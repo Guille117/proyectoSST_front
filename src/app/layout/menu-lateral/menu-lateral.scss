@@ -1,0 +1,44 @@
+.main{
+    display: flex;
+    flex-direction: column;
+    height: var(--heightNavBar);
+    width: 4vw;
+    background-color: var(--azulPrincipal);
+    padding: 25px 0;
+    gap: 10px;
+}
+
+.option{
+    display: flex;
+    color: #7A90AA;
+    gap: 5px;
+    font-size: 30px;
+    border-radius: 5px;
+}
+
+
+.foco{
+    background-color: var(--azulPrincipal);
+    border-radius: 11px;
+    padding: 10px 12px;
+    margin: 8px 0;
+}
+
+.barra{
+    border: solid 2px var(--azulPrincipal);
+    border-top-right-radius: 11px;
+    border-bottom-right-radius: 11px;
+}
+
+.option :hover{
+    color: var(--textoNavs);
+}
+
+.barra .active{
+    border: solid 2px var(--azulSecundario);
+}
+
+.foco .active{
+    background-color: var(--azulSecundario);
+}
+
