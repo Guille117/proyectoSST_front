@@ -1,0 +1,34 @@
+.main{
+    background-color: var(--azulPrincipal);
+    width: 100vw;
+    height: var(--heightTopBar);
+    display: flex;
+    padding: 0 20px;
+}
+
+.logo{
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    color: var(--textoNavs);
+}
+
+.logolg{
+    border-radius: 30px;
+    width: 50px;
+    height: 50px;
+}
+
+.usuario{
+    display: flex;
+    flex-direction: column;
+    align-items: end;
+    justify-content: center;
+    margin-left: auto;
+    color: var(--textoNavs);
+}
+
+h5{
+    font-weight: 100;
+    font-size: 15px;
+}
