@@ -1,53 +1,60 @@
-<div class="main">
-    <div class="option">
-        <div class="barra"></div>
-        <div class="foco">
-            <i class="bi bi-columns-gap"></i>
+<!--este componente contendrá tanto la barra de navegación 
+como el área de trabajo dinámico-->
+<div class="main">  
+    <nav class="manuLateralNav">
+        <div class="option" routerLink="/far" routerLinkActive="active">
+            <div class="barra" ></div>
+            <div class="foco">
+                <i class="bi bi-columns-gap"></i>
+            </div>
         </div>
-    </div>
+        
+        <div class="option">
+            <div class="barra"></div>
+            <div class="foco">
+                <i class="bi bi-person-vcard"></i>
+            </div>
+        </div>
     
-    <div class="option">
-        <div class="barra"></div>
-        <div class="foco">
-            <i class="bi bi-person-vcard"></i>
+        <div class="option" routerLink="/farmacia" routerLinkActive="active">
+            <div class="barra"></div>
+            <div class="foco">
+                <i class="bi bi-capsule"></i>
+            </div>
         </div>
-    </div>
-
-    <div class="option">
-        <div class="barra"></div>
-        <div class="foco">
-            <i class="bi bi-capsule"></i>
+        
+        <div class="option">
+            <div class="barra"></div>
+            <div class="foco">
+                <i class="bi bi-grid-3x3-gap"></i>
+            </div>
         </div>
-    </div>
     
-    <div class="option">
-        <div class="barra"></div>
-        <div class="foco">
-            <i class="bi bi-grid-3x3-gap"></i>
+        <div class="option">
+            <div class="barra"></div>
+            <div class="foco">
+                <i class="bi bi-people-fill"></i>
+            </div>
         </div>
-    </div>
-
-    <div class="option">
-        <div class="barra"></div>
-        <div class="foco">
-            <i class="bi bi-people-fill"></i>
+    
+        <div class="option">
+            <div class="barra"></div>
+            <div class="foco">
+                <i class="bi bi-clipboard2-data-fill"></i>
+            </div>
         </div>
-    </div>
-
-    <div class="option">
-        <div class="barra"></div>
-        <div class="foco">
-            <i class="bi bi-clipboard2-data-fill"></i>
+    
+         <div class="option">
+            <div class="barra"></div>
+            <div class="foco">
+                <i class="bi bi-person-circle"></i>
+            </div>
         </div>
-    </div>
+    </nav>
 
-     <div class="option">
-        <div class="barra"></div>
-        <div class="foco">
-            <i class="bi bi-person-circle"></i>
-        </div>
+    <div class="areaTrabajo">
+        <router-outlet></router-outlet>
     </div>
-
 </div>
 
 

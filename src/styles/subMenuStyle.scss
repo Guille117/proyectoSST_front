@@ -1,0 +1,25 @@
+.subMenuNav{
+    margin-top: 25px;
+    display: flex;
+    font-size: 22px;
+    // padding-bottom: 5px;
+    border-bottom: solid 2px #DDE3EC;
+    width: 100%;
+
+    & .option{
+    padding: 0 35px;
+    padding-bottom: 7px;
+    color: #7c7c7d;
+    }
+
+    & .option:hover{
+        cursor: pointer;
+        color: #f24b45;
+    }
+
+    & .option.active {
+        font-weight: bold;
+        color: #e10c05;
+        border-bottom: solid 3px #e10c05;
+    }
+}

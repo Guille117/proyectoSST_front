@@ -1,19 +1,24 @@
 .main{
     display: flex;
-    flex-direction: column;
+    width: 100vw;
     height: var(--heightNavBar);
-    width: 4vw;
+}
+
+.manuLateralNav{
+    display: flex;
+    flex-direction: column;
+    width: var(--widthNavBar);
     background-color: var(--azulPrincipal);
     padding: 25px 0;
     gap: 10px;
-}
-
-.option{
-    display: flex;
-    color: #7A90AA;
-    gap: 5px;
-    font-size: 30px;
-    border-radius: 5px;
+    
+    & .option{
+        display: flex;
+        color: #7A90AA;
+        gap: 5px;
+        font-size: 30px;
+        border-radius: 5px;
+    }
 }
 
 
@@ -34,11 +39,22 @@
     color: var(--textoNavs);
 }
 
-.barra .active{
-    border: solid 2px var(--azulSecundario);
+.option.active .barra{
+    border: solid 2px red;
 }
 
-.foco .active{
+.option.active .foco{
     background-color: var(--azulSecundario);
 }
+
+.option.active{
+    background-color: red;
+}
+
+.areaTrabajo{
+    width: 100%;
+    height: 100%;
+    padding: 35px;
+}
+
 
