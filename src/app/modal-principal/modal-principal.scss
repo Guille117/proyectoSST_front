@@ -1,0 +1,101 @@
+dialog {
+  border: none;
+  border-radius: 20px;
+  padding: 0;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  max-width: max-content;
+  min-width: 320px;
+  max-width: 80vh;
+  max-height: 80vh;
+  overflow: hidden;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  margin: 0;
+  opacity: 0;
+  visibility: hidden;
+  transform: translate(-50%, -50%) translateY(24px);
+
+  &::backdrop {
+    background-color: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(4px);
+    opacity: 0;
+  }
+}
+
+dialog.open,
+dialog[open] {
+  animation: modalIn 0.5s ease forwards;
+}
+
+dialog.open::backdrop,
+dialog[open]::backdrop {
+  animation: backdropIn 0.5s ease forwards;
+}
+
+dialog.closing {
+  animation: modalOut 0.5s ease forwards;
+}
+
+dialog.closing::backdrop {
+  animation: backdropOut 0.5s ease forwards;
+}
+
+@keyframes modalIn {
+  from {
+    opacity: 0;
+    visibility: hidden;
+    transform: translate(-50%, -50%) translateY(24px);
+  }
+  to {
+    opacity: 1;
+    visibility: visible;
+    transform: translate(-50%, -50%) translateY(0);
+  }
+}
+
+@keyframes modalOut {
+  from {
+    opacity: 1;
+    visibility: visible;
+    transform: translate(-50%, -50%) translateY(0);
+  }
+  to {
+    opacity: 0;
+    visibility: hidden;
+    transform: translate(-50%, -50%) translateY(24px);
+  }
+}
+
+@keyframes backdropIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes backdropOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+.modal-wrapper {
+  background: white;
+  display: flex;
+  flex-direction: column;
+
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 30px 0 7px 30px;
+    background-image: linear-gradient(to left, transparent, #a8adad, transparent);
+    background-position: bottom;
+    background-size: 100% 2px; 
+    background-repeat: no-repeat;
+  }
+
+  .modal-body {
+    padding: 1.5rem;
+    overflow-y: auto;
+  }
+}
+

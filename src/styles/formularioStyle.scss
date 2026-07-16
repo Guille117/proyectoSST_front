@@ -1,0 +1,63 @@
+.formulario{
+    background: #fff;
+    border: 1px solid #d9d9d9;
+    border-radius: 30px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.titulo-formulario {
+    background-color: var(--azulSecundario);
+    color: white;
+    margin: 0 0 16px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    padding: 15px 25px;
+    border-radius: 28px 28px 0 0;
+}
+
+.campo-formulario {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 12px;
+    label {
+        font-weight: 600;
+        color:#1A2535;
+    }
+
+    input {
+        padding: 12px 10px;
+        border: 1px solid #909090d6;
+        border-radius: 10px;
+        font-size: 16px;
+    }
+}
+
+.desplegable {
+    padding: 12px 10px;
+    border: 1px solid #909090d6;
+    border-radius: 10px;
+    background-color: white;
+    color: #1A2535;
+    font-weight: 500;
+    cursor: pointer;
+    font-size: 16px;
+
+    // Estilos para las opciones de adentro (Solo permite esto)
+    option {
+        background-color: white;
+        color: #1A2535;
+        padding: 12px; /* Algunos navegadores lo ignoran */
+        font-size: 16px;
+        
+        &:hover, &:checked {
+            background-color: #1A2535 !important; /* Cambia el azul por defecto */
+            color: white !important;
+        }
+    }
+}
+
+.mensaje-error {
+    color: #ff1900;
+    font-size: 0.9rem;
+}

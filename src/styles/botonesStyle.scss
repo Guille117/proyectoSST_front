@@ -1,0 +1,44 @@
+.btn {
+    font-size: 18px;
+    padding: 8px 12px;
+    border: none;
+    border-radius: 15px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+    width: auto;
+    margin-bottom: 8px;
+    height: 40px;
+
+    &:hover {
+        transform: translateY(-2px) scale(1.02); /* Se eleva y crece un mínimo */
+        filter: brightness(1.1); /* Brilla un poco más */
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12); /* Sombra difuminada */
+    }
+
+    //Cuando el usuario hace clic real (Active) el botón regresa a su lugar
+    &:active {
+        transform: translateY(0) scale(1);
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    }
+}
+
+._cancelar {
+    background: #c6c9cc;
+    color: #333;
+}
+
+._principal {
+    background: #0d6efd;
+    color: #fff;
+}
+
+._guardar{
+    color : #fff;
+    background: #22C55E
+}
+
+.btn-principal:disabled {
+    background: #adb5bd;
+    cursor: not-allowed;
+}

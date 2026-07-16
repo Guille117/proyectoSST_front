@@ -1,0 +1,19 @@
+<dialog #dialogElement (close)="handleNativeClose()">
+  <div class="modal-wrapper">
+    
+    <header class="modal-header">
+      <h2>{{ title }}</h2>
+      
+      <button class="btn-close" (click)="closeComponente()">✕</button>
+    </header>
+
+    <section class="modal-body">
+      <!-- Contenedor donde se renderiza el componente dinámico -->
+      <div #componentContainer></div>
+      
+      <!-- Contenido estático (ng-content) como fallback -->
+      <ng-content></ng-content>
+    </section>
+
+  </div>
+</dialog>

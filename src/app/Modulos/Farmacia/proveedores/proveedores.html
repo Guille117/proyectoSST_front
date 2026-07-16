@@ -1,1 +1,102 @@
-<p>proveedores works!</p>
+<div class="areaTrabajo-container">
+
+    <div class="trabajoArea">
+            <!-- Bloque izquierdo -->
+        <div class="table-container">
+                <div class="seccionSuperior">
+        
+                    <div class="buscador-container">
+                        <div class="buscador">
+                            <input class="inputB" type="text" placeholder="Buscar...">
+        
+                            <button class="btnLupa">
+                                <i class="bi bi-search fs-5"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th class="celda_centrada">Código</th>
+                            <th class="celda_izquierda">Nombre</th>
+                            <th class="celda_centrada">Teléfono</th>
+                            <th class="celda_izquierda">Email</th>
+                            <th class="celda_centrada">NIT</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="celda_centrada">PRV-001</td>
+                            <td class="celda_izquierda">Bioarma Guatemala</td>
+                            <td class="celda_centrada">2234-5678</td>
+                            <td class="celda_izquierda">ventas@bioarma.com</td>
+                            <td class="celda_centrada">123456-7</td>
+                        </tr>
+    
+                        <tr>
+                            <td class="celda_centrada">PRV-002</td>
+                            <td class="celda_izquierda">Farmacia Central</td>
+                            <td class="celda_centrada">2201-1122</td>
+                            <td class="celda_izquierda">contacto@farmaciacentral.com</td>
+                            <td class="celda_centrada">765432-1</td>
+                        </tr>
+    
+                        <tr>
+                            <td class="celda_centrada">PRV-003</td>
+                            <td class="celda_izquierda">Distribuidora Salud</td>
+                            <td class="celda_centrada">2210-9988</td>
+                            <td class="celda_izquierda">admin@distribuidorasalud.com</td>
+                            <td class="celda_centrada">987654-3</td>
+                        </tr>
+                    </tbody>
+                </table>
+        </div>
+
+        <!-- Bloque derecho -->
+        <div class="formulario-container">
+            <div class="formulario">
+                <h3 class="titulo-formulario">Agregar proveedor</h3>
+            
+                <form #proveedorForm="ngForm" novalidate>
+                    <div class="campo-formulario etiqueta-input">
+                        <label for="nombre">Nombre</label>
+                        <input type="text" id="nombre" name="nombre" [(ngModel)]="proveedor.nombre" required placeholder="Nombre del proveedor" #nombre="ngModel">
+                    </div>
+            
+                    <div class="campo-formulario  etiqueta-input">
+                        <label for="telefono">Teléfono</label>
+                        <input type="text" id="telefono" name="telefono" placeholder="Ej: 1234-5678" [(ngModel)]="proveedor.telefono" pattern="[0-9]{4}-[0-9]{4}" maxlength="9" #telefono="ngModel">
+                        @if (telefono.touched && telefono.invalid) {
+                            <small class="mensaje-error">Formato telefónico inválido.</small>
+                        }
+                    </div>
+            
+                    <div class="campo-formulario etiqueta-input">
+                        <label for="email">Email</label>
+                        <input type="email" id="email" name="email" placeholder="Ej: correo@proveedor.com" [(ngModel)]="proveedor.email" email #email="ngModel">
+                        @if (email.touched && email.invalid) {
+                            <small class="mensaje-error">Ingrese un email válido.</small>
+                        }
+                    </div>
+            
+                    <div class="campo-formulario etiqueta-input">
+                        <label for="nit">NIT</label>
+                        <input type="text" id="nit" name="nit" placeholder="Ej: 1234567-8" [(ngModel)]="proveedor.nit" [pattern]="nitPattern" maxlength="11" #nit="ngModel">
+                        @if (nit.touched && nit.invalid) {
+                            <small class="mensaje-error">Formato de NIT inválido.</small>
+                        }
+                    </div>
+            
+                    <div class="botones">
+                        <button type="button" class="btn _cancelar">Cancelar</button>
+                        <button type="submit" class="btn _guardar">Guardar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+</div>
+

@@ -6,6 +6,16 @@
     border: solid 2px var(--colorBorde);
     box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
     background-color: white;
+    display: flex;
+    gap: 55px;
+    align-items: flex-start;
+    width: 100%;
+    box-sizing: border-box;
+
+    > * {
+        flex: var(--ancho);
+        min-width: 0; 
+    }
 }
 
 
@@ -59,7 +69,7 @@
 
 .miniSubMenu{
     display: flex;
-    background-color: #F5F5F4;
+    background-color: #f1f1e5d2;
     border-radius: 20px;
     border: solid 1px #DDE3EC;
     padding: 5px;
@@ -69,10 +79,10 @@
     .op{
         color:#7A8A9E;
         padding: 10px 15px;
+        cursor: pointer;
     }
 
     .op2{
-        color:#1a549a;
         background-color: #1A6FBD;
         color: white;
         padding: 10px 15px;

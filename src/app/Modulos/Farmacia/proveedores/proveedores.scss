@@ -1,0 +1,43 @@
+.areaTrabajo-container {
+    width: 100%;
+    margin: 0 auto;
+}
+
+.etiqueta-input{
+    margin-left: 25px;
+    margin-right: 25px;
+}
+
+
+.buscador-container {
+    width: 50%;
+    height: 45px;
+}
+
+.seccionSuperior{
+    margin-bottom: 25px;
+}
+
+.table-container {
+    margin-top: 10px;
+    --ancho: 5;
+    width: 100%;
+}
+
+.formulario-container {
+    --ancho: 2;
+}
+
+.botones{
+    width: 70%;
+    display: flex;
+    gap: 10px;
+    margin-left: auto;
+    justify-content: flex-end;
+    padding-right: 25px;
+
+    & > * { // selecciona los elementos hijos directos del contenedor
+        flex: 1; // hace que cada botón ocupe el mismo espacio disponible
+    }
+}
+

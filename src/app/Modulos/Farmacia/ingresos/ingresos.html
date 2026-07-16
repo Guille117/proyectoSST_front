@@ -1,1 +1,137 @@
-<p>ingresos works!</p>
+<div class="areaTrabajo-container">
+  <div class="trabajoArea">
+    <div class="table-container">
+      <div class="seccionSuperior">
+        <div class="buscador-container">
+          <div class="buscador">
+            <select class="selector">
+              <option value="1" selected>Proveedor</option>
+              <option value="2">Fecha</option>
+              <option value="3">Código</option>
+            </select>
+            <input class="inputB" type="text" placeholder="Buscar...">
+            <button class="btnLupa">
+              <i class="bi bi-search fs-5"></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="botones-container">
+          <button class="btn _principal" (click)="abrirModalDetalleMed()">Agregar medicamento</button>
+          <button class="btn _principal" (click)="abrirModalCompra()">Registrar compra</button>
+        </div>
+      </div>
+
+      <table class="table">
+        <thead>
+          <tr>
+            <th class="celda_centrada">Código</th>
+            <th class="celda_izquierda">Proveedor</th>
+            <th class="celda_centrada">Fecha</th>
+            <th class="celda_centrada">Medicamentos</th>
+            <th class="celda_centrada">Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="celda_centrada">COMP-001</td>
+            <td class="celda_izquierda">Farmacia Central</td>
+            <td class="celda_centrada">02-04-20op26</td>
+            <td class="celda_centrada">12</td>
+            <td class="celda_centrada">Q 3,450.00</td>
+          </tr>
+          <tr>
+            <td class="celda_centrada">COMP-002</td>
+            <td class="celda_izquierda">Distribuidora Salud</td>
+            <td class="celda_centrada">15-04-2026</td>
+            <td class="celda_centrada">8</td>
+            <td class="celda_centrada">Q 1,980.00</td>
+          </tr>
+          <tr>
+            <td class="celda_centrada">COMP-003</td>
+            <td class="celda_izquierda">Química GT</td>
+            <td class="celda_centrada">24-04-2026</td>
+            <td class="celda_centrada">20</td>
+            <td class="celda_centrada">Q 5,620.00</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <aside class="detalle-compra">
+      <div class="detalle-card">
+        <div class="row">
+          <div>
+            <h6>DETALLE DE COMPRA</h6>
+            <h3>COMP-001</h3>
+          </div>
+          <h4>02 de marzo de 2026</h4>
+        </div>
+
+        <!-- <hr> -->
+        <div class="row">
+          <div>
+            <p class="label">Proveedor</p>
+            <p class="value">Farmacia Central</p>
+          </div>
+
+          <div>
+            <p class="label">Total</p>
+            <p class="value">Q 3,450.00</p>
+          </div>
+
+          <div>
+            <button class="btn _principal">Ver Comprobante</button>
+          </div>
+        </div>
+
+        <hr>
+
+        <h6>MEDICAMENTOS ADQUIRIDOS</h6>
+        <table class="table">
+          <thead>
+            <tr>
+              <th class="celda_centrada">Código</th>
+              <th class="celda_izquierda">Medicamento</th>
+              <th class="celda_centrada">Cant.</th>
+              <th class="celda_centrada">Precio</th>
+              <th class="celda_centrada">Sub.</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="celda_centrada">MED-001</td>
+              <td class="celda_izquierda">Amoxicilina 500mg</td>
+              <td class="celda_centrada">5</td>
+              <td class="celda_centrada">Q 85.00</td>
+              <td class="celda_centrada">Q 425.00</td>
+            </tr>
+            <tr>
+              <td class="celda_centrada">MED-002</td>
+              <td class="celda_izquierda">Paracetamol 500mg</td>
+              <td class="celda_centrada">3</td>
+              <td class="celda_centrada">Q 42.00</td>
+              <td class="celda_centrada">Q 126.00</td>
+            </tr>
+            <tr>
+              <td class="celda_centrada">MED-003</td>
+              <td class="celda_izquierda">Ibuprofeno 400mg</td>
+              <td class="celda_centrada">2</td>
+              <td class="celda_centrada">Q 65.00</td>
+              <td class="celda_centrada">Q 130.00</td>
+            </tr>
+            <tr>
+              <td class="celda_centrada">MED-003</td>
+              <td class="celda_izquierda">Ibuprofeno 400mg</td>
+              <td class="celda_centrada">2</td>
+              <td class="celda_centrada">Q 65.00</td>
+              <td class="celda_centrada">Q 130.00</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<app-modal-principal #miModal></app-modal-principal>

@@ -1,7 +1,16 @@
-/* You can add global styles to this file, and also import other style files */
+
 @use "styles/tableStyle";
 @use "styles/subMenuStyle.scss";
+@use "styles/formularioStyle.scss";
+@use "styles/botonesStyle.scss";
 @use "styles/otrosStyle.scss";
+
+@layer theme, base, components, utilities;
+
+/* 3. Cargamos la configuración y las utilidades, SIN el preflight */
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+
 @import "bootstrap-icons/font/bootstrap-icons.css";
 @import "@fortawesome/fontawesome-free/css/all.css";
 
@@ -21,7 +30,7 @@ body {
 :root{
     --azulPrincipal: #1A2535;
     --textoNavs: white;
-    --azulSecundario: #1A6FBC;
+    --azulSecundario: #1A6FBD;
     --heightTopBar: 9vh;
     --heightNavBar: calc(100vh - var(--heightTopBar));
     --widthNavBar: 4vw;

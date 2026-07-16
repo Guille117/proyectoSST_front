@@ -1,0 +1,92 @@
+<div class="modal-container">
+
+  <!-- Content -->
+  <div class="modal-content">
+    <!-- Product Type Selector -->
+    <div class="miniSub-container campo-formulario" [ngClass]="{'w-medicamento': isMedicamento, 'w-insumo': !isMedicamento}">
+        <label class="form-label">Tipo de producto</label>
+        <div class="miniSubMenu">
+            <div [ngClass]="{'op2': isMedicamento, 'op': !isMedicamento}" (click)="changeProductType()" [style.pointer-events]="!isMedicamento ? 'auto' : 'none'">
+                Medicamentos
+            </div>
+            <div [ngClass]="{'op2': !isMedicamento, 'op': isMedicamento}" (click)="changeProductType()" [style.pointer-events]="isMedicamento ? 'auto' : 'none'">
+                Insumos
+            </div>
+        </div>
+    </div>
+
+    
+    <div class="form-row">
+      <div class="campo-formulario" [style.width]="isMedicamento ? '60%' : '100%'">
+        <label for="genericName">Nombre genérico</label>
+        <input
+          type="text"
+          id="genericName"
+          [placeholder]="isMedicamento ? 'Ej. Paracetamol' : 'Ej. Guantes quirúrgicos talla M'"
+          [(ngModel)]="productForm.genericName"
+        />
+      </div>
+      @if(isMedicamento){
+        <div class="campo-formulario" style="width: 15%; flex-shrink: 0;">
+          <label for="dose">Dosis</label>
+          <input
+            type="text"
+            id="dose"
+            placeholder="Ej. 500mg"
+            [(ngModel)]="productForm.dose"
+          />
+        </div>
+  
+        <div class="campo-formulario" style="width: 19%; flex-shrink: 0;">
+          <label for="administrationRoute">Unidad</label>
+          <select  id="administrationRoute" [(ngModel)]="productForm.administrationRoute" class="desplegable">
+            <option value="">Seleccionar</option>
+            <option *ngFor="let route of administrationRoutes" [value]="route">
+              {{ route }}
+            </option>
+          </select>
+        </div>
+      }
+    </div>
+
+    <div class="campo-formulario" [style.width]="isMedicamento ? '60%' : '100%'">
+      <label for="marcaCommercial">Marca comercial</label>
+      <input
+        type="text"
+        id="marcaCommercial"
+        class="form-input"
+        placeholder="Ej. Laboratorios MK"
+        [(ngModel)]="productForm.commercialBrand"
+      />
+    </div>
+
+     @if(isMedicamento){
+       <div class="form-row">
+         <div class="campo-formulario" style="width: 45%; flex-shrink: 0;">
+           <label for="administrationRoute">Vía de administración</label>
+           <select  id="administrationRoute" [(ngModel)]="productForm.administrationRoute" class="desplegable">
+             <option value="">Seleccionar</option>
+             <option *ngFor="let route of administrationRoutes" [value]="route">
+               {{ route }}
+             </option>
+           </select>
+         </div>
+         <div class="campo-formulario" style="width: 45%; flex-shrink: 0;">
+           <label for="presentation">Presentación</label>
+           <select id="presentation" [(ngModel)]="productForm.presentation" class="desplegable">
+             <option value="">Seleccionar</option>
+             <option *ngFor="let pres of presentations" [value]="pres">
+               {{ pres }}
+             </option>
+           </select>
+         </div>
+       </div>
+     }
+  </div>
+
+  <!-- Footer Buttons -->
+  <div class="modal-footer">
+    <button class="btn _cancelar" (click)="cancel()">Cancelar</button>
+    <button class="btn _guardar" (click)="save()">Guardar</button>
+  </div>
+</div>
