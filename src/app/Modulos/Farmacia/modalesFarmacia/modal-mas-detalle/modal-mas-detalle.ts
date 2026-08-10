@@ -22,6 +22,7 @@ export class ModalMasDetalle implements OnInit {
   @Output() onCancel = new EventEmitter<void>();
   @Output() onSave = new EventEmitter<ProductForm>();
   @Output() titulo = new EventEmitter<string>();
+  @Output() subTitulo = new EventEmitter<string>();
 
   productForm: ProductForm = {
     productType: 'medication',
@@ -37,9 +38,7 @@ export class ModalMasDetalle implements OnInit {
   isMedicamento: boolean = true;
   constructor() {}
 
-  ngOnInit(): void {
-    this.titulo.emit('Detalle del Medicamento');
-  }
+  ngOnInit(): void {}
 
   changeProductType(): void {
     this.isMedicamento = !this.isMedicamento;
