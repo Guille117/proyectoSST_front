@@ -51,19 +51,38 @@
                         <input type="text" id="nombre" name="nombre" [(ngModel)]="a" required placeholder="Nombre del proveedor" #nombre="ngModel">
                     </div>
             
-                    <div class="campo-formulario  etiqueta-input">
+                    <div class="campo-formulario etiqueta-input">
                         <label for="telefono">Teléfono</label>
-                        <input type="text" id="telefono" name="telefono" placeholder="Ej: 1234-5678" [(ngModel)]="a" pattern="[0-9]{4}-[0-9]{4}" maxlength="9" #telefono="ngModel">
-                        @if (telefono.touched && telefono.invalid) {
-                            <small class="mensaje-error">Formato telefónico inválido.</small>
-                        }
+                        <div class="input-wrapper">
+                            <input
+                                type="text"
+                                id="telefono"
+                                name="telefono"
+                                placeholder="Ej: 1234-5678"
+                                [(ngModel)]="proveedor.telefono"
+                                pattern="[0-9]{4}-[0-9]{4}"
+                                maxlength="9"
+                                #telefono="ngModel"
+                                [class.input-invalid]="telefono.touched && telefono.invalid"
+                            >
+
+                            @if (telefono.touched && telefono.invalid) {
+                                <div class="mensaje-error" role="alert">
+                                    <span class="mensaje-error__icono">!</span>
+                                    <span>Formato telefónico inválido</span>
+                                </div>
+                            }
+                        </div>
                     </div>
             
                     <div class="campo-formulario etiqueta-input">
                         <label for="email">Email</label>
-                        <input type="email" id="email" name="email" placeholder="Ej: correo@proveedor.com" [(ngModel)]="a" email #email="ngModel">
+                        <input type="email" id="email" name="email" placeholder="Ej: correo@proveedor.com" [(ngModel)]="proveedor.email" email #email="ngModel" [class.input-invalid]="email.touched && email.invalid">
                         @if (email.touched && email.invalid) {
-                            <small class="mensaje-error">Ingrese un email válido.</small>
+                            <div class="mensaje-error" role="alert">
+                                <span class="mensaje-error__icono">!</span>
+                                <span>Formato de email inválido</span>
+                            </div>
                         }
                     </div>
             

@@ -1,6 +1,6 @@
 import { ChangeDetectorRef, Component } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { proveedorResponse } from './data/proveedorInterfaz';
+import { proveedorRequest, proveedorResponse } from './data/proveedorInterfaz';
 import { ProveedorService } from './data/proveedor-service';
 
 @Component({
@@ -16,6 +16,13 @@ export class Proveedores {
     private cdr: ChangeDetectorRef
   ) {}
 
+  proveedor: proveedorRequest = {
+    nombre: '',
+    nit: '',
+    telefono: '',
+    email: '',
+  }
+  
   proveedores: proveedorResponse[] = [];
 
   ngOnInit() {
