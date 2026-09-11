@@ -28,6 +28,24 @@
     color: var(--textoNavs);
 }
 
+.btn-logout {
+    background: transparent;
+    border: none;
+    color: var(--textoNavs);
+    margin-left: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 8px;
+    transition: background 0.2s ease;
+
+    &:hover {
+        background: rgba(255, 255, 255, 0.15);
+    }
+}
+
 h5{
     font-weight: 100;
     font-size: 15px;

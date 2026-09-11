@@ -1,0 +1,380 @@
+.contenedorPrincipal {
+  display: flex;
+  width: 100%;
+  height: calc(100% - 25px);
+  min-height: 0;
+  margin-top: 25px;
+  overflow: hidden;
+}
+
+.izquierda {
+  width: 42%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.seccionSuperior {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+  flex-shrink: 0;
+}
+
+.buscador-container {
+  flex: 1;
+  height: 45px;
+}
+
+.miniSub-container{
+  width: 210px;
+  height: 45px;
+  display: flex;
+  align-items: center;
+}
+
+.horarios-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+  flex: 1;
+  padding-right: 4px;
+}
+
+.sin-horarios {
+  padding: 30px 10px;
+  text-align: center;
+  color: #64748b;
+  font-size: 14px;
+  font-style: italic;
+}
+
+.horario-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 70px;
+  padding: 14px 20px;
+  border: 1px solid #d9dfe6;
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: 0 2px 6px rgba(26, 37, 53, 0.05);
+  color: var(--azulPrincipal);
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    border-color: #2864e8;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(40, 100, 232, 0.12);
+  }
+
+  &.activo {
+    border-color: #2864e8;
+    background: linear-gradient(115deg, #24447e, #2864e8);
+    box-shadow: 0 4px 14px rgba(40, 100, 232, 0.25);
+    color: #ffffff;
+
+    .horario-card-nombre {
+      color: #ffffff;
+    }
+
+    .horario-card-codigo {
+      background-color: #ffffff;
+      color: #24447e;
+    }
+  }
+}
+
+.horario-card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.horario-card-nombre {
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: var(--azulPrincipal);
+}
+
+.horario-card-side {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.horario-card-codigo {
+  padding: 7px 12px;
+  border-radius: 6px;
+  background-color: #f1f5f9;
+  color: #475569;
+  font-size: 13px;
+  font-weight: 800;
+  transition: all 0.2s ease;
+}
+
+.derecha {
+  width: 58%;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+.formulario-container {
+  width: 100%;
+  max-width: 980px;
+  min-height: 420px;
+  border: 1px solid var(--colorBorde);
+  border-radius: 14px;
+  background: #ffffff;
+  overflow: hidden;
+}
+
+.titulo-formulario {
+  margin: 0;
+  padding: 20px 22px;
+  background: linear-gradient(90deg, #1d438a 0%, #2b6fe5 100%);
+  font-size: 18px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 20px 22px 18px;
+}
+
+.fila-encabezado-formulario {
+  display: flex;
+  align-items: end;
+  gap: 18px;
+  width: 100%;
+}
+
+.campo-nombre {
+  flex: 1;
+  min-width: 0;
+}
+
+.input-formulario {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 14px;
+  border: 1px solid #d3d6db;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #1f2a37;
+  font-size: 15px;
+  outline: none;
+  box-shadow: inset 0 0 0 1px transparent;
+}
+
+.input-formulario:focus {
+  border-color: #2a6fe7;
+  box-shadow: 0 0 0 3px rgba(42, 111, 231, 0.12);
+}
+
+.guardia-inline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 160px;
+  padding-bottom: 8px;
+  color: #1f2a37;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 52px;
+  height: 30px;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background-color: #d5d8dc;
+  transition: 0.25s ease;
+  cursor: pointer;
+}
+
+.slider::before {
+  content: "";
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  left: 4px;
+  top: 4px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+  transition: 0.25s ease;
+}
+
+.switch input:checked + .slider {
+  background-color: #2d6cdf;
+}
+
+.switch input:checked + .slider::before {
+  transform: translateX(22px);
+}
+
+.guardia-horas-container {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.fila-horario {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+}
+
+.grupos-horarios {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.grupo-horarios {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.grupo-titulos {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 5px;
+  color: #52607a;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  text-align: center;
+}
+
+.titulo-horas {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(5px, 1fr));
+  gap: 4px;
+  width: 70%;
+  margin-left: 40px;
+  text-align: center;
+}
+
+.dia {
+  color: var(--azulPrincipal);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.horario-inputs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(5px, 1fr));
+  gap: 4px;
+  width: 70%;
+  margin-left: 40px;
+}
+
+.input-hora {
+  width: 100%;
+  min-height: 32px;
+  border: 1px solid #d9dfe6;
+  border-radius: 10px;
+  background: #ffffff;
+  padding: 0 6px;
+  font-size: 13px;
+  color: var(--azulPrincipal);
+  text-align: center;
+  outline: none;
+}
+
+.input-hora:focus {
+  border-color: #2a6fe7;
+  box-shadow: 0 0 0 3px rgba(42, 111, 231, 0.12);
+}
+
+.acciones-formulario {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 18px;
+  margin-top: 12px;
+  border-top: 1px solid var(--colorBorde);
+}
+
+@media (max-width: 900px) {
+  .contenedorPrincipal {
+    flex-direction: column;
+    height: auto;
+  }
+
+  .izquierda,
+  .derecha {
+    width: 100%;
+  }
+
+  .seccionSuperior {
+    flex-wrap: wrap;
+  }
+
+  .fila-encabezado-formulario {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .guardia-inline {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .horario-inputs {
+    grid-template-columns: 1fr;
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .grupo-titulos {
+    grid-template-columns: 1fr;
+    width: 100%;
+    text-align: left;
+
+  }
+
+  .titulo-horas {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .fila-horario {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+}

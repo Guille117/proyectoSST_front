@@ -1,0 +1,287 @@
+<div class="pasos">
+    <div class="paso" [class.activo]="contador === 0">
+        <span class="numero">1</span>
+        <span class="texto">Datos personales</span>
+    </div>
+
+    <span class="conector"></span>
+
+    <div class="paso" [class.activo]="contador === 1">
+        <span class="numero">2</span>
+        <span class="texto">Datos de usuario</span>
+    </div>
+</div>
+
+@if (contador === 0) {
+<div class="formularioUsuarioPaso1">
+    <div class="fila">
+        <app-campo-validado
+        class="etiqueta-input" 
+        [label]="'Nombres'"
+        [fieldId]="'nombre'"
+        [errorMessage]="'Debe ingresar los nombres'"
+        >
+            <input
+                type="text"
+                id="nombre"
+                name="nombres"
+                placeholder="Nombres *"
+                required
+                [(ngModel)]="persona.nombres"
+            >
+        </app-campo-validado>
+
+        <app-campo-validado
+            class="etiqueta-input" 
+            [label]="'Apellidos'"
+            [fieldId]="'apellidos'"
+            [errorMessage]="'Debe ingresar los apellidos'"
+        >
+            <input
+                type="text"
+                id="apellidos"
+                name="apellidos"
+                placeholder="Apellidos *"
+                required
+                [(ngModel)]="persona.apellidos"
+            >
+        </app-campo-validado>
+    </div>
+    
+    <div class="fila">
+        <app-campo-validado
+            class="etiqueta-input" 
+            [label]="'CUI'"
+            [fieldId]="'cui'"
+            [errorMessage]="'Debe ingresar un CUI válido'"
+        >
+            <input
+                type="text"
+                id="cui"
+                name="cui"
+                placeholder="CUI *"
+                required
+                [(ngModel)]="persona.cui"
+            >
+        </app-campo-validado>
+
+        <app-campo-validado
+            class="etiqueta-input" 
+            [label]="'Sexo'"
+            [fieldId]="'sexo'"
+            [errorMessage]="'Debe seleccionar un sexo'"
+        >
+            <select
+                id="sexo"
+                name="sexo"
+                required
+                [(ngModel)]="persona.sexo"
+            >
+                <option value="" disabled>Seleccione un sexo *</option>
+                <option value="MASCULINO">Masculino</option>
+                <option value="FEMENINO">Femenino</option>
+            </select>
+        </app-campo-validado>
+    </div>
+
+    <div class="fila">
+         <app-campo-validado
+            class="etiqueta-input" 
+            [label]="'Fecha de nacimiento'"
+            [fieldId]="'fechaNacimiento'"
+            [errorMessage]="'Debe ingresar una fecha de nacimiento'"
+        >
+            <input
+                type="date"
+                id="fechaNacimiento"
+                name="fechaNacimiento"
+                required
+                [(ngModel)]="persona.fechaNacimiento"
+            >
+        </app-campo-validado>
+
+        <app-campo-validado
+            class="etiqueta-input" 
+            [label]="'Teléfono'"
+            [fieldId]="'telefono'"
+            [errorMessage]="'Debe ingresar un teléfono'"
+        >
+            <input
+                type="tel"
+                id="telefono"
+                name="telefono"
+                placeholder="Teléfono"
+                [(ngModel)]="persona.telefono"
+            >
+        </app-campo-validado>
+    </div>
+
+    <div class="fila">
+        <app-campo-validado
+            class="etiqueta-input" 
+            [label]="'Email'"
+            [fieldId]="'email'"
+            [errorMessage]="''"
+        >
+            <input
+                type="email"
+                id="email"
+                name="email"
+                placeholder="Email" 
+                [(ngModel)]="persona.email"
+            >
+        </app-campo-validado>
+    </div>
+</div>
+}
+
+@if (contador === 1) {
+<div class="formularioUsuarioPaso2">
+    <div class="fila">
+        <app-campo-validado
+        class="etiqueta-input" 
+        [label]="'Puesto'"
+        [fieldId]="'puesto'"
+        [errorMessage]="'Debe seleccionar un puesto'"
+        >
+            <select
+                id="puesto"
+                name="puestoId"
+                required
+                [(ngModel)]="usuarioReq.puestoId"
+            >
+                <option [ngValue]="0" disabled>Seleccione un puesto *</option>
+                @for (puesto of puestos; track puesto.id) {
+                    <option [ngValue]="puesto.id">{{ puesto.nombre }}</option>
+                }
+            </select>
+        </app-campo-validado>
+
+        <app-campo-validado
+            class="etiqueta-input" 
+            [label]="'Horario'"
+            [fieldId]="'horario'"
+            [errorMessage]="'Debe seleccionar un horario'"
+        >
+            <select
+                id="horario"
+                name="horarioId"
+                required
+                [(ngModel)]="usuarioReq.horarioId"
+            >
+                <option [ngValue]="0" disabled>Seleccione un horario *</option>
+                @for (horario of horarios; track horario.id) {
+                    <option [ngValue]="horario.id">{{ horario.nombre }}</option>
+                }
+            </select>
+        </app-campo-validado>
+    </div>
+    
+    <div class="fila">
+        <app-campo-validado
+            class="etiqueta-input" 
+            [label]="'Usuario'"
+            [fieldId]="'usuario'"
+            [errorMessage]="'Debe ingresar un usuario'"
+        >
+            <input
+                type="text"
+                id="usuario"
+                name="username"
+                placeholder="Nombre de usuario *"
+                required
+                [(ngModel)]="usuarioReq.username"
+            >
+        </app-campo-validado>
+
+        <app-campo-validado
+            class="etiqueta-input" 
+            [label]="'Rol'"
+            [fieldId]="'rol'"
+            [errorMessage]="'Debe seleccionar un rol'"
+        >
+            <select
+                id="rol"
+                name="rolId"
+                required
+                [(ngModel)]="usuarioReq.rolId"
+            >
+                <option [ngValue]="0" disabled>Seleccione un rol *</option>
+                @for (rol of roles; track rol.id) {
+                    <option [ngValue]="rol.id">{{ rol.nombre }}</option>
+                }
+            </select>
+        </app-campo-validado>
+    </div>
+
+    <div class="fila">
+         <app-campo-validado
+            class="etiqueta-input" 
+            [label]="'Contraseña'"
+            [fieldId]="'contrasena'"
+            [errorMessage]="'Debe ingresar una contraseña'"
+        >
+            <div class="input-con-ojo">
+                <input
+                    [type]="showPassword ? 'text' : 'password'"
+                    id="contrasena"
+                    name="password"
+                    placeholder="Contraseña {{ isEditing ? '(Opcional)' : '*' }}"
+                    [(ngModel)]="usuarioReq.password"
+                >
+                <button
+                    type="button"
+                    class="btn-ojo"
+                    (click)="toggleShowPassword()"
+                    title="Mostrar / ocultar contraseña"
+                >
+                    <i class="bi" [class.bi-eye]="!showPassword" [class.bi-eye-slash]="showPassword"></i>
+                </button>
+            </div>
+        </app-campo-validado>
+
+        <app-campo-validado
+            class="etiqueta-input" 
+            [label]="'Confirmar contraseña'"
+            [fieldId]="'confirmarContrasena'"
+            [errorMessage]="'Debe confirmar la contraseña'"
+        >
+            <div class="input-con-ojo">
+                <input
+                    [type]="showConfirmPassword ? 'text' : 'password'"
+                    id="confirmarContrasena"
+                    name="confirmPassword"
+                    placeholder="Confirmar contraseña {{ isEditing ? '(Opcional)' : '*' }}"
+                    [(ngModel)]="confirmPassword"
+                >
+                <button
+                    type="button"
+                    class="btn-ojo"
+                    (click)="toggleShowConfirmPassword()"
+                    title="Mostrar / ocultar contraseña"
+                >
+                    <i class="bi" [class.bi-eye]="!showConfirmPassword" [class.bi-eye-slash]="showConfirmPassword"></i>
+                </button>
+            </div>
+        </app-campo-validado>
+    </div>
+
+</div>
+}
+
+<div class="footer">
+    <button type="button" class="btn _cancelar" (click)="cerrarModal()">Cancelar</button>
+    @if (contador > 0) {
+        <button type="button" class="btn _principal" (click)="disminuirContador()">
+            <i class="bi bi-arrow-left"></i> Atrás
+        </button>
+        <button type="button" class="btn _guardar" (click)="guardarUsuario()">
+            {{ isEditing ? 'Guardar cambios' : 'Guardar' }}
+        </button>
+    }
+    @if (contador < 1) {
+        <button type="button" class="btn _principal" (click)="aumentarContador()">
+            Siguiente <i class="bi bi-arrow-right"></i>
+        </button>
+    }
+</div>

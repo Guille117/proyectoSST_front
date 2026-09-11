@@ -1,0 +1,26 @@
+.miniSubMenu{
+    display: flex;
+    background-color: #f1f1e5d2;
+    border-radius: 20px;
+    border: solid 1px #DDE3EC;
+    padding: 5px;
+    align-items: center;
+    gap: 20px;
+    width: 100%;
+    height: 45px;
+
+    .op{
+        color:#7A8A9E;
+        padding: 10px 15px;
+        cursor: pointer;
+    }
+
+    .op2{
+        background-color: #1A6FBD;
+        color: white;
+        padding: 9px 12px;
+        border-radius: 15px;
+        font-size: 17px;
+        letter-spacing: 0.4px;
+    }
+}

@@ -1,11 +1,10 @@
 import { Component, signal } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
-import { MenuLateral } from "./layout/menu-lateral/menu-lateral";
-import { Topbar } from "./layout/topbar/topbar";
+import { ModalPrincipal } from './modal-principal/modal-principal';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, MenuLateral, Topbar],
+  imports: [RouterOutlet, ModalPrincipal],
   templateUrl: './app.html',
   styleUrl: './app.scss'
 })

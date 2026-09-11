@@ -9,17 +9,31 @@
     width: auto;
     margin-bottom: 8px;
     height: 40px;
+    appearance: none;
+    -webkit-appearance: none;
 
     &:hover {
-        transform: translateY(-2px) scale(1.02); /* Se eleva y crece un mínimo */
-        filter: brightness(1.1); /* Brilla un poco más */
-        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12); /* Sombra difuminada */
+        transform: translateY(-2px) scale(1.02);
+        filter: brightness(1.1);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
     }
 
-    //Cuando el usuario hace clic real (Active) el botón regresa a su lugar
     &:active {
         transform: translateY(0) scale(1);
         box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    }
+
+    &:disabled,
+    &[disabled] {
+        cursor: not-allowed;
+        opacity: 0.75;
+        filter: grayscale(0.1);
+        box-shadow: none;
+        transform: none;
+        pointer-events: none;
+        background-color: #c9c9c9 !important;
+        color: #5f6368 !important;
+        border: 1px solid #b7b7b7 !important;
     }
 }
 
@@ -33,12 +47,80 @@
     color: #fff;
 }
 
-._guardar{
-    color : #fff;
-    background: #22C55E
+._guardar {
+    color: #fff;
+    background: #22C55E;
 }
 
-.btn-principal:disabled {
-    background: #adb5bd;
-    cursor: not-allowed;
+._cancelar:disabled,
+._cancelar[disabled] {
+    background-color: #bfbfbf !important;
+    color: #4d4d4d !important;
+    border-color: #a8a8a8 !important;
 }
+
+._guardar:disabled,
+._guardar[disabled] {
+    background-color: #7aa887 !important;
+    color: #f5f5f5 !important;
+    border-color: #6a9b78 !important;
+}
+
+._principal:disabled,
+._principal[disabled] {
+    background-color: #8aa7d6 !important;
+    color: #f8f9fb !important;
+    border-color: #7d99c9 !important;
+}
+
+._eliminar {
+    background: #ed1a0f;
+    color: #fff;
+}
+
+._editar{
+    background: #fd9d01;
+    color: #fff;
+}
+
+.i_basurero{
+    color: red;
+    font-size: 21px;
+    cursor: pointer;
+    display: inline-block;
+    transition: transform 0.2s ease, color 0.2s ease, filter 0.2s ease;
+
+    &:hover {
+        transform: translateY(-2px) scale(1.12) rotate(-6deg);
+        color: #cc0000;
+        filter: drop-shadow(0 4px 8px rgba(204, 0, 0, 0.35));
+    }
+}
+
+.i_lapiz{
+    color: rgb(243, 177, 23);
+    font-size: 21px;
+    margin-right: 10px;
+    cursor: pointer;
+    display: inline-block;
+    transition: transform 0.2s ease, color 0.2s ease, filter 0.2s ease;
+
+    &:hover {
+        transform: translateY(-2px) scale(1.12) rotate(8deg);
+        color: #d89700;
+        filter: drop-shadow(0 4px 8px rgba(216, 151, 0, 0.35));
+    }
+}
+
+.i_lapiz.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none; /* Bloquea completamente el evento de clic */
+}
+.i_basurero.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none; /* Bloquea completamente el evento de clic */
+}
+
+

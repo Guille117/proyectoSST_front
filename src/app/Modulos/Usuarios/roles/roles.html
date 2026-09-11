@@ -1,0 +1,172 @@
+<div class="contenedorPrincipal trabajoArea">
+    <div class="izquierda"> 
+
+        <div class="seccionSuperior">
+            <div class="buscador-container">
+                <div class="buscador">
+                    <input
+                        class="inputB"
+                        type="text"
+                        placeholder="Buscar..."
+                        [(ngModel)]="criterioBusqueda"
+                        (keyup.enter)="buscarRoles()"
+                    >
+                    <button class="btnLupa" type="button" (click)="buscarRoles()">
+                        <i class="bi bi-search fs-5"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="switchContainer">
+                <app-tab-switch [op1]="'Activos'" [op2]="'Inactivos'" (opcionCambiada)="cambiarTab($event)"></app-tab-switch>
+            </div>
+
+        </div>
+
+        <div class="roles-lista">
+          @for (item of roles; track item.id) {
+            <div
+              class="rol-card"
+              [class.activo]="rolSeleccionado?.id === item.id"
+              (click)="seleccionarRol(item)"
+            >
+              <div class="rol-card-info">
+                <span class="rol-card-nombre">{{ item.nombre }}</span>
+              </div>
+              <div class="rol-card-side">
+                <span class="rol-card-codigo">{{ item.codigo }}</span>
+              </div>
+            </div>
+          } @empty {
+            <div class="sin-roles">No hay roles registrados.</div>
+          }
+        </div>
+
+    </div>
+
+    <div class="derecha">
+      <div class="formulario formulario-container">
+        <h3 class="titulo-formulario">{{ tituloFormulario }}</h3>
+
+        <form class="form-roles" (ngSubmit)="$event.preventDefault()">
+          <app-campo-validado
+            class="etiqueta-input" 
+            [label]="'Nombre'"
+            [fieldId]="'nombre'"
+            [errorMessage]="'Debe ingresar un nombre'"
+          >
+            <input
+              type="text"
+              id="nombre"
+              name="nombre"
+              placeholder="Nombre de rol *"
+              [(ngModel)]="nombreRol"
+              [disabled]="isFormDisabled"
+              required
+              #nombre="ngModel"
+              [class.input-invalid]="nombre.touched && nombre.invalid"
+            >
+          </app-campo-validado>
+
+          <div class="seccion-permisos">
+            <div class="panel-modulos">
+              @for (mod of modulos; track mod.id) {
+                <button
+                  type="button"
+                  class="modulo-item"
+                  [class.activo]="moduloSeleccionado?.id === mod.id"
+                  (click)="seleccionarModulo(mod)"
+                >
+                  <span>{{ mod.nombre }}</span>
+                </button>
+              }
+            </div>
+
+            <div class="panel-submodulos">
+              <h4 class="submodulos-titulo">Módulo de {{ moduloSeleccionado?.nombre || '' }}</h4>
+
+              <div class="tabla-permisos-container">
+                <div class="submodulos-header">
+                  <span class="col-nombre">Submódulos</span>
+                  <div class="col-acciones-header">
+                    <span>Ver</span>
+                    <span>Crear</span>
+                    <span>Editar</span>
+                    <span>Elim.</span>
+                  </div>
+                </div>
+
+                <div class="submodulos-body">
+                  @for (submodulo of moduloSeleccionado?.submodulos; track submodulo.id) {
+                    <div class="submodulo-fila">
+                      <span class="submodulo-nombre">{{ submodulo.nombre }}</span>
+                      <div class="acciones-permisos">
+                        <input
+                          type="checkbox"
+                          class="permiso"
+                          [checked]="getPermiso(submodulo.id, 'puedeLeer')"
+                          (change)="setPermiso(submodulo.id, 'puedeLeer', $event)"
+                          [disabled]="isFormDisabled"
+                          [aria-label]="'Ver ' + submodulo.nombre"
+                        >
+                        <input
+                          type="checkbox"
+                          class="permiso"
+                          [checked]="getPermiso(submodulo.id, 'puedeCrear')"
+                          (change)="setPermiso(submodulo.id, 'puedeCrear', $event)"
+                          [disabled]="isFormDisabled"
+                          [aria-label]="'Crear ' + submodulo.nombre"
+                        >
+                        <input
+                          type="checkbox"
+                          class="permiso"
+                          [checked]="getPermiso(submodulo.id, 'puedeEditar')"
+                          (change)="setPermiso(submodulo.id, 'puedeEditar', $event)"
+                          [disabled]="isFormDisabled"
+                          [aria-label]="'Editar ' + submodulo.nombre"
+                        >
+                        <input
+                          type="checkbox"
+                          class="permiso"
+                          [checked]="getPermiso(submodulo.id, 'puedeEliminar')"
+                          (change)="setPermiso(submodulo.id, 'puedeEliminar', $event)"
+                          [disabled]="isFormDisabled"
+                          [aria-label]="'Eliminar ' + submodulo.nombre"
+                        >
+                      </div>
+                    </div>
+                  } @empty {
+                    <div class="sin-submodulos">No hay submódulos disponibles.</div>
+                  }
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="acciones-formulario">
+            @if (rolSeleccionado) {
+              @if (!isEditing) {
+                <button type="button" class="btn _cancelar" (click)="cancelarAccion()">Cancelar</button>
+                @if (rolSeleccionado.estado) {
+                  <button type="button" class="btn _editar" (click)="activarEdicion()">Editar</button>
+                }
+                <button 
+                  type="button" 
+                  [class]="rolSeleccionado.estado ? 'btn _eliminar' : 'btn _guardar'" 
+                  (click)="cambiarEstadoRol()"
+                >
+                  {{ rolSeleccionado.estado ? 'Desactivar' : 'Activar' }}
+                </button>
+              } @else {
+                <button type="button" class="btn _cancelar" (click)="cancelarAccion()">Cancelar</button>
+                <button type="button" class="btn _guardar" [disabled]="!isFormValido() || !hayCambios()" (click)="actualizarRol()">Guardar cambios</button>
+              }
+            } @else {
+              <button type="button" class="btn _cancelar" (click)="cancelarAccion()">Cancelar</button>
+              <button type="button" class="btn _guardar" [disabled]="!isFormValido()" (click)="crearRol()">Guardar</button>
+            }
+          </div>
+        </form>
+      </div>
+    </div>
+</div>

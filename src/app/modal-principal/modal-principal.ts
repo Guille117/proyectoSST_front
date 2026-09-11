@@ -10,7 +10,8 @@ import { ModalService } from './modal-service';
 export class ModalPrincipal {
   // varibles
   @Input() title: string = '';
-
+  @Input() subtitle: string = '';
+  
   // Referencia al elemento <dialog> del HTML
   @ViewChild('dialogElement') private dialog! : ElementRef<HTMLDialogElement>;
   
@@ -31,16 +32,32 @@ export class ModalPrincipal {
       const deberiaEstarAbierto = this.modalService.isOpen();
       const datos = this.modalService.datosInput();
 
-      if (datos && datos.title){
-        this.title = datos.title;
-      }else if(!componente){
-        this.title = '';
-      }
+      queueMicrotask(() => {
+        if (datos && datos.title){
+          this.title = datos.title;
+        }else if(!componente){
+          this.title = '';
+        }
+
+        if (datos && datos.subtitle){
+          this.subtitle = datos.subtitle;
+        }else if(!componente){
+          this.subtitle = '';
+        }
+      });
 
       // Si hay un componente, lo renderiza dinámicamente
       if(componente && this.componentContainer) {
         this.componentContainer.clear();
-        this.componentContainer.createComponent(componente);
+        const componentRef = this.componentContainer.createComponent(componente);
+
+        if (datos) {
+          Object.entries(datos).forEach(([key, value]) => {
+            if (key in componentRef.instance && key !== 'title') {
+              componentRef.setInput(key, value);
+            }
+          });
+        }
       }
 
       // Abre o cierra el modal según el estado

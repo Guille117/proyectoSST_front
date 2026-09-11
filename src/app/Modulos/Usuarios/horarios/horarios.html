@@ -1,0 +1,232 @@
+<div class="contenedorPrincipal trabajoArea">
+  <div class="izquierda">
+    <div class="seccionSuperior">
+      <div class="buscador-container">
+        <div class="buscador">
+          <input
+            class="inputB"
+            type="text"
+            placeholder="Buscar..."
+            [(ngModel)]="textoBusqueda"
+            name="nombreHorario"
+          >
+          <button class="btnLupa" type="button" aria-label="Buscar">
+            <i class="bi bi-search fs-5"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="miniSub-container">
+        <app-tab-switch [op1]="'Activos'" [op2]="'Inactivos'" (opcionCambiada)="getHorarios($event)"></app-tab-switch>
+      </div>
+    </div>
+
+    <div class="horarios-lista">
+      @for (item of horariosFiltrados; track item.id) {
+        <div
+          class="horario-card"
+          [class.activo]="horarioSeleccionado?.id === item.id"
+          (click)="seleccionarHorario(item)"
+        >
+          <div class="horario-card-info">
+            <span class="horario-card-nombre">{{ item.nombre }}</span>
+          </div>
+          <div class="horario-card-side">
+            <span class="horario-card-codigo">{{ item.codigo }}</span>
+          </div>
+        </div>
+      } @empty {
+        <div class="sin-horarios">No hay horarios registrados.</div>
+      }
+    </div>
+  </div>
+
+  <div class="derecha">
+    <div class="formulario formulario-container">
+      <h3 class="titulo-formulario">{{ tituloFormulario }}</h3>
+
+      <form class="form">
+        <div class="fila-encabezado-formulario">
+          <app-campo-validado
+            class="campo-nombre"
+            [label]="'Nombre'"
+            [fieldId]="'nombre'"
+            [errorMessage]="'Debe ingresar un nombre'"
+          >
+            <input
+              class="input-formulario"
+              type="text"
+              id="nombre"
+              name="nombre"
+              placeholder="Nombre del horario *"
+              required
+              [(ngModel)]="horario.nombre"
+              [disabled]="isFormDisabled"
+            >
+          </app-campo-validado>
+
+          <div class="guardia-inline">
+            <label for="guardias">Guardia médica</label>
+            <label class="switch">
+              <input
+                id="guardias"
+                type="checkbox"
+                [checked]="horario.esRotativo"
+                (change)="horario.esRotativo = $any($event.target).checked"
+                [disabled]="isFormDisabled"
+              />
+              <span class="slider"></span>
+            </label>
+          </div>
+        </div>
+
+        @if (horario.esRotativo) {
+          <div class="guardia-horas-container">
+            <app-campo-validado
+              class="etiqueta-input"
+              [label]="'Cantidad de horas seguidas de trabajo'"
+              [fieldId]="'horasTrabajo'"
+              [errorMessage]="'Debe ingresar las horas de trabajo'"
+            >
+              <input
+                class="input-formulario"
+                type="number"
+                id="horasTrabajo"
+                name="horasTrabajo"
+                placeholder="Ej: 24"
+                min="1"
+                required
+                [(ngModel)]="horarioTurno.horasTrabajo"
+                [disabled]="isFormDisabled"
+              >
+            </app-campo-validado>
+
+            <app-campo-validado
+              class="etiqueta-input"
+              [label]="'Cantidad de horas de descanso'"
+              [fieldId]="'horasDescanso'"
+              [errorMessage]="'Debe ingresar las horas de descanso'"
+            >
+              <input
+                class="input-formulario"
+                type="number"
+                id="horasDescanso"
+                name="horasDescanso"
+                placeholder="Ej: 48"
+                min="0"
+                required
+                [(ngModel)]="horarioTurno.horasDescanso"
+                [disabled]="isFormDisabled"
+              >
+            </app-campo-validado>
+          </div>
+        } @else {
+          <div class="tabla-horarios">
+            <div class="grupos-horarios">
+              <div class="grupo-horarios">
+                <div class="grupo-titulos">
+                  <span></span>
+                  <div class="titulo-horas">
+                    <span>Ingreso</span>
+                    <span>Salida</span>
+                  </div>
+                </div>
+
+                @for (dia of getPrimerGrupoDias(); track dia.diaSemana) {
+                  <div class="fila-horario">
+                    <span class="dia">{{ dia.diaSemana }}</span>
+
+                    <div class="horario-inputs">
+                      <div>
+                        <input
+                          type="time"
+                          step="60"
+                          class="input-hora"
+                          [(ngModel)]="dia.horaEntrada"
+                          [name]="'horaEntrada_' + dia.diaSemana"
+                          [disabled]="isFormDisabled"
+                        >
+                      </div>
+
+                      <div>
+                        <input
+                          type="time"
+                          step="60"
+                          class="input-hora"
+                          [(ngModel)]="dia.horaSalida"
+                          [name]="'horaSalida_' + dia.diaSemana"
+                          [disabled]="isFormDisabled"
+                        >
+                      </div>
+                    </div>
+                  </div>
+                }
+              </div>
+
+              <div class="grupo-horarios">
+                <div class="grupo-titulos">
+                  <span></span>
+                  <div class="titulo-horas">
+                    <span>Ingreso</span>
+                    <span>Salida</span>
+                  </div>
+                </div>
+
+                @for (dia of getSegundoGrupoDias(); track dia.diaSemana) {
+                  <div class="fila-horario">
+                    <span class="dia">{{ dia.diaSemana }}</span>
+
+                    <div class="horario-inputs">
+                      <div>
+                        <input
+                          type="time"
+                          step="60"
+                          class="input-hora"
+                          [(ngModel)]="dia.horaEntrada"
+                          [name]="'horaEntrada_' + dia.diaSemana"
+                          [disabled]="isFormDisabled"
+                        >
+                      </div>
+
+                      <div>
+                        <input
+                          type="time"
+                          step="60"
+                          class="input-hora"
+                          [(ngModel)]="dia.horaSalida"
+                          [name]="'horaSalida_' + dia.diaSemana"
+                          [disabled]="isFormDisabled"
+                        >
+                      </div>
+                    </div>
+                  </div>
+                }
+              </div>
+            </div>
+          </div>
+        }
+
+        <div class="acciones-formulario">
+          @if (horarioSeleccionado) {
+            @if (!isEditing) {
+              <button type="button" class="btn _cancelar" (click)="cancelarAccion()">Cancelar</button>
+              @if (horarioSeleccionado.estado) {
+                <button type="button" class="btn _editar" (click)="activarEdicion()">Editar</button>
+                <button type="button" class="btn _eliminar" (click)="eliminarHorario()">Desactivar</button>
+              } @else {
+                <button type="button" class="btn _guardar" (click)="eliminarHorario()">Activar</button>
+              }
+            } @else {
+              <button type="button" class="btn _cancelar" (click)="cancelarAccion()">Cancelar</button>
+              <button type="button" class="btn _guardar" [disabled]="!tieneCambios" (click)="actualizarHorario()">Guardar cambios</button>
+            }
+          } @else {
+            <button type="button" class="btn _cancelar" (click)="cancelarAccion()">Cancelar</button>
+            <button type="button" class="btn _guardar" (click)="guardarHorario()">Guardar</button>
+          }
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+

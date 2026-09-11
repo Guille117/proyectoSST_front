@@ -3,11 +3,11 @@ dialog {
   border-radius: 20px;
   padding: 0;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-  max-width: max-content;
+  width: min(680px, calc(100vw - 32px));
   min-width: 320px;
-  max-width: 80vh;
+  max-width: none;
   max-height: 80vh;
-  overflow: hidden;
+  overflow: visible;
   position: fixed;
   top: 50%;
   left: 50%;
@@ -81,6 +81,8 @@ dialog.closing::backdrop {
   background: white;
   display: flex;
   flex-direction: column;
+  border-radius: 20px;
+  overflow: hidden;
 
   .modal-header {
     display: flex;
@@ -91,6 +93,10 @@ dialog.closing::backdrop {
     background-position: bottom;
     background-size: 100% 2px; 
     background-repeat: no-repeat;
+  }
+
+  .modal-title{
+    
   }
 
   .modal-body {

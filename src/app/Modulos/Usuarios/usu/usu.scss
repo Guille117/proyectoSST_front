@@ -1,0 +1,127 @@
+.contenedorPrincipal{
+    display: flex;
+    width: 100%;
+    margin-top: 25px;
+}
+
+.izquierda{
+    width: 60%;
+}
+
+.seccionSuperior{
+    display: flex;
+    gap: 20px;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 25px;
+}
+
+.buscador-container {
+    width: 53%;
+    height: 45px;
+}
+
+.switchContainer{
+    width: 24%;
+}
+
+tbody tr {
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+
+    &:hover {
+        background-color: #f1f5f9;
+    }
+
+    &.table-active td {
+        background-color: #e2e8f0;
+        font-weight: 600;
+    }
+}
+
+.sin-usuarios {
+    padding: 20px;
+    color: #64748b;
+    font-style: italic;
+}
+
+.sin-seleccion {
+    padding: 40px 20px;
+    text-align: center;
+    color: #64748b;
+    font-style: italic;
+}
+
+
+.derecha{
+    width: 40%;
+    min-width: 300px;
+    padding: 16px;
+    border: 2px solid var(--colorBorde);
+    border-radius: 14px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    box-sizing: border-box;
+
+    .titulo {
+        padding-bottom: 10px;
+        border-bottom: 2px solid var(--colorBorde);
+
+        h3 {
+            color: var(--azulPrincipal);
+            font-size: 18px;
+            font-weight: 700;
+        }
+    }
+
+    .datosPer,
+    .datosLab {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 8px;
+
+        h2 {
+            grid-column: 1 / -1;
+            margin-bottom: 2px;
+            color: var(--azulSecundario);
+            font-size: 16px;
+            font-weight: 700;
+        }
+    }
+
+    .datosLab {
+        padding-top: 12px;
+        border-top: 1px solid var(--colorBorde);
+    }
+
+    .data {
+        display: grid;
+        grid-template-columns: max-content minmax(0, 1fr);
+        gap: 16px;
+        align-items: start;
+        color: #4f5155;
+        font-size: 14px;
+        line-height: 1.4;
+
+        label:first-child {
+            color: #64748b;
+            font-weight: 600;
+        }
+
+        label:last-child {
+            color: #1f2937;
+            font-weight: 500;
+            overflow-wrap: anywhere;
+        }
+    }
+
+    .footer{
+        display: flex;
+        gap: 10px;
+        justify-content: flex-end;
+    }
+
+}
+

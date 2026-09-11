@@ -1,0 +1,17 @@
+<div class="campo-formulario">
+  <label [for]="fieldId()">{{ label() }}</label>
+
+  <div class="input-wrapper">
+    <ng-content></ng-content>
+
+    <div
+      class="mensaje-error"
+      role="alert"
+      [class.mensaje-error--visible]="showError()"
+      [attr.aria-hidden]="!showError()"
+    >
+      <span class="mensaje-error__icono">{{ iconText() }}</span>
+      <span>{{ errorMessage() }}</span>
+    </div>
+  </div>
+</div>

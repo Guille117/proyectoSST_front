@@ -4,6 +4,7 @@
 @use "styles/formularioStyle.scss";
 @use "styles/botonesStyle.scss";
 @use "styles/otrosStyle.scss";
+@use "styles/popUpStyle.scss";
 
 @layer theme, base, components, utilities;
 
@@ -36,4 +37,39 @@ body {
     --widthNavBar: 4vw;
     --colorBorde: #E5EAF1;
     --colorFondoPrincipal: #F5F5F4;
+}
+
+.swal-actions-custom {
+  gap: 0.6rem;
+}
+
+.swal-btn-confirm,
+.swal-btn-cancel {
+  border: 0;
+  border-radius: 10px;
+  padding: 0.45rem 1rem;
+  font-weight: 600;
+  font-size: 0.98rem;
+  transition: transform 0.15s ease, box-shadow 0.2s ease, filter 0.2s ease;
+}
+
+.swal-btn-confirm {
+  background: #16a34a;
+  color: #fff;
+  box-shadow: 0 6px 14px rgba(22, 163, 74, 0.28);
+}
+
+.swal-btn-confirm:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.06);
+}
+
+.swal-btn-cancel {
+  background: #e5e7eb;
+  color: #111827;
+}
+
+.swal-btn-cancel:hover {
+  background: #d1d5db;
+  transform: translateY(-1px);
 }

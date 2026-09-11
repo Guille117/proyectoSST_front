@@ -1,15 +1,17 @@
 <div class="main">
     <div class="logo">
-        <img class="logolg" src="logo.jpeg" alt="">
+        <img class="logolg" src="logo.jpeg" alt="Logo">
         <h1>Sanatorio Santa Teresita</h1>
     </div>
     <div class="usuario">
         <h3>
-            Sistema Sistema
+            {{ authService.currentUser()?.nombreCompleto || 'Usuario' }}
         </h3>
         <h5>
-            Administrador
+            {{ authService.currentUser()?.rol || authService.currentUser()?.puesto || 'Administrador' }}
         </h5>
-            
     </div>
+    <button type="button" class="btn-logout" (click)="logout()" title="Cerrar sesión">
+        <i class="bi bi-box-arrow-right fs-5"></i>
+    </button>
 </div>

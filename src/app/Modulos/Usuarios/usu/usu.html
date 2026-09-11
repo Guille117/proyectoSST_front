@@ -1,0 +1,138 @@
+
+<div class="contenedorPrincipal trabajoArea">
+    <div class="izquierda">
+        <div class="seccionSuperior">
+            <div class="buscador-container">
+                <div class="buscador">
+                    <input
+                        class="inputB"
+                        type="text"
+                        placeholder="Buscar..."
+                        [(ngModel)]="criterioBusqueda"
+                        (keyup.enter)="buscarUsuarios()"
+                    >
+                        
+                    <button class="btnLupa" type="button" (click)="buscarUsuarios()">
+                        <i class="bi bi-search fs-5"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="switchContainer">
+                <app-tab-switch [op1]="'Activos'" [op2]="'Inactivos'" (opcionCambiada)="cambiarTab($event)"></app-tab-switch>
+            </div>
+
+            <button type="button" class="btn _principal" (click)="abrirModalAgregar()">Agregar usuario</button>
+        </div>
+
+        <table class="table">
+            <thead>
+                <tr>
+                    <th class="celda_centrada">No.</th>
+                    <th class="celda_centrada">Código</th>
+                    <th class="celda_izquierda">Nombre</th>
+                    <th class="celda_centrada">Teléfono</th>
+                    <th class="celda_izquierda">Rol</th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (user of usuarios; track user.id; let i = $index) {
+                    <tr [class.table-active]="usuarioSeleccionado?.id === user.id" (click)="seleccionarUsuario(user)">
+                        <td class="celda_centrada">{{ i + 1 }}</td>
+                        <td class="celda_centrada">{{ user.codigo }}</td>
+                        <td class="celda_izquierda">{{ getNombreCompleto(user) }}</td>
+                        <td class="celda_centrada">{{ getTelefono(user) }}</td>
+                        <td class="celda_izquierda">{{ getRol(user) }}</td>
+                    </tr>
+                } @empty {
+                    <tr>
+                        <td colspan="5" class="celda_centrada sin-usuarios">No se encontraron usuarios</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+ 
+    <div class="derecha">
+        @if (usuarioSeleccionado) {
+            <div class="titulo">
+                <h3>Detalle de usuario {{ usuarioSeleccionado.codigo }}</h3>
+            </div>
+
+            <div class="datosPer">
+                <h2>Datos personales</h2>
+                <div class="data">
+                    <label>Nombres:</label>
+                    <label>{{ getNombres(usuarioSeleccionado) }}</label>
+                </div>
+
+                <div class="data">
+                    <label>Apellidos:</label>
+                    <label>{{ getApellidos(usuarioSeleccionado) }}</label>
+                </div>
+
+                <div class="data">
+                    <label>CUI:</label>
+                    <label>{{ getCui(usuarioSeleccionado) }}</label>
+                </div>
+
+                <div class="data">
+                    <label>Fecha de nacimiento:</label>
+                    <label>{{ formatearFecha(getFechaNacimiento(usuarioSeleccionado)) }}</label>
+                </div>
+
+                <div class="data">
+                    <label>Edad:</label>
+                    <label>{{ calcularEdad(getFechaNacimiento(usuarioSeleccionado)) }}</label>
+                </div>
+
+                <div class="data">
+                    <label>Teléfono:</label>
+                    <label>{{ getTelefono(usuarioSeleccionado) }}</label>
+                </div>
+
+                <div class="data">
+                    <label>Email:</label>
+                    <label>{{ getEmail(usuarioSeleccionado) }}</label>
+                </div>
+            </div>
+
+            <div class="datosLab">
+                <h2>Perfil de usuario</h2>
+                <div class="data">
+                    <label>Puesto:</label>
+                    <label>{{ getPuesto(usuarioSeleccionado) }}</label>
+                </div>
+
+                <div class="data">
+                    <label>Horario:</label>
+                    <label>{{ getHorario(usuarioSeleccionado) }}</label>
+                </div>
+
+                <div class="data">
+                    <label>Username:</label>
+                    <label>{{ usuarioSeleccionado.username }}</label>
+                </div>
+
+                <div class="data">
+                    <label>Rol:</label>
+                    <label>{{ getRol(usuarioSeleccionado) }}</label>
+                </div>
+            </div>
+
+            <div class="footer">
+                @if (usuarioSeleccionado.estado) {
+                    <button type="button" class="btn _eliminar" (click)="cambiarEstadoUsuario()">Inhabilitar</button>
+                } @else {
+                    <button type="button" class="btn _principal" (click)="cambiarEstadoUsuario()">Habilitar</button>
+                }
+                <button type="button" class="btn _editar" (click)="abrirModalEditar()">Editar usuario</button>
+            </div>
+        } @else {
+            <div class="sin-seleccion">
+                Seleccione un usuario de la lista para ver su detalle.
+            </div>
+        }
+    </div>
+</div>

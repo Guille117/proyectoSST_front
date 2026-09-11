@@ -1,0 +1,70 @@
+<div class="login-wrapper">
+  <div class="login-header">
+    <div class="logo-container">
+      <img src="logo.jpeg" alt="Logo Sanatorio Santa Teresita" class="login-logo" />
+    </div>
+    <h1 class="login-title">Sanatorio Santa Teresita</h1>
+    <div class="accent-divider">
+      <span class="accent-dot"></span>
+    </div>
+    <p class="login-subtitle">Sistema de Evaluación y Evolución de Pacientes</p>
+  </div>
+
+  <div class="login-card">
+    @if (errorMessage) {
+      <div class="login-error-banner" role="alert">
+        {{ errorMessage }}
+      </div>
+    }
+
+    <form (ngSubmit)="onSubmit()" class="login-form">
+      <div class="field-group">
+        <label for="username">Usuario</label>
+        <div class="input-container">
+          <i class="bi bi-person input-icon-left"></i>
+          <input
+            id="username"
+            name="username"
+            type="text"
+            placeholder="Username"
+            [(ngModel)]="username"
+            autocomplete="username"
+            required
+          />
+        </div>
+      </div>
+
+      <div class="field-group">
+        <label for="password">Contraseña</label>
+        <div class="input-container">
+          <i class="bi bi-lock input-icon-left"></i>
+          <input
+            id="password"
+            name="password"
+            [type]="showPassword ? 'text' : 'password'"
+            placeholder="•••••"
+            [(ngModel)]="password"
+            autocomplete="current-password"
+            required
+          />
+          <button
+            type="button"
+            class="toggle-password-btn"
+            (click)="toggleShowPassword()"
+            title="Mostrar / ocultar contraseña"
+          >
+            <i class="bi" [class.bi-eye]="!showPassword" [class.bi-eye-slash]="showPassword"></i>
+          </button>
+        </div>
+      </div>
+
+      <button type="submit" class="btn-login" [disabled]="loading">
+        @if (loading) {
+          <span>Iniciando sesión...</span>
+        } @else {
+          Iniciar sesión
+        }
+      </button>
+    </form>
+  </div>
+</div>
