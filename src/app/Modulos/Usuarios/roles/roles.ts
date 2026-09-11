@@ -252,7 +252,7 @@ export class Roles implements OnInit {
   async actualizarRol(): Promise<void> {
     if (!this.rolSeleccionado || !this.isFormValido()) return;
 
-    const confirmado = await this.popUps.confirmarToast('¿Desea actualizar el rol?');
+    const confirmado = await this.popUps.confirmarToast('¿Desea actualizar este rol?');
     if (!confirmado) return;
 
     const rolReq: RolRequest = {

@@ -11,6 +11,7 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 export class CampoValidado {
   label = input.required<string>();
   fieldId = input<string>('');
+  required = input<boolean>(false);
   showError = input<boolean>(false);
   errorMessage = input<string>('');
   iconText = input<string>('!');

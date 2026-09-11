@@ -61,7 +61,15 @@ export class Usu implements OnInit {
 
   private actualizarListaUsuarios(data: UsuarioResponse[]): void {
     this.usuarios = data;
-    // this.actualizarSeleccion();
+    const primerUsuario = this.usuarios[0];
+
+    if (!primerUsuario) {
+      this.usuarioSeleccionado = null;
+      this.cdr.detectChanges();
+      return;
+    }
+
+    this.seleccionarUsuario(primerUsuario);
     this.cdr.detectChanges();
   }
 
@@ -72,7 +80,7 @@ export class Usu implements OnInit {
         this.usuarioSeleccionado = fullUser;
         this.cdr.detectChanges();
       },
-      error: () => {}
+      error: (err) => this.popUps.errorDesdeBackend(err, 'Error al cargar el detalle del usuario'),
     });
   }
 

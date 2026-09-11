@@ -1,5 +1,7 @@
 <div class="campo-formulario">
-  <label [for]="fieldId()">{{ label() }}</label>
+  <label [for]="fieldId()">
+    {{ label() }}@if (required()) {<span class="campo-obligatorio" aria-hidden="true">*</span>}
+  </label>
 
   <div class="input-wrapper">
     <ng-content></ng-content>

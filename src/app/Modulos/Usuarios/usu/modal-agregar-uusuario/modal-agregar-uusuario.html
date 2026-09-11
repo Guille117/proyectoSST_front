@@ -19,15 +19,20 @@
         class="etiqueta-input" 
         [label]="'Nombres'"
         [fieldId]="'nombre'"
+        [required]="true"
+        [showError]="!!(nombres.touched && nombres.invalid)"
         [errorMessage]="'Debe ingresar los nombres'"
         >
             <input
                 type="text"
                 id="nombre"
                 name="nombres"
-                placeholder="Nombres *"
+                placeholder="Nombres"
                 required
+                pattern="^[A-Za-zÁÉÍÓÚáéíóúÑñ ]+$"
                 [(ngModel)]="persona.nombres"
+                #nombres="ngModel"
+                [class.input-invalid]="nombres.touched && nombres.invalid"
             >
         </app-campo-validado>
 
@@ -35,15 +40,20 @@
             class="etiqueta-input" 
             [label]="'Apellidos'"
             [fieldId]="'apellidos'"
+            [required]="true"
+            [showError]="!!(apellidos.touched && apellidos.invalid)"
             [errorMessage]="'Debe ingresar los apellidos'"
         >
             <input
                 type="text"
                 id="apellidos"
                 name="apellidos"
-                placeholder="Apellidos *"
+                placeholder="Apellidos"
                 required
+                pattern="^[A-Za-zÁÉÍÓÚáéíóúÑñ ]+$"
                 [(ngModel)]="persona.apellidos"
+                #apellidos="ngModel"
+                [class.input-invalid]="apellidos.touched && apellidos.invalid"
             >
         </app-campo-validado>
     </div>
@@ -53,15 +63,21 @@
             class="etiqueta-input" 
             [label]="'CUI'"
             [fieldId]="'cui'"
+            [required]="true"
+            [showError]="!!(cui.touched && cui.invalid)"
             [errorMessage]="'Debe ingresar un CUI válido'"
         >
             <input
                 type="text"
                 id="cui"
                 name="cui"
-                placeholder="CUI *"
+                placeholder="CUI"
                 required
+                pattern="[0-9]{13}"
+                maxlength="13"
                 [(ngModel)]="persona.cui"
+                #cui="ngModel"
+                [class.input-invalid]="cui.touched && cui.invalid"
             >
         </app-campo-validado>
 
@@ -69,6 +85,8 @@
             class="etiqueta-input" 
             [label]="'Sexo'"
             [fieldId]="'sexo'"
+            [required]="true"
+            [showError]="!!(sexo.touched && sexo.invalid)"
             [errorMessage]="'Debe seleccionar un sexo'"
         >
             <select
@@ -76,8 +94,10 @@
                 name="sexo"
                 required
                 [(ngModel)]="persona.sexo"
+                #sexo="ngModel"
+                [class.input-invalid]="sexo.touched && sexo.invalid"
             >
-                <option value="" disabled>Seleccione un sexo *</option>
+                <option value="" disabled>Seleccione un sexo</option>
                 <option value="MASCULINO">Masculino</option>
                 <option value="FEMENINO">Femenino</option>
             </select>
@@ -89,6 +109,8 @@
             class="etiqueta-input" 
             [label]="'Fecha de nacimiento'"
             [fieldId]="'fechaNacimiento'"
+            [required]="true"
+            [showError]="!!(fechaNacimiento.touched && fechaNacimiento.invalid)"
             [errorMessage]="'Debe ingresar una fecha de nacimiento'"
         >
             <input
@@ -97,6 +119,8 @@
                 name="fechaNacimiento"
                 required
                 [(ngModel)]="persona.fechaNacimiento"
+                #fechaNacimiento="ngModel"
+                [class.input-invalid]="fechaNacimiento.touched && fechaNacimiento.invalid"
             >
         </app-campo-validado>
 
@@ -104,6 +128,8 @@
             class="etiqueta-input" 
             [label]="'Teléfono'"
             [fieldId]="'telefono'"
+            [required]="true"
+            [showError]="!!(telefono.touched && telefono.invalid)"
             [errorMessage]="'Debe ingresar un teléfono'"
         >
             <input
@@ -111,7 +137,12 @@
                 id="telefono"
                 name="telefono"
                 placeholder="Teléfono"
+                required
+                pattern="[0-9]{8}"
+                maxlength="8"
                 [(ngModel)]="persona.telefono"
+                #telefono="ngModel"
+                [class.input-invalid]="telefono.touched && telefono.invalid"
             >
         </app-campo-validado>
     </div>
@@ -121,14 +152,18 @@
             class="etiqueta-input" 
             [label]="'Email'"
             [fieldId]="'email'"
-            [errorMessage]="''"
+            [showError]="!!(email.touched && email.invalid)"
+            [errorMessage]="'Formato de email inválido'"
         >
             <input
                 type="email"
                 id="email"
                 name="email"
                 placeholder="Email" 
+                email
                 [(ngModel)]="persona.email"
+                #email="ngModel"
+                [class.input-invalid]="email.touched && email.invalid"
             >
         </app-campo-validado>
     </div>
@@ -142,6 +177,8 @@
         class="etiqueta-input" 
         [label]="'Puesto'"
         [fieldId]="'puesto'"
+            [required]="true"
+        [showError]="!!(puesto.touched && puesto.invalid)"
         [errorMessage]="'Debe seleccionar un puesto'"
         >
             <select
@@ -149,8 +186,10 @@
                 name="puestoId"
                 required
                 [(ngModel)]="usuarioReq.puestoId"
+                #puesto="ngModel"
+                [class.input-invalid]="puesto.touched && puesto.invalid"
             >
-                <option [ngValue]="0" disabled>Seleccione un puesto *</option>
+                <option [ngValue]="0" disabled>Seleccione un puesto</option>
                 @for (puesto of puestos; track puesto.id) {
                     <option [ngValue]="puesto.id">{{ puesto.nombre }}</option>
                 }
@@ -161,6 +200,8 @@
             class="etiqueta-input" 
             [label]="'Horario'"
             [fieldId]="'horario'"
+            [required]="true"
+            [showError]="!!(horario.touched && horario.invalid)"
             [errorMessage]="'Debe seleccionar un horario'"
         >
             <select
@@ -168,8 +209,10 @@
                 name="horarioId"
                 required
                 [(ngModel)]="usuarioReq.horarioId"
+                #horario="ngModel"
+                [class.input-invalid]="horario.touched && horario.invalid"
             >
-                <option [ngValue]="0" disabled>Seleccione un horario *</option>
+                <option [ngValue]="0" disabled>Seleccione un horario</option>
                 @for (horario of horarios; track horario.id) {
                     <option [ngValue]="horario.id">{{ horario.nombre }}</option>
                 }
@@ -182,15 +225,19 @@
             class="etiqueta-input" 
             [label]="'Usuario'"
             [fieldId]="'usuario'"
+            [required]="true"
+            [showError]="!!(usuario.touched && usuario.invalid)"
             [errorMessage]="'Debe ingresar un usuario'"
         >
             <input
                 type="text"
                 id="usuario"
                 name="username"
-                placeholder="Nombre de usuario *"
+                placeholder="Nombre de usuario"
                 required
                 [(ngModel)]="usuarioReq.username"
+                #usuario="ngModel"
+                [class.input-invalid]="usuario.touched && usuario.invalid"
             >
         </app-campo-validado>
 
@@ -198,6 +245,8 @@
             class="etiqueta-input" 
             [label]="'Rol'"
             [fieldId]="'rol'"
+            [required]="true"
+            [showError]="!!(rol.touched && rol.invalid)"
             [errorMessage]="'Debe seleccionar un rol'"
         >
             <select
@@ -205,64 +254,14 @@
                 name="rolId"
                 required
                 [(ngModel)]="usuarioReq.rolId"
+                #rol="ngModel"
+                [class.input-invalid]="rol.touched && rol.invalid"
             >
-                <option [ngValue]="0" disabled>Seleccione un rol *</option>
+                <option [ngValue]="0" disabled>Seleccione un rol</option>
                 @for (rol of roles; track rol.id) {
                     <option [ngValue]="rol.id">{{ rol.nombre }}</option>
                 }
             </select>
-        </app-campo-validado>
-    </div>
-
-    <div class="fila">
-         <app-campo-validado
-            class="etiqueta-input" 
-            [label]="'Contraseña'"
-            [fieldId]="'contrasena'"
-            [errorMessage]="'Debe ingresar una contraseña'"
-        >
-            <div class="input-con-ojo">
-                <input
-                    [type]="showPassword ? 'text' : 'password'"
-                    id="contrasena"
-                    name="password"
-                    placeholder="Contraseña {{ isEditing ? '(Opcional)' : '*' }}"
-                    [(ngModel)]="usuarioReq.password"
-                >
-                <button
-                    type="button"
-                    class="btn-ojo"
-                    (click)="toggleShowPassword()"
-                    title="Mostrar / ocultar contraseña"
-                >
-                    <i class="bi" [class.bi-eye]="!showPassword" [class.bi-eye-slash]="showPassword"></i>
-                </button>
-            </div>
-        </app-campo-validado>
-
-        <app-campo-validado
-            class="etiqueta-input" 
-            [label]="'Confirmar contraseña'"
-            [fieldId]="'confirmarContrasena'"
-            [errorMessage]="'Debe confirmar la contraseña'"
-        >
-            <div class="input-con-ojo">
-                <input
-                    [type]="showConfirmPassword ? 'text' : 'password'"
-                    id="confirmarContrasena"
-                    name="confirmPassword"
-                    placeholder="Confirmar contraseña {{ isEditing ? '(Opcional)' : '*' }}"
-                    [(ngModel)]="confirmPassword"
-                >
-                <button
-                    type="button"
-                    class="btn-ojo"
-                    (click)="toggleShowConfirmPassword()"
-                    title="Mostrar / ocultar contraseña"
-                >
-                    <i class="bi" [class.bi-eye]="!showConfirmPassword" [class.bi-eye-slash]="showConfirmPassword"></i>
-                </button>
-            </div>
         </app-campo-validado>
     </div>
 
@@ -275,12 +274,12 @@
         <button type="button" class="btn _principal" (click)="disminuirContador()">
             <i class="bi bi-arrow-left"></i> Atrás
         </button>
-        <button type="button" class="btn _guardar" (click)="guardarUsuario()">
+        <button type="button" class="btn _guardar" [disabled]="!puedeGuardarPaso2" (click)="guardarUsuario()">
             {{ isEditing ? 'Guardar cambios' : 'Guardar' }}
         </button>
     }
     @if (contador < 1) {
-        <button type="button" class="btn _principal" (click)="aumentarContador()">
+        <button type="button" class="btn _principal" [disabled]="!puedeAvanzarPaso1" (click)="aumentarContador()">
             Siguiente <i class="bi bi-arrow-right"></i>
         </button>
     }

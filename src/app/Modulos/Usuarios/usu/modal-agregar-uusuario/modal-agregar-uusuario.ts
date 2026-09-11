@@ -44,21 +44,8 @@ export class ModalAgregarUusuario implements OnInit, OnChanges {
     horarioId: 0,
     rolId: 0,
     username: '',
-    password: '',
     estado: true,
   };
-
-  confirmPassword = '';
-  showPassword = false;
-  showConfirmPassword = false;
-
-  toggleShowPassword(): void {
-    this.showPassword = !this.showPassword;
-  }
-
-  toggleShowConfirmPassword(): void {
-    this.showConfirmPassword = !this.showConfirmPassword;
-  }
 
   constructor(
     private puestoService: PuestoService,
@@ -79,6 +66,29 @@ export class ModalAgregarUusuario implements OnInit, OnChanges {
     if (changes['usuarioToEdit'] || changes['isEditing']) {
       this.cargarDatosEdicion();
     }
+  }
+
+  get puedeAvanzarPaso1(): boolean {
+    return !!(
+      this.persona.nombres?.trim() &&
+      this.persona.apellidos?.trim() &&
+      /^[A-Za-zÁÉÍÓÚáéíóúÑñ ]+$/.test(this.persona.nombres.trim()) &&
+      /^[A-Za-zÁÉÍÓÚáéíóúÑñ ]+$/.test(this.persona.apellidos.trim()) &&
+      /^[0-9]{13}$/.test(this.persona.cui?.trim() || '') &&
+      this.persona.sexo &&
+      this.persona.fechaNacimiento &&
+      /^[0-9]{8}$/.test(this.persona.telefono?.trim() || '') &&
+      (!this.persona.email?.trim() || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.persona.email.trim()))
+    );
+  }
+
+  get puedeGuardarPaso2(): boolean {
+    return !!(
+      this.usuarioReq.puestoId &&
+      this.usuarioReq.horarioId &&
+      this.usuarioReq.rolId &&
+      this.usuarioReq.username?.trim()
+    );
   }
 
   cargarDatosEdicion(): void {
@@ -102,10 +112,8 @@ export class ModalAgregarUusuario implements OnInit, OnChanges {
         horarioId: Number(horarioIdVal),
         rolId: Number(rolIdVal),
         username: this.usuarioToEdit.username || '',
-        password: '',
         estado: this.usuarioToEdit.estado ?? true,
       };
-      this.confirmPassword = '';
       this.cdr.detectChanges();
     }
   }
@@ -134,7 +142,7 @@ export class ModalAgregarUusuario implements OnInit, OnChanges {
   }
 
   aumentarContador(): void {
-    if (this.validarPaso1() && this.contador < 1) {
+    if (this.puedeAvanzarPaso1 && this.contador < 1) {
       this.contador++;
     }
   }
@@ -170,6 +178,14 @@ export class ModalAgregarUusuario implements OnInit, OnChanges {
       this.popUps.formIncompleto('Debe ingresar la fecha de nacimiento.');
       return false;
     }
+    if (!this.persona.telefono?.trim()) {
+      this.popUps.formIncompleto('Debe ingresar un teléfono.');
+      return false;
+    }
+    if (!/^[0-9]{8}$/.test(this.persona.telefono.trim())) {
+      this.popUps.formIncompleto('El teléfono debe tener 8 dígitos.');
+      return false;
+    }
     return true;
   }
 
@@ -191,30 +207,17 @@ export class ModalAgregarUusuario implements OnInit, OnChanges {
       return false;
     }
 
-    if (!this.isEditing) {
-      if (!this.usuarioReq.password) {
-        this.popUps.formIncompleto('Debe ingresar una contraseña.');
-        return false;
-      }
-      if (this.usuarioReq.password !== this.confirmPassword) {
-        this.popUps.formIncompleto('Las contraseñas no coinciden.');
-        return false;
-      }
-    } else if (this.usuarioReq.password) {
-      if (this.usuarioReq.password !== this.confirmPassword) {
-        this.popUps.formIncompleto('Las contraseñas no coinciden.');
-        return false;
-      }
-    }
     return true;
   }
 
   guardarUsuario(): void {
-    if (!this.validarPaso1()) {
+    if (!this.puedeAvanzarPaso1) {
       this.contador = 0;
+      this.popUps.formIncompleto('Completa correctamente los datos personales.');
       return;
     }
-    if (!this.validarPaso2()) {
+    if (!this.puedeGuardarPaso2) {
+      this.popUps.formIncompleto('Completa correctamente los datos de usuario.');
       return;
     }
 
@@ -235,8 +238,6 @@ export class ModalAgregarUusuario implements OnInit, OnChanges {
       horarioId: Number(this.usuarioReq.horarioId),
       rolId: Number(this.usuarioReq.rolId),
       username: this.usuarioReq.username!,
-      password: this.usuarioReq.password || undefined,
-      confirmPassword: this.confirmPassword || this.usuarioReq.password || undefined,
       estado: this.usuarioReq.estado ?? true,
     };
 

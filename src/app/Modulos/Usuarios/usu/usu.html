@@ -63,24 +63,16 @@
             <div class="datosPer">
                 <h2>Datos personales</h2>
                 <div class="data">
-                    <label>Nombres:</label>
-                    <label>{{ getNombres(usuarioSeleccionado) }}</label>
+                    <label>Nombre:</label>
+                    <label>{{ getNombres(usuarioSeleccionado) + ' ' + getApellidos(usuarioSeleccionado) }}</label>
                 </div>
 
-                <div class="data">
-                    <label>Apellidos:</label>
-                    <label>{{ getApellidos(usuarioSeleccionado) }}</label>
-                </div>
 
                 <div class="data">
                     <label>CUI:</label>
                     <label>{{ getCui(usuarioSeleccionado) }}</label>
                 </div>
 
-                <div class="data">
-                    <label>Fecha de nacimiento:</label>
-                    <label>{{ formatearFecha(getFechaNacimiento(usuarioSeleccionado)) }}</label>
-                </div>
 
                 <div class="data">
                     <label>Edad:</label>

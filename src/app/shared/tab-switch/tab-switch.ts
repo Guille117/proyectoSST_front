@@ -14,8 +14,10 @@ export class TabSwitch {
   
   mostrarActivos: boolean = true;
 
-  cambiarOpcion() {
-    this.mostrarActivos = !this.mostrarActivos;
-    this.opcionCambiada.emit(this.mostrarActivos);
+  seleccionarOpcion(activos: boolean): void {
+    if (this.mostrarActivos === activos) return;
+
+    this.mostrarActivos = activos;
+    this.opcionCambiada.emit(activos);
   }
 }

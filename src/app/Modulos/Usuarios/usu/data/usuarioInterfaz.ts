@@ -39,8 +39,6 @@ export interface UsuarioRequest {
   horarioId: number;
   rolId: number;
   username: string;
-  password?: string;
-  confirmPassword?: string;
   estado?: boolean;
 }
 
