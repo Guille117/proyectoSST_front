@@ -7,6 +7,31 @@ import Swal from 'sweetalert2';
 })
 export class PopUps {
 
+  private posicionarToast(popup: HTMLElement): void {
+    const container = popup.parentElement as HTMLElement | null;
+    if (!container) return;
+
+    container.style.position = 'fixed';
+    container.style.inset = '0';
+    container.style.width = '100vw';
+    container.style.height = '100vh';
+    container.style.zIndex = '2147483647';
+    container.style.display = 'flex';
+    container.style.alignItems = 'flex-start';
+    container.style.justifyContent = 'flex-start';
+    container.style.padding = '16px';
+    container.style.boxSizing = 'border-box';
+    container.style.pointerEvents = 'none';
+
+    popup.style.position = 'absolute';
+    popup.style.top = '16px';
+    popup.style.left = 'calc(100% + 16px)';
+    popup.style.right = 'auto';
+    popup.style.margin = '0';
+    popup.style.transform = 'none';
+    popup.style.pointerEvents = 'auto';
+  }
+
   private getTarget(): HTMLElement | string {
     const openDialog = document.querySelector('dialog[open]') as HTMLElement;
     return openDialog || 'body';
@@ -33,6 +58,7 @@ exito(mensaje: string, titulo='¡Éxito!') {
     title: titulo,
     text: mensaje,
     target: this.getTarget(),
+    didOpen: (popup) => this.posicionarToast(popup),
   });
 }
 
@@ -43,6 +69,7 @@ error(mensaje: string) {
     title: 'Error',
     text: mensaje,
     target: this.getTarget(),
+    didOpen: (popup) => this.posicionarToast(popup),
   });
 }
 
@@ -146,65 +173,4 @@ private obtenerMensajeError(error: unknown, mensajeDefault: string): string {
   return mensajeDefault;
 }
 
-confirmacionActualizar(): Promise<boolean> {
-  return Swal.fire({
-    icon: 'question',
-    title: '<span style="font-weight:600; color:#111827;">¿Desea continuar?</span>',
-    html: `
-      <p style="font-size:14px; color:#374151; margin-top:8px;">
-        La actualización se aplicará a todos los registros vinculados.
-      </p>
-    `,
-    background: '#ffffff',
-    width: '25rem',
-    padding: '1.5rem 1.5rem 1rem',
-    showCancelButton: true,
-    confirmButtonText: 'Sí',
-    cancelButtonText: 'No',
-    reverseButtons: true,
-    allowOutsideClick: false,
-    allowEscapeKey: false,
-    focusCancel: true,
-    buttonsStyling: false,
-    target: this.getTarget(),
-    customClass: {
-      popup: 'rounded-4 shadow-sm border-0',
-      actions: 'swal-actions-custom',
-      confirmButton: 'swal-btn-confirm', 
-      cancelButton: 'swal-btn-cancel'
-    },
-    position: 'top', // centrado en pantalla
-  }).then((res) => !!res.isConfirmed);
-}
-
-confirmacionEliminar(): Promise<boolean> {
-  return Swal.fire({
-    icon: 'question',
-    title: '<span style="font-weight:600; color:#111827;">¿Desea continuar?</span>',
-    html: `
-      <p style="font-size:14px; color:#374151; margin-top:8px;">
-        La desactivación afectará a todos los registros vinculados y dejarán de estar disponibles en el sistema.
-      </p>
-    `,
-    background: '#ffffff',
-    width: '25rem',
-    padding: '1.5rem 1.5rem 1rem',
-    showCancelButton: true,
-    confirmButtonText: 'Sí',
-    cancelButtonText: 'No',
-    reverseButtons: true,
-    allowOutsideClick: false,
-    allowEscapeKey: false,
-    focusCancel: true,
-    buttonsStyling: false,
-    target: this.getTarget(),
-    customClass: {
-      popup: 'rounded-4 shadow-sm border-0',
-      actions: 'swal-actions-custom',
-      confirmButton: 'swal-btn-confirm',
-      cancelButton: 'swal-btn-cancel'
-    },
-    position: 'top', // centrado en pantalla
-  }).then((res) => !!res.isConfirmed);
-}
 }

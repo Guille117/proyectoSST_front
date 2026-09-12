@@ -154,7 +154,9 @@ export class ModalAgregarUusuario implements OnInit, OnChanges {
   }
 
   cerrarModal(): void {
-    this.modalService.close();
+    // this.modalService.close();
+    this.popUps.error('Se ha cerrado el modal.');
+
   }
 
   validarPaso1(): boolean {

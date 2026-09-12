@@ -112,7 +112,10 @@ throw new Error('Method not implemented.');
   }
 
   async editarProveedor() {
-    const confirmado = await this.popUps.confirmacionActualizar();
+    const confirmado = await this.popUps.confirmarToast(
+      '¿Deseas guardar los cambios realizados?',
+      'Confirmación'
+    );
     if (!confirmado) {
       return;
     }
@@ -141,7 +144,10 @@ throw new Error('Method not implemented.');
   }
 
   async cambiarEstadoProveedor(id: number) {
-    await this.popUps.confirmacionEliminar().then((result) => { 
+    await this.popUps.confirmarToast(
+      '¿Deseas cambiar el estado del proveedor?',
+      'Confirmación'
+    ).then((result) => { 
       this.proveedorService.cambiarEstado(id).subscribe({
         next: () => {
           this.popUps.exito('Estado del proveedor cambiado exitosamente.');
