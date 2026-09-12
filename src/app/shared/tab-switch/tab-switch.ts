@@ -1,5 +1,4 @@
-import { Component, EventEmitter, Output } from '@angular/core';
-import { Input } from '@angular/core';
+import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { NgClass } from '@angular/common';
 @Component({
   selector: 'app-tab-switch',
@@ -8,11 +7,10 @@ import { NgClass } from '@angular/common';
   styleUrl: './tab-switch.scss',
 })
 export class TabSwitch {
-  @Input() op1: string = '';
-  @Input() op2: string = '';
+  @Input() op1 = '';
+  @Input() op2 = '';
+  @Input() mostrarActivos = true;
   @Output() opcionCambiada = new EventEmitter<boolean>();
-  
-  mostrarActivos: boolean = true;
 
   seleccionarOpcion(activos: boolean): void {
     if (this.mostrarActivos === activos) return;

@@ -1,0 +1,111 @@
+<div class="catalogo-layout">
+	<section class="panel panel-grupos">
+		<h3 class="panel-title">Catálogos</h3>
+
+		<table class="table tabla-catalogos">
+			<thead>
+				<tr>
+					<th class="celda_izquierda">Nombre</th>
+				</tr>
+			</thead>
+			<tbody>
+				<tr class="selected-row">
+					<td>Puesto</td>
+				</tr>
+			</tbody>
+		</table>
+	</section>
+
+	<section class="panel panel-registros">
+		<div class="encabezado-registros">
+			<h3 class="panel-title">Puesto</h3>
+			<div class="miniSub-container">
+				<app-tab-switch
+					[op1]="'Activos'"
+					[op2]="'Inactivos'"
+					[mostrarActivos]="mostrarActivos"
+					(opcionCambiada)="mostrarPuestos($event)"
+				></app-tab-switch>
+			</div>
+		</div>
+
+		<table class="table tabla-registros">
+			<thead>
+				<tr>
+					<th class="celda_centrada">No.</th>
+					<th class="celda_izquierda">Nombre</th>
+					<th class="celda_centrada">Acciones</th>
+				</tr>
+			</thead>
+			<tbody>
+				@for (puesto of puestos; track puesto.id) {
+					<tr>
+						<td class="celda_centrada">{{ $index + 1 }}</td>
+						<td class="celda_izquierda">{{ puesto.nombre }}</td>
+						<td class="celda_centrada acciones">
+							@if (mostrarActivos) {
+								<button
+									type="button"
+									class="btn _editar"
+									[disabled]="enProceso"
+									(click)="seleccionarPuesto(puesto)"
+								>
+									Editar
+								</button>
+							}
+							<button
+								type="button"
+								class="btn"
+								[class._eliminar]="mostrarActivos"
+								[class._guardar]="!mostrarActivos"
+								[disabled]="enProceso"
+								(click)="cambiarEstadoPuesto(puesto)"
+							>
+								{{ mostrarActivos ? 'Desactivar' : 'Activar' }}
+							</button>
+						</td>
+					</tr>
+				} @empty {
+					<tr>
+						<td class="celda_centrada" colspan="3">No hay puestos para mostrar.</td>
+					</tr>
+				}
+			</tbody>
+		</table>
+	</section>
+
+	<section class="panel panel-formulario">
+		<h3 class="panel-title">{{ tituloFormulario }}</h3>
+
+		<div class="formulario-box">
+			<label for="nombrePuesto" class="label">Nombre</label>
+			<input
+				id="nombrePuesto"
+				type="text"
+				[(ngModel)]="puesto.nombre"
+				name="nombrePuesto"
+				placeholder="Ingrese el nombre del puesto"
+				[disabled]="enProceso"
+			>
+
+			<div class="acciones-formulario">
+				<button
+					type="button"
+					class="btn _cancelar"
+					[disabled]="enProceso"
+					(click)="resetFormulario()"
+				>
+					Cancelar
+				</button>
+				<button
+					type="button"
+					class="btn _guardar"
+					[disabled]="!formularioValido || !hayCambiosEnEdicion || enProceso"
+					(click)="modoEdicion ? actualizarPuesto() : guardarPuesto()"
+				>
+					{{ modoEdicion ? 'Guardar cambios' : 'Guardar' }}
+				</button>
+			</div>
+		</div>
+	</section>
+</div>

@@ -6,6 +6,8 @@ import { rutasFarmacia } from './Modulos/Farmacia/rutasFarmacia';
 import { PrincipalUsuarios } from './Modulos/Usuarios/principal-usuarios/principal-usuarios';
 import { rutasUsuarios } from './Modulos/Usuarios/rutasUsuarios';
 import { authGuard, loginGuard } from './Modulos/Auth/data/auth.guard';
+import { PrincipalCatalogo } from './Modulos/Catalogos/principal-catalogo/principal-catalogo';
+import { rutasCatalogo } from './Modulos/Catalogos/rutasCatalogo';
 
 export const routes: Routes = [
   {
@@ -17,6 +19,7 @@ export const routes: Routes = [
       { path: '', redirectTo: 'usuarios', pathMatch: 'full' },
       { path: 'farmacia', component: PrincipalFarmacia, children: rutasFarmacia },
       { path: 'usuarios', component: PrincipalUsuarios, children: rutasUsuarios },
+      { path: 'catalogos', component: PrincipalCatalogo, children: rutasCatalogo },
     ],
   },
   {

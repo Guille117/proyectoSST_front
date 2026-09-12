@@ -92,9 +92,6 @@ export class Horarios implements OnInit {
           this.resetearFormulario();
         }
         this.cdr.detectChanges();
-      },
-      error: (error) => {
-        this.popUps.errorDesdeBackend(error, 'Error al cargar los horarios');
       }
     });
   }

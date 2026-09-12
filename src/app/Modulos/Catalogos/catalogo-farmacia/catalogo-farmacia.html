@@ -1,0 +1,98 @@
+<div class="catalogo-layout">
+  <section class="panel panel-grupos">
+    <h3 class="panel-title">Catálogos</h3>
+
+    <table class="table tabla-catalogos">
+      <thead>
+        <tr>
+          <th class="celda_izquierda">Nombre</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (grupo of grupos; track grupo.id) {
+          <tr
+            [class.selected-row]="grupoSeleccionado.id === grupo.id"
+            (click)="seleccionarGrupo(grupo)"
+          >
+            <td>{{ grupo.nombre }}</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </section>
+
+  <section class="panel panel-registros">
+    <div class="encabezado-registros">
+      <h3 class="panel-title">{{ grupoSeleccionado.nombre }}</h3>
+      <div class="miniSub-container">
+        <app-tab-switch
+          [op1]="'Activos'"
+          [op2]="'Inactivos'"
+          (opcionCambiada)="mostrarActivos = $event"
+        ></app-tab-switch>
+      </div>
+    </div>
+
+    <table class="table tabla-registros">
+      <thead>
+        <tr>
+          <th class="celda_centrada">No.</th>
+          <th class="celda_izquierda">Nombre</th>
+          <th class="celda_centrada">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (item of registrosMostrados; track item.id) {
+          <tr>
+            <td class="celda_centrada">{{ $index + 1 }}</td>
+            <td class="celda_izquierda">{{ item.nombre }}</td>
+            <td class="celda_centrada acciones">
+              <button type="button" class="btn _editar" (click)="editarRegistro(item)">
+                Editar
+              </button>
+              <button
+                type="button"
+                class="btn"
+                [class._eliminar]="item.activo"
+                [class._guardar]="!item.activo"
+                (click)="cambiarEstadoRegistro(item)"
+              >
+                {{ item.activo ? 'Desactivar' : 'Activar' }}
+              </button>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </section>
+
+  <section class="panel panel-formulario">
+    <h3 class="panel-title">{{ tituloFormulario }}</h3>
+
+    <div class="formulario-box">
+      <label for="nombreRegistro" class="label">Nombre</label>
+      <input
+        id="nombreRegistro"
+        type="text"
+        [(ngModel)]="nombreRegistro"
+        name="nombreRegistro"
+        placeholder="Ingrese el nombre"
+        [disabled]="!grupoSeleccionado"
+      >
+
+      <div class="acciones-formulario">
+        <button type="button" class="btn _cancelar" (click)="resetFormulario()">
+          Cancelar
+        </button>
+        <button
+          type="button"
+          class="btn _guardar"
+          [disabled]="!formularioValido"
+          (click)="guardarRegistro()"
+        >
+          {{ modoEdicion ? 'Guardar cambios' : 'Guardar' }}
+        </button>
+      </div>
+    </div>
+  </section>
+</div>
