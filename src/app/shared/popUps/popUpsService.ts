@@ -21,11 +21,12 @@ export class PopUps {
     }
   });
 
-  exito(mensaje: string, titulo = '¡Éxito!') {
+  exito(mensaje: string, titulo = '¡Éxito!', duracion = 3000) {
     this.Toast.fire({
       icon: 'success',
       title: titulo,
       text: mensaje,
+      timer: duracion,
     });
   }
 

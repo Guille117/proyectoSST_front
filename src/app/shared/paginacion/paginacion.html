@@ -1,0 +1,14 @@
+<div class="contenido">
+    <div class="texto">
+        Mostrando {{cantidadMostrar}} de {{totalPaginas}} resultados
+    </div>
+    <nav>
+        <button type="button" class="izquierda" [disabled]="paginaActual <= 1" (click)="paginaAnterior()">
+            <i class="bi bi-chevron-left"></i>
+        </button>
+        <div class="pagina">{{ paginaActual }}</div>
+        <button type="button" class="derecha" [disabled]="paginaActual >= totalPaginas" (click)="paginaSiguiente()">
+            <i class="bi bi-chevron-right"></i>
+        </button>
+    </nav>
+</div>

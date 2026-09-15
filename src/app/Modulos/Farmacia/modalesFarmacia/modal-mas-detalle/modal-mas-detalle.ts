@@ -1,6 +1,7 @@
 import { Component, OnInit, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { TabSwitch } from '../../../../shared/tab-switch/tab-switch';
 
 interface ProductForm {
   productType: 'medication' | 'input';
@@ -14,7 +15,7 @@ interface ProductForm {
 @Component({
   selector: 'app-modal-mas-detalle',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, TabSwitch],
   templateUrl: './modal-mas-detalle.html',
   styleUrl: './modal-mas-detalle.scss',
 })
@@ -39,10 +40,6 @@ export class ModalMasDetalle implements OnInit {
   constructor() {}
 
   ngOnInit(): void {}
-
-  changeProductType(): void {
-    this.isMedicamento = !this.isMedicamento;
-  }
 
   cancel(): void {
     this.onCancel.emit();

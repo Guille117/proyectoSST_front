@@ -258,14 +258,20 @@ export class ModalAgregarUusuario implements OnInit, OnChanges {
       });
     } else {
       this.usuarioService.postUsuario(payload).subscribe({
-        next: () => {
-          this.popUps.exito('Usuario guardado exitosamente.');
+        next: (respuesta) => {
           this.modalService.close();
-          if (this.onSuccess) {
-            this.onSuccess();
-          }
+          window.setTimeout(() => {
+            const pin = respuesta.pin;
+            const mensaje = pin === undefined || pin === null
+              ? 'Usuario guardado exitosamente.\nNo se recibió el PIN del primer ingreso.'
+              : `Usuario guardado exitosamente.\nPIN de primer ingreso: ${pin}\nTiene una hora para ingresarlo al iniciar sesión por primera vez.`;
+
+            this.popUps.exito(mensaje, '¡Éxito!', 6000);
+            this.onSuccess?.();
+          }, 550);
         },
         error: (err) => {
+          console.log(payload);
           this.popUps.errorDesdeBackend(err, 'No se pudo guardar el usuario.');
         }
       });

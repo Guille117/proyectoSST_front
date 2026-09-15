@@ -4,15 +4,13 @@
   <div class="modal-content">
     <!-- Product Type Selector -->
     <div class="miniSub-container campo-formulario" [ngClass]="{'w-medicamento': isMedicamento, 'w-insumo': !isMedicamento}">
-        <label class="form-label">Tipo de producto</label>
-        <div class="miniSubMenu">
-            <div [ngClass]="{'op2': isMedicamento, 'op': !isMedicamento}" (click)="changeProductType()" [style.pointer-events]="!isMedicamento ? 'auto' : 'none'">
-                Medicamentos
-            </div>
-            <div [ngClass]="{'op2': !isMedicamento, 'op': isMedicamento}" (click)="changeProductType()" [style.pointer-events]="isMedicamento ? 'auto' : 'none'">
-                Insumos
-            </div>
-        </div>
+      <label class="form-label">Tipo de producto</label>
+      <app-tab-switch
+        [op1]="'Medicamentos'"
+        [op2]="'Insumos'"
+        [mostrarActivos]="isMedicamento"
+        (opcionCambiada)="isMedicamento = $event"
+      ></app-tab-switch>
     </div>
 
     

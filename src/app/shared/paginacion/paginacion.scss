@@ -1,0 +1,54 @@
+.contenido{
+    display: flex;
+    margin: 10px;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.texto{
+    font-size: 17px;
+    color: var(--texto);
+    color:rgb(112, 112, 111);
+    font-style:italic
+}
+
+nav{
+    display: flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.pagina{
+    padding: 5px 10px;
+    background-color: var(--azulSecundario);
+    color: white;
+    font-size: 20px;
+    border-radius: 10px;
+
+}
+
+.izquierda, .derecha{
+    border: 0;
+    background: transparent;
+   padding: 5px 5px;
+   font-size: 20px;
+   font-weight:600;
+   border-radius: 15px;
+   cursor: pointer;
+
+   &:hover{
+    background-color: var(--azulSecundario);
+    color: white;
+   }
+
+   &:disabled{
+    color: rgb(180, 180, 177);
+    cursor: default;
+   }
+
+   &:disabled:hover{
+    background-color: transparent;
+    color: rgb(180, 180, 177);
+   }
+}
+

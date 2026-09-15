@@ -48,6 +48,7 @@ export interface UsuarioResponse {
   codigo: string;
   username: string;
   estado: boolean;
+  pin?: string | number;
 
   cui?: string;
   nombres?: string;

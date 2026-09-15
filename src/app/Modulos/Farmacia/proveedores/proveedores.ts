@@ -1,10 +1,8 @@
 import { ChangeDetectorRef, Component, inject } from '@angular/core';
-import { NgClass } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { proveedorRequest, proveedorResponse } from './data/proveedorInterfaz';
 import { ProveedorService } from './data/proveedor-service';
 import { CampoValidado } from '../../../shared/campo-validado/campo-validado';
-import { ModalPrincipal } from '../../../modal-principal/modal-principal';
 import { ModalService } from '../../../modal-principal/modal-service';
 import { PopUps } from '../../../shared/popUps/popUpsService';
 import { TabSwitch } from "../../../shared/tab-switch/tab-switch";
@@ -12,7 +10,7 @@ import { TabSwitch } from "../../../shared/tab-switch/tab-switch";
 @Component({
   selector: 'app-proveedores',
   standalone: true,
-  imports: [FormsModule, NgClass, CampoValidado, ModalPrincipal, TabSwitch],
+  imports: [FormsModule, CampoValidado, TabSwitch],
   templateUrl: './proveedores.html',
   styleUrl: './proveedores.scss',
 })

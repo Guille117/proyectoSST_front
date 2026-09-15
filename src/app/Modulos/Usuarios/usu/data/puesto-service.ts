@@ -17,6 +17,7 @@ export class PuestoService {
   }
 
   getPuestosActivos(): Observable<PuestoResponse[]> {
-    return this.http.get<PuestoResponse[]>(`${this.apiUrl}/activos`);
+    const params = new HttpParams().set('activos', true);
+    return this.http.get<PuestoResponse[]>(this.apiUrl, { params });
   }
 }
