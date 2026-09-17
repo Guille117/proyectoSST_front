@@ -1,111 +1,117 @@
 <div class="catalogo-layout">
-	<section class="panel panel-grupos">
-		<h3 class="panel-title">Catálogos</h3>
+  <section class="panel">
+    <h3 class="panel-title">Catálogos</h3>
+    
+    @for(catalogo of listaCatalogos; track $index) {
+      <div class="catalogos" [class.selected]="catalogoSeleccionado === catalogo.titulo" (click)="seleccionarCatalogo(catalogo.titulo, catalogo.url)">
+        <div class="icono">
+          <i class="{{ catalogo.icono }}"></i>
+        </div>
+        <div class="texto">
+          <h3>{{ catalogo.titulo }}</h3>
+          <p>{{ catalogo.descripcion }}</p>
+        </div>
+        <div class="cantidad">
+          <h3>Registros</h3>
+          <h4>{{ catalogo.cantidad }}</h4>
+        </div>
+      </div>
+    }
+    
+  </section>
 
-		<table class="table tabla-catalogos">
-			<thead>
-				<tr>
-					<th class="celda_izquierda">Nombre</th>
-				</tr>
-			</thead>
-			<tbody>
-				<tr class="selected-row">
-					<td>Puesto</td>
-				</tr>
-			</tbody>
-		</table>
-	</section>
+  <section class="panel panel_tabla">
+    <div class="encabezado-registros">
+      <h3 class="panel-title">{{ catalogoSeleccionado }}</h3>
+      <div class="miniSub-container">
+        <app-tab-switch
+          [op1]="'Activos'"
+          [op2]="'Inactivos'"
+          [mostrarActivos]="mostrarActivos"
+          (opcionCambiada)="traerRegistros($event)"
+        >
+        </app-tab-switch>
+      </div>
+    </div>
 
-	<section class="panel panel-registros">
-		<div class="encabezado-registros">
-			<h3 class="panel-title">Puesto</h3>
-			<div class="miniSub-container">
-				<app-tab-switch
-					[op1]="'Activos'"
-					[op2]="'Inactivos'"
-					[mostrarActivos]="mostrarActivos"
-					(opcionCambiada)="mostrarPuestos($event)"
-				></app-tab-switch>
-			</div>
-		</div>
+    <table class="table tabla-registros">
+      <thead>
+        <tr>
+          <th class="celda_centrada">No.</th>
+          <th class="celda_izquierda">Nombre</th>
+          @if(catalogoSeleccionado === 'Unidad de medida'){
+            <th class="celda_izquierda">Abreviatura</th>
+          }
+          <th class="celda_centrada">Acciones</th>
+        </tr>
+      </thead>
 
-		<table class="table tabla-registros">
-			<thead>
-				<tr>
-					<th class="celda_centrada">No.</th>
-					<th class="celda_izquierda">Nombre</th>
-					<th class="celda_centrada">Acciones</th>
-				</tr>
-			</thead>
-			<tbody>
-				@for (puesto of puestos; track puesto.id) {
-					<tr>
-						<td class="celda_centrada">{{ $index + 1 }}</td>
-						<td class="celda_izquierda">{{ puesto.nombre }}</td>
-						<td class="celda_centrada acciones">
-							@if (mostrarActivos) {
-								<button
-									type="button"
-									class="btn _editar"
-									[disabled]="enProceso"
-									(click)="seleccionarPuesto(puesto)"
-								>
-									Editar
-								</button>
-							}
-							<button
-								type="button"
-								class="btn"
-								[class._eliminar]="mostrarActivos"
-								[class._guardar]="!mostrarActivos"
-								[disabled]="enProceso"
-								(click)="cambiarEstadoPuesto(puesto)"
-							>
-								{{ mostrarActivos ? 'Desactivar' : 'Activar' }}
-							</button>
-						</td>
-					</tr>
-				} @empty {
-					<tr>
-						<td class="celda_centrada" colspan="3">No hay puestos para mostrar.</td>
-					</tr>
-				}
-			</tbody>
-		</table>
-	</section>
+      <tbody>
+        @for(registro of registros; track $index) {
+          <tr>
+            <td class="celda_centrada">{{$index + 1}}</td>
+            <td class="celda_izquierda">{{ registro.nombre }}</td>
+            <td class="celda_centrada acciones">
+              <button class="btn _editar" (click)="precargar(registro.nombre, registro.id)">Editar</button>
+              @if(mostrarActivos){
+                <button class="btn _eliminar" (click)="activarDesactivar(registro.id)">Desactivar</button>
+              }@else {
+                <button class="btn _guardar" (click)="activarDesactivar(registro.id)">Activar</button>
+              }
+            </td>
+          </tr>
+        }
+        
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="4"><app-paginacion [paginaActual]="1" [totalregistros]="2" [cantidadMostrar]="7"></app-paginacion></td>
+        </tr>
+      </tfoot>
+    </table>
+     
+  </section>
 
-	<section class="panel panel-formulario">
-		<h3 class="panel-title">{{ tituloFormulario }}</h3>
+  <section class="panel panel_formulario">
+    <h3 class=" titulo-formulario">{{ tituloFormulario }}</h3>
 
-		<div class="formulario-box">
-			<label for="nombrePuesto" class="label">Nombre</label>
-			<input
-				id="nombrePuesto"
-				type="text"
-				[(ngModel)]="puesto.nombre"
-				name="nombrePuesto"
-				placeholder="Ingrese el nombre del puesto"
-				[disabled]="enProceso"
-			>
+    <div class="formulario-box">
+      <form #formularioRegistro="ngForm">
+        <label for="nombreRegistro" class="label">Nombre</label>
+        <input
+          id="nombreRegistro"
+          type="text"
+          [(ngModel)]="nombre"
+          name="nombreRegistro"
+          placeholder="Ingrese nombre"
+          required
+        >
+      </form>
 
-			<div class="acciones-formulario">
-				<button
-					type="button"
-					class="btn _cancelar"
-					[disabled]="enProceso"
-					(click)="resetFormulario()"
-				>
-					Cancelar
-				</button>
-				<button
-					type="button"
-					class="btn _guardar"
-					[disabled]="!formularioValido || !hayCambiosEnEdicion || enProceso"
-					(click)="modoEdicion ? actualizarPuesto() : guardarPuesto()"
-				>
-					{{ modoEdicion ? 'Guardar cambios' : 'Guardar' }}
-				</button>
-			</div>
-		</div>
-	</section>
+      <div class="acciones-formulario">
+        <button type="button" class="btn _cancelar" (click)="limpiarFormulario(formularioRegistro)">
+          Cancelar
+        </button>
+        @if (editar) {
+          <button
+            type="button"
+            class="btn _guardar"
+            [disabled]="!formularioRegistro.valid || !hayCambios()"
+            (click)="editarRegistro(formularioRegistro)"
+          >
+            Guardar Cambios
+          </button>
+        }@else {
+          <button
+            type="button"
+            class="btn _guardar"
+            [disabled]="!formularioRegistro.valid"
+            (click)="guardar(formularioRegistro)"
+          >
+            Guardar
+          </button>
+        }
+      </div>
+    </div>
+  </section>
 </div>

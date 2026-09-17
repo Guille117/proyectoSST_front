@@ -1,8 +1,8 @@
 <div class="miniSubMenu">
-    <div [ngClass]="mostrarActivos ? 'op2' : 'op'" (click)="seleccionarOpcion(true)">
+    <div [ngClass]="mostrarActivos ? 'op2' : 'op'" (click)="seleccionarOpcion()">
          {{op1}}
     </div>
-    <div [ngClass]="mostrarActivos ? 'op' : 'op2'" (click)="seleccionarOpcion(false)">
+    <div [ngClass]="mostrarActivos ? 'op' : 'op2'" (click)="seleccionarOpcion()">
         {{op2}}
     </div>
 </div>

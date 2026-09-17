@@ -8,18 +8,32 @@ import { Component, EventEmitter, Input, Output } from '@angular/core';
 })
 export class Paginacion {
   @Input() paginaActual = 1;
-  @Input() totalPaginas = 0;
+  @Input() totalregistros = 0;
   @Input() cantidadMostrar = 0;
   @Output() paginaCambiada = new EventEmitter<number>();
+
+  mostrando = 0
+
+  ngOnInit() {
+    this.iniciarVariables();
+  }
+
+  iniciarVariables(){
+    if(this.cantidadMostrar > this.totalregistros){
+      this.mostrando = this.totalregistros;
+    }else{
+      this.mostrando = this.cantidadMostrar;
+    }
+  }
 
   paginaAnterior(): void {
     if (this.paginaActual > 1) {
       this.cambiarPagina(this.paginaActual - 1);
     }
   }
-
+    
   paginaSiguiente(): void {
-    if (this.paginaActual < this.totalPaginas) {
+    if (this.paginaActual < this.totalregistros) {
       this.cambiarPagina(this.paginaActual + 1);
     }
   }

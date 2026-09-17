@@ -1,6 +1,6 @@
 import { Routes } from "@angular/router";
-import { CatalogoUsuarios } from "./catalogo-usuarios/catalogo-usuarios";
 import { CatalogoFarmacia } from "./catalogo-farmacia/catalogo-farmacia";
+import { CatalogoUsuarios } from "./catalogo-usuarios/catalogo-usuarios";
 
 export const rutasCatalogo: Routes=[
     {path: '', redirectTo: 'farmaciaCatalogo', pathMatch: 'full' },
