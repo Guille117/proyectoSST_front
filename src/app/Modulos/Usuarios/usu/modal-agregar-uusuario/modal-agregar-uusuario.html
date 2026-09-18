@@ -246,41 +246,38 @@
             [label]="'Rol'"
             [fieldId]="'rol'"
             [required]="true"
-            [showError]="!!(rol.touched && rol.invalid)"
             [errorMessage]="'Debe seleccionar un rol'"
         >
-            <select
-                id="rol"
-                name="rolId"
-                required
-                [(ngModel)]="usuarioReq.rolId"
-                #rol="ngModel"
-                [class.input-invalid]="rol.touched && rol.invalid"
-            >
-                <option [ngValue]="0" disabled>Seleccione un rol</option>
-                @for (rol of roles; track rol.id) {
-                    <option [ngValue]="rol.id">{{ rol.nombre }}</option>
+            <div class="selector-roles" [class.abierto]="rolesAbierto">
+                <button
+                    type="button"
+                    class="selector-roles-trigger"
+                    [attr.aria-expanded]="rolesAbierto"
+                    aria-controls="lista-roles"
+                    (click)="rolesAbierto = !rolesAbierto"
+                >
+                    <span [class.placeholder]="!(usuarioReq.rolIds?.length)">{{ nombresRolesSeleccionados }}</span>
+                    <i class="bi" [class.bi-chevron-down]="!rolesAbierto" [class.bi-chevron-up]="rolesAbierto"></i>
+                </button>
+
+                @if (rolesAbierto) {
+                    <div id="lista-roles" class="lista-roles" role="group" aria-label="Roles disponibles">
+                        @for (rol of roles; track rol.id) {
+                            <label class="opcion-rol">
+                                <input
+                                    type="checkbox"
+                                    [checked]="rolSeleccionado(rol.id)"
+                                    (change)="alternarRol(rol.id)"
+                                >
+                                <span>{{ rol.nombre }}</span>
+                            </label>
+                        }
+                    </div>
                 }
-            </select>
+            </div>
         </app-campo-validado>
     </div>
 
 </div>
 }
 
-<div class="footer">
-    <button type="button" class="btn _cancelar" (click)="cerrarModal()">Cancelar</button>
-    @if (contador > 0) {
-        <button type="button" class="btn _principal" (click)="disminuirContador()">
-            <i class="bi bi-arrow-left"></i> Atrás
-        </button>
-        <button type="button" class="btn _guardar" [disabled]="!puedeGuardarPaso2" (click)="guardarUsuario()">
-            {{ isEditing ? 'Guardar cambios' : 'Guardar' }}
-        </button>
-    }
-    @if (contador < 1) {
-        <button type="button" class="btn _principal" [disabled]="!puedeAvanzarPaso1" (click)="aumentarContador()">
-            Siguiente <i class="bi bi-arrow-right"></i>
-        </button>
-    }
-</div>

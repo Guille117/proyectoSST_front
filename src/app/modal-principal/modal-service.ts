@@ -1,5 +1,18 @@
 import { Injectable, signal, Type } from '@angular/core';
 
+export interface ModalAction {
+  id: string;
+  label: string;
+  className: string;
+  onClick: () => void;
+  disabled?: () => boolean;
+  icon?: string;
+}
+
+export interface ModalContent {
+  modalActions?: ModalAction[];
+}
+
 @Injectable({
   providedIn: 'root',
 })

@@ -1,7 +1,4 @@
-<div class="modal-container">
-
-  <!-- Content -->
-  <div class="modal-content">
+<div class="modal-content">
     <!-- Product Type Selector -->
     <div class="miniSub-container campo-formulario" [ngClass]="{'w-medicamento': isMedicamento, 'w-insumo': !isMedicamento}">
       <label class="form-label">Tipo de producto</label>
@@ -80,11 +77,4 @@
          </div>
        </div>
      }
-  </div>
-
-  <!-- Footer Buttons -->
-  <div class="modal-footer">
-    <button class="btn _cancelar" (click)="cancel()">Cancelar</button>
-    <button class="btn _guardar" (click)="save()">Guardar</button>
-  </div>
 </div>

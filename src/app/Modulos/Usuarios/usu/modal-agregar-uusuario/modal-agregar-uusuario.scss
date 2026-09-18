@@ -4,7 +4,7 @@
     width: fit-content;
     max-width: 100%;
     padding: 4px 0 20px;
-    color: #8a9ab0;
+    color: #667085;
 }
 
 .paso {
@@ -21,16 +21,16 @@
         width: 30px;
         height: 30px;
         border-radius: 50%;
-        background-color: #eef2f7;
-        color: #7d8da3;
+        background-color: #E9EEF5;
+        color: #667085;
         font-weight: 700;
     }
 
     &.activo {
-        color: var(--azulPrincipal);
+        color: #0D6EFD;
 
         .numero {
-            background-color: var(--azulSecundario);
+            background-color: #0D6EFD;
             color: #ffffff;
         }
     }
@@ -41,7 +41,7 @@
     height: 2px;
     min-width: 45px;
     margin: 0 16px;
-    background-color: #dbe2ea;
+    background-color: #CFCBFF;
 }
 
 .fila{
@@ -75,7 +75,7 @@
         right: 10px;
         background: transparent;
         border: none;
-        color: #64748b;
+        color: #667085;
         cursor: pointer;
         padding: 4px;
         display: flex;
@@ -85,16 +85,9 @@
         transition: color 0.2s ease;
 
         &:hover {
-            color: #1e293b;
+            color: #0B1739;
         }
     }
-}
-
-.footer{
-    display: flex;
-    justify-content: flex-end;
-    gap: 16px;
-    margin-top: 24px;
 }
 
 @media (max-width: 560px) {
@@ -108,5 +101,69 @@
         .texto {
             font-size: 13px;
         }
+    }
+}
+
+.selector-roles {
+    position: relative;
+    width: 100%;
+}
+
+.selector-roles-trigger {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    min-height: 42px;
+    padding: 9px 12px;
+    color: #101828;
+    text-align: left;
+    background: rgba(255, 255, 255, 0.72);
+    border: 1px solid #CBD5E1;
+    border-radius: 8px;
+    cursor: pointer;
+
+    .placeholder {
+        color: #667085;
+    }
+
+    &:focus-visible {
+        outline: 2px solid #3B82F6;
+        outline-offset: 1px;
+    }
+}
+
+.lista-roles {
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    left: 0;
+    z-index: 30;
+    max-height: 180px;
+    padding: 6px;
+    overflow-y: auto;
+    background: rgba(255, 255, 255, 0.96);
+    border: 1px solid #CBD5E1;
+    border-radius: 8px;
+    box-shadow: 0 8px 18px rgba(11, 23, 57, 0.16);
+}
+
+.opcion-rol {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    color: #101828;
+    border-radius: 5px;
+    cursor: pointer;
+
+    &:hover {
+        background: #F5F7FF;
+    }
+
+    input {
+        width: 16px;
+        height: 16px;
+        accent-color: #0D6EFD;
     }
 }

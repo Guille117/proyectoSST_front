@@ -1,5 +1,5 @@
-import { Component, ElementRef, Input, ViewChild, ViewContainerRef, effect, inject, input, output } from '@angular/core';
-import { ModalService } from './modal-service';
+import { Component, ElementRef, Input, Type, ViewChild, ViewContainerRef, effect, inject, output } from '@angular/core';
+import { ModalContent, ModalService } from './modal-service';
 
 @Component({
   selector: 'app-modal-principal',
@@ -8,6 +8,10 @@ import { ModalService } from './modal-service';
   styleUrl: './modal-principal.scss',
 })
 export class ModalPrincipal {
+  componentInstance: ModalContent | null = null;
+  private isClosing = false;
+  private renderedComponent: Type<unknown> | null = null;
+  private renderedData: unknown = null;
   // varibles
   @Input() title: string = '';
   @Input() subtitle: string = '';
@@ -47,9 +51,16 @@ export class ModalPrincipal {
       });
 
       // Si hay un componente, lo renderiza dinámicamente
-      if(componente && this.componentContainer) {
+      const debeCrearComponente = componente && this.componentContainer && (
+        this.renderedComponent !== componente || this.renderedData !== datos
+      );
+
+      if(debeCrearComponente) {
         this.componentContainer.clear();
         const componentRef = this.componentContainer.createComponent(componente);
+        this.componentInstance = componentRef.instance as ModalContent;
+        this.renderedComponent = componente;
+        this.renderedData = datos;
 
         if (datos) {
           Object.entries(datos).forEach(([key, value]) => {
@@ -58,17 +69,18 @@ export class ModalPrincipal {
             }
           });
         }
+      } else if (!componente) {
+        this.componentInstance = null;
+        this.renderedComponent = null;
+        this.renderedData = null;
       }
 
-      // Abre o cierra el modal según el estado
-      // Solo abre si isOpen es true
       if(deberiaEstarAbierto && this.dialog){
         this.open();
       } 
-      // Solo cierra si isOpen es false Y no hay componente (se cerró correctamente)
-      else if(!deberiaEstarAbierto && !componente && this.dialog && this.dialog.nativeElement.open){
-          this.close();
-        }
+      else if(!deberiaEstarAbierto && this.dialog && this.dialog.nativeElement.open){
+        this.close();
+      }
     })
   }
 
@@ -76,6 +88,7 @@ export class ModalPrincipal {
   // Método público para abrir modal
   public open(): void {
     const dialog = this.dialog.nativeElement;
+    this.isClosing = false;
     dialog.classList.remove('closing');
     dialog.classList.remove('open');
     
@@ -100,6 +113,11 @@ export class ModalPrincipal {
   // Método público para cerrar
   public close(): void {
     const dialog = this.dialog.nativeElement;
+    if (this.isClosing) {
+      return;
+    }
+
+    this.isClosing = true;
     dialog.classList.remove('open');
     dialog.classList.add('closing');
 

@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { Observable, tap } from 'rxjs';
 import { environment } from '../../../../environments/environment';
-import { LoginRequest, LoginResponse } from './authInterfaz';
+import { EstablecerCredencialesRequest, LoginRequest, LoginResponse } from './authInterfaz';
 
 @Injectable({
   providedIn: 'root',
@@ -25,6 +25,12 @@ export class AuthService {
           this.currentUser.set(res);
         }
       })
+    );
+  }
+
+  establecerCredenciales(credentials: EstablecerCredencialesRequest): Observable<LoginResponse> {
+    return this.http.post<LoginResponse>(`${this.apiUrl}/establecer-credenciales`, credentials).pipe(
+      tap((res) => this.guardarSesion(res))
     );
   }
 
@@ -57,5 +63,16 @@ export class AuthService {
     } catch {
       return null;
     }
+  }
+
+  private guardarSesion(res: LoginResponse): void {
+    if (!res) {
+      return;
+    }
+
+    const token = res.token || (res as any).accessToken || (res as any).jwt || 'session_active';
+    localStorage.setItem('auth_token', token);
+    localStorage.setItem('auth_user', JSON.stringify(res));
+    this.currentUser.set(res);
   }
 }

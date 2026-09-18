@@ -18,7 +18,10 @@ export class Ingresos {
   }
 
   abrirModalCompra() {
-    this.modalService.open(ModalMasCompra, { });
+    this.modalService.open(ModalMasCompra, {
+      title: 'Registro de compra',
+      subtitle: 'Paso 1 de 2: Selección de productos',
+    });
   }
 
   nombreUsuario = signal('Usuario');

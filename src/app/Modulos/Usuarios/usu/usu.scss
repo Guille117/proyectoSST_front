@@ -36,6 +36,92 @@ tbody tr {
     &.table-active td {
         background-color: #e2e8f0;
         font-weight: 600;
+        color: var(--azulSecundario);
+    }
+}
+
+.acciones-tabla {
+    white-space: nowrap;
+}
+
+.boton-icono-editar {
+    display: inline-grid;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    margin-right: 10px;
+    place-items: center;
+    color: rgb(243, 177, 23);
+    background: var(--colorFondoPrincipal);
+    border: 1px solid var(--colorBorde);
+    border-radius: 50%;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+    transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, color 0.2s ease, transform 0.2s ease;
+
+    &:hover {
+        color: #ffffff;
+        background: #fd9d01;
+        border-color: #fd9d01;
+        box-shadow: 0 3px 6px rgba(216, 151, 0, 0.35);
+        transform: translateY(-1px);
+    }
+
+    &:active {
+        box-shadow: none;
+        transform: translateY(0);
+    }
+
+    &:focus-visible {
+        outline: 2px solid #fd9d01;
+        outline-offset: 2px;
+    }
+}
+
+.interruptor-estado {
+    display: inline-flex;
+    cursor: pointer;
+    vertical-align: middle;
+
+    input {
+        position: absolute;
+        opacity: 0;
+    }
+
+    span {
+        position: relative;
+        width: 38px;
+        height: 20px;
+        background: #9ca3af;
+        border-radius: 10px;
+        transition: background-color 0.2s ease;
+
+        &::after {
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 14px;
+            height: 14px;
+            content: '';
+            background: #ffffff;
+            border-radius: 50%;
+            transition: transform 0.2s ease;
+        }
+    }
+
+    input:checked + span {
+        background: #22c55e;
+
+        &::after {
+            transform: translateX(18px);
+        }
+    }
+
+    input:focus-visible + span {
+        outline: 2px solid var(--azulPrincipal);
+        outline-offset: 2px;
     }
 }
 
@@ -71,7 +157,7 @@ tbody tr {
 
         h3 {
             color: var(--azulPrincipal);
-            font-size: 18px;
+            font-size: 20px;
             font-weight: 700;
         }
     }
@@ -86,12 +172,21 @@ tbody tr {
             grid-column: 1 / -1;
             margin-bottom: 2px;
             color: var(--azulSecundario);
-            font-size: 16px;
+            font-size: 18px;
             font-weight: 700;
         }
     }
 
+    .datosPer {
+        grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+
+        .data-email {
+            grid-column: 1 / -1;
+        }
+    }
+
     .datosLab {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
         padding-top: 12px;
         border-top: 1px solid var(--colorBorde);
     }
@@ -102,7 +197,7 @@ tbody tr {
         gap: 16px;
         align-items: start;
         color: #4f5155;
-        font-size: 14px;
+        font-size: 16px;
         line-height: 1.4;
 
         label:first-child {

@@ -2,6 +2,7 @@ import { Component, OnInit, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TabSwitch } from '../../../../shared/tab-switch/tab-switch';
+import { ModalAction } from '../../../../modal-principal/modal-service';
 
 interface ProductForm {
   productType: 'medication' | 'input';
@@ -37,6 +38,14 @@ export class ModalMasDetalle implements OnInit {
   administrationRoutes: string[] = ['Oral', 'Inyectable', 'Tópico', 'Inhalado'];
   presentations: string[] = ['Tableta', 'Cápsula', 'Inyección', 'Suspensión'];
   isMedicamento: boolean = true;
+
+  get modalActions(): ModalAction[] {
+    return [
+      { id: 'cancelar', label: 'Cancelar', className: '_cancelar', onClick: () => this.cancel() },
+      { id: 'guardar', label: 'Guardar', className: '_guardar', onClick: () => this.save() },
+    ];
+  }
+
   constructor() {}
 
   ngOnInit(): void {}

@@ -33,6 +33,7 @@
                     <th class="celda_izquierda">Nombre</th>
                     <th class="celda_centrada">Teléfono</th>
                     <th class="celda_izquierda">Rol</th>
+                    <th class="celda_centrada">Acciones</th>
                 </tr>
             </thead>
             <tbody>
@@ -43,10 +44,31 @@
                         <td class="celda_izquierda">{{ getNombreCompleto(user) }}</td>
                         <td class="celda_centrada">{{ getTelefono(user) }}</td>
                         <td class="celda_izquierda">{{ getRol(user) }}</td>
+                        <td class="celda_centrada acciones-tabla">
+                            <button
+                                type="button"
+                                class="boton-icono-editar"
+                                aria-label="Editar usuario"
+                                title="Editar usuario"
+                                (click)="$event.stopPropagation(); abrirModalEditar(user)"
+                            >
+                                <i class="bi bi-pencil-square"></i>
+                            </button>
+                            <label class="interruptor-estado" [title]="user.estado ? 'Usuario activo' : 'Usuario inactivo'">
+                                <input
+                                    type="checkbox"
+                                    [checked]="user.estado"
+                                    [attr.aria-label]="user.estado ? 'Desactivar usuario' : 'Activar usuario'"
+                                    (click)="$event.stopPropagation()"
+                                    (change)="cambiarEstadoUsuario($event, user)"
+                                >
+                                <span></span>
+                            </label>
+                        </td>
                     </tr>
                 } @empty {
                     <tr>
-                        <td colspan="5" class="celda_centrada sin-usuarios">No se encontraron usuarios</td>
+                        <td colspan="6" class="celda_centrada sin-usuarios">No se encontraron usuarios</td>
                     </tr>
                 }
             </tbody>
@@ -62,7 +84,7 @@
 
             <div class="datosPer">
                 <h2>Datos personales</h2>
-                <div class="data">
+                <div class="data data-nombre">
                     <label>Nombre:</label>
                     <label>{{ getNombres(usuarioSeleccionado) + ' ' + getApellidos(usuarioSeleccionado) }}</label>
                 </div>
@@ -75,16 +97,16 @@
 
 
                 <div class="data">
-                    <label>Edad:</label>
-                    <label>{{ calcularEdad(getFechaNacimiento(usuarioSeleccionado)) }}</label>
-                </div>
-
-                <div class="data">
                     <label>Teléfono:</label>
                     <label>{{ getTelefono(usuarioSeleccionado) }}</label>
                 </div>
 
-                <div class="data">
+                <div class="data data-edad">
+                    <label>Edad:</label>
+                    <label>{{ calcularEdad(getFechaNacimiento(usuarioSeleccionado)) }}</label>
+                </div>
+
+                <div class="data data-email">
                     <label>Email:</label>
                     <label>{{ getEmail(usuarioSeleccionado) }}</label>
                 </div>
@@ -114,12 +136,6 @@
             </div>
 
             <div class="footer">
-                @if (usuarioSeleccionado.estado) {
-                    <button type="button" class="btn _eliminar" (click)="cambiarEstadoUsuario()">Inhabilitar</button>
-                } @else {
-                    <button type="button" class="btn _principal" (click)="cambiarEstadoUsuario()">Habilitar</button>
-                }
-                <button type="button" class="btn _editar" (click)="abrirModalEditar()">Editar usuario</button>
                 <button type="button" class="btn _editar" >Restablecer contraseña</button>
             </div>
         } @else {

@@ -3,6 +3,12 @@ export interface LoginRequest {
   password: string;
 }
 
+export interface EstablecerCredencialesRequest {
+  username: string;
+  pin: string;
+  password: string;
+}
+
 export interface PermisoAuth {
   submoduloId: number;
   submoduloCodigo: string;

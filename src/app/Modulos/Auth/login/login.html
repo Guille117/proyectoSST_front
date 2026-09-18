@@ -46,6 +46,8 @@
             [(ngModel)]="password"
             autocomplete="current-password"
             required
+            [minlength]="showCredentialRecovery ? passwordMinLength : null"
+            [class.input-password-error]="showCredentialRecovery && password.length > 0 && password.length < passwordMinLength"
           />
           <button
             type="button"
@@ -81,6 +83,11 @@
               <i class="bi" [class.bi-eye]="!showConfirmPassword" [class.bi-eye-slash]="showConfirmPassword"></i>
             </button>
           </div>
+          @if (showCredentialRecovery && password && password.length < passwordMinLength) {
+            <p class="password-requirement" role="alert">
+              La contraseña debe tener al menos {{ passwordMinLength }} caracteres.
+            </p>
+          }
         </div>
       }
 
@@ -138,8 +145,12 @@
 
       <div class="pin-modal-actions">
         <button type="button" class="btn-pin-cancel" (click)="cerrarModalPin()">Cancelar</button>
-        <button type="button" class="btn-pin-confirm" [disabled]="intentosPin >= 3" (click)="validarPin()">
-          Validar PIN
+        <button type="button" class="btn-pin-confirm" [disabled]="intentosPin >= 3 || loading" (click)="validarPin()">
+          @if (loading) {
+            Validando...
+          } @else {
+            Validar PIN
+          }
         </button>
       </div>
     </section>

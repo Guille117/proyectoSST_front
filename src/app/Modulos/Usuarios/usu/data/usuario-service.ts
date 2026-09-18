@@ -12,8 +12,8 @@ export class UsuarioService {
 
   constructor(private http: HttpClient) {}
 
-  postUsuario(usuario: UsuarioRequest): Observable<UsuarioResponse> {
-    return this.http.post<UsuarioResponse>(`${this.apiUrl}`, usuario, {
+  postUsuario(usuario: UsuarioRequest): Observable<UsuarioResponse | string | number> {
+    return this.http.post<UsuarioResponse | string | number>(`${this.apiUrl}`, usuario, {
       headers: { 'Content-Type': 'application/json' },
     });
   }

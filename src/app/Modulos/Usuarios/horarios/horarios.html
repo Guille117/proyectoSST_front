@@ -23,11 +23,7 @@
 
     <div class="horarios-lista">
       @for (item of horariosFiltrados; track item.id) {
-        <div
-          class="horario-card"
-          [class.activo]="horarioSeleccionado?.id === item.id"
-          (click)="seleccionarHorario(item)"
-        >
+        <div class="horario-card" [class.activo]="horarioSeleccionado?.id === item.id" (click)="seleccionarHorario(item)">
           <div class="horario-card-info">
             <span class="horario-card-nombre">{{ item.nombre }}</span>
           </div>
@@ -208,8 +204,8 @@
 
         <div class="acciones-formulario">
           @if (horarioSeleccionado) {
-            @if (!isEditing) {
-              <button type="button" class="btn _cancelar" (click)="cancelarAccion()">Cancelar</button>
+            @if (isWatching) {
+              <button type="button" class="btn _principal" (click)="cancelarAccion()">Agregar horario</button>
               @if (horarioSeleccionado.estado) {
                 <button type="button" class="btn _editar" (click)="activarEdicion()">Editar</button>
                 <button type="button" class="btn _eliminar" (click)="eliminarHorario()">Desactivar</button>
@@ -217,7 +213,7 @@
                 <button type="button" class="btn _guardar" (click)="eliminarHorario()">Activar</button>
               }
             } @else {
-              <button type="button" class="btn _cancelar" (click)="cancelarAccion()">Cancelar</button>
+              <button type="button" class="btn _cancelar" (click)="cancelarAccion(); prepararVer()">Cancelar</button>
               <button type="button" class="btn _guardar" [disabled]="!tieneCambios" (click)="actualizarHorario()">Guardar cambios</button>
             }
           } @else {

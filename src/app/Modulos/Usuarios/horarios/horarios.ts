@@ -22,6 +22,8 @@ export class Horarios implements OnInit {
 
   // ------------------ VARIABLES ------------------
   isEditing = false;
+  isWatching = true;
+  isCreating = false;
   textoBusqueda = '';
   horarioSeleccionado: HorarioResponse | null = null;
   horarios: HorarioResponse[] = [];
@@ -51,7 +53,7 @@ export class Horarios implements OnInit {
     if (!this.horarioSeleccionado) {
       return 'Agregar horario';
     }
-    return this.isEditing ? 'Editar horario' : 'Ver horario';
+    return this.isEditing ? 'Editar detalles de horario' + ' ' +(this.horarioSeleccionado?.codigo ) : 'Detalles de horario' + ' ' +(this.horarioSeleccionado?.codigo );
   }
 
   get tieneCambios(): boolean {
@@ -66,6 +68,22 @@ export class Horarios implements OnInit {
         (h.codigo && h.codigo.toLowerCase().includes(this.textoBusqueda.toLowerCase().trim()));
       return coincideBusqueda;
     });
+  }
+
+  //----------------------------------------------------------
+
+  //método para pasar a la vista de formulario
+  prepararGuardar(){
+    this.isEditing = false;
+    this.isWatching = false;
+    this.isCreating = true;
+  }
+
+  //método para pasar a la vista de solo ver
+  prepararVer() {
+    this.isEditing = false;
+    this.isWatching = true;
+    this.isCreating = false;
   }
 
   // ------------------ MÉTODOS DE INICIALIZACIÓN ------------------
@@ -132,6 +150,8 @@ export class Horarios implements OnInit {
       return;
     }
     this.isEditing = true;
+    this.isWatching = false;
+    this.isCreating = true;
   }
 
   cancelarAccion(): void {

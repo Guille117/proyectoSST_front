@@ -9,8 +9,8 @@ import { RolService } from '../../roles/data/rol-service';
 import { PuestoResponse, PersonaDatos, UsuarioRequest, UsuarioResponse } from '../data/usuarioInterfaz';
 import { HorarioResponse } from '../../horarios/data/horarioInterfaz';
 import { RolResponse } from '../../roles/data/rolInterfaz';
-import { ModalService } from '../../../../modal-principal/modal-service';
-import { PopUps } from '../../../../shared/popUps/popUpsService';
+import { ModalAction, ModalService } from '../../../../modal-principal/modal-service';
+import { ModalPopUps } from '../../../../shared/popUps/modal-popUpsService';
 
 @Component({
   selector: 'app-modal-agregar-uusuario',
@@ -28,6 +28,7 @@ export class ModalAgregarUusuario implements OnInit, OnChanges {
   puestos: PuestoResponse[] = [];
   horarios: HorarioResponse[] = [];
   roles: RolResponse[] = [];
+  rolesAbierto = false;
 
   persona: PersonaDatos = {
     cui: '',
@@ -42,10 +43,70 @@ export class ModalAgregarUusuario implements OnInit, OnChanges {
   usuarioReq: Partial<UsuarioRequest> = {
     puestoId: 0,
     horarioId: 0,
-    rolId: 0,
+    rolIds: [],
     username: '',
     estado: true,
   };
+
+  get modalActions(): ModalAction[] {
+    const actions: ModalAction[] = [
+      {
+        id: 'cancelar',
+        label: 'Cancelar',
+        className: '_cancelar',
+        onClick: () => this.cerrarModal(),
+      },
+    ];
+
+    if (this.contador > 0) {
+      actions.push(
+        {
+          id: 'atras',
+          label: 'Atrás',
+          className: '_principal',
+          icon: 'bi bi-arrow-left',
+          onClick: () => this.disminuirContador(),
+        },
+        {
+          id: 'guardar',
+          label: this.isEditing ? 'Guardar cambios' : 'Guardar',
+          className: '_guardar',
+          onClick: () => this.guardarUsuario(),
+          disabled: () => !this.puedeGuardarPaso2,
+        },
+      );
+    } else {
+      actions.push({
+        id: 'siguiente',
+        label: 'Siguiente',
+        className: '_principal',
+        icon: 'bi bi-arrow-right',
+        onClick: () => this.aumentarContador(),
+        disabled: () => !this.puedeAvanzarPaso1,
+      });
+    }
+
+    return actions;
+  }
+
+  alternarRol(rolId: number): void {
+    const rolesSeleccionados = this.usuarioReq.rolIds ?? [];
+    this.usuarioReq.rolIds = rolesSeleccionados.includes(rolId)
+      ? rolesSeleccionados.filter((id) => id !== rolId)
+      : [...rolesSeleccionados, rolId];
+  }
+
+  rolSeleccionado(rolId: number): boolean {
+    return this.usuarioReq.rolIds?.includes(rolId) ?? false;
+  }
+
+  get nombresRolesSeleccionados(): string {
+    const nombres = this.roles
+      .filter((rol) => this.rolSeleccionado(rol.id))
+      .map((rol) => rol.nombre);
+
+    return nombres.length ? nombres.join(', ') : 'Seleccione uno o varios roles';
+  }
 
   constructor(
     private puestoService: PuestoService,
@@ -53,7 +114,7 @@ export class ModalAgregarUusuario implements OnInit, OnChanges {
     private rolService: RolService,
     private usuarioService: UsuarioService,
     private modalService: ModalService,
-    private popUps: PopUps,
+    private popUps: ModalPopUps,
     private cdr: ChangeDetectorRef
   ) {}
 
@@ -86,7 +147,7 @@ export class ModalAgregarUusuario implements OnInit, OnChanges {
     return !!(
       this.usuarioReq.puestoId &&
       this.usuarioReq.horarioId &&
-      this.usuarioReq.rolId &&
+      this.usuarioReq.rolIds?.length &&
       this.usuarioReq.username?.trim()
     );
   }
@@ -105,12 +166,12 @@ export class ModalAgregarUusuario implements OnInit, OnChanges {
 
       const puestoIdVal = this.usuarioToEdit.puesto?.id || (this.usuarioToEdit as any).puestoId || 0;
       const horarioIdVal = this.usuarioToEdit.horario?.id || (this.usuarioToEdit as any).horarioId || 0;
-      const rolIdVal = this.usuarioToEdit.rol?.id || (this.usuarioToEdit as any).rolId || 0;
+      const rolIdsVal = this.obtenerRolIds(this.usuarioToEdit);
 
       this.usuarioReq = {
         puestoId: Number(puestoIdVal),
         horarioId: Number(horarioIdVal),
-        rolId: Number(rolIdVal),
+        rolIds: rolIdsVal.map((id: number | string) => Number(id)),
         username: this.usuarioToEdit.username || '',
         estado: this.usuarioToEdit.estado ?? true,
       };
@@ -154,9 +215,7 @@ export class ModalAgregarUusuario implements OnInit, OnChanges {
   }
 
   cerrarModal(): void {
-    // this.modalService.close();
-    this.popUps.error('Se ha cerrado el modal.');
-
+    this.modalService.close();
   }
 
   validarPaso1(): boolean {
@@ -204,7 +263,7 @@ export class ModalAgregarUusuario implements OnInit, OnChanges {
       this.popUps.formIncompleto('Debe ingresar el nombre de usuario.');
       return false;
     }
-    if (!this.usuarioReq.rolId || this.usuarioReq.rolId === 0) {
+    if (!this.usuarioReq.rolIds?.length) {
       this.popUps.formIncompleto('Debe seleccionar un rol.');
       return false;
     }
@@ -212,7 +271,7 @@ export class ModalAgregarUusuario implements OnInit, OnChanges {
     return true;
   }
 
-  guardarUsuario(): void {
+  async guardarUsuario(): Promise<void> {
     if (!this.puedeAvanzarPaso1) {
       this.contador = 0;
       this.popUps.formIncompleto('Completa correctamente los datos personales.');
@@ -234,23 +293,31 @@ export class ModalAgregarUusuario implements OnInit, OnChanges {
     };
 
     const payload: UsuarioRequest = {
-      ...datosPersonales,
       persona: datosPersonales,
       puestoId: Number(this.usuarioReq.puestoId),
       horarioId: Number(this.usuarioReq.horarioId),
-      rolId: Number(this.usuarioReq.rolId),
+      rolIds: (this.usuarioReq.rolIds ?? []).map((id) => Number(id)),
       username: this.usuarioReq.username!,
       estado: this.usuarioReq.estado ?? true,
     };
 
     if (this.isEditing && this.usuarioToEdit) {
+      const confirmado = await this.popUps.confirmarToast(
+        '¿Desea guardar los cambios realizados en este usuario?',
+        'Confirmar cambios',
+      );
+
+      if (!confirmado) {
+        return;
+      }
+
       this.usuarioService.putUsuario(this.usuarioToEdit.id, payload).subscribe({
         next: () => {
-          this.popUps.exito('Usuario actualizado exitosamente.');
-          this.modalService.close();
-          if (this.onSuccess) {
-            this.onSuccess();
-          }
+          this.popUps.exito('Usuario actualizado exitosamente.', '¡Éxito!', 1800);
+          window.setTimeout(() => {
+            this.modalService.close();
+            this.onSuccess?.();
+          }, 1800);
         },
         error: (err) => {
           this.popUps.errorDesdeBackend(err, 'No se pudo actualizar el usuario.');
@@ -258,17 +325,10 @@ export class ModalAgregarUusuario implements OnInit, OnChanges {
       });
     } else {
       this.usuarioService.postUsuario(payload).subscribe({
-        next: (respuesta) => {
+        next: async (respuesta) => {
+          await this.popUps.usuarioCreado(this.obtenerPinCreacion(respuesta));
           this.modalService.close();
-          window.setTimeout(() => {
-            const pin = respuesta.pin;
-            const mensaje = pin === undefined || pin === null
-              ? 'Usuario guardado exitosamente.\nNo se recibió el PIN del primer ingreso.'
-              : `Usuario guardado exitosamente.\nPIN de primer ingreso: ${pin}\nTiene una hora para ingresarlo al iniciar sesión por primera vez.`;
-
-            this.popUps.exito(mensaje, '¡Éxito!', 6000);
-            this.onSuccess?.();
-          }, 550);
+          window.setTimeout(() => this.onSuccess?.(), 550);
         },
         error: (err) => {
           console.log(payload);
@@ -276,5 +336,54 @@ export class ModalAgregarUusuario implements OnInit, OnChanges {
         }
       });
     }
+  }
+
+  private obtenerRolIds(user: UsuarioResponse): number[] {
+    const datos = user as UsuarioResponse & {
+      rolIds?: Array<number | string>;
+      roles?: Array<{ id: number | string }> | Array<number | string>;
+      rolId?: number | string;
+    };
+
+    if (datos.rolIds?.length) {
+      return datos.rolIds.map((id) => Number(id));
+    }
+
+    if (datos.roles?.length) {
+      return datos.roles.map((rol) => Number(typeof rol === 'object' ? rol.id : rol));
+    }
+
+    if (datos.rolId !== undefined && datos.rolId !== null) {
+      return [Number(datos.rolId)];
+    }
+
+    return datos.rol?.id ? [Number(datos.rol.id)] : [];
+  }
+
+  private obtenerPinCreacion(respuesta: UsuarioResponse | string | number): string | number | null {
+    if (typeof respuesta === 'string' || typeof respuesta === 'number') {
+      return respuesta;
+    }
+
+    const datos = respuesta as UsuarioResponse & {
+      pinGenerado?: string | number;
+      pinPrimerIngreso?: string | number;
+      primerIngresoPin?: string | number;
+      pinIngreso?: string | number;
+      codigoPin?: string | number;
+      respuesta?: { pin?: string | number; pinGenerado?: string | number };
+      data?: { pin?: string | number };
+    };
+
+    return datos.pin
+      ?? datos.pinGenerado
+      ?? datos.pinPrimerIngreso
+      ?? datos.primerIngresoPin
+      ?? datos.pinIngreso
+      ?? datos.codigoPin
+      ?? datos.respuesta?.pin
+      ?? datos.respuesta?.pinGenerado
+      ?? datos.data?.pin
+      ?? null;
   }
 }

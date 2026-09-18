@@ -15,6 +15,9 @@ import { PopUps } from '../../../shared/popUps/popUpsService';
 })
 export class Roles implements OnInit {
   isEditing = false;
+  isWatching = true;
+  isCreating = false;
+
   modulos: ModuloResponse[] = [];
   moduloSeleccionado: ModuloResponse | null = null;
   roles: RolResponse[] = [];
@@ -25,7 +28,6 @@ export class Roles implements OnInit {
   mostrarActivos = true;
 
   permisosMap: Map<number, { id?: number; puedeLeer: boolean; puedeCrear: boolean; puedeEditar: boolean; puedeEliminar: boolean }> = new Map();
-
   constructor(
     private rolService: RolService,
     private cdr: ChangeDetectorRef,
@@ -126,6 +128,8 @@ export class Roles implements OnInit {
       return;
     }
     this.isEditing = true;
+    this.isWatching = false;
+    this.isCreating = true;
   }
 
   cancelarAccion(): void {
@@ -226,7 +230,7 @@ export class Roles implements OnInit {
     if (!this.rolSeleccionado) {
       return 'Agregar rol';
     }
-    return this.isEditing ? 'Editar rol' : 'Ver rol';
+    return this.isEditing ? 'Editar detalles de rol'+ ' ' + (this.rolSeleccionado?.codigo) : 'Ver detalles de rol'+ ' ' + (this.rolSeleccionado?.codigo);
   }
 
   crearRol(): void {
@@ -321,5 +325,20 @@ export class Roles implements OnInit {
     } else {
       this.cargarRoles(this.mostrarActivos, idSeleccionar);
     }
+  }
+
+
+    //método para pasar a la vista de formulario
+  prepararGuardar(){
+    this.isEditing = false;
+    this.isWatching = false;
+    this.isCreating = true;
+  }
+
+  //método para pasar a la vista de solo ver
+  prepararVer() {
+    this.isEditing = false;
+    this.isWatching = true;
+    this.isCreating = false;
   }
 }

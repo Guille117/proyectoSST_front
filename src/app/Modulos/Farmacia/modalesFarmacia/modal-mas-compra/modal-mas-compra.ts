@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, EventEmitter, OnInit, Output, output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { ModalAction } from '../../../../modal-principal/modal-service';
 
 interface PurchaseLine {
   code: string;
@@ -73,6 +74,19 @@ export class ModalMasCompra implements OnInit {
   };
 
   editIndex: number | null = null;
+
+  get modalActions(): ModalAction[] {
+    return [
+      { id: 'cancelar', label: 'Cancelar', className: '_cancelar', onClick: () => this.cancel() },
+      {
+        id: 'siguiente',
+        label: 'Siguiente',
+        className: '_principal',
+        icon: 'bi bi-arrow-right',
+        onClick: () => this.save(),
+      },
+    ];
+  }
 
   lineasCompra: PurchaseLine[] = [
     {

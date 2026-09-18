@@ -32,8 +32,6 @@
 .miniSub-container{
   width: 210px;
   height: 45px;
-  display: flex;
-  align-items: center;
 }
 
 .horarios-lista {
@@ -60,8 +58,8 @@
   width: 100%;
   min-height: 70px;
   padding: 14px 20px;
-  border: 1px solid #d9dfe6;
-  border-radius: 18px;
+  border: 2px solid #d9dfe6;
+  border-radius: 10px;
   background: #ffffff;
   box-shadow: 0 2px 6px rgba(26, 37, 53, 0.05);
   color: var(--azulPrincipal);
@@ -75,7 +73,6 @@
   }
 
   &.activo {
-    border-color: #2864e8;
     background: linear-gradient(115deg, #24447e, #2864e8);
     box-shadow: 0 4px 14px rgba(40, 100, 232, 0.25);
     color: #ffffff;

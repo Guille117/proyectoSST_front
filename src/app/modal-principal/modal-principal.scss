@@ -1,5 +1,8 @@
 dialog {
-  border: none;
+  border: 1px solid #DCD9FF;
+  background: rgba(245, 247, 255, 0.62);
+  backdrop-filter: blur(18px) saturate(1.08);
+  -webkit-backdrop-filter: blur(18px) saturate(1.08);
   border-radius: 20px;
   padding: 0;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
@@ -78,7 +81,10 @@ dialog.closing::backdrop {
 }
 
 .modal-wrapper {
-  background: white;
+  position: relative;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.72) 0%, rgba(245, 247, 255, 0.66) 58%, rgba(234, 232, 255, 0.58) 100%);
+  backdrop-filter: blur(14px) saturate(1.05);
+  -webkit-backdrop-filter: blur(14px) saturate(1.05);
   display: flex;
   flex-direction: column;
   border-radius: 20px;
@@ -89,10 +95,50 @@ dialog.closing::backdrop {
     justify-content: space-between;
     align-items: center;
     padding: 30px 0 7px 30px;
-    background-image: linear-gradient(to left, transparent, #a8adad, transparent);
-    background-position: bottom;
-    background-size: 100% 2px; 
-    background-repeat: no-repeat;
+    position: relative;
+    z-index: 2;
+    overflow: visible;
+    background:
+      linear-gradient(105deg, rgba(255, 255, 255, 0.12) 0%, rgba(245, 247, 255, 0.08) 58%, rgba(220, 217, 255, 0.14) 100%),
+      linear-gradient(to right, transparent 0%, rgba(194, 188, 255, 0.7) 5%, rgba(194, 188, 255, 0.7) 95%, transparent 100%) bottom / 100% 2px no-repeat;
+
+    &::before {
+      position: absolute;
+      right: 0;
+      bottom: -24px;
+      left: 0;
+      height: 38px;
+      content: '';
+      pointer-events: none;
+      background: linear-gradient(to bottom, rgba(220, 217, 255, 0.18), rgba(234, 232, 255, 0));
+      filter: blur(10px);
+      opacity: 0.8;
+    }
+
+    h2 {
+
+          p {
+            position: relative;
+            z-index: 1;
+            margin: 4px 0 0;
+            color: #667085;
+          }
+      position: relative;
+      z-index: 1;
+      color: #0B1739;
+    }
+
+    .btn-close {
+      position: relative;
+      z-index: 1;
+      color: #667085;
+      background: transparent;
+      border: 0;
+
+      &:hover {
+        color: #0B1739;
+      }
+    }
   }
 
   .modal-title{
@@ -100,8 +146,94 @@ dialog.closing::backdrop {
   }
 
   .modal-body {
+    position: relative;
+    z-index: 1;
     padding: 1.5rem;
     overflow-y: auto;
+    background: transparent;
   }
+
+  .modal-footer {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    justify-content: flex-end;
+    gap: 16px;
+    padding: 18px 1.5rem 1.5rem;
+    background: transparent;
+
+    &::before {
+      position: absolute;
+      z-index: 0;
+      top: 0;
+      right: 0;
+      left: 0;
+      height: 2px;
+      content: '';
+      pointer-events: none;
+      background: linear-gradient(
+        to right,
+        transparent 0%,
+        rgba(194, 188, 255, 0.7) 5%,
+        rgba(194, 188, 255, 0.7) 95%,
+        transparent 100%
+      );
+    }
+
+    &::after {
+      position: absolute;
+      z-index: 0;
+      bottom: -8px;
+      left: -6%;
+      width: 74%;
+      height: 94px;
+      content: '';
+      pointer-events: none;
+      background:
+        radial-gradient(ellipse at left bottom, rgba(220, 217, 255, 0.32) 0%, rgba(234, 232, 255, 0.16) 48%, transparent 82%),
+        linear-gradient(to top, rgba(245, 247, 255, 0.24), transparent 72%);
+      filter: blur(10px);
+      opacity: 0.85;
+    }
+
+    .btn {
+      position: relative;
+      z-index: 1;
+    }
+  }
+}
+
+.modal-popup-host {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  pointer-events: none;
+}
+
+.modal-popup-host:has(.swal2-container) {
+  pointer-events: auto;
+}
+
+.modal-popup-host .swal2-container {
+  position: absolute !important;
+  z-index: 20 !important;
+  inset: 14px 0 auto !important;
+  display: flex !important;
+  justify-content: center !important;
+  width: 100% !important;
+  height: auto !important;
+  padding: 0 16px !important;
+  background: transparent !important;
+  pointer-events: auto !important;
+}
+
+.modal-popup-host .swal2-popup {
+  position: relative !important;
+  z-index: 21 !important;
+  pointer-events: auto !important;
+}
+
+.modal-popup-host .swal2-popup * {
+  pointer-events: auto !important;
 }
 

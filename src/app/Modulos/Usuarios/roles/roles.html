@@ -145,8 +145,8 @@
 
           <div class="acciones-formulario">
             @if (rolSeleccionado) {
-              @if (!isEditing) {
-                <button type="button" class="btn _cancelar" (click)="cancelarAccion()">Cancelar</button>
+              @if (isWatching) {
+                <button type="button" class="btn _principal" (click)="cancelarAccion()">Agregar Rol</button>
                 @if (rolSeleccionado.estado) {
                   <button type="button" class="btn _editar" (click)="activarEdicion()">Editar</button>
                 }
@@ -158,7 +158,7 @@
                   {{ rolSeleccionado.estado ? 'Desactivar' : 'Activar' }}
                 </button>
               } @else {
-                <button type="button" class="btn _cancelar" (click)="cancelarAccion()">Cancelar</button>
+                <button type="button" class="btn _cancelar" (click)="cancelarAccion(); prepararVer()">Cancelar</button>
                 <button type="button" class="btn _guardar" [disabled]="!isFormValido() || !hayCambios()" (click)="actualizarRol()">Guardar cambios</button>
               }
             } @else {

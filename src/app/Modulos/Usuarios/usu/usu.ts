@@ -93,25 +93,28 @@ export class Usu implements OnInit {
     });
   }
 
-  abrirModalEditar(): void {
-    if (!this.usuarioSeleccionado) return;
-    this.modalServ.open(ModalAgregarUusuario, {
-      title: 'Editar usuario',
-      subtitle: 'Paso 1 de 2: Datos personales',
-      isEditing: true,
-      usuarioToEdit: this.usuarioSeleccionado,
-      onSuccess: () => this.cargarUsuarios(this.mostrarActivos)
+  abrirModalEditar(user: UsuarioResponse): void {
+    this.usuarioService.getUsuarioById(user.id).subscribe({
+      next: (fullUser) => this.modalServ.open(ModalAgregarUusuario, {
+        title: 'Editar usuario',
+        subtitle: 'Paso 1 de 2: Datos personales',
+        isEditing: true,
+        usuarioToEdit: fullUser,
+        onSuccess: () => this.cargarUsuarios(this.mostrarActivos)
+      }),
+      error: (err) => this.popUps.errorDesdeBackend(err, 'Error al cargar el detalle del usuario'),
     });
   }
 
-  async cambiarEstadoUsuario(): Promise<void> {
-    if (!this.usuarioSeleccionado) return;
+  async cambiarEstadoUsuario(event: Event, user: UsuarioResponse): Promise<void> {
+    const switchElement = event.target as HTMLInputElement;
+    switchElement.checked = user.estado;
 
-    const accion = this.usuarioSeleccionado.estado ? 'inhabilitar' : 'habilitar';
+    const accion = user.estado ? 'inhabilitar' : 'habilitar';
     const confirmado = await this.popUps.confirmarToast(`¿Desea ${accion} este usuario?`);
     if (!confirmado) return;
 
-    this.usuarioService.cambiarEstado(this.usuarioSeleccionado.id).subscribe({
+    this.usuarioService.cambiarEstado(user.id).subscribe({
       next: () => {
         this.popUps.exito(`Usuario ${accion === 'inhabilitar' ? 'inhabilitado' : 'habilitado'} exitosamente.`);
         this.cargarUsuarios(this.mostrarActivos);
@@ -171,6 +174,11 @@ export class Usu implements OnInit {
 
   getRol(user: UsuarioResponse | null): string {
     if (!user) return 'N/A';
+
+    if (user.roles?.length) {
+      return user.roles.map((rol) => rol.nombre).join(', ');
+    }
+
     return user.rol?.nombre || user.rolNombre || 'N/A';
   }
 
