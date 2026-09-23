@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../../../environments/environment';
-import { UsuarioRequest, UsuarioResponse } from './usuarioInterfaz';
+import { UsuarioListadoResponse, UsuarioRequest, UsuarioResponse } from './usuarioInterfaz';
 
 @Injectable({
   providedIn: 'root',
@@ -18,24 +18,24 @@ export class UsuarioService {
     });
   }
 
-  getUsuarios(activos?: boolean): Observable<UsuarioResponse[]> {
+  getUsuarios(activos?: boolean): Observable<UsuarioListadoResponse[]> {
     let params = new HttpParams();
     if (activos !== undefined) {
       params = params.set('activos', activos);
     }
-    return this.http.get<UsuarioResponse[]>(`${this.apiUrl}`, { params });
+    return this.http.get<UsuarioListadoResponse[]>(`${this.apiUrl}`, { params });
   }
 
   getUsuarioById(id: number): Observable<UsuarioResponse> {
     return this.http.get<UsuarioResponse>(`${this.apiUrl}/${id}`);
   }
 
-  buscarUsuarios(criterio: string, activos?: boolean): Observable<UsuarioResponse[]> {
+  buscarUsuarios(criterio: string, activos?: boolean): Observable<UsuarioListadoResponse[]> {
     let params = new HttpParams().set('criterio', criterio);
     if (activos !== undefined) {
       params = params.set('activos', activos);
     }
-    return this.http.get<UsuarioResponse[]>(`${this.apiUrl}/buscar`, { params });
+    return this.http.get<UsuarioListadoResponse[]>(`${this.apiUrl}/buscar`, { params });
   }
 
   putUsuario(id: number, usuario: UsuarioRequest): Observable<UsuarioResponse> {

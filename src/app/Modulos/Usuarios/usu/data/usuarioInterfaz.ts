@@ -14,6 +14,11 @@ export interface CatalogoOpcion {
   nombre: string;
 }
 
+export interface CatalogoReferencia {
+  id: number;
+  nombre: string;
+}
+
 // 2. Modelo de datos personales
 export interface PersonaDatos {
   cui: string;
@@ -35,26 +40,35 @@ export interface UsuarioRequest {
   estado?: boolean;
 }
 
+export interface UsuarioListadoResponse {
+  id: number;
+  codigo: string;
+  nombreCompleto: string;
+  telefono?: string;
+  roles?: string[];
+  estado: boolean;
+}
+
 // 4. Respuesta devuelta por el servidor (Response)
 export interface UsuarioResponse {
   id: number;
   codigo: string;
   username: string;
+  nombres: string;
+  apellidos: string;
   estado: boolean;
   pin?: string | number;
 
   cui?: string;
-  nombres?: string;
-  apellidos?: string;
   sexo?: Sexo;
   fechaNacimiento?: string;
   telefono?: string;
   email?: string;
 
   persona?: PersonaDatos & { id?: number };
-  puesto?: CatalogoOpcion;
+  puesto?: CatalogoReferencia;
   puestoNombre?: string;
-  horario?: CatalogoOpcion;
+  horario?: CatalogoReferencia;
   horarioNombre?: string;
   rol?: CatalogoOpcion;
   rolNombre?: string;

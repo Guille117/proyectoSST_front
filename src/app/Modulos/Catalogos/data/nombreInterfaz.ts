@@ -2,9 +2,11 @@ export interface Nombre {
   nombre: string;
 }
 
-export interface nombreAbrev {
+
+export interface tipoDato2Post {
   nombre: string;
-  abreviatura: string;
+  abreviatura?: string;
+  descripcion?: string;
 }
 
 export interface NombreGet {
@@ -13,10 +15,13 @@ export interface NombreGet {
   activo?: boolean;
 }
 
-export interface unidadMedida {
+
+export interface tipoDato2 {
   id: number;
   nombre: string;
-  abreviatura: string;
+  descripcion?: string;
+  aux1?: string;
+  abreviatura?: string;
   activo?: boolean;
 }
 
@@ -24,3 +29,4 @@ export interface registrosCatalogos {
   tabla: string;
   total: number;
 }
+

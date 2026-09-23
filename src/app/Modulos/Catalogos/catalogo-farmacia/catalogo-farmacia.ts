@@ -4,7 +4,7 @@ import { FormsModule, NgForm } from '@angular/forms';
 import { TabSwitch } from '../../../shared/tab-switch/tab-switch';
 import { PopUps } from '../../../shared/popUps/popUpsService';
 import { CatalogoService } from '../data/serviceCatalogo';
-import { Nombre, NombreGet, registrosCatalogos, unidadMedida } from '../data/nombreInterfaz';
+import { Nombre, NombreGet, registrosCatalogos, tipoDato2 } from '../data/nombreInterfaz';
 import { Paginacion } from '../../../shared/paginacion/paginacion';
 
 interface CatalogoGrupo {
@@ -114,7 +114,7 @@ llenarConetoACatalogos() {
 // traer registros de catalodos
 mostrarActivos:boolean = true;
 registros: NombreGet[] = [];
-unidadesMedida: unidadMedida[] = [];
+unidadesMedida: tipoDato2[] = [];
 
 traerRegistros(estado:boolean){
   if (this.catalogoSeleccionado === 'Unidad de medida') {

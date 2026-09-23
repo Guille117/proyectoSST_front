@@ -8,6 +8,8 @@ import { rutasUsuarios } from './Modulos/Usuarios/rutasUsuarios';
 import { authGuard, loginGuard } from './Modulos/Auth/data/auth.guard';
 import { PrincipalCatalogo } from './Modulos/Catalogos/principal-catalogo/principal-catalogo';
 import { rutasCatalogo } from './Modulos/Catalogos/rutasCatalogo';
+import { PrincipalPacientes } from './Modulos/Pacientes/principal-pacientes/principal-pacientes';
+import { rutasPaciente } from './Modulos/Pacientes/rutasPaciente';
 
 export const routes: Routes = [
   {
@@ -16,10 +18,11 @@ export const routes: Routes = [
   {
     path: '', component: MainLayout, canActivate: [authGuard],canActivateChild: [authGuard],
     children: [
-      { path: '', redirectTo: 'usuarios', pathMatch: 'full' },
+      { path: '', redirectTo: 'login', pathMatch: 'full' },
       { path: 'farmacia', component: PrincipalFarmacia, children: rutasFarmacia },
       { path: 'usuarios', component: PrincipalUsuarios, children: rutasUsuarios },
       { path: 'catalogos', component: PrincipalCatalogo, children: rutasCatalogo },
+      { path: 'pacientes', component: PrincipalPacientes, children: rutasPaciente },
     ],
   },
   {

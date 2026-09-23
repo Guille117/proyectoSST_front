@@ -1,20 +1,20 @@
+import { ChangeDetectorRef, Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
-import { FormsModule, NgForm } from '@angular/forms';
-import { TabSwitch } from '../../../shared/tab-switch/tab-switch';
+import { FormsModule } from '@angular/forms';
+import { NgForm } from '@angular/forms';
+import { Nombre, NombreGet, tipoDato2, tipoDato2Post } from '../data/nombreInterfaz';
 import { PopUps } from '../../../shared/popUps/popUpsService';
-import { Nombre, NombreGet, registrosCatalogos } from '../data/nombreInterfaz';
+import { TabSwitch } from '../../../shared/tab-switch/tab-switch';
 import { Paginacion } from '../../../shared/paginacion/paginacion';
 import { CatalogoService } from '../data/serviceCatalogo';
 
 @Component({
-  selector: 'app-catalogo-usuarios',
-  imports: [CommonModule, FormsModule, TabSwitch, Paginacion],
-  templateUrl: './catalogo-usuarios.html',
+  selector: 'app-catalogo-paciente',
+  imports: [CommonModule, FormsModule,TabSwitch, Paginacion],
+  templateUrl: './catalogo-paciente.html',
   styleUrl: '../catalogo-farmacia/catalogo-farmacia.scss',
 })
-export class CatalogoUsuarios implements OnInit {
-  // servicios y configuración del catálogo
+export class CatalogoPaciente {// servicios y configuración del catálogo
   private readonly catalogoService: CatalogoService<Nombre, NombreGet>;
 
    constructor(
@@ -29,11 +29,27 @@ export class CatalogoUsuarios implements OnInit {
   // catálogo de usuarios
   listaCatalogos = [
     {
-      key: 'UnidadMedida',
-      url: 'puestos',
-      icono: 'bi bi-briefcase',
-      titulo: 'Puesto',
-      descripcion: 'Indica los puestos posibles para usuarios',
+      key: 'tipos_cama',
+      url: 'tiposCama',
+      icono: 'bi bi-tag',
+      titulo: 'Tipo cama',
+      descripcion: 'Indica los tipos de cama posibles',
+      cantidad: 0
+    },
+    {
+      key: 'areas',
+      url: 'areas',
+      icono: 'bi bi-collection',
+      titulo: 'Area',
+      descripcion: 'Indica las areas posibles de hospitalización',
+      cantidad: 0
+    },
+    {
+      key: 'habitaciones',
+      url: 'habitaciones',
+      icono: 'bi bi-grid',
+      titulo: 'Habitación',
+      descripcion: 'Indica las habitaciones para hospitalización',
       cantidad: 0
     },
   ];
@@ -46,8 +62,6 @@ export class CatalogoUsuarios implements OnInit {
   ngOnInit(): void {
     this.seleccionarCatalogo(this.listaCatalogos[0].titulo, this.listaCatalogos[0].url);
     this.obtenerContedoCatalogos();
-    this.obtenerContedoCatalogos();
-    this.traerRegistros(true);
   }
   
   seleccionarCatalogo(nombre: string, url: string) {
@@ -60,9 +74,11 @@ export class CatalogoUsuarios implements OnInit {
     // obtener la cantidad de registros en las tablas relacionadas con farmacia
   
     obtenerContedoCatalogos(){
-      this.catalogoService.obtenerRegistrosCatalogosUsuarios().subscribe({
+      this.catalogoService.obtenerRegistrosCatalogosPacientes().subscribe({
         next: (data) => {
-          this.listaCatalogos[0].cantidad = data;
+          for (const catalogo of this.listaCatalogos) {
+            catalogo.cantidad = data.find((registro) => registro.tabla === catalogo.key)?.total ?? 0;
+          }
           this.cdr.detectChanges(); 
         },
         error: () => {
@@ -76,10 +92,10 @@ export class CatalogoUsuarios implements OnInit {
   
   // traer registros de catalodos
   mostrarActivos:boolean = true;
-  registros: NombreGet[] = [];
+  registros: tipoDato2[] = [];
   
   traerRegistros(estado:boolean){
-    this.catalogoService.listar(this.catalogoUrl, estado).subscribe({
+    this.catalogoService.listar2(this.catalogoUrl, estado).subscribe({
       next: (data) => {
         this.registros = data;
         this.cdr.detectChanges();
@@ -95,7 +111,7 @@ export class CatalogoUsuarios implements OnInit {
     const confirmado = await this.popUps.confirmarToast('¿Está seguro de que desea cambiar el estado de este registro?');
 
     if(confirmado){
-      this.catalogoService.cambiarEstado(this.catalogoUrl, id).subscribe({
+      this.catalogoService.cambiarEstado2(this.catalogoUrl, id).subscribe({
         next:()=>{
           this.traerRegistros(this.mostrarActivos);
           this.obtenerContedoCatalogos();
@@ -114,12 +130,19 @@ export class CatalogoUsuarios implements OnInit {
   tituloFormulario: string = 'Guardar registro';
 
   nombre: string = '';
+  descripcion: string = '';
   nombreOriginal = '';
+  descripcionOriginal = '';
   idRegistroSeleccionado = 0;
 
   guardar(formulario: NgForm){
     if(!this.forumularioVacio()){
-      this.catalogoService.crear(this.catalogoUrl, { nombre: this.nombre }).subscribe({
+      const catalogo: tipoDato2Post = {
+        nombre: this.nombre.trim(),
+        descripcion: this.descripcion.trim(),
+      };
+
+      this.catalogoService.crear2(this.catalogoUrl, catalogo).subscribe({
         next: () => {
           this.popUps.exito('Registro guardado con éxito');
           this.traerRegistros(this.mostrarActivos);
@@ -143,15 +166,18 @@ export class CatalogoUsuarios implements OnInit {
 // editar registro
   editar: boolean = false;
 
-  precargar(nombre: string, id: number){
+  precargar(nombre: string, descripcion: string, id: number){
     this.editar = true;
     this.nombre = nombre;
+    this.descripcion = descripcion;
     this.nombreOriginal = nombre;
+    this.descripcionOriginal = descripcion;
     this.idRegistroSeleccionado = id;
   }
 
   hayCambios(): boolean {
-    return (this.nombre.trim() !== this.nombreOriginal.trim()) 
+    return this.nombre.trim() !== this.nombreOriginal.trim()
+      || this.descripcion.trim() !== this.descripcionOriginal.trim();
   }
 
   async editarRegistro(formulario: NgForm){
@@ -159,7 +185,12 @@ export class CatalogoUsuarios implements OnInit {
       const confirmado = await this.popUps.confirmarToast('¿Está seguro de que desea editar el registro?');
       if(!confirmado) return;
         if(!this.forumularioVacio()){
-          this.catalogoService.actualizar(this.catalogoUrl, this.idRegistroSeleccionado, { nombre: this.nombre }).subscribe({
+          const catalogo: tipoDato2Post = {
+            nombre: this.nombre.trim(),
+            descripcion: this.descripcion.trim(),
+          };
+
+          this.catalogoService.actualizar2(this.catalogoUrl, this.idRegistroSeleccionado, catalogo).subscribe({
             next: () => {
               this.popUps.exito('Registro actualizado con éxito');
               this.traerRegistros(this.mostrarActivos);
@@ -183,6 +214,6 @@ export class CatalogoUsuarios implements OnInit {
     this.editar = false;
     formulario.resetForm();
     this.nombre = '';
+    this.descripcion = '';
   }
 }
- 

@@ -1,0 +1,223 @@
+<div class="camas-layout">
+	<section class="panel camas-listado">
+		<div class="encabezado-listado">
+			<div class="buscador-container">
+				<div class="buscador">
+				<select class="selector" [(ngModel)]="filtro" (change)="cambiarFiltro()" aria-label="Filtrar camas por">
+					<option value="codigo">Código</option>
+					<option value="area">Área</option>
+					<option value="tipoCama">Tipo cama</option>
+					<option value="estado">Estado</option>
+					<option value="habitacion">Habitación</option>
+				</select>
+				<div class="busqueda-codigo">
+					@if (filtro === 'codigo') {
+						<span>CAMA-</span>
+						<input
+							class="inputB"
+							type="text"
+							[(ngModel)]="textoBusqueda"
+							placeholder="Buscar cama..."
+							aria-label="Parte final del código de cama"
+							(focus)="busquedaEnfocada = true"
+							(blur)="busquedaEnfocada = false"
+						>
+					} @else if (filtro === 'area') {
+						<select class="inputB" [(ngModel)]="textoBusqueda" aria-label="Seleccionar área" (change)="buscarCamas(textoBusqueda)">
+							<option value="">Seleccionar área</option>
+							@for (area of areas; track area.id) {
+								<option [ngValue]="area.nombre">{{ area.nombre }}</option>
+							}
+						</select>
+					} @else if (filtro === 'tipoCama') {
+						<select class="inputB" [(ngModel)]="textoBusqueda" aria-label="Seleccionar tipo de cama" (change)="buscarCamas(textoBusqueda)">
+							<option value="">Seleccionar tipo de cama</option>
+							@for (tipo of tiposCama; track tipo.id) {
+								<option [ngValue]="tipo.nombre">{{ tipo.nombre }}</option>
+							}
+						</select>
+					} @else if (filtro === 'estado') {
+						<select class="inputB" [(ngModel)]="textoBusqueda" aria-label="Seleccionar estado" (change)="buscarCamas(textoBusqueda)">
+							<option value="">Seleccionar estado</option>
+							<option [ngValue]="EstadoCama.OCUPADA">Ocupada</option>
+							<option [ngValue]="EstadoCama.DISPONIBLE">Disponible</option>
+							<option [ngValue]="EstadoCama.LIMPIEZA">Limpieza</option>
+						</select>
+					} @else {
+						<select class="inputB" [(ngModel)]="textoBusqueda" aria-label="Seleccionar habitación" (change)="buscarCamas(textoBusqueda)">
+							<option value="">Seleccionar habitación</option>
+							@for (habitacion of habitaciones; track habitacion.id) {
+								<option [ngValue]="habitacion.nombre">{{ habitacion.nombre }}</option>
+							}
+						</select>
+					}
+				</div>
+				<button
+					class="btnLupa"
+					type="button"
+					aria-label="Buscar camas"
+					title="Buscar camas"
+					(click)="buscarCamas(filtro === 'codigo' ? 'CAMA-' + textoBusqueda.padStart(2, '0') : textoBusqueda)"
+				>
+					<i class="bi bi-search"></i>
+				</button>
+				</div>
+			</div>
+
+			<app-tab-switch
+				[op1]="'Activos'"
+				[op2]="'Inactivos'"
+				[mostrarActivos]="mostrarActivos"
+				(opcionCambiada)="cambiarEstado($event)"
+			></app-tab-switch>
+		</div>
+
+		<div class="camas-grid">
+			@if (camas.length === 0) {
+				<p class="camas-vacias">No hay camas para mostrar.</p>
+			} @else {
+			@for(cama of camasPaginadas; track cama.idCama) {
+				<article class="cama-card" [ngClass]="'cama-'+cama.estado" [attr.data-cama-id]="cama.idCama" [class.cama-inactiva]="isEditing ? idActualizar !== cama.idCama : !cama.activo" [class.menu-abierto]="menuCamaAbierto === cama.idCama">
+					<div class="cama-card-content">
+						<div class="cama-card-top">
+						@if (cama.activo) {
+							<span class="cama-estado">{{cama.estado}}</span>
+						}
+						<div class="cama-card-tools">
+							<span class="cama-codigo">{{cama.codigo}}</span>
+							@if(!isEditing) {
+								<button
+									type="button"
+									class="cama-menu-trigger"
+									aria-label="Más opciones para {{ cama.codigo }}"
+									[aria-expanded]="menuCamaAbierto === cama.idCama"
+									(click)="alternarMenuCama(cama.idCama)"
+								>
+									<i class="bi bi-three-dots-vertical"></i>
+								</button>
+							}
+						</div>
+						</div>
+						<dl>
+							<div><dt>Área</dt><dd>{{cama.nombreArea}}</dd></div>
+							<div><dt>Habitación</dt><dd>{{cama.nombreHabitacion}}</dd></div>
+							<div><dt>Tipo cama</dt><dd>{{cama.nombreTipoCama}}</dd></div>
+						</dl>
+					</div>
+					@if(!isEditing) {
+						@if (menuCamaAbierto === cama.idCama) {
+							<div class="cama-card-actions" role="menu" aria-label="Acciones para {{ cama.codigo }}">
+							@if(cama.activo && cama.estado !== EstadoCama.OCUPADA) {
+								<button type="button" class="cama-status-button" role="menuitem" (click)="cambiarEstadoCama(cama.idCama, cama.estado === EstadoCama.DISPONIBLE ? EstadoCama.LIMPIEZA : EstadoCama.DISPONIBLE); cerrarMenuCama()">
+									<i class="bi bi-check2"></i>
+									@switch (cama.estado) {
+										@case (EstadoCama.DISPONIBLE) {
+											En limpieza
+										}
+										@case (EstadoCama.LIMPIEZA) {
+											Disponible
+										}
+									}
+								</button>
+								
+								<div class="cama-action-row">
+									<span>Editar</span>
+									<button type="button" class="iconEditar" role="menuitem" aria-label="Editar cama" title="Editar cama" (click)="precargarCama(cama.idCama); cerrarMenuCama()">
+										<i class="bi bi-pencil-square"></i>
+									</button>
+								</div>
+							}
+
+							@if(cama.estado !== EstadoCama.OCUPADA){
+								<div class="cama-action-row">
+									<span>{{ cama.activo ? 'Desactivar' : 'Activar' }}</span>
+									<label class="cama-switch" [title]="cama.activo ? 'Desactivar cama' : 'Activar cama'">
+										<input type="checkbox" [checked]="cama.activo" [attr.aria-label]="cama.activo ? 'Desactivar cama' : 'Activar cama'" (click)="$event.preventDefault(); cambiarActivoCama(cama.idCama); cerrarMenuCama()">
+										<span></span>
+									</label>
+								</div>
+							}
+							</div>
+						}
+					}
+					
+				</article>
+			}
+			}
+		</div>
+
+		<nav class="camas-paginacion" aria-label="Paginación de camas">
+			<button
+				type="button"
+				class="camas-paginacion-control"
+				[disabled]="paginaCamas === 1"
+				aria-label="Página anterior"
+				(click)="cambiarPaginaCamas(paginaCamas - 1)"
+			>
+				<i class="bi bi-chevron-left"></i>
+			</button>
+			<span class="camas-paginacion-resumen">Mostrando {{ camasPaginadas.length }} de {{ camas.length }} · Página {{ paginaCamas }}</span>
+			<button
+				type="button"
+				class="camas-paginacion-control"
+				[disabled]="paginaCamas === totalPaginasCamas"
+				aria-label="Página siguiente"
+				(click)="cambiarPaginaCamas(paginaCamas + 1)"
+			>
+				<i class="bi bi-chevron-right"></i>
+			</button>
+		</nav>
+	</section>
+
+	<aside class="f_formulario">
+		<div class="f_header">
+			<h3>{{isEditing ? 'Actualizar registro' : 'Guardar registro'}}</h3>
+		</div>
+
+		<div class="f_body">
+			<form class="body_container">
+				<div class="subFormulario">
+					<label for="tipoCama">Tipo de cama</label>
+					<select id="tipoCama" name="tipoCama" [(ngModel)]="camaRequest.tipoId" required>
+						<option [ngValue]="0" disabled>Selecciona un tipo de cama</option>
+						@for (tipo of tiposCama; track tipo.id) {
+							<option [ngValue]="tipo.id">{{ tipo.nombre }}</option>
+						}
+					</select>
+				</div>
+
+				<div class="subFormulario">
+					<label for="habitacion">Habitación</label>
+					<select id="habitacion" name="habitacion" [(ngModel)]="camaRequest.habitacionId" required>
+						<option [ngValue]="0" disabled>Selecciona una habitación</option>
+						@for (habitacion of habitaciones; track habitacion.id) {
+							<option [ngValue]="habitacion.id">{{ habitacion.nombre }}</option>
+						}
+					</select>
+				</div>
+				
+				<div class="subFormulario">
+					<label for="area">Área</label>
+					<select id="area" name="area" [(ngModel)]="camaRequest.areaId" required>
+						<option [ngValue]="0" disabled>Selecciona un área</option>
+						@for (area of areas; track area.id) {
+							<option [ngValue]="area.id">{{ area.nombre }}</option>
+						}
+					</select>
+				</div>
+			</form>
+		</div>
+			
+		<div class="f_footer">
+			<button type="button" class="btn _cancelar" (click)="limpiarFormulario()">Cancelar</button>
+			<button
+				type="submit"
+				class="btn _guardar"
+				[disabled]="!puedeGuardar()"
+				(click)=  "isEditing ? actualizarCama() : crearCama()"
+			>
+				{{isEditing ? 'Guardar Cambios' : 'Guardar'}}
+			</button>
+		</div>
+	</aside>
+</div>

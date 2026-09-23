@@ -47,6 +47,11 @@
     color: #fff;
 }
 
+._editar{
+    background: #F59E0B;
+    color: #fff;
+}
+
 ._guardar {
     color: #fff;
     background: #22C55E;
@@ -78,45 +83,33 @@
     color: #fff;
 }
 
-._editar{
-    background: #fd9d01;
-    color: #fff;
+.iconEditar {
+	display: grid;
+	width: 40px;
+	height: 40px;
+	padding: 0;
+	place-items: center;
+	color: #F59E0B;
+	background: rgba(255, 255, 255, 0.62);
+	border: 1px solid rgba(148, 163, 184, 0.45);
+	border-radius: 50%;
+	box-shadow: 0 2px 6px rgba(26, 37, 53, 0.12);
+	font-size: 19px;
+	cursor: pointer;
+	transition: color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+
+	&:hover {
+		color: #fff;
+		background: #F59E0B;
+		transform: translateY(-1px);
+	}
+
+	&:focus-visible {
+		outline: 2px solid #F59E0B;
+		outline-offset: 2px;
+	}
 }
 
-.i_basurero{
-    color: red;
-    font-size: 21px;
-    cursor: pointer;
-    display: inline-block;
-    transition: transform 0.2s ease, color 0.2s ease, filter 0.2s ease;
-
-    &:hover {
-        transform: translateY(-2px) scale(1.12) rotate(-6deg);
-        color: #cc0000;
-        filter: drop-shadow(0 4px 8px rgba(204, 0, 0, 0.35));
-    }
-}
-
-.i_lapiz{
-    color: rgb(243, 177, 23);
-    font-size: 21px;
-    margin-right: 10px;
-    cursor: pointer;
-    display: inline-block;
-    transition: transform 0.2s ease, color 0.2s ease, filter 0.2s ease;
-
-    &:hover {
-        transform: translateY(-2px) scale(1.12) rotate(8deg);
-        color: #d89700;
-        filter: drop-shadow(0 4px 8px rgba(216, 151, 0, 0.35));
-    }
-}
-
-.i_lapiz.disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-  pointer-events: none; /* Bloquea completamente el evento de clic */
-}
 .i_basurero.disabled {
   opacity: 0.4;
   cursor: not-allowed;

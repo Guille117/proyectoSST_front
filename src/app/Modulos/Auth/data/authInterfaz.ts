@@ -25,11 +25,8 @@ export interface LoginResponse {
   token: string;
   tipo?: string;
   id: number;
-  codigo?: string;
-  username: string;
   nombreCompleto: string;
-  puesto?: string;
-  rol?: string;
+  roles?: string[];
   estado?: boolean;
   permisos?: PermisoAuth[];
 }

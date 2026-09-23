@@ -1,0 +1,423 @@
+.camas-layout {
+	display: grid;
+	grid-template-columns: minmax(0, 1.8fr) minmax(300px, 0.7fr);
+	gap: 24px;
+	width: 100%;
+	padding: 24px 0;
+	align-items: start;
+}
+
+.panel {
+	min-width: 0;
+	padding: 24px;
+	background: rgba(255, 255, 255, 0.86);
+	border: 1px solid var(--colorBorde);
+	border-radius: 14px;
+	box-shadow: 0 8px 24px rgba(26, 37, 53, 0.08);
+}
+
+.encabezado-listado {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 18px;
+	margin-bottom: 24px;
+}
+
+.buscador-container {
+	width: min(100%, 620px);
+	height: 45px;
+}
+
+.busqueda-codigo {
+	display: flex;
+	align-items: center;
+	flex: 1;
+	min-width: 0;
+	height: 100%;
+	color: #344054;
+	font-size: 16px;
+	font-weight: 600;
+	border-right: 1px solid rgba(154, 152, 152, 0.601);
+
+	span {
+		padding-left: 12px;
+		white-space: nowrap;
+	}
+
+	.inputB {
+		min-width: 0;
+		padding-left: 5px;
+	}
+}
+
+.camas-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+	gap: 25px;
+}
+
+.camas-paginacion {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 12px;
+	margin-top: 28px;
+}
+
+.camas-paginacion-resumen {
+	min-width: 88px;
+	color: #64748B;
+	font-size: 14px;
+	font-weight: 700;
+	text-align: center;
+}
+
+.camas-paginacion-control {
+	display: grid;
+	width: 36px;
+	height: 36px;
+	place-items: center;
+	padding: 0;
+	color: #475569;
+	background: #fff;
+	border: 1px solid #CBD5E1;
+	border-radius: 50%;
+	font-size: 17px;
+	cursor: pointer;
+	transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+
+	&:hover:not(:disabled),
+	&:focus-visible {
+		color: #fff;
+		background: var(--azulSecundario);
+		border-color: var(--azulSecundario);
+		outline: none;
+	}
+
+	&:disabled {
+		color: #CBD5E1;
+		cursor: default;
+	}
+}
+
+.cama-card {
+	position: relative;
+	padding: 18px;
+	overflow: hidden;
+	background: rgba(255, 255, 255, 0.9);
+	border: 1px solid var(--card-color, #94A3B8);
+	border-left: 8px solid var(--card-color, #94A3B8);
+	border-radius: 12px;
+	box-shadow: 0 7px 18px color-mix(in srgb, var(--card-color, #94A3B8) 18%, transparent);
+	backdrop-filter: blur(10px);
+	-webkit-backdrop-filter: blur(10px);
+
+	&::before {
+		position: absolute;
+		top: -106px;
+		left: -8%;
+		width: 120%;
+		height: 190px;
+		content: '';
+		background: var(--card-tint, rgba(148, 163, 184, 0.12));
+		border-radius: 48% 52% 45% 55%;
+		transform: rotate(13deg);
+	}
+
+	&::after {
+		position: absolute;
+		right: -32px;
+		top: 6px;
+		width: 72%;
+		height: 120px;
+		content: '';
+		background: rgba(255, 255, 255, 0.38);
+		border-radius: 50%;
+		transform: rotate(13deg);
+	}
+
+	h3 {
+		position: relative;
+		z-index: 1;
+		margin: 16px 0;
+		color: var(--azulPrincipal);
+		font-size: 20px;
+	}
+}
+
+.cama-card-content {
+	position: relative;
+	z-index: 1;
+	transition: filter 0.2s ease, opacity 0.2s ease;
+}
+
+.menu-abierto .cama-card-content {
+	filter: blur(5px);
+	opacity: 0.58;
+	pointer-events: none;
+}
+
+// Estilos de cards para los diferentes estados de las camas
+.cama-DISPONIBLE {
+	--card-color: #00B953;
+	--card-tint: rgba(0, 185, 83, 0.12);	// fondo del card
+
+	// color de letra, que indica el estado de la cama
+	& .cama-estado { color: #00B953; }
+
+	// colores para el boton de cambiar estado de cama
+	& .cama-status-button {
+		color: #B45309;
+		background: rgba(255, 237, 213, 0.82);
+		border-color: rgba(245, 158, 11, 0.55);
+
+		&:hover { background: #F59E0B; }
+	}
+}
+
+.cama-LIMPIEZA {
+	--card-color: #FF921C;
+	--card-tint: rgba(255, 146, 28, 0.13); // fondo del card
+
+	& .cama-estado { color: #eb6905; }
+
+	& .cama-status-button {
+		color: #15803D;
+		background: rgba(220, 252, 231, 0.82);
+		border-color: rgba(34, 197, 94, 0.55);
+
+		&:hover { background: #22C55E; }
+	}
+}
+
+.cama-OCUPADA {
+	--card-color: #F51F2A;
+	--card-tint: rgba(245, 31, 42, 0.11);
+
+	& .cama-estado { color: #F51F2A; }
+}
+
+.cama-inactiva {
+	--card-color: #89939D;
+	--card-tint: rgba(137, 147, 157, 0.12);
+
+	.cama-estado,
+	.cama-codigo,
+	.cama-card dl dt,
+	.cama-card dl dd {
+		color: #89939D;
+	}
+}
+
+.cama-card-top,
+.cama-card dl div {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+}
+
+.cama-card-top {
+	position: relative;
+	z-index: 1;
+	margin-bottom: 14px;
+}
+
+.cama-card-tools {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	min-width: 0;
+}
+
+.cama-estado {
+	font-size: 14px;
+	font-weight: 700;
+	text-transform: uppercase;
+}
+
+.cama-codigo {
+	color: #707A96;
+	font-size: 17px;
+	font-weight: 700;
+	line-height: 1;
+}
+
+.cama-card dl {
+	display: grid;
+	gap: 10px;
+	margin: 0;
+
+	dt { color: #667085; font-size: 16px; }
+	dd { margin: 0; color: #101828; font-weight: 600; }
+}
+
+.cama-card-actions {
+	position: absolute;
+	z-index: 3;
+	top: 14px;
+	right: 12px;
+	display: flex;
+	flex-direction: column;
+	align-items: flex-end;
+	width: 150px;
+	max-width: calc(100% - 24px);
+	box-sizing: border-box;
+	gap: 8px;
+
+	.cama-status-button {
+		width: 100%;
+		justify-content: flex-start;
+	}
+
+	.cama-status-button {
+		min-height: 36px;
+	}
+
+	.cama-action-row {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		width: 100%;
+		color: #475569;
+		font-size: 16px;
+		font-weight: 600;
+	}
+
+	.iconEditar {
+		width: 42px;
+		height: 42px;
+		padding: 0;
+		border-radius: 50%;
+		box-shadow: none;
+		font-size: 21px;
+	}
+
+	.cama-switch {
+		align-self: flex-end;
+	}
+
+	.cama-switch span {
+		width: 44px;
+		height: 24px;
+
+		&::after {
+			width: 18px;
+			height: 18px;
+		}
+	}
+
+	.cama-switch input:checked + span::after {
+		transform: translateX(20px);
+	}
+}
+
+.cama-menu-trigger {
+	display: grid;
+	width: 28px;
+	height: 28px;
+	flex: 0 0 28px;
+	place-items: center;
+	padding: 0;
+	color: #52627f;
+	background: rgba(255, 255, 255, 0.56);
+	border: 0;
+	border-radius: 50%;
+	font-size: 22px;
+	cursor: pointer;
+	transition: background 0.2s ease, color 0.2s ease;
+
+	&:hover,
+	&:focus-visible {
+		color: #1e293b;
+		background: rgba(255, 255, 255, 0.88);
+		outline: none;
+	}
+
+	&:focus-visible {
+		box-shadow: 0 0 0 3px color-mix(in srgb, var(--card-color) 32%, transparent);
+	}
+}
+
+.cama-status-button {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	min-height: 34px;
+	padding: 0 11px;
+	border: 1px solid;
+	border-radius: 8px;
+	font-size: 13px;
+	font-weight: 700;
+	cursor: pointer;
+	transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+
+.cama-status-button + .cama-edit-button {
+	margin-left: auto;
+}
+
+.cama-switch {
+	display: inline-flex;
+	cursor: pointer;
+
+	input {
+		position: absolute;
+		opacity: 0;
+	}
+
+	span {
+		position: relative;
+		display: block;
+		width: 44px;
+		height: 23px;
+		background: #94A3B8;
+		border-radius: 12px;
+		transition: background 0.2s ease;
+
+		&::after {
+			position: absolute;
+			top: 3px;
+			left: 3px;
+			width: 17px;
+			height: 17px;
+			content: '';
+			background: #fff;
+			border-radius: 50%;
+			transition: transform 0.2s ease;
+		}
+	}
+
+	input:checked + span {
+		background: #22C55E;
+
+		&::after { transform: translateX(21px); }
+	}
+
+	input:focus-visible + span {
+		outline: 2px solid #3B82F6;
+		outline-offset: 2px;
+	}
+}
+
+.subFormulario {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+
+.body_container {
+	display: flex;
+	flex-direction: column;
+	gap: 13px;
+}
+
+@media (max-width: 900px) {
+	.camas-layout { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 620px) {
+	.encabezado-listado { align-items: stretch; flex-direction: column; }
+	.buscador-container { width: 100%; }
+}

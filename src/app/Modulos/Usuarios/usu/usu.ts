@@ -5,7 +5,7 @@ import { TabSwitch } from "../../../shared/tab-switch/tab-switch";
 import { ModalService } from '../../../modal-principal/modal-service';
 import { ModalAgregarUusuario } from './modal-agregar-uusuario/modal-agregar-uusuario';
 import { UsuarioService } from './data/usuario-service';
-import { UsuarioResponse } from './data/usuarioInterfaz';
+import { UsuarioListadoResponse, UsuarioResponse } from './data/usuarioInterfaz';
 import { PopUps } from '../../../shared/popUps/popUpsService';
 
 @Component({
@@ -20,7 +20,7 @@ export class Usu implements OnInit {
   private popUps = inject(PopUps);
   private cdr = inject(ChangeDetectorRef);
 
-  usuarios: UsuarioResponse[] = [];
+  usuarios: UsuarioListadoResponse[] = [];
   usuarioSeleccionado: UsuarioResponse | null = null;
   mostrarActivos = true;
   criterioBusqueda = '';
@@ -59,7 +59,7 @@ export class Usu implements OnInit {
     }
   }
 
-  private actualizarListaUsuarios(data: UsuarioResponse[]): void {
+  private actualizarListaUsuarios(data: UsuarioListadoResponse[]): void {
     this.usuarios = data;
     const primerUsuario = this.usuarios[0];
 
@@ -73,8 +73,7 @@ export class Usu implements OnInit {
     this.cdr.detectChanges();
   }
 
-  seleccionarUsuario(user: UsuarioResponse): void {
-    this.usuarioSeleccionado = user;
+  seleccionarUsuario(user: UsuarioListadoResponse): void {
     this.usuarioService.getUsuarioById(user.id).subscribe({
       next: (fullUser) => {
         this.usuarioSeleccionado = fullUser;
@@ -93,7 +92,7 @@ export class Usu implements OnInit {
     });
   }
 
-  abrirModalEditar(user: UsuarioResponse): void {
+  abrirModalEditar(user: UsuarioListadoResponse): void {
     this.usuarioService.getUsuarioById(user.id).subscribe({
       next: (fullUser) => this.modalServ.open(ModalAgregarUusuario, {
         title: 'Editar usuario',
@@ -106,7 +105,7 @@ export class Usu implements OnInit {
     });
   }
 
-  async cambiarEstadoUsuario(event: Event, user: UsuarioResponse): Promise<void> {
+  async cambiarEstadoUsuario(event: Event, user: UsuarioListadoResponse): Promise<void> {
     const switchElement = event.target as HTMLInputElement;
     switchElement.checked = user.estado;
 
@@ -135,11 +134,8 @@ export class Usu implements OnInit {
     return user.apellidos || user.persona?.apellidos || '';
   }
 
-  getNombreCompleto(user: UsuarioResponse | null): string {
-    if (!user) return '';
-    const nom = this.getNombres(user);
-    const ape = this.getApellidos(user);
-    return `${nom} ${ape}`.trim() || 'N/A';
+  getNombreCompleto(user: UsuarioListadoResponse | null): string {
+    return user?.nombreCompleto || 'N/A';
   }
 
   getCui(user: UsuarioResponse | null): string {
@@ -152,9 +148,12 @@ export class Usu implements OnInit {
     return user.fechaNacimiento || user.persona?.fechaNacimiento || '';
   }
 
-  getTelefono(user: UsuarioResponse | null): string {
+  getTelefono(user: UsuarioListadoResponse | UsuarioResponse | null): string {
     if (!user) return 'N/A';
-    return user.telefono || user.persona?.telefono || 'N/A';
+    if ('persona' in user) {
+      return user.telefono || user.persona?.telefono || 'N/A';
+    }
+    return user.telefono || 'N/A';
   }
 
   getEmail(user: UsuarioResponse | null): string {
@@ -172,14 +171,18 @@ export class Usu implements OnInit {
     return user.horario?.nombre || user.horarioNombre || 'N/A';
   }
 
-  getRol(user: UsuarioResponse | null): string {
+  getRol(user: UsuarioListadoResponse | UsuarioResponse | null): string {
     if (!user) return 'N/A';
 
     if (user.roles?.length) {
-      return user.roles.map((rol) => rol.nombre).join(', ');
+      return user.roles.map((rol) => typeof rol === 'string' ? rol : rol.nombre).join(', ');
     }
 
-    return user.rol?.nombre || user.rolNombre || 'N/A';
+    if ('rol' in user) {
+      return user.rol?.nombre || user.rolNombre || 'N/A';
+    }
+
+    return 'N/A';
   }
 
   calcularEdad(fechaNacimiento?: string): number | string {

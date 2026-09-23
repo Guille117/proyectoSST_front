@@ -8,7 +8,7 @@
             {{ authService.currentUser()?.nombreCompleto || 'Usuario' }}
         </h3>
         <h5>
-            {{ authService.currentUser()?.rol || authService.currentUser()?.puesto || 'Administrador' }}
+            {{ authService.currentUser()?.roles?.join(', ') || 'Usuario' }}
         </h5>
     </div>
     <button type="button" class="btn-logout" (click)="logout()" title="Cerrar sesión">
