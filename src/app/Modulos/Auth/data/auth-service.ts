@@ -3,7 +3,12 @@ import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { Observable, tap } from 'rxjs';
 import { environment } from '../../../../environments/environment';
-import { EstablecerCredencialesRequest, LoginRequest, LoginResponse } from './authInterfaz';
+import {
+  EstablecerCredencialesRequest,
+  LoginRequest,
+  LoginResponse,
+  SolicitarCambioCredencialesRequest,
+} from './authInterfaz';
 
 @Injectable({
   providedIn: 'root',
@@ -31,6 +36,15 @@ export class AuthService {
   establecerCredenciales(credentials: EstablecerCredencialesRequest): Observable<LoginResponse> {
     return this.http.post<LoginResponse>(`${this.apiUrl}/establecer-credenciales`, credentials).pipe(
       tap((res) => this.guardarSesion(res))
+    );
+  }
+
+  solicitarCambioCredenciales(
+    credentials: SolicitarCambioCredencialesRequest,
+  ): Observable<string | number | { pin: string | number }> {
+    return this.http.post<string | number | { pin: string | number }>(
+      `${this.apiUrl}/solicitar-cambio-credenciales`,
+      credentials,
     );
   }
 

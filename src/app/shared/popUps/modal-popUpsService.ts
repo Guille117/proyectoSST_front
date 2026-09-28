@@ -10,15 +10,20 @@ export class ModalPopUps {
     this.crearToast().fire({ icon: 'success', title: titulo, text: mensaje, timer: duracion });
   }
 
-  async usuarioCreado(pin: string | number | null | undefined): Promise<void> {
+  async usuarioCreado(
+    pin: string | number | null | undefined,
+    titulo = 'Usuario creado exitosamente',
+  ): Promise<void> {
     const detallePin = pin === undefined || pin === null
       ? 'No se recibió el PIN del primer ingreso.'
       : `PIN generado: ${pin}`;
 
+    const host = document.querySelector<HTMLElement>('dialog[open] .modal-popup-host');
+
     await Swal.fire({
-      target: this.obtenerHost(),
+      target: host ?? undefined,
       icon: 'success',
-      title: 'Usuario creado exitosamente',
+      title: titulo,
       text: detallePin,
       toast: false,
       position: 'center',
@@ -32,6 +37,31 @@ export class ModalPopUps {
         const closeButton = popup.querySelector<HTMLButtonElement>('.modal-toast-btn-confirm');
         closeButton?.addEventListener('click', () => Swal.close(), { capture: true, once: true });
       },
+      customClass: {
+        popup: 'modal-toast modal-success-popup',
+        confirmButton: 'modal-toast-btn-confirm',
+      },
+    });
+  }
+
+  async credencialesRestablecidas(pin: string | number | null | undefined): Promise<void> {
+    const detallePin = pin === undefined || pin === null
+      ? 'No se recibió el PIN de restablecimiento.'
+      : `PIN generado: ${pin}`;
+
+    await Swal.fire({
+      target: this.obtenerHost(),
+      icon: 'success',
+      title: 'Contraseña restablecida',
+      text: detallePin,
+      toast: false,
+      position: 'center',
+      showConfirmButton: true,
+      confirmButtonText: 'Cerrar',
+      buttonsStyling: false,
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+      returnFocus: false,
       customClass: {
         popup: 'modal-toast modal-success-popup',
         confirmButton: 'modal-toast-btn-confirm',

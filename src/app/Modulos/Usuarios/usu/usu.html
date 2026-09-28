@@ -54,16 +54,18 @@
                             >
                                 <i class="bi bi-pencil-square"></i>
                             </button>
-                            <label class="interruptor-estado" [title]="user.estado ? 'Usuario activo' : 'Usuario inactivo'">
-                                <input
-                                    type="checkbox"
-                                    [checked]="user.estado"
-                                    [attr.aria-label]="user.estado ? 'Desactivar usuario' : 'Activar usuario'"
-                                    (click)="$event.stopPropagation()"
-                                    (change)="cambiarEstadoUsuario($event, user)"
-                                >
-                                <span></span>
-                            </label>
+                            @if (!esUsuarioActual(user)) {
+                                <label class="interruptor-estado" [title]="user.estado ? 'Usuario activo' : 'Usuario inactivo'">
+                                    <input
+                                        type="checkbox"
+                                        [checked]="user.estado"
+                                        [attr.aria-label]="user.estado ? 'Desactivar usuario' : 'Activar usuario'"
+                                        (click)="$event.stopPropagation()"
+                                        (change)="cambiarEstadoUsuario($event, user)"
+                                    >
+                                    <span></span>
+                                </label>
+                            }
                         </td>
                     </tr>
                 } @empty {
@@ -72,6 +74,18 @@
                     </tr>
                 }
             </tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="6">
+                        <app-paginacion
+                            [paginaActual]="paginaActual"
+                            [totalregistros]="usuariosTodos.length"
+                            [cantidadMostrar]="cantidadMostrar"
+                            (paginaCambiada)="actualizarPagina($event)"
+                        ></app-paginacion>
+                    </td>
+                </tr>
+            </tfoot>
         </table>
     </div>
 
@@ -119,6 +133,13 @@
                     <label>{{ getPuesto(usuarioSeleccionado) }}</label>
                 </div>
 
+                @if (esMedicoUsuario(usuarioSeleccionado)) {
+                    <div class="data">
+                        <label>Especialidad:</label>
+                        <label>{{ getEspecialidad(usuarioSeleccionado) }}</label>
+                    </div>
+                }
+
                 <div class="data">
                     <label>Horario:</label>
                     <label>{{ getHorario(usuarioSeleccionado) }}</label>
@@ -136,7 +157,15 @@
             </div>
 
             <div class="footer">
-                <button type="button" class="btn _editar" >Restablecer contraseña</button>
+                @if (!esUsuarioActual(usuarioSeleccionado)) {
+                    <button
+                        type="button"
+                        class="btn _editar"
+                        (click)="abrirRestablecerContrasena(usuarioSeleccionado)"
+                    >
+                        Restablecer contraseña
+                    </button>
+                }
             </div>
         } @else {
             <div class="sin-seleccion">

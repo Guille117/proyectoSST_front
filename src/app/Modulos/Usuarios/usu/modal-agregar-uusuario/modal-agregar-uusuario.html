@@ -113,6 +113,7 @@
             [showError]="!!(fechaNacimiento.touched && fechaNacimiento.invalid)"
             [errorMessage]="'Debe ingresar una fecha de nacimiento'"
         >
+
             <input
                 type="date"
                 id="fechaNacimiento"
@@ -122,8 +123,7 @@
                 #fechaNacimiento="ngModel"
                 [class.input-invalid]="fechaNacimiento.touched && fechaNacimiento.invalid"
             >
-        </app-campo-validado>
-
+            </app-campo-validado>
         <app-campo-validado
             class="etiqueta-input" 
             [label]="'Teléfono'"
@@ -219,6 +219,33 @@
             </select>
         </app-campo-validado>
     </div>
+
+    @if (esMedico) {
+        <div class="fila">
+            <app-campo-validado
+                class="etiqueta-input"
+                [label]="'Especialidad'"
+                [fieldId]="'especialidad'"
+                [required]="true"
+                [showError]="!!(especialidad.touched && especialidad.invalid)"
+                [errorMessage]="'Debe ingresar la especialidad médica'"
+            >
+                <select
+                    id="especialidad"
+                    name="especialidad"
+                    required
+                    [(ngModel)]="usuarioReq.especialidadId"
+                    #especialidad="ngModel"
+                    [class.input-invalid]="especialidad.touched && especialidad.invalid"
+                >
+                    <option [ngValue]="0" disabled>Seleccione una especialidad</option>
+                    @for (especialidadItem of especialidades; track especialidadItem.id) {
+                        <option [ngValue]="especialidadItem.id">{{ especialidadItem.nombre }}</option>
+                    }
+                </select>
+            </app-campo-validado>
+        </div>
+    }
     
     <div class="fila">
         <app-campo-validado

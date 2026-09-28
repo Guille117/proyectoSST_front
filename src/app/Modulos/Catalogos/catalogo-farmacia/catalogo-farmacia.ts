@@ -34,7 +34,7 @@ export class CatalogoFarmacia implements OnInit {
   // catálogo de grupos
   listaCatalogos = [
     {
-      key: 'UnidadMedida',
+      key: 'unidad_medidas',
       url: 'unidadMedida',
       icono: 'bi bi-beaker',
       titulo: 'Unidad de medida',
@@ -42,7 +42,7 @@ export class CatalogoFarmacia implements OnInit {
       cantidad: 0
     },
     {
-      key: 'Fabricante',
+      key: 'marcas',
       url: 'marca',
       icono: 'bi bi-building',
       titulo: 'Fabricante',
@@ -50,7 +50,7 @@ export class CatalogoFarmacia implements OnInit {
       cantidad: 5
     },
     {
-      key: 'ViaAdministracion',
+      key: 'vias_admin',
       url: 'viaAdmin',
       icono: 'bi bi-capsule',
       titulo: 'Vía de administración',
@@ -58,7 +58,7 @@ export class CatalogoFarmacia implements OnInit {
       cantidad: 0
     },
     {
-      key: 'Presentacion',
+      key: 'presentaciones',
       url: 'presentacion',
       icono: 'bi bi-prescription2',
       titulo: 'Presentación',

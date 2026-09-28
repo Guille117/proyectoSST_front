@@ -131,6 +131,90 @@
   background-color: rgba(0, 0, 0, 0.15) !important;
 }
 
+.custom-password-popup {
+  padding: 28px 24px 26px !important;
+  border-radius: 16px !important;
+  background: rgba(248, 251, 255, 0.78) !important;
+  backdrop-filter: blur(18px) saturate(1.08) !important;
+  -webkit-backdrop-filter: blur(18px) saturate(1.08) !important;
+  border: 1px solid rgba(255, 255, 255, 0.8) !important;
+}
+
+.custom-password-lock {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  width: 68px !important;
+  height: 68px !important;
+  margin: 0 auto 14px !important;
+  border-radius: 50% !important;
+  background: #dceaff !important;
+  color: #1671d9 !important;
+  font-size: 28px !important;
+}
+
+.custom-password-title {
+	display: flex !important;
+	flex-direction: column;
+	align-items: center;
+  margin: 0 !important;
+  color: #13264a !important;
+  font-size: 1.7rem !important;
+  line-height: 1.15 !important;
+  text-align: center !important;
+}
+
+.custom-password-text {
+  margin: 10px auto 18px !important;
+  color: #667085 !important;
+  font-size: 0.95rem !important;
+  line-height: 1.35 !important;
+  text-align: center !important;
+}
+
+.custom-password-label {
+  display: block !important;
+  margin: 0 0 7px !important;
+  color: #344054 !important;
+  font-size: 0.85rem !important;
+  font-weight: 700 !important;
+  text-align: left !important;
+}
+
+.custom-password-input {
+  width: 100% !important;
+  height: 42px !important;
+  margin: 0 !important;
+  padding: 0 14px !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 9px !important;
+  background: #ffffff !important;
+  color: #1d2939 !important;
+  font-size: 0.95rem !important;
+  box-shadow: none !important;
+}
+
+.custom-password-input:focus {
+  border-color: #8cbcf2 !important;
+  box-shadow: 0 0 0 3px rgba(22, 113, 217, 0.14) !important;
+}
+
+.custom-password-actions {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px !important;
+  width: 100% !important;
+  margin: 22px 0 0 !important;
+}
+
+.custom-password-actions .custom-toast-btn-confirm,
+.custom-password-actions .custom-toast-btn-cancel {
+  width: 100% !important;
+  min-height: 44px;
+  border-radius: 10px !important;
+  font-size: 0.9rem !important;
+}
+
 /* Color del ícono de pregunta */
 .custom-toast-glass .swal2-icon.swal2-question {
   border-color: #7c3aed !important;

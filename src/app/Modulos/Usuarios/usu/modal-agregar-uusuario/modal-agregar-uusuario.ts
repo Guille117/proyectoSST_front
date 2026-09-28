@@ -11,6 +11,8 @@ import { HorarioResponse } from '../../horarios/data/horarioInterfaz';
 import { RolResponse } from '../../roles/data/rolInterfaz';
 import { ModalAction, ModalService } from '../../../../modal-principal/modal-service';
 import { ModalPopUps } from '../../../../shared/popUps/modal-popUpsService';
+import { Nombre, NombreGet } from '../../../Catalogos/data/nombreInterfaz';
+import { CatalogoService } from '../../../Catalogos/data/serviceCatalogo';
 
 @Component({
   selector: 'app-modal-agregar-uusuario',
@@ -23,11 +25,12 @@ export class ModalAgregarUusuario implements OnInit, OnChanges {
   @Input() usuarioToEdit?: UsuarioResponse;
   @Input() onSuccess?: () => void;
 
-  contador: number = 0;
+  contador: number = 1;
 
   puestos: PuestoResponse[] = [];
   horarios: HorarioResponse[] = [];
   roles: RolResponse[] = [];
+  especialidades: NombreGet[] = [];
   rolesAbierto = false;
 
   persona: PersonaDatos = {
@@ -45,6 +48,7 @@ export class ModalAgregarUusuario implements OnInit, OnChanges {
     horarioId: 0,
     rolIds: [],
     username: '',
+    especialidadId: 0,
     estado: true,
   };
 
@@ -113,6 +117,7 @@ export class ModalAgregarUusuario implements OnInit, OnChanges {
     private horarioService: HorarioService,
     private rolService: RolService,
     private usuarioService: UsuarioService,
+    private catalogoService: CatalogoService<Nombre, NombreGet>,
     private modalService: ModalService,
     private popUps: ModalPopUps,
     private cdr: ChangeDetectorRef
@@ -148,8 +153,18 @@ export class ModalAgregarUusuario implements OnInit, OnChanges {
       this.usuarioReq.puestoId &&
       this.usuarioReq.horarioId &&
       this.usuarioReq.rolIds?.length &&
-      this.usuarioReq.username?.trim()
+      this.usuarioReq.username?.trim() &&
+      (!this.esMedico || this.usuarioReq.especialidadId)
     );
+  }
+
+  get esMedico(): boolean {
+    const puesto = this.puestos.find((item) => item.id === Number(this.usuarioReq.puestoId));
+    return puesto?.nombre
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .includes('medic') ?? false;
   }
 
   cargarDatosEdicion(): void {
@@ -173,6 +188,7 @@ export class ModalAgregarUusuario implements OnInit, OnChanges {
         horarioId: Number(horarioIdVal),
         rolIds: rolIdsVal.map((id: number | string) => Number(id)),
         username: this.usuarioToEdit.username || '',
+        especialidadId: this.usuarioToEdit.especialidadId || 0,
         estado: this.usuarioToEdit.estado ?? true,
       };
       this.cdr.detectChanges();
@@ -197,6 +213,13 @@ export class ModalAgregarUusuario implements OnInit, OnChanges {
     this.rolService.getRoles(true).subscribe({
       next: (res) => {
         this.roles = res;
+        this.cdr.detectChanges();
+      }
+    });
+
+    this.catalogoService.listar('especialidades', true).subscribe({
+      next: (res) => {
+        this.especialidades = res;
         this.cdr.detectChanges();
       }
     });
@@ -267,6 +290,10 @@ export class ModalAgregarUusuario implements OnInit, OnChanges {
       this.popUps.formIncompleto('Debe seleccionar un rol.');
       return false;
     }
+    if (this.esMedico && !this.usuarioReq.especialidadId) {
+      this.popUps.formIncompleto('Debe ingresar la especialidad médica.');
+      return false;
+    }
 
     return true;
   }
@@ -298,6 +325,7 @@ export class ModalAgregarUusuario implements OnInit, OnChanges {
       horarioId: Number(this.usuarioReq.horarioId),
       rolIds: (this.usuarioReq.rolIds ?? []).map((id) => Number(id)),
       username: this.usuarioReq.username!,
+      especialidadId: this.esMedico ? Number(this.usuarioReq.especialidadId) : undefined,
       estado: this.usuarioReq.estado ?? true,
     };
 

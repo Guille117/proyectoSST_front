@@ -1,1 +1,49 @@
-<p>paciente works!</p>
+<div class="contenedorPrincipal trabajoArea">
+    <div class="izquierda">
+        <div class="seccionSuperior">
+            <div class="buscador-container">
+                <div class="buscador">
+                    <input class="inputB" type="text" placeholder="Buscar...">
+                    <button class="btnLupa" type="button" aria-label="Buscar paciente">
+                        <i class="bi bi-search fs-5"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="switchContainer">
+                <app-tab-switch [op1]="'Paciente'" [op2]="'Egresado'"></app-tab-switch>
+            </div>
+
+            <button type="button" class="btn _principal" (click)="abrirModalAgregar()">Agregar paciente</button>
+        </div>
+
+        <table class="table">
+            <thead>
+                <tr>
+                    <th class="celda_centrada">No.</th>
+                    <th class="celda_centrada">Expediente</th>
+                    <th class="celda_izquierda">Nombre</th>
+                    <th class="celda_centrada">Teléfono</th>
+                    <th class="celda_centrada">Tratamiento</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Quitar esto -->
+                <tr>
+                    <td class="celda_centrada">1</td>
+                    <td class="celda_centrada">PAC-01</td>
+                    <td class="celda_izquierda">Yasmin Esmeralda Alessandra Bulux Chavez</td>
+                    <td class="celda_centrada">123456789</td>
+                    <td class="celda_centrada">Consulta</td>
+                </tr>
+                <!-- Quitar esto -->
+            </tbody>
+        </table>
+    </div>
+
+    <div class="derecha">
+        <div class="titulo">
+            <h3>Detalle de paciente</h3>
+        </div>
+    </div>
+</div>

@@ -3,6 +3,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../../../environments/environment';
 import { UsuarioListadoResponse, UsuarioRequest, UsuarioResponse } from './usuarioInterfaz';
+import { MedicoDatos } from '../../../Pacientes/paciente/data/pacienteInterfaz';
 
 @Injectable({
   providedIn: 'root',
@@ -25,6 +26,11 @@ export class UsuarioService {
     }
     return this.http.get<UsuarioListadoResponse[]>(`${this.apiUrl}`, { params });
   }
+   
+  getMedicos():Observable<MedicoDatos[]> {
+    return this.http.get<MedicoDatos[]>(`${this.apiUrl}/medicos`);
+  } 
+
 
   getUsuarioById(id: number): Observable<UsuarioResponse> {
     return this.http.get<UsuarioResponse>(`${this.apiUrl}/${id}`);

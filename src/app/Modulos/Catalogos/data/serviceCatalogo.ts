@@ -2,7 +2,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable, map } from 'rxjs';
 import { environment } from '../../../../environments/environment';
-import { Nombre, NombreGet, registrosCatalogos, tipoDato2, tipoDato2Post } from './nombreInterfaz';
+import { ConteoCatalogosUsuarios, Nombre, NombreGet, registrosCatalogos, tipoDato2, tipoDato2Post } from './nombreInterfaz';
 
 @Injectable({ providedIn: 'root' })
 export class CatalogoService<TEntrada extends Nombre = Nombre, TRespuesta extends NombreGet = NombreGet> {
@@ -70,8 +70,8 @@ export class CatalogoService<TEntrada extends Nombre = Nombre, TRespuesta extend
         );
     }
 
-    obtenerRegistrosCatalogosUsuarios(): Observable<number> {
-        return this.http.get<number>(`${this.apiUrl}/puestos/conteo`);
+    obtenerConteoCatalogosUsuarios(): Observable<ConteoCatalogosUsuarios> {
+        return this.http.get<ConteoCatalogosUsuarios>(`${this.apiUrl}/puestos/conteo`);
     }
 
     obtenerRegistrosCatalogosPacientes(): Observable<registrosCatalogos[]> {

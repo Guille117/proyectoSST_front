@@ -1,4 +1,4 @@
-import { Component, ElementRef, Input, Type, ViewChild, ViewContainerRef, effect, inject, output } from '@angular/core';
+import { Component, ElementRef, Type, ViewChild, ViewContainerRef, effect, inject, output, signal } from '@angular/core';
 import { ModalContent, ModalService } from './modal-service';
 
 @Component({
@@ -12,9 +12,7 @@ export class ModalPrincipal {
   private isClosing = false;
   private renderedComponent: Type<unknown> | null = null;
   private renderedData: unknown = null;
-  // varibles
-  @Input() title: string = '';
-  @Input() subtitle: string = '';
+  title = signal('');
   
   // Referencia al elemento <dialog> del HTML
   @ViewChild('dialogElement') private dialog! : ElementRef<HTMLDialogElement>;
@@ -36,19 +34,7 @@ export class ModalPrincipal {
       const deberiaEstarAbierto = this.modalService.isOpen();
       const datos = this.modalService.datosInput();
 
-      queueMicrotask(() => {
-        if (datos && datos.title){
-          this.title = datos.title;
-        }else if(!componente){
-          this.title = '';
-        }
-
-        if (datos && datos.subtitle){
-          this.subtitle = datos.subtitle;
-        }else if(!componente){
-          this.subtitle = '';
-        }
-      });
+      this.title.set(datos?.title ?? '');
 
       // Si hay un componente, lo renderiza dinámicamente
       const debeCrearComponente = componente && this.componentContainer && (

@@ -12,18 +12,12 @@ export class Paginacion {
   @Input() cantidadMostrar = 0;
   @Output() paginaCambiada = new EventEmitter<number>();
 
-  mostrando = 0
-
-  ngOnInit() {
-    this.iniciarVariables();
+  get mostrando(): number {
+    return Math.min(this.cantidadMostrar, this.totalregistros);
   }
 
-  iniciarVariables(){
-    if(this.cantidadMostrar > this.totalregistros){
-      this.mostrando = this.totalregistros;
-    }else{
-      this.mostrando = this.cantidadMostrar;
-    }
+  get totalPaginas(): number {
+    return Math.max(1, Math.ceil(this.totalregistros / this.cantidadMostrar));
   }
 
   paginaAnterior(): void {
@@ -33,7 +27,7 @@ export class Paginacion {
   }
     
   paginaSiguiente(): void {
-    if (this.paginaActual < this.totalregistros) {
+    if (this.paginaActual < this.totalPaginas) {
       this.cambiarPagina(this.paginaActual + 1);
     }
   }

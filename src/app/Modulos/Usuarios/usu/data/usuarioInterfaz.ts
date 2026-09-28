@@ -26,8 +26,8 @@ export interface PersonaDatos {
   apellidos: string;
   sexo: Sexo;
   fechaNacimiento: string; // Formato "YYYY-MM-DD"
-  telefono?: string;
-  email?: string;
+  telefono?: string | null;
+  email?: string | null;
 }
 
 // 3. Payload para crear o actualizar usuario (Request)
@@ -37,6 +37,7 @@ export interface UsuarioRequest {
   horarioId: number;
   rolIds: number[];
   username: string;
+  especialidadId?: number;
   estado?: boolean;
 }
 
@@ -56,6 +57,8 @@ export interface UsuarioResponse {
   username: string;
   nombres: string;
   apellidos: string;
+  especialidad?: string;
+  especialidadId?: number;
   estado: boolean;
   pin?: string | number;
 

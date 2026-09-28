@@ -30,3 +30,8 @@ export interface registrosCatalogos {
   total: number;
 }
 
+export interface ConteoCatalogosUsuarios {
+  puestos: number;
+  especialidades: number;
+}
+

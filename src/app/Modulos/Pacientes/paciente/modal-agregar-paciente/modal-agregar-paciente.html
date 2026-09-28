@@ -1,0 +1,384 @@
+
+<!-- progreso del formulario -->
+<div class="progreso-paciente">
+	<div class="progreso-paso">
+		<span class="numero">{{ contador + 1 }}</span>
+		<div class="descripcion-paso">
+			<strong>Paso {{ contador + 1 }} de {{ pasos.length }}</strong>
+			<span>{{ pasos[contador] }}</span>
+		</div>
+	</div>
+
+	<div class="barra-progreso" role="progressbar" [attr.aria-valuenow]="contador + 1" aria-valuemin="1" [attr.aria-valuemax]="pasos.length">
+		<span [style.width.%]="((contador + 1) / pasos.length) * 100"></span>
+	</div>
+
+	<span class="contador-progreso">{{ contador + 1 }} / {{ pasos.length }}</span>
+</div>
+
+@if (contador === 0) {
+	<div class="formularioPacientePaso1">
+		<div class="opcion-buscar-paciente">
+			<label>
+				<input
+					type="checkbox"
+					name="buscarPacienteExistente"
+				>
+				<span class="interruptor" aria-hidden="true"></span>
+				<span class="texto-opcion">
+					<strong>¿Desea buscar un paciente existente?</strong>
+				</span>
+			</label>
+		</div>
+
+		<div class="fila">
+			<app-campo-validado
+				[label]="'Nombres'"
+				[fieldId]="'nombresPaciente'"
+				[required]="true"
+			>
+				<input
+					type="text"
+					id="nombresPaciente"
+					name="nombres"
+					placeholder="Nombres"
+				>
+			</app-campo-validado>
+
+			<app-campo-validado
+				[label]="'Apellidos'"
+				[fieldId]="'apellidosPaciente'"
+				[required]="true"
+			>
+				<input
+					type="text"
+					id="apellidosPaciente"
+					name="apellidos"
+					placeholder="Apellidos"
+				>
+			</app-campo-validado>
+		</div>
+
+		<div class="fila">
+			<app-campo-validado [label]="'Fecha de nacimiento'" [fieldId]="'fechaNacimientoPaciente'">
+				<input
+					type="date"
+					id="fechaNacimientoPaciente"
+					name="fechaNacimiento"
+				>
+			</app-campo-validado>
+
+			<app-campo-validado [label]="'Sexo'" [fieldId]="'sexoPaciente'">
+				<select id="sexoPaciente" name="sexo">
+					<option value="">Seleccione un sexo</option>
+					<option value="MASCULINO">Masculino</option>
+					<option value="FEMENINO">Femenino</option>
+				</select>
+			</app-campo-validado>
+		</div>
+
+		<div class="fila">
+			<app-campo-validado [label]="'CUI'" [fieldId]="'cuiPaciente'">
+				<input
+					type="text"
+					id="cuiPaciente"
+					name="cui"
+					placeholder="CUI"
+				>
+			</app-campo-validado>
+			
+			<app-campo-validado [label]="'Estado civil'" [fieldId]="'estadoCivilPaciente'">
+				<select id="estadoCivilPaciente" name="estadoCivil">
+					<option value="">Seleccione un estado civil</option>
+					<option value="SOLTERO">Soltero/a</option>
+					<option value="CASADO">Casado/a</option>
+					<option value="DIVORCIADO">Divorciado/a</option>
+					<option value="VIUDO">Viudo/a</option>
+				</select>
+			</app-campo-validado>
+		</div>
+
+		<div class="fila">
+			<app-campo-validado [label]="'Dirección'" [fieldId]="'direccionPaciente'">
+				<input
+					type="text"
+					id="direccionPaciente"
+					name="direccion"
+					placeholder="Dirección"
+				>
+			</app-campo-validado>
+
+			<app-campo-validado [label]="'Teléfono'" [fieldId]="'telefonoPaciente'">
+				<input
+					type="tel"
+					id="telefonoPaciente"
+					name="telefono"
+					placeholder="Teléfono"
+				>
+			</app-campo-validado>
+		</div>
+
+		<div class="fila">
+			<app-campo-validado [label]="'Ocupación'" [fieldId]="'ocupacionProfesionPaciente'">
+				<input
+					type="text"
+					id="ocupacionProfesionPaciente"
+					name="ocupacionProfesion"
+					placeholder="Ocupación / profesión"
+				>
+			</app-campo-validado>
+		</div>
+
+	</div>
+}
+
+@if (contador === 1) {
+	<div class="paso2">
+		<fieldset>
+			<legend>Tipo de atención</legend>
+
+			<label>
+				<input
+					type="radio"
+					name="tipoAtencion"
+					value="emergencia"
+					[checked]="tipoAtencion === 'emergencia'"
+					(change)="tipoAtencion = 'emergencia'"
+				>
+				<i class="bi bi-truck-front" aria-hidden="true"></i>
+				<span>Emergencia</span>
+			</label>
+
+			<label>
+				<input
+					type="radio"
+					name="tipoAtencion"
+					value="hospitalizacion"
+					[checked]="tipoAtencion === 'hospitalizacion'"
+					(change)="tipoAtencion = 'hospitalizacion'"
+				>
+				<i class="bi bi-hospital" aria-hidden="true"></i>
+				<span>Hospitalización</span>
+			</label>
+		</fieldset>
+
+		<div class="fila-paso2">
+			<app-campo-validado [label]="'Descripción breve'" [fieldId]="'descripcionAtencion'" [required]="true">
+				<textarea
+					id="descripcionAtencion"
+					name="descripcionAtencion"
+					[placeholder]="tipoAtencion === 'emergencia'
+						? 'Describa los síntomas, tiempo de evolución y cualquier dato relevante...'
+						: 'Describa el motivo de la hospitalización, antecedentes y notas relevantes...'"
+				></textarea>
+			</app-campo-validado>
+
+			<app-campo-validado [label]="'Médico asignado'" [fieldId]="'medicoAtencion'" [required]="true">
+				<select id="medicoAtencion" name="medicoAtencion">
+					<option value="">Seleccione un médico</option>
+					@for (medico of medicos; track medico.id) {
+						<option [value]="medico.id">{{ medico.nombreCompleto }}</option>
+					}
+				</select>
+			</app-campo-validado>
+		</div>
+
+		@if (tipoAtencion === 'hospitalizacion') {
+			<table class="tabla-camas">
+				<thead>
+					<tr>
+						<th>Código</th>
+						<th>Tipo</th>
+						<th>Habitación</th>
+						<th>Área</th>
+						<th>Estado</th>
+					</tr>
+				</thead>
+				<tbody>
+					<tr>
+						<td colspan="5">No hay camas disponibles para mostrar</td>
+					</tr>
+				</tbody>
+			</table>
+		}
+	</div>
+}
+
+@if (contador === 2) {
+	<div>
+		<div class="fila">
+			<app-campo-validado
+				[label]="'Nombres'"
+				[fieldId]="'nombresResponsable'"
+				[required]="true"
+			>
+				<input
+					type="text"
+					id="nombresResponsable"
+					name="nombresResponsable"
+					placeholder="Nombres"
+				>
+			</app-campo-validado>
+
+			<app-campo-validado
+				[label]="'Apellidos'"
+				[fieldId]="'apellidosResponsable'"
+				[required]="true"
+			>
+				<input
+					type="text"
+					id="apellidosResponsable"
+					name="apellidosResponsable"
+					placeholder="Apellidos"
+				>
+			</app-campo-validado>
+		</div>
+
+		<div class="fila">
+			<app-campo-validado
+				[label]="'Fecha de nacimiento'"
+				[fieldId]="'fechaNacimientoResponsable'"
+				[required]="true"
+			>
+				<input
+					type="date"
+					id="fechaNacimientoResponsable"
+					name="fechaNacimientoResponsable"
+				>
+			</app-campo-validado>
+
+			<app-campo-validado [label]="'Sexo'" [fieldId]="'sexoResponsable'">
+				<select id="sexoResponsable" name="sexoResponsable">
+					<option value="">Seleccione un sexo</option>
+					<option value="MASCULINO">Masculino</option>
+					<option value="FEMENINO">Femenino</option>
+				</select>
+			</app-campo-validado>
+		</div>
+
+		<div class="fila">
+			<app-campo-validado
+				[label]="'CUI'"
+				[fieldId]="'cuiResponsable'"
+				[required]="true"
+			>
+				<input
+					type="text"
+					id="cuiResponsable"
+					name="cuiResponsable"
+					placeholder="CUI"
+				>
+			</app-campo-validado>
+
+			<app-campo-validado [label]="'Dirección'" [fieldId]="'direccionResponsable'">
+				<input
+					type="text"
+					id="direccionResponsable"
+					name="direccionResponsable"
+					placeholder="Dirección"
+				>
+			</app-campo-validado>
+		</div>
+
+		<div class="fila">
+			<app-campo-validado
+				[label]="'Teléfono'"
+				[fieldId]="'telefonoResponsable'"
+				[required]="true"
+			>
+				<input
+					type="tel"
+					id="telefonoResponsable"
+					name="telefonoResponsable"
+					placeholder="Teléfono"
+				>
+			</app-campo-validado>
+
+			<app-campo-validado
+				[label]="'Parentesco'"
+				[fieldId]="'parentescoResponsable'"
+				[required]="true"
+			>
+				<select id="parentescoResponsable" name="parentescoResponsable">
+					<option value="">Seleccione un parentesco</option>
+					<option value="PADRE">Padre</option>
+					<option value="MADRE">Madre</option>
+					<option value="HERMANO">Hermano/a</option>
+					<option value="CONYUGE">Cónyuge</option>
+					<option value="HIJO">Hijo/a</option>
+					<option value="OTRO">Otro</option>
+				</select>
+			</app-campo-validado>
+		</div>
+	</div>
+}
+
+@if (contador === 3) {
+	<div class="paso4">
+		<app-campo-validado [label]="'Institución que refiere'" [fieldId]="'institucionReferencia'">
+			<input
+				type="text"
+				id="institucionReferencia"
+				name="institucionReferencia"
+				placeholder="Institución que refiere"
+			>
+		</app-campo-validado>
+
+		<app-campo-validado [label]="'Motivo de la referencia'" [fieldId]="'motivoReferencia'">
+			<textarea
+				id="motivoReferencia"
+				name="motivoReferencia"
+				placeholder="Describa el motivo de la referencia..."
+			></textarea>
+		</app-campo-validado>
+
+		<app-campo-validado [label]="'Documento o imagen de referencia'" [fieldId]="'documentoReferencia'">
+			<div class="carga-archivo" (dragover)="$event.preventDefault()" (drop)="soltarArchivo($event)">
+				<input
+					#documentoReferencia
+					type="file"
+					id="documentoReferencia"
+					name="documentoReferencia"
+					accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+					(change)="seleccionarArchivo($event)"
+				>
+				<label for="documentoReferencia" class="zona-carga">
+					<i class="bi bi-cloud-arrow-up" aria-hidden="true"></i>
+					<strong>Arrastra y suelta un archivo aquí</strong>
+					<span>o haz clic para seleccionar</span>
+					<span class="boton-archivo">Seleccionar archivo</span>
+				</label>
+
+				@if (archivoReferencia) {
+					<div class="archivo-seleccionado">
+						<i class="bi bi-file-earmark-text" aria-hidden="true"></i>
+						<span>{{ archivoReferencia.name }}</span>
+						<button type="button" aria-label="Quitar archivo" (click)="quitarArchivo(documentoReferencia)">
+							<i class="bi bi-x-lg" aria-hidden="true"></i>
+						</button>
+					</div>
+				}
+			</div>
+		</app-campo-validado>
+	</div>
+}
+
+<div class="acciones-modal">
+	<button type="button" class="btn _eliminar">Cancelar</button>
+
+	@if (contador > 0) {
+		<button type="button" class="btn _principal" (click)="contador -= 1">
+			<i class="bi bi-arrow-left"></i>
+			Atrás
+		</button>
+	}
+
+	@if (contador < 3) {
+		<button type="button" class="btn _principal" (click)="contador += 1">
+			Siguiente
+			<i class="bi bi-arrow-right"></i>
+		</button>
+	} @else {
+		<button type="button" class="btn _guardar" disabled>Guardar</button>
+	}
+</div>

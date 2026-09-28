@@ -9,6 +9,14 @@ export interface EstablecerCredencialesRequest {
   password: string;
 }
 
+export interface SolicitarCambioCredencialesRequest {
+  usuarioId: number;
+  usuarioActualId: number;
+  passwordActual: string;
+}
+
+
+
 export interface PermisoAuth {
   submoduloId: number;
   submoduloCodigo: string;

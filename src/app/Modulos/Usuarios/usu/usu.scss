@@ -96,7 +96,6 @@ tbody tr {
         height: 20px;
         background: #9ca3af;
         border-radius: 10px;
-        transition: background-color 0.2s ease;
 
         &::after {
             position: absolute;
@@ -107,7 +106,6 @@ tbody tr {
             content: '';
             background: #ffffff;
             border-radius: 50%;
-            transition: transform 0.2s ease;
         }
     }
 
@@ -117,11 +115,6 @@ tbody tr {
         &::after {
             transform: translateX(18px);
         }
-    }
-
-    input:focus-visible + span {
-        outline: 2px solid var(--azulPrincipal);
-        outline-offset: 2px;
     }
 }
 

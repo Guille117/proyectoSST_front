@@ -29,11 +29,19 @@ export class CatalogoUsuarios implements OnInit {
   // catálogo de usuarios
   listaCatalogos = [
     {
-      key: 'UnidadMedida',
+      key: 'Puestos',
       url: 'puestos',
       icono: 'bi bi-briefcase',
       titulo: 'Puesto',
       descripcion: 'Indica los puestos posibles para usuarios',
+      cantidad: 0
+    },
+    {
+      key: 'Especialidades',
+      url: 'especialidades',
+      icono: 'bi bi-heart-pulse',
+      titulo: 'Especialidad médica',
+      descripcion: 'Indica las especialidades disponibles para médicos',
       cantidad: 0
     },
   ];
@@ -45,8 +53,7 @@ export class CatalogoUsuarios implements OnInit {
 
   ngOnInit(): void {
     this.seleccionarCatalogo(this.listaCatalogos[0].titulo, this.listaCatalogos[0].url);
-    this.obtenerContedoCatalogos();
-    this.obtenerContedoCatalogos();
+    this.obtenerConteoCatalogos();
     this.traerRegistros(true);
   }
   
@@ -59,16 +66,17 @@ export class CatalogoUsuarios implements OnInit {
   // ---------------------------------------------------------------------------------
     // obtener la cantidad de registros en las tablas relacionadas con farmacia
   
-    obtenerContedoCatalogos(){
-      this.catalogoService.obtenerRegistrosCatalogosUsuarios().subscribe({
-        next: (data) => {
-          this.listaCatalogos[0].cantidad = data;
-          this.cdr.detectChanges(); 
-        },
-        error: () => {
-          this.popUps.error('Error al obtener los registros de los catálogos de usuario');
-        }
-      })
+    obtenerConteoCatalogos(){
+      this.catalogoService.obtenerConteoCatalogosUsuarios().subscribe({
+          next: (data) => {
+            this.listaCatalogos[0].cantidad = data.puestos;
+            this.listaCatalogos[1].cantidad = data.especialidades;
+            this.cdr.detectChanges();
+          },
+          error: () => {
+            this.popUps.error('Error al obtener los registros de los catálogos de usuario');
+          }
+        });
     }
 
  
@@ -98,7 +106,7 @@ export class CatalogoUsuarios implements OnInit {
       this.catalogoService.cambiarEstado(this.catalogoUrl, id).subscribe({
         next:()=>{
           this.traerRegistros(this.mostrarActivos);
-          this.obtenerContedoCatalogos();
+          this.obtenerConteoCatalogos();
           this.cdr.detectChanges();
         },
         error: () => {
@@ -123,7 +131,7 @@ export class CatalogoUsuarios implements OnInit {
         next: () => {
           this.popUps.exito('Registro guardado con éxito');
           this.traerRegistros(this.mostrarActivos);
-          this.obtenerContedoCatalogos();
+          this.obtenerConteoCatalogos();
           this.cdr.detectChanges();
           this.limpiarFormulario(formulario);
         },
@@ -163,7 +171,7 @@ export class CatalogoUsuarios implements OnInit {
             next: () => {
               this.popUps.exito('Registro actualizado con éxito');
               this.traerRegistros(this.mostrarActivos);
-              this.obtenerContedoCatalogos();
+              this.obtenerConteoCatalogos();
               this.limpiarFormulario(formulario);
               this.cdr.detectChanges();
               this.editar = false;

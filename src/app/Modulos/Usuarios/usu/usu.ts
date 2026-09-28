@@ -7,10 +7,13 @@ import { ModalAgregarUusuario } from './modal-agregar-uusuario/modal-agregar-uus
 import { UsuarioService } from './data/usuario-service';
 import { UsuarioListadoResponse, UsuarioResponse } from './data/usuarioInterfaz';
 import { PopUps } from '../../../shared/popUps/popUpsService';
+import { ModalPopUps } from '../../../shared/popUps/modal-popUpsService';
+import { Paginacion } from '../../../shared/paginacion/paginacion';
+import { AuthService } from '../../Auth/data/auth-service';
 
 @Component({
   selector: 'app-usu',
-  imports: [CommonModule, FormsModule, TabSwitch],
+  imports: [CommonModule, FormsModule, TabSwitch, Paginacion],
   templateUrl: './usu.html',
   styleUrl: './usu.scss',
 })
@@ -18,12 +21,17 @@ export class Usu implements OnInit {
   private modalServ = inject(ModalService);
   private usuarioService = inject(UsuarioService);
   private popUps = inject(PopUps);
+  private modalPopUps = inject(ModalPopUps);
   private cdr = inject(ChangeDetectorRef);
+  private authService = inject(AuthService);
 
   usuarios: UsuarioListadoResponse[] = [];
+  usuariosTodos: UsuarioListadoResponse[] = [];
   usuarioSeleccionado: UsuarioResponse | null = null;
   mostrarActivos = true;
   criterioBusqueda = '';
+  paginaActual = 1;
+  cantidadMostrar = 5;
 
   ngOnInit(): void {
     this.cargarUsuarios(true);
@@ -60,7 +68,17 @@ export class Usu implements OnInit {
   }
 
   private actualizarListaUsuarios(data: UsuarioListadoResponse[]): void {
-    this.usuarios = data;
+    this.usuariosTodos = data;
+    this.paginaActual = 1;
+    this.actualizarPagina();
+  }
+
+  actualizarPagina(pagina: number = this.paginaActual): void {
+    const totalPaginas = Math.max(1, Math.ceil(this.usuariosTodos.length / this.cantidadMostrar));
+    this.paginaActual = Math.min(Math.max(pagina, 1), totalPaginas);
+
+    const inicio = (this.paginaActual - 1) * this.cantidadMostrar;
+    this.usuarios = this.usuariosTodos.slice(inicio, inicio + this.cantidadMostrar);
     const primerUsuario = this.usuarios[0];
 
     if (!primerUsuario) {
@@ -83,25 +101,26 @@ export class Usu implements OnInit {
     });
   }
 
-  abrirModalAgregar(): void {
-    this.modalServ.open(ModalAgregarUusuario, {
-      title: 'Agregar usuario',
-      subtitle: 'Paso 1 de 2: Datos personales',
-      isEditing: false,
-      onSuccess: () => this.cargarUsuarios(this.mostrarActivos)
-    });
+  esUsuarioActual(user: UsuarioListadoResponse | UsuarioResponse): boolean {
+    return this.authService.currentUser()?.id === user.id;
   }
 
-  abrirModalEditar(user: UsuarioListadoResponse): void {
-    this.usuarioService.getUsuarioById(user.id).subscribe({
-      next: (fullUser) => this.modalServ.open(ModalAgregarUusuario, {
-        title: 'Editar usuario',
-        subtitle: 'Paso 1 de 2: Datos personales',
-        isEditing: true,
-        usuarioToEdit: fullUser,
-        onSuccess: () => this.cargarUsuarios(this.mostrarActivos)
-      }),
-      error: (err) => this.popUps.errorDesdeBackend(err, 'Error al cargar el detalle del usuario'),
+  async abrirRestablecerContrasena(user: UsuarioResponse): Promise<void> {
+    const password = await this.popUps.solicitarContrasena();
+    const usuarioActualId = this.authService.currentUser()?.id;
+
+    if (!password || !usuarioActualId) return;
+
+    this.authService.solicitarCambioCredenciales({
+      usuarioId: user.id,
+      usuarioActualId,
+      passwordActual: password,
+    }).subscribe({
+      next: (respuesta) => {
+        const pin = typeof respuesta === 'object' ? respuesta.pin : respuesta;
+        this.modalPopUps.usuarioCreado(pin, 'Contraseña restablecida');
+      },
+      error: (err) => this.popUps.errorDesdeBackend(err, 'No se pudo restablecer la contraseña.'),
     });
   }
 
@@ -121,6 +140,27 @@ export class Usu implements OnInit {
       error: (err) => {
         this.popUps.errorDesdeBackend(err, `Error al ${accion} el usuario`);
       },
+    });
+  }
+
+  abrirModalAgregar(): void {
+    this.modalServ.open(ModalAgregarUusuario, {
+      title: 'Agregar usuario',
+      isEditing: false,
+      onSuccess: () => this.cargarUsuarios(this.mostrarActivos)
+    });
+  }
+
+  abrirModalEditar(user: UsuarioListadoResponse): void {
+    this.usuarioService.getUsuarioById(user.id).subscribe({
+      next: (fullUser) => this.modalServ.open(ModalAgregarUusuario, {
+        title: 'Editar usuario',
+        subtitle: 'Paso 1 de 2: Datos personales',
+        isEditing: true,
+        usuarioToEdit: fullUser,
+        onSuccess: () => this.cargarUsuarios(this.mostrarActivos)
+      }),
+      error: (err) => this.popUps.errorDesdeBackend(err, 'Error al cargar el detalle del usuario'),
     });
   }
 
@@ -166,6 +206,25 @@ export class Usu implements OnInit {
     return user.puesto?.nombre || user.puestoNombre || 'N/A';
   }
 
+  esMedicoUsuario(user: UsuarioResponse | null): boolean {
+    return this.getPuesto(user)
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .includes('medic');
+  }
+
+  getEspecialidad(user: UsuarioResponse | null): string {
+    const datos = user as unknown as {
+      especialidad?: string | { nombre?: string };
+      especialidadNombre?: string;
+    } | null;
+
+    if (!datos) return 'N/A';
+    if (typeof datos.especialidad === 'string') return datos.especialidad || 'N/A';
+    return datos.especialidad?.nombre || datos.especialidadNombre || 'N/A';
+  }
+
   getHorario(user: UsuarioResponse | null): string {
     if (!user) return 'N/A';
     return user.horario?.nombre || user.horarioNombre || 'N/A';
@@ -184,6 +243,9 @@ export class Usu implements OnInit {
 
     return 'N/A';
   }
+
+  // restablecer contraseña
+  
 
   calcularEdad(fechaNacimiento?: string): number | string {
     if (!fechaNacimiento) return 'N/A';

@@ -78,6 +78,40 @@ export class PopUps {
     return res.isConfirmed;
   }
 
+  async solicitarContrasena(): Promise<string | null> {
+    const resultado = await Swal.fire({
+      title: '<span class="custom-password-lock"><i class="bi bi-lock-fill"></i></span><span>Confirmar<br>restablecimiento</span>',
+      text: 'Ingrese su contraseña para validar esta acción',
+      input: 'password',
+      inputLabel: 'Contraseña',
+      inputPlaceholder: 'Ingresa tu contraseña',
+      inputAttributes: {
+        autocomplete: 'new-password',
+      },
+      showCancelButton: true,
+      confirmButtonText: 'Confirmar',
+      cancelButtonText: 'Cancelar',
+      buttonsStyling: false,
+      width: 430,
+      customClass: {
+        popup: 'custom-toast-glass custom-password-popup',
+        title: 'custom-password-title',
+        htmlContainer: 'custom-password-text',
+        input: 'custom-password-input',
+        inputLabel: 'custom-password-label',
+        actions: 'custom-password-actions',
+        confirmButton: 'custom-toast-btn-confirm',
+        cancelButton: 'custom-toast-btn-cancel',
+      },
+      inputValidator: (valor) => {
+        if (!valor?.trim()) return 'Debe ingresar una contraseña';
+        return undefined;
+      },
+    });
+
+    return resultado.isConfirmed ? String(resultado.value).trim() : null;
+  }
+
   formIncompleto(mensaje: string) {
     Swal.fire({
       icon: 'warning',
