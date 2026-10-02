@@ -1,0 +1,160 @@
+CHECKLIST GENERAL PARA TYPESCRIPT Y HTML
+======================================
+
+OBJETIVO
+Revisar limpieza, orden, comentarios, tipos, comportamiento y presentacion.
+Aplicable a cualquier modelo de datos: formularios, tablas, paneles y componentes.
+Marcar cada punto como completado o N/A cuando no corresponda.
+No agregar funciones, validaciones ni abstracciones solo para completar esta lista.
+Respetar los contratos del backend y las convenciones del proyecto.
+
+CHECKLIST TYPESCRIPT (TS)
+========================
+
+1. LIMPIEZA
+[ ] Eliminar imports, variables, propiedades y metodos realmente sin uso.
+[ ] Revisar referencias del HTML y otros consumidores antes de eliminar simbolos.
+[ ] Quitar logs de depuracion, codigo comentado obsoleto y comentarios incorrectos.
+[ ] Eliminar llamadas, asignaciones, condiciones e inyecciones duplicadas.
+[ ] Evitar conversiones de tipo y variables temporales que no aportan claridad.
+[ ] Simplificar condiciones con retornos tempranos sin cambiar el comportamiento.
+[ ] Compartir codigo repetido solo cuando una abstraccion reduzca complejidad real.
+[ ] No eliminar validaciones ni protecciones necesarias para reducir lineas.
+
+2. ORDEN Y FORMATO
+[ ] Mantener el mismo orden en componentes con responsabilidades equivalentes.
+[ ] Separar imports, tipos, configuracion, dependencias, estado y metodos.
+[ ] Agrupar el estado y los metodos relacionados; evitar propiedades dispersas.
+[ ] Usar nombres claros, consistentes y sin errores de escritura.
+[ ] Mantener indentacion, espacios, comillas y formato del proyecto.
+[ ] Evitar lineas excesivamente largas y separadores decorativos repetidos.
+[ ] Ejecutar el formateador existente solo sobre los archivos modificados.
+
+Orden sugerido, adaptable a la responsabilidad del componente:
+Configuracion y tipos -> dependencias y estado -> inicializacion y destruccion
+-> seleccion y filtros -> consultas y carga -> acciones -> guardar o crear
+-> helpers -> editar o actualizar -> limpiar o reiniciar.
+No agregar secciones vacias ni operaciones que el componente no necesite.
+
+3. COMENTARIOS DE SECCION
+[ ] Usar indicadores breves y consistentes para localizar cada responsabilidad.
+[ ] Reutilizar los mismos encabezados en archivos de estructura equivalente.
+[ ] Adaptar los comentarios al modulo actual; no copiar nombres incorrectos.
+[ ] Explicar decisiones o restricciones no evidentes, no narrar cada instruccion.
+[ ] Actualizar o eliminar comentarios cuando cambie el comportamiento.
+
+Ejemplos: usar solo los que correspondan, con el estilo del proyecto.
+// ------------ INICIALIZACION ------------
+// ------------ CONSULTAS Y CARGA ------------
+// ------------ FILTROS Y SELECCION ------------
+// ------------ ACCIONES ------------
+// ---------------------------- GUARDAR REGISTROS ------------------------------
+// ----------------------------- HELPERS -----------------------------
+// --------------------EDITAR REGISTRO --------------------
+// ------------ LIMPIAR FORMULARIO ------------
+
+4. TIPOS Y CONTRATOS
+[ ] Representar los datos reales con interfaces o tipos adecuados al dominio.
+[ ] Reutilizar tipos existentes compatibles; no forzar un modelo ajeno.
+[ ] Distinguir campos obligatorios, opcionales y valores que pueden ser null.
+[ ] Diferenciar entrada, respuesta y modelo de pantalla cuando sean distintos.
+[ ] Evitar any; usar unknown y comprobar el valor cuando su estructura no se conoce.
+[ ] Usar genericos cuando exista un contrato reutilizable, no por obligacion.
+[ ] No asumir que la respuesta de una operacion tiene el mismo tipo que la entrada.
+[ ] No confundir el tipado de TypeScript con validacion de datos en tiempo de ejecucion.
+[ ] Evitar as y ! que oculten datos ausentes sin una garantia verificable.
+[ ] Decidir el comportamiento mediante identificadores estables, no textos visibles.
+
+5. ESTADO Y FORMULARIOS
+[ ] Mantener una fuente de verdad para los valores mostrados, editados y enviados.
+[ ] Precargar el mismo modelo que utilizan los controles del formulario.
+[ ] Validar segun las reglas reales del dominio; no inventar campos obligatorios.
+[ ] Detectar cambios solo en campos aplicables a la operacion actual.
+[ ] Construir el payload con los campos autorizados y requeridos por el endpoint.
+[ ] Conservar valores falsy validos como 0 o false; elegir ?? u || conscientemente.
+[ ] Reiniciar valores y estados del formulario cuando corresponda, no solo vaciar inputs.
+[ ] Considerar dirty, touched, submitted, errores y modo de edicion al reiniciar.
+[ ] No limpiar otro formulario o una seleccion nueva al finalizar una operacion anterior.
+
+6. OPERACIONES ASINCRONAS
+[ ] Evitar que respuestas antiguas sobrescriban la seleccion o consulta actual.
+[ ] Cancelar o ignorar consultas obsoletas con una estrategia clara y consistente.
+[ ] Capturar el contexto y los datos relevantes antes de esperar una confirmacion.
+[ ] Bloquear operaciones duplicadas tanto en la interfaz como en los metodos.
+[ ] Liberar bloqueos al finalizar, cancelar o fallar, incluidas las confirmaciones.
+[ ] Diferenciar carga, guardado y otras operaciones si sus restricciones son distintas.
+[ ] Liberar suscripciones y recursos al destruir el componente cuando sea necesario.
+[ ] No asumir que cancelar una suscripcion deshace una escritura ya enviada al servidor.
+[ ] Actualizar la vista despues de modificar el estado, con el mecanismo del framework.
+[ ] Evitar deteccion manual de cambios repetida o ejecutada antes del cambio relevante.
+
+7. ERRORES Y RECUPERACION
+[ ] Manejar fallos de consultas, escrituras y confirmaciones sin errores no controlados.
+[ ] Pasar el error real al servicio de avisos y proporcionar un mensaje de respaldo.
+[ ] Diferenciar una escritura fallida de una escritura exitosa cuya recarga fallo.
+[ ] No presentar datos viejos como actuales ni un fallo como una lista vacia valida.
+[ ] Mostrar que hubo un fallo si se descartan los datos y permitir un reintento seguro.
+[ ] Evitar avisos tardios de operaciones que ya no corresponden a la pantalla actual.
+
+CHECKLIST HTML
+==============
+
+1. LIMPIEZA, ORDEN Y COMENTARIOS
+[ ] Eliminar elementos, bindings y condiciones sin uso o duplicados.
+[ ] Agrupar elementos que dependen de la misma condicion cuando mejore la lectura.
+[ ] Mantener un orden visual coherente con el flujo del usuario.
+[ ] Usar etiquetas semanticas, indentacion y formato consistentes.
+[ ] Agregar comentarios de seccion solo cuando ayuden a localizar bloques importantes.
+[ ] Mantener esos comentarios alineados con las responsabilidades del TS.
+[ ] No copiar columnas, etiquetas ni instrucciones que pertenezcan a otro modulo.
+
+2. ENLACE DE DATOS Y CONTROLES
+[ ] Enlazar controles con la fuente de verdad definida en el TS.
+[ ] Mostrar solo los campos y acciones aplicables al dato y operacion actuales.
+[ ] Reflejar las reglas de validacion del dominio en los controles correspondientes.
+[ ] Deshabilitar acciones invalidas y operaciones que ya estan pendientes.
+[ ] Usar el evento adecuado: click para comandos, change/input para cambios de valor.
+[ ] Seleccionar explicitamente una opcion, sin alternar al pulsar la ya seleccionada.
+[ ] Evitar que el estado nativo del DOM contradiga al modelo o al backend.
+[ ] Definir type="button" para botones que no deban enviar el formulario.
+[ ] No duplicar envios mediante click y submit para la misma accion.
+[ ] Mantener bindings simples; llevar logica compleja al lugar que la controla.
+
+3. LISTAS Y TABLAS, SI APLICAN
+[ ] Recorrer la coleccion que realmente carga el TS.
+[ ] Identificar elementos mediante claves estables y unicas, no su posicion si cambian.
+[ ] Mantener encabezados, celdas y colspan alineados con las columnas visibles.
+[ ] Conectar total, pagina, tamano y eventos de paginacion con datos reales.
+[ ] Limitar filas visibles y mantener la numeracion esperada entre paginas.
+[ ] Ajustar la pagina al cambiar filtros o reducirse el total de registros.
+[ ] Cubrir listas vacias, ultima pagina incompleta y limites de navegacion.
+
+4. ESTADOS Y ACCESIBILIDAD
+[ ] Distinguir carga, resultados, ausencia de datos y error cuando sea necesario.
+[ ] Mostrar avisos comprensibles sin exponer informacion sensible del servidor.
+[ ] Asociar etiquetas con controles y dar nombres accesibles a botones de iconos.
+[ ] Permitir teclado y foco visible; no depender exclusivamente del raton.
+[ ] No comunicar estados solo mediante color o iconos sin nombre accesible.
+[ ] Evitar contenido superpuesto, texto cortado y cambios inesperados de layout.
+[ ] Comprobar campos, tablas y controles en escritorio y pantallas pequenas.
+
+VERIFICACION FINAL
+==================
+[ ] Probar las operaciones existentes con los modelos de datos que realmente soportan.
+[ ] Probar valores validos, invalidos, opcionales y limites importantes del dominio.
+[ ] Probar que precarga, modificacion, envio y limpieza utilizan los mismos valores.
+[ ] Probar cancelaciones, errores, desbloqueo y reintentos.
+[ ] Probar respuestas demoradas y fuera de orden, y cambios de seleccion mientras espera.
+[ ] Probar pulsaciones repetidas y comprobar que no duplican operaciones.
+[ ] Probar listas vacias, filtros y paginacion cuando correspondan.
+[ ] Reutilizar pruebas existentes y agregar casos enfocados al riesgo del cambio.
+[ ] Ejecutar pruebas y comprobaciones de tipos o compilacion pertinentes.
+[ ] Revisar errores del editor y comprobar que no quedaron referencias obsoletas.
+[ ] Revisar que el diff no incluya cambios ajenos, contratos rotos o formato innecesario.
+[ ] Verificar con el backend real y en el navegador los flujos afectados.
+[ ] Informar claramente lo comprobado, lo pendiente y cualquier limitacion.
+
+NOTA
+Esta lista es una guia de revision, no una obligacion de reescribir componentes.
+Limpieza no significa menos lineas a cualquier costo: conservar claridad y seguridad.
+Adoptar patrones modernos solo cuando ayuden al proyecto y dentro del alcance acordado.

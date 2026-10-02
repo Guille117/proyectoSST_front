@@ -6,7 +6,7 @@ import Swal from 'sweetalert2';
   providedIn: 'root',
 })
 export class ModalPopUps {
-  exito(mensaje: string, titulo = '¡Éxito!', duracion = 3000): void {
+  exito(mensaje: string, titulo = '¡Éxito!', duracion = 5000): void {
     this.crearToast().fire({ icon: 'success', title: titulo, text: mensaje, timer: duracion });
   }
 

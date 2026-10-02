@@ -47,43 +47,43 @@
       </thead>
 
       <tbody>
-        @if(catalogoSeleccionado === 'Unidad de medida'){
-          @for(unidad of unidadesMedida; track $index) {
-            <tr>
-              <td class="celda_centrada">{{$index + 1}}</td>
-              <td class="celda_izquierda">{{ unidad.nombre }}</td>
-              <td class="celda_izquierda">{{ unidad.abreviatura }}</td>
-              <td class="celda_centrada acciones">
-                <button class="btn _editar" (click)="precargar(unidad.nombre, unidad.id, unidad.abreviatura)">Editar</button>
-                @if(mostrarActivos){
-                  <button class="btn _eliminar" (click)="activarDesactivar(unidad.id)">Desactivar</button>
-                }@else {
-                  <button class="btn _guardar" (click)="activarDesactivar(unidad.id)">Activar</button>
-                }
-              </td>
-            </tr>
-          }
-        }@else {
-          @for(registro of registros; track $index) {
+        @for(dato of datos | slice:(paginaActual - 1) * cantidadMostrar:paginaActual * cantidadMostrar; track dato.id) {
           <tr>
-          <td class="celda_centrada">{{$index + 1}}</td>
-          <td class="celda_izquierda">{{ registro.nombre }}</td>
-          <td class="celda_centrada acciones">
-            <button class="btn _editar" (click)="precargar(registro.nombre, registro.id)">Editar</button>
-            @if(mostrarActivos){
-                  <button class="btn _eliminar" (click)="activarDesactivar(registro.id)">Desactivar</button>
-                }@else {
-                  <button class="btn _guardar" (click)="activarDesactivar(registro.id)">Activar</button>
-                }
-          </td>
-        </tr>
+            <td class="celda_centrada">{{(paginaActual - 1) * cantidadMostrar + $index + 1}}</td>
+            <td class="celda_izquierda">{{ dato.nombre }}</td>
+            @if(catalogoSeleccionado === 'Unidad de medida'){
+              <td class="celda_izquierda">{{ dato.abreviatura }}</td>
+            }
+            <td class="celda_centrada acciones">
+              @if(mostrarActivos){
+                <button class="iconEditar" title="Editar" aria-label="Editar" 
+                  (click)="precargar(dato.nombre, dato.id!, catalogoSeleccionado === 'Unidad de medida' ? dato.abreviatura : undefined)">
+                  <i class="bi bi-pencil-square"></i>
+                </button>
+                <label class="interruptor-estado" title="Desactivar">
+                  <input type="checkbox" checked [disabled]="cambiandoEstado || cargandoRegistros" (change)="activarDesactivar($event, dato.id!)">
+                  <span></span>
+                </label>
+              }@else {
+                <label class="interruptor-estado" title="Activar">
+                  <input type="checkbox" [disabled]="cambiandoEstado || cargandoRegistros" (change)="activarDesactivar($event, dato.id!)">
+                  <span></span>
+                </label>
+              }
+            </td>
+          </tr>
         }
-      }
-        
       </tbody>
       <tfoot>
         <tr>
-          <td colspan="4"><app-paginacion [paginaActual]="1" [totalregistros]="2" [cantidadMostrar]="7"></app-paginacion></td>
+          <td [attr.colspan]="catalogoSeleccionado === 'Unidad de medida' ? 4 : 3">
+            <app-paginacion
+              [paginaActual]="paginaActual"
+              [totalregistros]="datos.length"
+              [cantidadMostrar]="cantidadMostrar"
+              (paginaCambiada)="paginaActual = $event"
+            ></app-paginacion>
+          </td>
         </tr>
       </tfoot>
     </table>
@@ -91,7 +91,7 @@
   </section>
 
   <section class="panel panel_formulario">
-    <h3 class=" titulo-formulario">{{ tituloFormulario }}</h3>
+    <h3 class=" titulo-formulario">Guardar registro</h3>
 
     <div class="formulario-box">
       <form #formularioRegistro="ngForm">
@@ -99,7 +99,7 @@
         <input
           id="nombreRegistro"
           type="text"
-          [(ngModel)]="nombre"
+          [(ngModel)]="variableEntrada.nombre"
           name="nombreRegistro"
           placeholder="Ingrese nombre"
           required
@@ -109,7 +109,7 @@
           <input
             id="abreviaturaRegistro"
             type="text"
-            [(ngModel)]="abreviatura"
+            [(ngModel)]="variableEntrada.abreviatura"
             name="abreviaturaRegistro"
             placeholder="Ingrese abreviatura"
             required
@@ -125,7 +125,7 @@
           <button
             type="button"
             class="btn _guardar"
-            [disabled]="!formularioRegistro.valid || !hayCambios()"
+            [disabled]="guardando || !formularioRegistro.valid || !hayCambios()"
             (click)="editarRegistro(formularioRegistro)"
           >
             Guardar Cambios
@@ -134,7 +134,7 @@
           <button
             type="button"
             class="btn _guardar"
-            [disabled]="!formularioRegistro.valid"
+            [disabled]="guardando || !formularioRegistro.valid"
             (click)="guardar(formularioRegistro)"
           >
             Guardar

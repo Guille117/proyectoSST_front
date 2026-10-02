@@ -11,7 +11,7 @@ import { HorarioResponse } from '../../horarios/data/horarioInterfaz';
 import { RolResponse } from '../../roles/data/rolInterfaz';
 import { ModalAction, ModalService } from '../../../../modal-principal/modal-service';
 import { ModalPopUps } from '../../../../shared/popUps/modal-popUpsService';
-import { Nombre, NombreGet } from '../../../Catalogos/data/nombreInterfaz';
+import { Inter_base, Nombre, NombreGet } from '../../../Catalogos/data/nombreInterfaz';
 import { CatalogoService } from '../../../Catalogos/data/serviceCatalogo';
 
 @Component({
@@ -25,12 +25,12 @@ export class ModalAgregarUusuario implements OnInit, OnChanges {
   @Input() usuarioToEdit?: UsuarioResponse;
   @Input() onSuccess?: () => void;
 
-  contador: number = 1;
+  contador: number = 0;
 
   puestos: PuestoResponse[] = [];
   horarios: HorarioResponse[] = [];
   roles: RolResponse[] = [];
-  especialidades: NombreGet[] = [];
+  especialidades: Inter_base[] = [];
   rolesAbierto = false;
 
   persona: PersonaDatos = {
@@ -117,10 +117,11 @@ export class ModalAgregarUusuario implements OnInit, OnChanges {
     private horarioService: HorarioService,
     private rolService: RolService,
     private usuarioService: UsuarioService,
-    private catalogoService: CatalogoService<Nombre, NombreGet>,
+    private catalogoService: CatalogoService<Nombre, NombreGet>, // eliminar
     private modalService: ModalService,
     private popUps: ModalPopUps,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private servicioCatalogo: CatalogoService,
   ) {}
 
   ngOnInit(): void {
@@ -217,7 +218,7 @@ export class ModalAgregarUusuario implements OnInit, OnChanges {
       }
     });
 
-    this.catalogoService.listar('especialidades', true).subscribe({
+    this.servicioCatalogo.listar<Inter_base>('especialidades', true).subscribe({
       next: (res) => {
         this.especialidades = res;
         this.cdr.detectChanges();

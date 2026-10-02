@@ -25,144 +25,98 @@
 					name="buscarPacienteExistente"
 				>
 				<span class="interruptor" aria-hidden="true"></span>
-				<span class="texto-opcion">
-					<strong>¿Desea buscar un paciente existente?</strong>
-				</span>
+				<span class="texto-opcion"><strong>¿Desea buscar un paciente existente?</strong></span>
 			</label>
 		</div>
 
 		<div class="fila">
-			<app-campo-validado
-				[label]="'Nombres'"
-				[fieldId]="'nombresPaciente'"
-				[required]="true"
-			>
-				<input
-					type="text"
-					id="nombresPaciente"
-					name="nombres"
-					placeholder="Nombres"
-				>
-			</app-campo-validado>
+						<app-campo-validado [label]="'Nombres'" [fieldId]="'nombresPaciente'" [required]="true">
+							<input type="text" id="nombresPaciente" name="nombres" placeholder="Nombres">
+						</app-campo-validado>
+						<app-campo-validado [label]="'Apellidos'" [fieldId]="'apellidosPaciente'" [required]="true">
+							<input type="text" id="apellidosPaciente" name="apellidos" placeholder="Apellidos">
+						</app-campo-validado>
+					</div>
 
-			<app-campo-validado
-				[label]="'Apellidos'"
-				[fieldId]="'apellidosPaciente'"
-				[required]="true"
-			>
-				<input
-					type="text"
-					id="apellidosPaciente"
-					name="apellidos"
-					placeholder="Apellidos"
-				>
-			</app-campo-validado>
-		</div>
+					<div class="fila">
+						<app-campo-validado [label]="'Fecha de nacimiento'" [fieldId]="'fechaNacimientoPaciente'">
+							<input type="date" id="fechaNacimientoPaciente" name="fechaNacimiento">
+						</app-campo-validado>
+						<app-campo-validado [label]="'Sexo'" [fieldId]="'sexoPaciente'">
+							<select id="sexoPaciente" name="sexo">
+								<option value="">Seleccione un sexo</option>
+								<option value="MASCULINO">Masculino</option>
+								<option value="FEMENINO">Femenino</option>
+							</select>
+						</app-campo-validado>
+					</div>
 
-		<div class="fila">
-			<app-campo-validado [label]="'Fecha de nacimiento'" [fieldId]="'fechaNacimientoPaciente'">
-				<input
-					type="date"
-					id="fechaNacimientoPaciente"
-					name="fechaNacimiento"
-				>
-			</app-campo-validado>
+					<div class="fila">
+						<app-campo-validado [label]="'CUI'" [fieldId]="'cuiPaciente'">
+							<input type="text" id="cuiPaciente" name="cui" placeholder="CUI">
+						</app-campo-validado>
+						<app-campo-validado [label]="'Estado civil'" [fieldId]="'estadoCivilPaciente'">
+							<select id="estadoCivilPaciente" name="estadoCivil">
+								<option value="">Seleccione un estado civil</option>
+								<option value="SOLTERO">Soltero/a</option>
+								<option value="CASADO">Casado/a</option>
+								<option value="DIVORCIADO">Divorciado/a</option>
+								<option value="VIUDO">Viudo/a</option>
+							</select>
+						</app-campo-validado>
+					</div>
 
-			<app-campo-validado [label]="'Sexo'" [fieldId]="'sexoPaciente'">
-				<select id="sexoPaciente" name="sexo">
-					<option value="">Seleccione un sexo</option>
-					<option value="MASCULINO">Masculino</option>
-					<option value="FEMENINO">Femenino</option>
-				</select>
-			</app-campo-validado>
-		</div>
+					<div class="fila">
+						<app-campo-validado [label]="'Dirección'" [fieldId]="'direccionPaciente'">
+							<input type="text" id="direccionPaciente" name="direccion" placeholder="Dirección">
+						</app-campo-validado>
+						<app-campo-validado [label]="'Teléfono'" [fieldId]="'telefonoPaciente'">
+							<input type="tel" id="telefonoPaciente" name="telefono" placeholder="Teléfono">
+						</app-campo-validado>
+					</div>
 
-		<div class="fila">
-			<app-campo-validado [label]="'CUI'" [fieldId]="'cuiPaciente'">
-				<input
-					type="text"
-					id="cuiPaciente"
-					name="cui"
-					placeholder="CUI"
-				>
-			</app-campo-validado>
-			
-			<app-campo-validado [label]="'Estado civil'" [fieldId]="'estadoCivilPaciente'">
-				<select id="estadoCivilPaciente" name="estadoCivil">
-					<option value="">Seleccione un estado civil</option>
-					<option value="SOLTERO">Soltero/a</option>
-					<option value="CASADO">Casado/a</option>
-					<option value="DIVORCIADO">Divorciado/a</option>
-					<option value="VIUDO">Viudo/a</option>
-				</select>
-			</app-campo-validado>
-		</div>
-
-		<div class="fila">
-			<app-campo-validado [label]="'Dirección'" [fieldId]="'direccionPaciente'">
-				<input
-					type="text"
-					id="direccionPaciente"
-					name="direccion"
-					placeholder="Dirección"
-				>
-			</app-campo-validado>
-
-			<app-campo-validado [label]="'Teléfono'" [fieldId]="'telefonoPaciente'">
-				<input
-					type="tel"
-					id="telefonoPaciente"
-					name="telefono"
-					placeholder="Teléfono"
-				>
-			</app-campo-validado>
-		</div>
-
-		<div class="fila">
-			<app-campo-validado [label]="'Ocupación'" [fieldId]="'ocupacionProfesionPaciente'">
-				<input
-					type="text"
-					id="ocupacionProfesionPaciente"
-					name="ocupacionProfesion"
-					placeholder="Ocupación / profesión"
-				>
-			</app-campo-validado>
-		</div>
-
+					<div class="fila">
+						<app-campo-validado [label]="'Ocupación'" [fieldId]="'ocupacionProfesionPaciente'">
+							<input type="text" id="ocupacionProfesionPaciente" name="ocupacionProfesion" placeholder="Ocupación / profesión">
+						</app-campo-validado>
+					</div>
 	</div>
 }
 
 @if (contador === 1) {
 	<div class="paso2">
-		<fieldset>
-			<legend>Tipo de atención</legend>
+		<div class="fila-tipo-atencion">
+			<div class="control-atencion">
+				<label>Tipo de atención</label>
+				<app-tab-switch
+					[op1]="'Emergencia'"
+					[op2]="'Hospitalización'"
+					(opcionCambiada)="tipoAtencion = $event ? 'emergencia' : 'hospitalizacion'"
+				></app-tab-switch>
+			</div>
 
-			<label>
-				<input
-					type="radio"
-					name="tipoAtencion"
-					value="emergencia"
-					[checked]="tipoAtencion === 'emergencia'"
-					(change)="tipoAtencion = 'emergencia'"
+			<div class="control-medico">
+				<app-campo-validado [label]="'Médico asignado'" [fieldId]="'medicoAtencion'" [required]="true">
+				<mat-select
+					[(value)]="medicoSeleccionado"
+					placeholder="Seleccione un médico"
+					panelClass="panel-medicos"
 				>
-				<i class="bi bi-truck-front" aria-hidden="true"></i>
-				<span>Emergencia</span>
-			</label>
+					<mat-select-trigger>
+						Dr. {{ medicoSeleccionado?.nombreCompleto ?? 'Seleccione un médico' }}
+					</mat-select-trigger>
+					@for (medico of medicos; track medico.id) {
+						<mat-option [value]="medico">
+							<strong>Dr. {{ medico.nombreCompleto }}</strong>
+							<span class="especialidad-medico"> - {{ medico.especialidad }}</span>
+						</mat-option>
+					}
+					</mat-select>
+					</app-campo-validado>
+				</div>
+		</div>
 
-			<label>
-				<input
-					type="radio"
-					name="tipoAtencion"
-					value="hospitalizacion"
-					[checked]="tipoAtencion === 'hospitalizacion'"
-					(change)="tipoAtencion = 'hospitalizacion'"
-				>
-				<i class="bi bi-hospital" aria-hidden="true"></i>
-				<span>Hospitalización</span>
-			</label>
-		</fieldset>
 
-		<div class="fila-paso2">
 			<app-campo-validado [label]="'Descripción breve'" [fieldId]="'descripcionAtencion'" [required]="true">
 				<textarea
 					id="descripcionAtencion"
@@ -173,33 +127,22 @@
 				></textarea>
 			</app-campo-validado>
 
-			<app-campo-validado [label]="'Médico asignado'" [fieldId]="'medicoAtencion'" [required]="true">
-				<select id="medicoAtencion" name="medicoAtencion">
-					<option value="">Seleccione un médico</option>
-					@for (medico of medicos; track medico.id) {
-						<option [value]="medico.id">{{ medico.nombreCompleto }}</option>
-					}
-				</select>
-			</app-campo-validado>
-		</div>
-
 		@if (tipoAtencion === 'hospitalizacion') {
-			<table class="tabla-camas">
-				<thead>
-					<tr>
-						<th>Código</th>
-						<th>Tipo</th>
-						<th>Habitación</th>
-						<th>Área</th>
-						<th>Estado</th>
-					</tr>
-				</thead>
-				<tbody>
-					<tr>
-						<td colspan="5">No hay camas disponibles para mostrar</td>
-					</tr>
-				</tbody>
-			</table>
+			<app-campo-validado [label]="'Seleccionar cama'" [fieldId]="'camaAtencion'" [required]="true">
+				<mat-select
+					[(value)]="camaSeleccionada"
+					placeholder="Seleccione una cama"
+					panelClass="panel-camas"
+				>
+					<mat-select-trigger>{{ camaSeleccionada?.codigo ?? 'Seleccione una cama' }}</mat-select-trigger>
+					@for (cama of camas; track cama.idCama) {
+						<mat-option [value]="cama">
+							<strong>{{ cama.codigo }}</strong>
+							<span class="detalle-cama"> - {{ cama.nombreTipoCama }} - {{ cama.nombreHabitacion }}</span>
+						</mat-option>
+					}
+				</mat-select>
+			</app-campo-validado>
 		}
 	</div>
 }

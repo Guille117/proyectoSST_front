@@ -39,5 +39,6 @@ export interface ReferenciaRequest {
 export interface MedicoDatos {
     id: number;
   nombreCompleto: string;
+  especialidad: string;
 }
 

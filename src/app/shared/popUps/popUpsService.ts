@@ -11,7 +11,7 @@ export class PopUps {
     toast: true,
     position: 'top', // <-- Cambiado a 'top' para centrarlo arriba
     showConfirmButton: false,
-    timer: 3000,
+    timer: 5000,
     timerProgressBar: false,
     customClass: {
       popup: 'custom-toast-glass',

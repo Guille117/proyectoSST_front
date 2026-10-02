@@ -13,7 +13,7 @@ export class Paginacion {
   @Output() paginaCambiada = new EventEmitter<number>();
 
   get mostrando(): number {
-    return Math.min(this.cantidadMostrar, this.totalregistros);
+    return Math.max(0, Math.min(this.cantidadMostrar, this.totalregistros - (this.paginaActual - 1) * this.cantidadMostrar));
   }
 
   get totalPaginas(): number {

@@ -12,8 +12,9 @@ export class TabSwitch {
   @Input() mostrarActivos = true;
   @Output() opcionCambiada = new EventEmitter<boolean>();
 
-  seleccionarOpcion(): void {
-    this.mostrarActivos = !this.mostrarActivos;
+  seleccionarOpcion(estado: boolean): void {
+    if (estado === this.mostrarActivos) return;
+    this.mostrarActivos = estado;
     this.opcionCambiada.emit(this.mostrarActivos);
   }
 }

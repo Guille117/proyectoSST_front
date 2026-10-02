@@ -39,24 +39,21 @@
         <tr>
           <th class="celda_centrada">No.</th>
           <th class="celda_izquierda">Nombre</th>
-          @if(catalogoSeleccionado === 'Unidad de medida'){
-            <th class="celda_izquierda">Abreviatura</th>
-          }
           <th class="celda_centrada">Acciones</th>
         </tr>
       </thead>
 
       <tbody>
-        @for(registro of registros; track $index) {
+        @for(registro of datos | slice:(paginaActual - 1) * cantidadMostrar:paginaActual * cantidadMostrar; track registro.id) {
           <tr>
-            <td class="celda_centrada">{{$index + 1}}</td>
+            <td class="celda_centrada">{{(paginaActual - 1) * cantidadMostrar + $index + 1}}</td>
             <td class="celda_izquierda">{{ registro.nombre }}</td>
             <td class="celda_centrada acciones">
-              <button class="btn _editar" (click)="precargar(registro.nombre, registro.id)">Editar</button>
               @if(mostrarActivos){
-                <button class="btn _eliminar" (click)="activarDesactivar(registro.id)">Desactivar</button>
+                <button class="iconEditar" title="Editar" aria-label="Editar" (click)="precargar(registro.nombre, registro.id!)"><i class="bi bi-pencil-square"></i></button>
+                <label class="interruptor-estado" title="Desactivar"><input type="checkbox" checked [disabled]="cambiandoEstado || cargandoRegistros" (change)="activarDesactivar($event, registro.id!)"><span></span></label>
               }@else {
-                <button class="btn _guardar" (click)="activarDesactivar(registro.id)">Activar</button>
+                <label class="interruptor-estado" title="Activar"><input type="checkbox" [disabled]="cambiandoEstado || cargandoRegistros" (change)="activarDesactivar($event, registro.id!)"><span></span></label>
               }
             </td>
           </tr>
@@ -65,7 +62,14 @@
       </tbody>
       <tfoot>
         <tr>
-          <td colspan="4"><app-paginacion [paginaActual]="1" [totalregistros]="2" [cantidadMostrar]="7"></app-paginacion></td>
+          <td colspan="3">
+            <app-paginacion
+              [paginaActual]="paginaActual"
+              [totalregistros]="datos.length"
+              [cantidadMostrar]="cantidadMostrar"
+              (paginaCambiada)="paginaActual = $event"
+            ></app-paginacion>
+          </td>
         </tr>
       </tfoot>
     </table>
@@ -73,7 +77,7 @@
   </section>
 
   <section class="panel panel_formulario">
-    <h3 class=" titulo-formulario">{{ tituloFormulario }}</h3>
+    <h3 class=" titulo-formulario">Guardar registro</h3>
 
     <div class="formulario-box">
       <form #formularioRegistro="ngForm">
@@ -81,7 +85,7 @@
         <input
           id="nombreRegistro"
           type="text"
-          [(ngModel)]="nombre"
+          [(ngModel)]="variableEntrada.nombre"
           name="nombreRegistro"
           placeholder="Ingrese nombre"
           required
@@ -96,7 +100,7 @@
           <button
             type="button"
             class="btn _guardar"
-            [disabled]="!formularioRegistro.valid || !hayCambios()"
+            [disabled]="guardando || !formularioRegistro.valid || !hayCambios()"
             (click)="editarRegistro(formularioRegistro)"
           >
             Guardar Cambios
@@ -105,7 +109,7 @@
           <button
             type="button"
             class="btn _guardar"
-            [disabled]="!formularioRegistro.valid"
+            [disabled]="guardando || !formularioRegistro.valid"
             (click)="guardar(formularioRegistro)"
           >
             Guardar

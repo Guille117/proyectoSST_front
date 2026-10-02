@@ -1,16 +1,12 @@
 import { CommonModule } from '@angular/common';
-import { Component, ChangeDetectorRef, OnInit } from '@angular/core';
+import { Component, ChangeDetectorRef, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule, NgForm } from '@angular/forms';
+import { finalize, Subscription } from 'rxjs';
 import { TabSwitch } from '../../../shared/tab-switch/tab-switch';
 import { PopUps } from '../../../shared/popUps/popUpsService';
 import { CatalogoService } from '../data/serviceCatalogo';
-import { Nombre, NombreGet, registrosCatalogos, tipoDato2 } from '../data/nombreInterfaz';
+import { Inter_base, Inter_unidadMedida, registrosCatalogos } from '../data/nombreInterfaz';
 import { Paginacion } from '../../../shared/paginacion/paginacion';
-
-interface CatalogoGrupo {
-  id: string;
-  nombre: string;
-}
 
 @Component({
   selector: 'app-catalogo-farmacia',
@@ -18,18 +14,18 @@ interface CatalogoGrupo {
   templateUrl: './catalogo-farmacia.html',
   styleUrl: './catalogo-farmacia.scss',
 })
-export class CatalogoFarmacia implements OnInit {
+export class CatalogoFarmacia implements OnInit, OnDestroy {
+  private peticionRegistros?: Subscription;
+  private peticionConteos?: Subscription;
+  private versionCatalogo = 0;
+
   constructor(
-    catalogoService: CatalogoService<Nombre, NombreGet>,
     private cdr: ChangeDetectorRef,
     private popUps: PopUps,
+    private servicioCatalogo: CatalogoService,
   ) {
-    this.catalogoService = catalogoService;
   }
-  private readonly catalogoService: CatalogoService<Nombre, NombreGet>;
 
-  
-  
   // variables
   // catálogo de grupos
   listaCatalogos = [
@@ -72,16 +68,25 @@ export class CatalogoFarmacia implements OnInit {
   
   // métodos
   
-  ngOnInit(): void {
+  ngOnInit(){
     this.seleccionarCatalogo(this.listaCatalogos[0].titulo, this.listaCatalogos[0].url);
     this.obtenerContedoCatalogos();
-    this.llenarConetoACatalogos();
-    this.traerRegistros(true);
+  }
+
+  ngOnDestroy(): void {
+    this.versionCatalogo++;
+    this.peticionRegistros?.unsubscribe();
+    this.peticionConteos?.unsubscribe();
   }
   
   seleccionarCatalogo(nombre: string, url: string) {
+    if (url !== this.catalogoUrl) {
+      this.versionCatalogo++;
+      this.limpiarFormulario();
+    }
     this.catalogoSeleccionado = nombre;
     this.catalogoUrl = url;
+    this.paginaActual = 1;
     this.traerRegistros(this.mostrarActivos);
   }
 
@@ -91,7 +96,8 @@ export class CatalogoFarmacia implements OnInit {
   listaRegistrosCatalogos: registrosCatalogos[] = []; 
 
   obtenerContedoCatalogos(){
-    this.catalogoService.obtenerRegistrosCatalogosFarmacia().subscribe({
+    this.peticionConteos?.unsubscribe();
+    this.peticionConteos = this.servicioCatalogo.obtenerRegistrosCatalogosFarmacia().subscribe({
       next: (data) => {
         this.listaRegistrosCatalogos = data;
         this.llenarConetoACatalogos();
@@ -111,182 +117,200 @@ llenarConetoACatalogos() {
 }
 // ---------------------------------------------------------------------------------
 
-// traer registros de catalodos
+// determina que buscar activos o no
 mostrarActivos:boolean = true;
-registros: NombreGet[] = [];
-unidadesMedida: tipoDato2[] = [];
 
-traerRegistros(estado:boolean){
-  if (this.catalogoSeleccionado === 'Unidad de medida') {
-    this.catalogoService.listarUnidadMedida(estado).subscribe({
-      next: (data) => {
-        this.unidadesMedida = data;
-        this.cdr.detectChanges();
-      }
-    })
-  }else{
-    this.catalogoService.listar(this.catalogoUrl, estado).subscribe({
-      next: (data) => {
-        this.registros = data;
-        this.cdr.detectChanges();
-      }
-    });
-  }
+// ------------ LISTAR REGISTROS ------------
+
+datos: Inter_unidadMedida[] = [];
+paginaActual = 1;
+readonly cantidadMostrar = 5;
+cambiandoEstado = false;
+cargandoRegistros = false;
+
+traerRegistros(estado: boolean){
+  if (estado !== this.mostrarActivos) this.paginaActual = 1;
   this.mostrarActivos = estado;
+  this.peticionRegistros?.unsubscribe();
+  this.cargandoRegistros = true;
+  this.cdr.markForCheck();
+  this.peticionRegistros = this.servicioCatalogo.listar<Inter_unidadMedida>(this.catalogoUrl, estado).pipe(
+    finalize(() => {
+      this.cargandoRegistros = false;
+      this.cdr.markForCheck();
+    }),
+  ).subscribe({
+    next: (data)=>{
+      this.datos = data;
+      this.cargandoRegistros = false;
+      this.paginaActual = Math.min(this.paginaActual, Math.max(1, Math.ceil(data.length / this.cantidadMostrar)));
+      this.cdr.detectChanges();
+    },
+    error: (error) => {
+      this.datos = [];
+      this.paginaActual = 1;
+      this.popUps.errorDesdeBackend(error, 'No se pudo actualizar la lista. Intente recargarla.');
+    }
+  })
 }
-
 
 // ---------------------------------------------------------------------------------
 
 // actualizar estado de un registro
-async activarDesactivar(id:number){
-  const confirmado = await this.popUps.confirmarToast('¿Está seguro de que desea cambiar el estado de este registro?');
+async activarDesactivar(event: Event, id:number){
+  const checkbox = event.target;
+  if (checkbox instanceof HTMLInputElement) checkbox.checked = this.mostrarActivos;
+  if (this.cambiandoEstado || this.cargandoRegistros) return;
+  this.cambiandoEstado = true;
+  this.cdr.markForCheck();
+  const url = this.catalogoUrl;
+  const version = this.versionCatalogo;
+  const estado = this.mostrarActivos;
+  const confirmado = await this.popUps.confirmarToast('¿Está seguro de que desea cambiar el estado de este registro?').catch(() => false);
 
-  if(confirmado){
-    this.catalogoService.cambiarEstado(this.catalogoUrl, id).subscribe({
-      next:()=>{
-        this.traerRegistros(this.mostrarActivos);
-        this.obtenerContedoCatalogos();
-        this.cdr.detectChanges();
-      },
-      error: () => {
-        this.popUps.errorDesdeBackend('Error al cambiar el estado del registro');
-      }
-    })
+  if (!confirmado || version !== this.versionCatalogo) {
+    this.cambiandoEstado = false;
+    this.cdr.markForCheck();
+    if (checkbox instanceof HTMLInputElement) {
+      checkbox.checked = estado;
+    }
+    return;
   }
+
+  this.servicioCatalogo.cambiarEstado(url, id).pipe(
+    finalize(() => {
+      this.cambiandoEstado = false;
+      this.cdr.markForCheck();
+    }),
+  ).subscribe({
+    next:()=>{
+      if (version !== this.versionCatalogo) return;
+      this.refrescarCatalogo();
+    },
+    error: (error) => {
+      if (version !== this.versionCatalogo) return;
+      if (checkbox instanceof HTMLInputElement) {
+        checkbox.checked = estado;
+      }
+      this.popUps.errorDesdeBackend(error, 'Error al cambiar el estado del registro');
+    }
+  })
 }
 
 // ---------------------------------------------------------------------------------
 
-// guardar estado
-  tituloFormulario: string = 'Guardar registro';
+  //---------------------------- GUARDAR REGISTROS ------------------------------
+  variableEntrada: Inter_unidadMedida = { nombre: '', abreviatura: '' };
+  guardando = false;
+  
+  guardar(formulario: NgForm) {
+    if (this.guardando) return;
+    this.guardando = true;
+    this.cdr.markForCheck();
+    const version = this.versionCatalogo;
+    this.servicioCatalogo.crear<Inter_base>(this.catalogoUrl, this.selecciontipoDato()).pipe(
+      finalize(() => {
+        this.guardando = false;
+        this.cdr.markForCheck();
+      }),
+    ).subscribe({
+      next: () => {
+        if (version !== this.versionCatalogo) return;
+        this.popUps.exito('Registro guardado con éxito');
+        this.refrescarCatalogo();
+        this.limpiarFormulario(formulario);
+      },
+      error: (error) => {
+        if (version !== this.versionCatalogo) return;
+        this.popUps.errorDesdeBackend(error, 'Error al guardar el registro');
+      }
+    });
+  }
+// ---------------------------------------------------------------------------------
 
-  nombre: string = '';
-  abreviatura: string = '';
+// ----------------------------- HELPERS -----------------------------
+  private refrescarCatalogo(): void {
+    this.traerRegistros(this.mostrarActivos);
+    this.obtenerContedoCatalogos();
+  }
+
+  // Helper para seleccionar el tipo de dato según el catálogo seleccionado
+  selecciontipoDato(){
+    return this.catalogoSeleccionado === 'Unidad de medida'
+      ? this.variableEntrada
+      : { nombre: this.variableEntrada.nombre };
+  }
+  // ---------------------------------------------------------------------------------
+
+  // --------------------EDITAR REGISTRO --------------------
+  editar: boolean = false;
   nombreOriginal = '';
   abreviaturaOriginal = '';
   idRegistroSeleccionado = 0;
 
-  guardar(formulario: NgForm){
-    // guardar unidad de medida
-    if(this.catalogoSeleccionado === 'Unidad de medida') {
-      if(!this.forumularioVacio()){
-        this.catalogoService.guardarUnidadMedida(this.nombre, this.abreviatura).subscribe({
-          next: () => {
-            this.popUps.exito('Unidad de medida guardada con éxito');
-            this.traerRegistros(this.mostrarActivos);
-            this.obtenerContedoCatalogos();
-            this.limpiarFormulario(formulario);
-            this.cdr.detectChanges();
-          },
-          error: () => {
-            this.popUps.errorDesdeBackend('Error al guardar la unidad de medida');
-          }
-        });
-      }
-      // guardar otro tipo de catálogo
-    }else{
-      if(!this.forumularioVacio()){
-        this.catalogoService.crear(this.catalogoUrl, { nombre: this.nombre }).subscribe({
-          next: () => {
-            this.popUps.exito('Registro guardado con éxito');
-            this.traerRegistros(this.mostrarActivos);
-            this.obtenerContedoCatalogos();
-            this.cdr.detectChanges();
-            this.limpiarFormulario(formulario);
-          },
-          error: () => {
-            this.popUps.errorDesdeBackend('Error al guardar el registro');
-          }
-        });
-      }
-    }
-  }
-
-  forumularioVacio(){
-    if(this.catalogoSeleccionado === 'Unidad de medida'){
-      return this.nombre === '' && this.nombre === null && this.abreviatura === '' && this.abreviatura === null;
-    }else{
-      return this.nombre === '' && this.nombre === null;
-    }
-  }
-
-// ---------------------------------------------------------------------------------
-
-// editar registro
-  editar: boolean = false;
-
+  //----------------
   precargar(nombre: string, id: number, abreviatura?: string){
     this.editar = true;
-    this.nombre = nombre;
-    this.nombreOriginal = nombre;
     this.idRegistroSeleccionado = id;
-    this.abreviatura = abreviatura ?? '';
-    this.abreviaturaOriginal = this.abreviatura;
+    this.variableEntrada.nombre = nombre;
+    this.variableEntrada.abreviatura = abreviatura ?? '';
+    this.nombreOriginal = this.variableEntrada.nombre;
+    this.abreviaturaOriginal = this.variableEntrada.abreviatura;
   }
-
+  //----------------
   hayCambios(): boolean {
-    if (this.nombre.trim() !== this.nombreOriginal.trim()) {
+    if (this.variableEntrada.nombre.trim() !== this.nombreOriginal.trim()) {
       return true;
     }
-
     return this.catalogoSeleccionado === 'Unidad de medida'
-      && this.abreviatura.trim() !== this.abreviaturaOriginal.trim();
+      && this.variableEntrada.abreviatura.trim() !== this.abreviaturaOriginal.trim();
   }
 
+  //--------------
   async editarRegistro(formulario: NgForm){
-    if(this.editar){
-      const confirmado = await this.popUps.confirmarToast('¿Está seguro de que desea editar el registro?');
-      if(!confirmado) return;
-      if(this.catalogoSeleccionado === 'Unidad de medida') {
-        if(!this.forumularioVacio()){
-          this.catalogoService.actualizarUnidadMedida(
-            this.idRegistroSeleccionado,
-            this.nombre,
-            this.abreviatura,
-          ).subscribe({
-            next: () => {
-              this.popUps.exito('Unidad de medida actualizada con éxito');
-              this.traerRegistros(this.mostrarActivos);
-              this.obtenerContedoCatalogos();
-              this.limpiarFormulario(formulario);
-              this.cdr.detectChanges();
-              this.editar = false;
-            },
-            error: () => {
-              this.popUps.errorDesdeBackend('Error al actualizar la unidad de medida');
-            }
-          });
-        }
-      }else{
-        if(!this.forumularioVacio()){
-          this.catalogoService.actualizar(this.catalogoUrl, this.idRegistroSeleccionado, { nombre: this.nombre }).subscribe({
-            next: () => {
-              this.popUps.exito('Registro actualizado con éxito');
-              this.traerRegistros(this.mostrarActivos);
-              this.obtenerContedoCatalogos();
-              this.limpiarFormulario(formulario);
-              this.cdr.detectChanges();
-              this.editar = false;
-            },
-            error: () => {
-              this.popUps.errorDesdeBackend('Error al actualizar el registro');
-            }
-          });
-        }
-      }
+    if (!this.editar || this.guardando) return;
+    this.guardando = true;
+    this.cdr.markForCheck();
+
+    const url = this.catalogoUrl;
+    const version = this.versionCatalogo;
+    const id = this.idRegistroSeleccionado;
+    const data = { ...this.selecciontipoDato() };
+    const confirmado = await this.popUps.confirmarToast('¿Está seguro de que desea editar el registro?').catch(() => false);
+    if (!confirmado || version !== this.versionCatalogo || !this.editar || id !== this.idRegistroSeleccionado) {
+      this.guardando = false;
+      this.cdr.markForCheck();
+      return;
     }
+
+    this.servicioCatalogo.actualizar1<Inter_base>(url, id, data).pipe(
+      finalize(() => {
+        this.guardando = false;
+        this.cdr.markForCheck();
+      }),
+    ).subscribe({
+      next: () => {
+        if (version !== this.versionCatalogo) return;
+        this.popUps.exito('Registro actualizado con éxito');
+        this.refrescarCatalogo();
+        if (this.editar && id === this.idRegistroSeleccionado) this.limpiarFormulario(formulario);
+      },
+      error: (error) => {
+        if (version !== this.versionCatalogo) return;
+        this.popUps.errorDesdeBackend(error, 'Error al actualizar el registro');
+      }
+    });
   }
-
-
   // ---------------------------------------------------------------------------------
 
 // limpiar formulario
-  limpiarFormulario(formulario: NgForm): void {
+  
+limpiarFormulario(formulario?: NgForm): void {
     this.editar = false;
-    formulario.resetForm();
-    this.nombre = '';
-    this.abreviatura = '';
+  formulario?.resetForm();
+    this.variableEntrada.abreviatura = '';
+    this.variableEntrada.nombre = '';
+    this.cdr.markForCheck();
   }
 }
   

@@ -19,4 +19,26 @@ describe('TabSwitch', () => {
   it('should create', () => {
     expect(component).toBeTruthy();
   });
+
+  it.each([true, false])('selecciona la opcion pulsada sin alternar la ya seleccionada: %s', async (estado) => {
+    fixture.componentRef.setInput('mostrarActivos', estado);
+    await fixture.whenStable();
+    const emitir = vi.spyOn(component.opcionCambiada, 'emit');
+    const opciones: NodeListOf<HTMLDivElement> = fixture.nativeElement.querySelectorAll('.miniSubMenu > div');
+    const seleccionada = opciones[estado ? 0 : 1];
+    const otra = opciones[estado ? 1 : 0];
+    seleccionada.click();
+    expect(component.mostrarActivos).toBe(estado);
+    expect(emitir).not.toHaveBeenCalled();
+    otra.click();
+    await fixture.whenStable();
+    expect(component.mostrarActivos).toBe(!estado);
+    expect(emitir).toHaveBeenCalledExactlyOnceWith(!estado);
+    expect(otra.classList.contains('op2')).toBe(true);
+    otra.click();
+    expect(emitir).toHaveBeenCalledTimes(1);
+    seleccionada.click();
+    expect(component.mostrarActivos).toBe(estado);
+    expect(emitir).toHaveBeenLastCalledWith(estado);
+  });
 });

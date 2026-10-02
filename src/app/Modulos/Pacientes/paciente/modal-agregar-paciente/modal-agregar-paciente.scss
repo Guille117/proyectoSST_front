@@ -33,16 +33,8 @@
 		gap: 2px;
 		white-space: nowrap;
 
-		strong {
-			color: #14213d;
-			font-size: 17px;
-		}
-
-		span {
-			font-size: 16px;
-			color: #475467;
-			font-weight: 500;
-		}
+		strong { color: #14213d; font-size: 17px; }
+		span { color: #475467; font-size: 16px; font-weight: 500; }
 	}
 
 	.barra-progreso {
@@ -154,6 +146,75 @@
 	display: flex;
 	flex-direction: column;
 	gap: 16px;
+
+	.fila-tipo-atencion {
+		display: grid;
+		grid-template-columns: minmax(260px, 0.90fr) minmax(0, 1fr);
+		align-items: start;
+		gap: 16px;
+	}
+
+	.control-atencion {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+		padding-top: 18px;
+
+		> label {
+			color: #101828;
+			font-weight: 600;
+		}
+
+		app-tab-switch { width: 100%; }
+	}
+
+	.control-medico { min-width: 0; }
+
+	mat-select {
+		display: block;
+		width: 100%;
+		padding: 10px 12px;
+		border: 1px solid #cbd5e1;
+		border-radius: 10px;
+		background: #ffffff;
+	}
+
+	::ng-deep .panel-medicos,
+	::ng-deep .panel-camas {
+		margin-left: -12px !important;
+		margin-top: -1px !important;
+		background: #ffffff !important;
+		border: 1px solid #cbd5e1;
+		border-radius: 10px;
+		box-shadow: 0 8px 20px rgba(11, 23, 57, 0.14);
+		overflow: hidden;
+
+		.mat-mdc-option {
+			min-height: 52px;
+			padding: 6px 16px;
+			background: #ffffff !important;
+			transition: background-color 160ms ease;
+
+			&:hover:not(.mdc-list-item--disabled) {
+				background: #f0f6ff !important;
+			}
+		}
+
+		strong {
+			color: #14213d;
+			font-size: 16px;
+		}
+
+		.especialidad-medico,
+		.detalle-cama {
+			color: #000000;
+			font-size: 14px;
+		}
+
+		.mat-mdc-option.mdc-list-item--selected {
+			background: #e8f1ff !important;
+		}
+	}
 
 	fieldset {
 		display: grid;
@@ -382,9 +443,9 @@
 	}
 
 	.paso2 {
-		fieldset {
-			grid-template-columns: 1fr;
-		}
+			.fila-tipo-atencion {
+				grid-template-columns: 1fr;
+			}
 
 		.fila-paso2 {
 			grid-template-columns: 1fr;

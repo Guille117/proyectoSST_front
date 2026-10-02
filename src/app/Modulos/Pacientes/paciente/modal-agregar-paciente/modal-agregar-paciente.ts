@@ -1,19 +1,30 @@
 import { Component } from '@angular/core';
+import { MatSelectModule } from '@angular/material/select';
 import { CampoValidado } from '../../../../shared/campo-validado/campo-validado';
+import { TabSwitch } from '../../../../shared/tab-switch/tab-switch';
 import { MedicoDatos } from '../data/pacienteInterfaz';
 import { UsuarioService } from '../../../Usuarios/usu/data/usuario-service';
+import { ServicioCama } from '../../camas/data/servicioCama';
+import { camaResponseSimple, EstadoCama } from '../../camas/data/interfazCama';
+
+
 
 @Component({
   selector: 'app-modal-agregar-paciente',
-  imports: [CampoValidado],
+  imports: [CampoValidado, MatSelectModule, TabSwitch],
   templateUrl: './modal-agregar-paciente.html',
   styleUrl: './modal-agregar-paciente.scss',
 })
 export class ModalAgregarPaciente {
-  constructor(private usuarioService: UsuarioService) {}
+  constructor(
+    private usuarioService: UsuarioService,
+    private servicioCama: ServicioCama,
+  ) {}
 
-  contador = 0;
+  contador = 1;
   tipoAtencion: 'emergencia' | 'hospitalizacion' = 'emergencia';
+  medicoSeleccionado: MedicoDatos | null = null;
+  camaSeleccionada: camaResponseSimple | null = null;
   archivoReferencia: File | null = null;
   pasos = [
     'Información del paciente',
@@ -25,12 +36,14 @@ export class ModalAgregarPaciente {
   // ----------------------- carga de inicio.------------------
   ngOnInit() {
     this.cargarMedicos();
+    this.cargarCamas();
   }
 
   // ----------------------- cargar datos ------------------------
 
   // medicos
   medicos: MedicoDatos[] = [];
+  camas: camaResponseSimple[] = [];
 
   cargarMedicos() {
     this.usuarioService.getMedicos().subscribe((medicos) => {
@@ -39,11 +52,11 @@ export class ModalAgregarPaciente {
   }
 
 
-
-
-
-
-
+  cargarCamas(){
+  this.servicioCama.buscarCamas(EstadoCama.DISPONIBLE, true).subscribe((camas) => {
+    this.camas = camas;
+  });
+  }
 
 
   seleccionarArchivo(event: Event): void {

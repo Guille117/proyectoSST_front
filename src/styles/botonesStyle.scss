@@ -109,6 +109,47 @@
 		outline-offset: 2px;
 	}
 }
+.interruptor-estado {
+    display: inline-flex;
+    align-items: center;
+    margin-left: 8px;
+    vertical-align: middle;
+    cursor: pointer;
+
+    input {
+        position: absolute;
+        opacity: 0;
+    }
+
+    span {
+        position: relative;
+        display: block;
+        width: 38px;
+        height: 20px;
+        border-radius: 999px;
+        background: #9ca3af;
+
+        &::after {
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #ffffff;
+            content: '';
+            transition: transform 160ms ease;
+        }
+    }
+
+    input:checked + span {
+        background: #22c55e;
+
+        &::after {
+            transform: translateX(18px);
+        }
+    }
+}
 
 .i_basurero.disabled {
   opacity: 0.4;
