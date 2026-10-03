@@ -1,158 +1,256 @@
 <div class="areaTrabajo-container">
+  <div class="trabajoArea">
+    <!-- Bloque izquierdo -->
+    <div class="table-container">
+      <div class="seccionSuperior">
+        <div class="buscador-container">
+          <div class="buscador">
+            <input
+              class="inputB"
+              type="text"
+              placeholder="Buscar..."
+              aria-label="Buscar proveedor"
+              [(ngModel)]="nombreProveedor"
+              name="nombreProveedor"
+              [disabled]="operacionPendiente"
+            />
 
-    <div class="trabajoArea">
-            <!-- Bloque izquierdo -->
-        <div class="table-container">
-                <div class="seccionSuperior">
-        
-                    <div class="buscador-container">
-                        <div class="buscador">
-                            <input class="inputB" type="text" placeholder="Buscar..." [(ngModel)]="nombreProveedor" name="nombreProveedor">
-        
-                            <button class="btnLupa" (click)="buscarProveedorPorNombre(true)">
-                                <i class="bi bi-search fs-5"></i>
-                            </button>
-                        </div>
-                        <div class="miniSub-container">
-                            <app-tab-switch [op1]="'Activos'" [op2]="'Inactivos'" (opcionCambiada)="resultadoSwitch($event)"></app-tab-switch>
-                        </div>
-                    </div>
-                </div>
-
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th class="celda_centrada">No.</th>
-                            <th class="celda_centrada">Código</th>
-                            <th class="celda_izquierda">Nombre</th>
-                            <th class="celda_centrada">Teléfono</th>
-                            <th class="celda_izquierda">Email</th>
-                            <th class="celda_centrada">NIT</th>
-                            <th class="celda_centrada">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @for(prov of proveedores; track $index) {
-                            <tr>
-                                <td class="celda_centrada">{{$index + 1}}</td>
-                                <td class="celda_centrada">{{prov.codigo}}</td>
-                                <td class="celda_izquierda">{{prov.nombre}}</td>
-                                <td class="celda_centrada">{{prov.telefono}}</td>
-                                <td class="celda_izquierda">{{prov.email}}</td>
-                                <td class="celda_centrada">{{prov.nit}}</td>
-                                <td class="celda_centrada">
-                                    @if(mostrarActivos) {
-                                        <i class="bi bi-pencil-square i_lapiz" (click)="preActualizarProveedor({...prov})" [class.disabled]="isEditing"></i>
-                                        <i class="bi bi-trash3 i_basurero" (click)="cambiarEstadoProveedor(prov.id)" [class.disabled]="isEditing"></i>
-                                    } @else {
-                                        
-                                    }
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
+            <button
+              type="button"
+              class="btnLupa"
+              title="Buscar proveedor"
+              aria-label="Buscar proveedor"
+              [disabled]="operacionPendiente"
+              (click)="buscarProveedorPorNombre()"
+            >
+              <i class="bi bi-search fs-5"></i>
+            </button>
+          </div>
+          <div
+            class="miniSub-container"
+            [attr.inert]="operacionPendiente ? '' : null"
+            [attr.aria-disabled]="operacionPendiente"
+          >
+            <app-tab-switch
+              [op1]="'Activos'"
+              [op2]="'Inactivos'"
+              [mostrarActivos]="mostrarActivos"
+              (opcionCambiada)="cargarProveedores($event)"
+            ></app-tab-switch>
+          </div>
         </div>
+      </div>
 
-        <!-- Bloque derecho -->
-            <div class="formulario formulario-container">
-                <h3 class="titulo-formulario">{{isEditing ? 'Editar datos de proveedor' : 'Agregar proveedor'}}</h3>
-            
-                <form #proveedorForm="ngForm" novalidate>
-
-                    <app-campo-validado
-                        class="etiqueta-input" 
-                        [label]="'Nombre'"
-                        [fieldId]="'nombre'"
-                        [errorMessage]="'Debe ingresar un nombre'"
-                    >
-                    <input
-                        type="text"
-                        id="nombre"
-                        name="nombre"
-                        placeholder="Nombre de proveedor *"
-                        [(ngModel)]="proveedor.nombre"
-                        required
-                        #nombre="ngModel"
-                        [class.input-invalid]="nombre.touched && nombre.invalid"
-                    >
-                    </app-campo-validado>
-            
-                    <app-campo-validado
-                        class="etiqueta-input"
-                        [label]="'Teléfono'"
-                        [fieldId]="'telefono'"
-                        [showError]="!!(telefono.touched && telefono.invalid)"
-                        [errorMessage]="'Formato telefónico invalido'"
-                    >
+      <table class="table" [attr.aria-busy]="cargandoProveedores">
+        <thead>
+          <tr>
+            <th class="celda_centrada">No.</th>
+            <th class="celda_centrada">Código</th>
+            <th class="celda_izquierda">Nombre</th>
+            <th class="celda_centrada">Teléfono</th>
+            <th class="celda_izquierda">Email</th>
+            <th class="celda_centrada">NIT</th>
+            <th class="celda_centrada">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          @if (cargandoProveedores) {
+            <tr>
+              <td colspan="7" class="celda_centrada" role="status">Cargando proveedores...</td>
+            </tr>
+          } @else if (errorLista) {
+            <tr>
+              <td colspan="7" class="celda_centrada" role="alert">
+                {{ errorLista }}
+                <button
+                  type="button"
+                  class="btn _principal"
+                  [disabled]="operacionPendiente"
+                  (click)="reintentarCarga()"
+                >
+                  Reintentar
+                </button>
+              </td>
+            </tr>
+          } @else {
+            @for (prov of proveedores; track prov.id) {
+              <tr [class.selected-row]="isEditing && idProveedorActualizar === prov.id">
+                <td class="celda_centrada">{{ $index + 1 }}</td>
+                <td class="celda_centrada">{{ prov.codigo }}</td>
+                <td class="celda_izquierda">{{ prov.nombre }}</td>
+                <td class="celda_centrada">{{ prov.telefono }}</td>
+                <td class="celda_izquierda">{{ prov.email }}</td>
+                <td class="celda_centrada">{{ prov.nit }}</td>
+                <td class="celda_centrada">
+                  @if (!isEditing) {
+                    <div class="interruptor-estado">
+                      @if (prov.estado) {
+                        <button
+                          type="button"
+                          class="iconEditar"
+                          title="Editar proveedor"
+                          aria-label="Editar proveedor"
+                          [disabled]="isEditing || operacionPendiente || cargandoProveedores"
+                          (click)="preActualizarProveedor(prov, proveedorForm)"
+                        >
+                          <i class="bi bi-pencil-square" aria-hidden="true"></i>
+                        </button>
+                      }
+                      <label
+                        class="interruptor-estado"
+                        [title]="prov.estado ? 'Proveedor activo' : 'Proveedor inactivo'"
+                      >
                         <input
-                            type="text"
-                            id="telefono"
-                            name="telefono"
-                            placeholder="Ej: 12345678"
-                            [(ngModel)]="proveedor.telefono"
-                            pattern="[0-9]{8}"
-                            maxlength="8"
-                            #telefono="ngModel"
-                            [class.input-invalid]="telefono.touched && telefono.invalid"
-                        >
-                    </app-campo-validado>
-            
-                    <app-campo-validado
-                        class="etiqueta-input" 
-                        [label]="'Email'"
-                        [fieldId]="'email'"
-                        [showError]="(email.touched && email.invalid) ?? false"
-                        [errorMessage]="'Formato de email inválido'"
-                    >
-                        <input
-                            type="email"
-                            id="email"
-                            name="email"
-                            placeholder="Ej: correo@proveedor.com"
-                            [(ngModel)]="proveedor.email"
-                            email
-                            #email="ngModel"
-                            [class.input-invalid]="email.touched && email.invalid"
-                        >
-                    </app-campo-validado>
-            
-                    <app-campo-validado
-                        class="etiqueta-input"
-                        [label]="'NIT'"
-                        [fieldId]="'nit'"
-                        [showError]="(nit.touched && nit.invalid) ?? false"
-                        [errorMessage]="'NIT inválido'"
-                        >
-                        <input
-                            type="text"
-                            id="nit"
-                            name="nit"
-                            placeholder="Ej: 1234567-8"
-                            [(ngModel)]="proveedor.nit"
-                            [pattern]="nitPattern"
-                            #nit="ngModel"
-                            [class.input-invalid]="nit.touched && nit.invalid"
-                        >
-                    </app-campo-validado>
-
-            
-                    <div class="botones">
-                        <button type="button" class="btn _cancelar" (click)="cancelar()">Cancelar</button>
-                        @if(isEditing) {
-                            <button type="button" class="btn _guardar" [disabled]="!isFormValido() || !tieneCambiosValidosParaActualizar()" (click)="editarProveedor()">
-                                Guardar cambios
-                            </button>
-                        } @else {
-                            <button type="button" class="btn _guardar" [disabled]="!isFormValido()" (click)="guardarCambios()">
-                                Guardar
-                            </button>
-                        }
+                          type="checkbox"
+                          role="switch"
+                          [checked]="prov.estado"
+                          [disabled]="isEditing || operacionPendiente || cargandoProveedores"
+                          [attr.aria-label]="
+                            prov.estado ? 'Desactivar proveedor' : 'Activar proveedor'
+                          "
+                          (change)="cambiarEstadoProveedor(prov.id, $event)"
+                        />
+                        <span aria-hidden="true"></span>
+                      </label>
                     </div>
-
-                </form>
-            </div>
+                  }
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="7" class="celda_centrada">No se encontraron proveedores.</td>
+              </tr>
+            }
+          }
+        </tbody>
+      </table>
     </div>
 
-</div>
+    <!-- Bloque derecho -->
+    <div class="formulario formulario-container">
+      <h3 class="titulo-formulario">
+        {{ isEditing ? 'Editar datos de proveedor' : 'Agregar proveedor' }}
+      </h3>
 
+      <form #proveedorForm="ngForm" novalidate [attr.aria-busy]="operacionPendiente">
+        <app-campo-validado
+          class="etiqueta-input"
+          [label]="'Nombre'"
+          [fieldId]="'nombre'"
+          [required]="true"
+          [showError]="!!nombre.touched && !esNombreValido()"
+          [errorMessage]="'Debe ingresar un nombre'"
+        >
+          <input
+            type="text"
+            id="nombre"
+            name="nombre"
+            placeholder="Nombre de proveedor"
+            [(ngModel)]="proveedor.nombre"
+            required
+            [pattern]="nombrePattern"
+            [disabled]="operacionPendiente"
+            #nombre="ngModel"
+            [class.input-invalid]="nombre.touched && !esNombreValido()"
+            [attr.aria-invalid]="!!nombre.touched && !esNombreValido()"
+          />
+        </app-campo-validado>
+
+        <app-campo-validado
+          class="etiqueta-input"
+          [label]="'Teléfono'"
+          [fieldId]="'telefono'"
+          [showError]="!!telefono.touched && !esTelefonoValido()"
+          [errorMessage]="'Formato telefónico invalido'"
+        >
+          <input
+            type="text"
+            id="telefono"
+            name="telefono"
+            placeholder="Ej: 12345678"
+            [(ngModel)]="proveedor.telefono"
+            [pattern]="telefonoPattern"
+            [disabled]="operacionPendiente"
+            maxlength="8"
+            #telefono="ngModel"
+            [class.input-invalid]="telefono.touched && !esTelefonoValido()"
+            [attr.aria-invalid]="!!telefono.touched && !esTelefonoValido()"
+          />
+        </app-campo-validado>
+
+        <app-campo-validado
+          class="etiqueta-input"
+          [label]="'Email'"
+          [fieldId]="'email'"
+          [showError]="!!email.touched && !esEmailValido()"
+          [errorMessage]="'Formato de email inválido'"
+        >
+          <input
+            type="email"
+            id="email"
+            name="email"
+            placeholder="Ej: correo@proveedor.com"
+            [(ngModel)]="proveedor.email"
+            [pattern]="emailPattern"
+            [disabled]="operacionPendiente"
+            #email="ngModel"
+            [class.input-invalid]="email.touched && !esEmailValido()"
+            [attr.aria-invalid]="!!email.touched && !esEmailValido()"
+          />
+        </app-campo-validado>
+
+        <app-campo-validado
+          class="etiqueta-input"
+          [label]="'NIT'"
+          [fieldId]="'nit'"
+          [showError]="!!nit.touched && !esNitValido()"
+          [errorMessage]="'NIT inválido: use CF o 7 u 8 dígitos, un guion y un dígito o K'"
+        >
+          <input
+            type="text"
+            id="nit"
+            name="nit"
+            placeholder="Ej: CF, 1234567-8 o 12345678-K"
+            [(ngModel)]="proveedor.nit"
+            [disabled]="operacionPendiente"
+            #nit="ngModel"
+            [class.input-invalid]="nit.touched && !esNitValido()"
+            [attr.aria-invalid]="nit.touched && !esNitValido()"
+          />
+        </app-campo-validado>
+
+        <div class="botones">
+          <button
+            type="button"
+            class="btn _cancelar"
+            [disabled]="operacionPendiente"
+            (click)="cancelar(proveedorForm)"
+          >
+            Cancelar
+          </button>
+          @if (isEditing) {
+            <button
+              type="button"
+              class="btn _guardar"
+              [disabled]="
+                operacionPendiente || cargandoProveedores || !tieneCambiosValidosParaActualizar()
+              "
+              (click)="editarProveedor(proveedorForm)"
+            >
+              Guardar cambios
+            </button>
+          } @else {
+            <button
+              type="button"
+              class="btn _guardar"
+              [disabled]="operacionPendiente || cargandoProveedores"
+              (click)="guardarProveedor(proveedorForm)"
+            >
+              Guardar
+            </button>
+          }
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
