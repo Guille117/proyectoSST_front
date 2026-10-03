@@ -8,9 +8,14 @@ export interface PacienteRequest {
   episodio: EpisodioRequest;
 }
 
+export interface PacienteMultipartRequest {
+  request: PacienteRequest;
+  archivoReferencia: File | null;
+}
+
 export interface PacienteDatos {
-  persona: PersonaDatos;
-  estadoCivil: EstadoCivil;
+  persona: Omit<PersonaDatos, 'cui'> & { cui: string | null };
+  estadoCivil: EstadoCivil | null;
   direccion: string | null;
   ocupacion: string | null;
 }
@@ -19,21 +24,31 @@ export interface EpisodioRequest {
   tipoAtencion: TipoAtencion;
   descripcion: string;
   medicoId: number;
-  responsable: ResponsableRequest;
+  responsable: ResponsableRequest | null;
   referencia: ReferenciaRequest | null;
 }
 
 export interface ResponsableRequest {
   persona: PersonaDatos;
-  parentesco: string;
+  parentescoId: number;
   direccion: string | null;
 }
 
 export interface ReferenciaRequest {
-  institucion: string;
-  motivo: string;
-  documento?: File | null;
+  institucionId: number;
+  motivoReferencia: string | null;
 }
+
+
+// --------------------- datos resumidos de paciente ------------------------- 
+export interface PacienteResumido {
+  codigoExpediente: string;
+  nombreCompleto: string;
+  telefono: string;
+  tipoTratamiento: TipoAtencion;
+  estado: boolean;
+}
+
 
 // medico
 export interface MedicoDatos {

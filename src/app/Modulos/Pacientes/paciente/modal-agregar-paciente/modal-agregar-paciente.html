@@ -4,47 +4,52 @@
 	<div class="progreso-paso">
 		<span class="numero">{{ contador + 1 }}</span>
 		<div class="descripcion-paso">
-			<strong>Paso {{ contador + 1 }} de {{ pasos.length }}</strong>
+			<div class="encabezado-paso">
+				<strong>Paso {{ contador + 1 }} de {{ pasos.length }}</strong>
+				@if ((contador === 2 && !responsableRequerido) || contador === 3) {
+					<span class="etiqueta-opcional">Opcional</span>
+				}
+			</div>
 			<span>{{ pasos[contador] }}</span>
 		</div>
 	</div>
 
-	<div class="barra-progreso" role="progressbar" [attr.aria-valuenow]="contador + 1" aria-valuemin="1" [attr.aria-valuemax]="pasos.length">
-		<span [style.width.%]="((contador + 1) / pasos.length) * 100"></span>
-	</div>
-
-	<span class="contador-progreso">{{ contador + 1 }} / {{ pasos.length }}</span>
+	@if (contador === 0) {
+		<div class="buscador-container">
+			<div class="buscador">
+				<input
+					class="inputB"
+					type="text"
+					name="busquedaPaciente"
+					placeholder="Buscar paciente"
+					[(ngModel)]="busquedaPaciente"
+				>
+				<button class="btnLupa" type="button" aria-label="Buscar paciente">
+					<i class="bi bi-search fs-5"></i>
+				</button>
+			</div>
+		</div>
+	}
 </div>
 
 @if (contador === 0) {
 	<div class="formularioPacientePaso1">
-		<div class="opcion-buscar-paciente">
-			<label>
-				<input
-					type="checkbox"
-					name="buscarPacienteExistente"
-				>
-				<span class="interruptor" aria-hidden="true"></span>
-				<span class="texto-opcion"><strong>¿Desea buscar un paciente existente?</strong></span>
-			</label>
-		</div>
-
 		<div class="fila">
-						<app-campo-validado [label]="'Nombres'" [fieldId]="'nombresPaciente'" [required]="true">
-							<input type="text" id="nombresPaciente" name="nombres" placeholder="Nombres">
+						<app-campo-validado [label]="'Nombres'" [fieldId]="'nombresPaciente'" [required]="true" [showError]="!!(nombresPacienteControl.touched && nombresPacienteControl.invalid)" [errorMessage]="'Debe ingresar los nombres'">
+							<input type="text" id="nombresPaciente" name="nombresPaciente" placeholder="Nombres" required pattern="^[A-Za-zÁÉÍÓÚáéíóúÑñ ]+$" [(ngModel)]="pacienteForm.persona.nombres" #nombresPacienteControl="ngModel" [class.input-invalid]="nombresPacienteControl.touched && nombresPacienteControl.invalid">
 						</app-campo-validado>
-						<app-campo-validado [label]="'Apellidos'" [fieldId]="'apellidosPaciente'" [required]="true">
-							<input type="text" id="apellidosPaciente" name="apellidos" placeholder="Apellidos">
+						<app-campo-validado [label]="'Apellidos'" [fieldId]="'apellidosPaciente'" [required]="true" [showError]="!!(apellidosPacienteControl.touched && apellidosPacienteControl.invalid)" [errorMessage]="'Debe ingresar los apellidos'">
+							<input type="text" id="apellidosPaciente" name="apellidosPaciente" placeholder="Apellidos" required pattern="^[A-Za-zÁÉÍÓÚáéíóúÑñ ]+$" [(ngModel)]="pacienteForm.persona.apellidos" #apellidosPacienteControl="ngModel" [class.input-invalid]="apellidosPacienteControl.touched && apellidosPacienteControl.invalid">
 						</app-campo-validado>
 					</div>
 
 					<div class="fila">
-						<app-campo-validado [label]="'Fecha de nacimiento'" [fieldId]="'fechaNacimientoPaciente'">
-							<input type="date" id="fechaNacimientoPaciente" name="fechaNacimiento">
+						<app-campo-validado [label]="'Fecha de nacimiento'" [fieldId]="'fechaNacimientoPaciente'" [required]="true" [showError]="!!(fechaNacimientoPacienteControl.touched && fechaNacimientoPacienteControl.invalid)" [errorMessage]="'Debe ingresar una fecha de nacimiento'">
+							<input type="date" id="fechaNacimientoPaciente" name="fechaNacimientoPaciente" required [(ngModel)]="pacienteForm.persona.fechaNacimiento" #fechaNacimientoPacienteControl="ngModel" [class.input-invalid]="fechaNacimientoPacienteControl.touched && fechaNacimientoPacienteControl.invalid">
 						</app-campo-validado>
-						<app-campo-validado [label]="'Sexo'" [fieldId]="'sexoPaciente'">
-							<select id="sexoPaciente" name="sexo">
-								<option value="">Seleccione un sexo</option>
+						<app-campo-validado [label]="'Sexo'" [fieldId]="'sexoPaciente'" [required]="true" [showError]="!!(sexoPacienteControl.touched && sexoPacienteControl.invalid)" [errorMessage]="'Debe seleccionar un sexo'">
+							<select id="sexoPaciente" name="sexoPaciente" required [(ngModel)]="pacienteForm.persona.sexo" #sexoPacienteControl="ngModel" [class.input-invalid]="sexoPacienteControl.touched && sexoPacienteControl.invalid">
+								<option [ngValue]="undefined">Seleccione un sexo</option>
 								<option value="MASCULINO">Masculino</option>
 								<option value="FEMENINO">Femenino</option>
 							</select>
@@ -52,11 +57,11 @@
 					</div>
 
 					<div class="fila">
-						<app-campo-validado [label]="'CUI'" [fieldId]="'cuiPaciente'">
-							<input type="text" id="cuiPaciente" name="cui" placeholder="CUI">
+						<app-campo-validado [label]="'CUI'" [fieldId]="'cuiPaciente'" [showError]="!!(cuiPacienteControl.touched && cuiPacienteControl.invalid)" [errorMessage]="'Debe ingresar un CUI válido de 13 dígitos'">
+							<input type="text" inputmode="numeric" maxlength="13" pattern="[0-9]{13}" id="cuiPaciente" name="cuiPaciente" placeholder="CUI" [ngModel]="pacienteForm.persona.cui" #cuiPacienteControl="ngModel" [class.input-invalid]="cuiPacienteControl.touched && cuiPacienteControl.invalid" (input)="pacienteForm.persona.cui = filtrarDigitos($event, 13)">
 						</app-campo-validado>
 						<app-campo-validado [label]="'Estado civil'" [fieldId]="'estadoCivilPaciente'">
-							<select id="estadoCivilPaciente" name="estadoCivil">
+							<select id="estadoCivilPaciente" name="estadoCivilPaciente" [(ngModel)]="pacienteForm.estadoCivil">
 								<option value="">Seleccione un estado civil</option>
 								<option value="SOLTERO">Soltero/a</option>
 								<option value="CASADO">Casado/a</option>
@@ -68,16 +73,16 @@
 
 					<div class="fila">
 						<app-campo-validado [label]="'Dirección'" [fieldId]="'direccionPaciente'">
-							<input type="text" id="direccionPaciente" name="direccion" placeholder="Dirección">
+							<input type="text" id="direccionPaciente" name="direccionPaciente" placeholder="Dirección" [(ngModel)]="pacienteForm.direccion">
 						</app-campo-validado>
-						<app-campo-validado [label]="'Teléfono'" [fieldId]="'telefonoPaciente'">
-							<input type="tel" id="telefonoPaciente" name="telefono" placeholder="Teléfono">
+						<app-campo-validado [label]="'Teléfono'" [fieldId]="'telefonoPaciente'" [showError]="!!(telefonoPacienteControl.touched && telefonoPacienteControl.invalid)" [errorMessage]="'Debe ingresar un teléfono válido de 8 dígitos'">
+							<input type="tel" inputmode="numeric" maxlength="8" pattern="[0-9]{8}" id="telefonoPaciente" name="telefonoPaciente" placeholder="Teléfono" [ngModel]="pacienteForm.persona.telefono" #telefonoPacienteControl="ngModel" [class.input-invalid]="telefonoPacienteControl.touched && telefonoPacienteControl.invalid" (input)="pacienteForm.persona.telefono = filtrarDigitos($event, 8)">
 						</app-campo-validado>
 					</div>
 
 					<div class="fila">
 						<app-campo-validado [label]="'Ocupación'" [fieldId]="'ocupacionProfesionPaciente'">
-							<input type="text" id="ocupacionProfesionPaciente" name="ocupacionProfesion" placeholder="Ocupación / profesión">
+							<input type="text" id="ocupacionProfesionPaciente" name="ocupacionPaciente" placeholder="Ocupación / profesión" [(ngModel)]="pacienteForm.ocupacion">
 						</app-campo-validado>
 					</div>
 	</div>
@@ -96,15 +101,21 @@
 			</div>
 
 			<div class="control-medico">
-				<app-campo-validado [label]="'Médico asignado'" [fieldId]="'medicoAtencion'" [required]="true">
+				<app-campo-validado [label]="'Médico asignado'" [fieldId]="'medicoAtencion'" [required]="true" [showError]="!!(medicoControl.touched && medicoControl.invalid)" [errorMessage]="'Debe seleccionar un médico'">
 				<mat-select
-					[(value)]="medicoSeleccionado"
+					[(ngModel)]="medicoSeleccionado"
+					name="medicoSeleccionado"
+					[disabled]="guardando"
+					required
+					#medicoControl="ngModel"
+					[class.input-invalid]="medicoControl.touched && medicoControl.invalid"
 					placeholder="Seleccione un médico"
 					panelClass="panel-medicos"
 				>
 					<mat-select-trigger>
 						Dr. {{ medicoSeleccionado?.nombreCompleto ?? 'Seleccione un médico' }}
 					</mat-select-trigger>
+					<mat-option [value]="null">Seleccione un médico</mat-option>
 					@for (medico of medicos; track medico.id) {
 						<mat-option [value]="medico">
 							<strong>Dr. {{ medico.nombreCompleto }}</strong>
@@ -117,10 +128,15 @@
 		</div>
 
 
-			<app-campo-validado [label]="'Descripción breve'" [fieldId]="'descripcionAtencion'" [required]="true">
+			<app-campo-validado [label]="'Descripción breve'" [fieldId]="'descripcionAtencion'" [required]="true" [showError]="!!(descripcionAtencionControl.touched && descripcionAtencionControl.invalid)" [errorMessage]="'Debe ingresar una descripción de la atención'">
 				<textarea
+					[disabled]="guardando"
 					id="descripcionAtencion"
 					name="descripcionAtencion"
+					[(ngModel)]="descripcionAtencion"
+					required
+					#descripcionAtencionControl="ngModel"
+					[class.input-invalid]="descripcionAtencionControl.touched && descripcionAtencionControl.invalid"
 					[placeholder]="tipoAtencion === 'emergencia'
 						? 'Describa los síntomas, tiempo de evolución y cualquier dato relevante...'
 						: 'Describa el motivo de la hospitalización, antecedentes y notas relevantes...'"
@@ -128,13 +144,19 @@
 			</app-campo-validado>
 
 		@if (tipoAtencion === 'hospitalizacion') {
-			<app-campo-validado [label]="'Seleccionar cama'" [fieldId]="'camaAtencion'" [required]="true">
+			<app-campo-validado [label]="'Seleccionar cama'" [fieldId]="'camaAtencion'" [required]="true" [showError]="!!(camaControl.touched && camaControl.invalid)" [errorMessage]="'Debe seleccionar una cama'">
 				<mat-select
-					[(value)]="camaSeleccionada"
+					[disabled]="guardando"
+					[(ngModel)]="camaSeleccionada"
+					name="camaSeleccionada"
+					required
+					#camaControl="ngModel"
+					[class.input-invalid]="camaControl.touched && camaControl.invalid"
 					placeholder="Seleccione una cama"
 					panelClass="panel-camas"
 				>
 					<mat-select-trigger>{{ camaSeleccionada?.codigo ?? 'Seleccione una cama' }}</mat-select-trigger>
+					<mat-option [value]="null">Seleccione una cama</mat-option>
 					@for (cama of camas; track cama.idCama) {
 						<mat-option [value]="cama">
 							<strong>{{ cama.codigo }}</strong>
@@ -153,26 +175,40 @@
 			<app-campo-validado
 				[label]="'Nombres'"
 				[fieldId]="'nombresResponsable'"
-				[required]="true"
+				[required]="responsableCamposRequeridos"
+				[showError]="!!(nombresResponsableControl.touched && nombresResponsableControl.invalid)"
+				[errorMessage]="'Debe ingresar los nombres del responsable'"
 			>
 				<input
 					type="text"
 					id="nombresResponsable"
 					name="nombresResponsable"
 					placeholder="Nombres"
+					pattern="^[A-Za-zÁÉÍÓÚáéíóúÑñ ]+$"
+					[required]="responsableCamposRequeridos"
+					[(ngModel)]="responsableForm.persona.nombres"
+					#nombresResponsableControl="ngModel"
+					[class.input-invalid]="nombresResponsableControl.touched && nombresResponsableControl.invalid"
 				>
 			</app-campo-validado>
 
 			<app-campo-validado
 				[label]="'Apellidos'"
 				[fieldId]="'apellidosResponsable'"
-				[required]="true"
+				[required]="responsableCamposRequeridos"
+				[showError]="!!(apellidosResponsableControl.touched && apellidosResponsableControl.invalid)"
+				[errorMessage]="'Debe ingresar los apellidos del responsable'"
 			>
 				<input
 					type="text"
 					id="apellidosResponsable"
 					name="apellidosResponsable"
 					placeholder="Apellidos"
+					pattern="^[A-Za-zÁÉÍÓÚáéíóúÑñ ]+$"
+					[required]="responsableCamposRequeridos"
+					[(ngModel)]="responsableForm.persona.apellidos"
+					#apellidosResponsableControl="ngModel"
+					[class.input-invalid]="apellidosResponsableControl.touched && apellidosResponsableControl.invalid"
 				>
 			</app-campo-validado>
 		</div>
@@ -181,18 +217,24 @@
 			<app-campo-validado
 				[label]="'Fecha de nacimiento'"
 				[fieldId]="'fechaNacimientoResponsable'"
-				[required]="true"
+				[required]="responsableCamposRequeridos"
+				[showError]="!!(fechaNacimientoResponsableControl.touched && fechaNacimientoResponsableControl.invalid)"
+				[errorMessage]="'Debe ingresar la fecha de nacimiento del responsable'"
 			>
 				<input
 					type="date"
 					id="fechaNacimientoResponsable"
 					name="fechaNacimientoResponsable"
+					[required]="responsableCamposRequeridos"
+					[(ngModel)]="responsableForm.persona.fechaNacimiento"
+					#fechaNacimientoResponsableControl="ngModel"
+					[class.input-invalid]="fechaNacimientoResponsableControl.touched && fechaNacimientoResponsableControl.invalid"
 				>
 			</app-campo-validado>
 
-			<app-campo-validado [label]="'Sexo'" [fieldId]="'sexoResponsable'">
-				<select id="sexoResponsable" name="sexoResponsable">
-					<option value="">Seleccione un sexo</option>
+			<app-campo-validado [label]="'Sexo'" [fieldId]="'sexoResponsable'" [required]="responsableCamposRequeridos" [showError]="!!(sexoResponsableControl.touched && sexoResponsableControl.invalid)" [errorMessage]="'Debe seleccionar el sexo del responsable'">
+				<select id="sexoResponsable" name="sexoResponsable" [required]="responsableCamposRequeridos" [(ngModel)]="responsableForm.persona.sexo" #sexoResponsableControl="ngModel" [class.input-invalid]="sexoResponsableControl.touched && sexoResponsableControl.invalid">
+					<option [ngValue]="undefined">Seleccione un sexo</option>
 					<option value="MASCULINO">Masculino</option>
 					<option value="FEMENINO">Femenino</option>
 				</select>
@@ -203,13 +245,23 @@
 			<app-campo-validado
 				[label]="'CUI'"
 				[fieldId]="'cuiResponsable'"
-				[required]="true"
+				[required]="responsableCamposRequeridos"
+				[showError]="!!(cuiResponsableControl.touched && cuiResponsableControl.invalid)"
+				[errorMessage]="'Debe ingresar un CUI válido de 13 dígitos'"
 			>
 				<input
 					type="text"
 					id="cuiResponsable"
 					name="cuiResponsable"
+					inputmode="numeric"
+					maxlength="13"
+					pattern="[0-9]{13}"
 					placeholder="CUI"
+					[required]="responsableCamposRequeridos"
+					[ngModel]="responsableForm.persona.cui"
+					#cuiResponsableControl="ngModel"
+					[class.input-invalid]="cuiResponsableControl.touched && cuiResponsableControl.invalid"
+					(input)="responsableForm.persona.cui = filtrarDigitos($event, 13)"
 				>
 			</app-campo-validado>
 
@@ -219,6 +271,7 @@
 					id="direccionResponsable"
 					name="direccionResponsable"
 					placeholder="Dirección"
+					[(ngModel)]="responsableForm.direccion"
 				>
 			</app-campo-validado>
 		</div>
@@ -227,29 +280,38 @@
 			<app-campo-validado
 				[label]="'Teléfono'"
 				[fieldId]="'telefonoResponsable'"
-				[required]="true"
+				[required]="responsableCamposRequeridos"
+				[showError]="!!(telefonoResponsableControl.touched && telefonoResponsableControl.invalid)"
+				[errorMessage]="'Debe ingresar un teléfono válido de 8 dígitos'"
 			>
 				<input
 					type="tel"
 					id="telefonoResponsable"
 					name="telefonoResponsable"
+					inputmode="numeric"
+					maxlength="8"
+					pattern="[0-9]{8}"
 					placeholder="Teléfono"
+					[required]="responsableCamposRequeridos"
+					[ngModel]="responsableForm.persona.telefono"
+					#telefonoResponsableControl="ngModel"
+					[class.input-invalid]="telefonoResponsableControl.touched && telefonoResponsableControl.invalid"
+					(input)="responsableForm.persona.telefono = filtrarDigitos($event, 8)"
 				>
 			</app-campo-validado>
 
 			<app-campo-validado
 				[label]="'Parentesco'"
 				[fieldId]="'parentescoResponsable'"
-				[required]="true"
+				[required]="responsableCamposRequeridos"
+				[showError]="!!(parentescoResponsableControl.touched && parentescoResponsableControl.invalid)"
+				[errorMessage]="'Debe seleccionar el parentesco del responsable'"
 			>
-				<select id="parentescoResponsable" name="parentescoResponsable">
-					<option value="">Seleccione un parentesco</option>
-					<option value="PADRE">Padre</option>
-					<option value="MADRE">Madre</option>
-					<option value="HERMANO">Hermano/a</option>
-					<option value="CONYUGE">Cónyuge</option>
-					<option value="HIJO">Hijo/a</option>
-					<option value="OTRO">Otro</option>
+				<select id="parentescoResponsable" name="parentescoResponsable" [required]="responsableCamposRequeridos" [(ngModel)]="responsableForm.parentescoId" #parentescoResponsableControl="ngModel" [class.input-invalid]="parentescoResponsableControl.touched && parentescoResponsableControl.invalid">
+					<option [ngValue]="null">Seleccione un parentesco</option>
+					@for (itemParentesco of parentesco; track itemParentesco.id ?? itemParentesco.nombre) {
+						<option [ngValue]="itemParentesco.id">{{ itemParentesco.nombre }}</option>
+					}
 				</select>
 			</app-campo-validado>
 		</div>
@@ -258,13 +320,27 @@
 
 @if (contador === 3) {
 	<div class="paso4">
-		<app-campo-validado [label]="'Institución que refiere'" [fieldId]="'institucionReferencia'">
-			<input
-				type="text"
-				id="institucionReferencia"
-				name="institucionReferencia"
-				placeholder="Institución que refiere"
+		<app-campo-validado [label]="'Institución que refiere'" [fieldId]="'institucionReferencia'" [required]="referenciaTieneDatos" [showError]="!!(institucionReferenciaControl.touched && institucionReferenciaControl.invalid)" [errorMessage]="'Debe seleccionar una institución'">
+			<mat-select
+				[(ngModel)]="institucionSeleccionada"
+				name="institucionSeleccionada"
+				[required]="referenciaTieneDatos"
+				#institucionReferenciaControl="ngModel"
+				[class.input-invalid]="institucionReferenciaControl.touched && institucionReferenciaControl.invalid"
+				placeholder="Seleccione una institución"
+				panelClass="panel-medicos"
 			>
+				<mat-select-trigger>
+					{{ institucionSeleccionada?.nombre ?? 'Seleccione una institución' }}
+				</mat-select-trigger>
+				<mat-option [value]="null">Seleccione una institución</mat-option>
+				@for (institucion of insituciones; track institucion.nombre) {
+					<mat-option [value]="institucion">
+						<strong>{{ institucion.nombre }}</strong>
+						<span class="especialidad-medico"> - {{ institucion.direccion }} - {{ institucion.telefono }}</span>
+					</mat-option>
+				}
+			</mat-select>
 		</app-campo-validado>
 
 		<app-campo-validado [label]="'Motivo de la referencia'" [fieldId]="'motivoReferencia'">
@@ -272,6 +348,8 @@
 				id="motivoReferencia"
 				name="motivoReferencia"
 				placeholder="Describa el motivo de la referencia..."
+				[(ngModel)]="motivoReferencia"
+				[disabled]="!institucionSeleccionada || guardando"
 			></textarea>
 		</app-campo-validado>
 
@@ -283,14 +361,17 @@
 					id="documentoReferencia"
 					name="documentoReferencia"
 					accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+					[disabled]="!institucionSeleccionada || guardando"
 					(change)="seleccionarArchivo($event)"
 				>
-				<label for="documentoReferencia" class="zona-carga">
-					<i class="bi bi-cloud-arrow-up" aria-hidden="true"></i>
-					<strong>Arrastra y suelta un archivo aquí</strong>
-					<span>o haz clic para seleccionar</span>
-					<span class="boton-archivo">Seleccionar archivo</span>
-				</label>
+				@if (!archivoReferencia) {
+					<label for="documentoReferencia" class="zona-carga">
+						<i class="bi bi-cloud-arrow-up" aria-hidden="true"></i>
+						<strong>Arrastra y suelta un archivo aquí</strong>
+						<span>o haz clic para seleccionar</span>
+						<span class="boton-archivo">Seleccionar archivo</span>
+					</label>
+				}
 
 				@if (archivoReferencia) {
 					<div class="archivo-seleccionado">
@@ -307,7 +388,7 @@
 }
 
 <div class="acciones-modal">
-	<button type="button" class="btn _eliminar">Cancelar</button>
+	<button type="button" class="btn _eliminar" (click)="cerrarModal()">Cancelar</button>
 
 	@if (contador > 0) {
 		<button type="button" class="btn _principal" (click)="contador -= 1">
@@ -317,11 +398,18 @@
 	}
 
 	@if (contador < 3) {
-		<button type="button" class="btn _principal" (click)="contador += 1">
+		<button
+			type="button"
+			class="btn _principal"
+			[disabled]="contador === 0 ? !puedeAvanzarPaso1 : contador === 1 ? !puedeAvanzarPaso2 : !puedeAvanzarPaso3"
+			(click)="contador += 1"
+		>
 			Siguiente
 			<i class="bi bi-arrow-right"></i>
 		</button>
 	} @else {
-		<button type="button" class="btn _guardar" disabled>Guardar</button>
+		<button type="button" class="btn _guardar" [disabled]="guardando" (click)="guardarPaciente()">
+			{{ guardando ? 'Guardando...' : 'Guardar' }}
+		</button>
 	}
 </div>

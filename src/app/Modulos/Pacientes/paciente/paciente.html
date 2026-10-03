@@ -29,13 +29,15 @@
             </thead>
             <tbody>
                 <!-- Quitar esto -->
-                <tr>
-                    <td class="celda_centrada">1</td>
-                    <td class="celda_centrada">PAC-01</td>
-                    <td class="celda_izquierda">Yasmin Esmeralda Alessandra Bulux Chavez</td>
-                    <td class="celda_centrada">123456789</td>
-                    <td class="celda_centrada">Consulta</td>
-                </tr>
+                @for(paciente of pacientes; track $index){
+                    <tr>
+                        <td class="celda_centrada">{{$index +1}}</td>
+                        <td class="celda_centrada">{{paciente.codigoExpediente}}</td>
+                        <td class="celda_izquierda">{{paciente.nombreCompleto}}</td>
+                        <td class="celda_centrada">{{paciente.telefono}}</td>
+                        <td class="celda_centrada">{{paciente.tipoTratamiento}}</td>
+                    </tr>
+                    }
                 <!-- Quitar esto -->
             </tbody>
         </table>
