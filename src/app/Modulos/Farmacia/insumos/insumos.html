@@ -1,0 +1,74 @@
+<div class="areaTrabajo-container">
+  <div class="trabajoArea">
+    <section class="table-container" aria-label="Listado de insumos">
+      <div class="seccionSuperior">
+        <div class="buscador-container">
+          <div class="buscador">
+            <select class="selector" name="criterioBusqueda" aria-label="Buscar insumos por">
+              <option value="nombre">Nombre</option>
+              <option value="fabricante">Fabricante</option>
+            </select>
+            <input
+              class="inputB"
+              type="search"
+              name="textoBusqueda"
+              placeholder="Buscar..."
+              aria-label="Buscar insumo"
+            />
+            <button type="button" class="btnLupa" title="Buscar insumo" aria-label="Buscar insumo">
+              <i class="bi bi-search fs-5" aria-hidden="true"></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="miniSub-container">
+          <app-tab-switch
+            [op1]="'Activos'"
+            [op2]="'Inactivos'"
+            role="group"
+            aria-label="Estado de insumos"
+          ></app-tab-switch>
+        </div>
+      </div>
+
+      <div class="tabla-container">
+        <table class="table" aria-label="Insumos">
+          <thead>
+            <tr>
+              <th scope="col" class="celda_centrada">No.</th>
+              <th scope="col" class="celda_izquierda">Nombre</th>
+              <th scope="col" class="celda_izquierda">Fabricante</th>
+              <th scope="col" class="celda_centrada celda-acciones">Acciones</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="formulario formulario-container" aria-labelledby="tituloInsumo">
+      <h3 id="tituloInsumo" class="titulo-formulario">Agregar insumo</h3>
+      <form novalidate>
+        <app-campo-validado label="Nombre" fieldId="nombreInsumo">
+          <input
+            id="nombreInsumo"
+            name="nombre"
+            type="text"
+            placeholder="Nombre del insumo"
+          />
+        </app-campo-validado>
+
+        <app-campo-validado label="Fabricante" fieldId="fabricanteInsumo">
+          <select id="fabricanteInsumo" name="fabricante">
+            <option value="">Seleccionar...</option>
+          </select>
+        </app-campo-validado>
+
+        <div class="botones">
+          <button type="button" class="btn _cancelar">Cancelar</button>
+          <button type="button" class="btn _guardar">Guardar</button>
+        </div>
+      </form>
+    </section>
+  </div>
+</div>

@@ -1,0 +1,1581 @@
+# INSTRUCCIÓN GENERAL DE REFACTORIZACIÓN ANGULAR
+
+Actúa como revisor senior de Angular y TypeScript.
+
+Debes revisar y refactorizar ÚNICAMENTE los archivos `.ts` y `.html` que te proporcione.
+
+No modifiques servicios, interfaces, modelos, estilos, componentes hijos ni ningún otro archivo, salvo que también haya sido proporcionado explícitamente.
+
+Tu objetivo es mejorar el código existente manteniendo exactamente la misma responsabilidad funcional del componente.
+
+No agregues funcionalidades nuevas.
+
+---
+
+# 1. ORDEN DE PRIORIDAD
+
+Cuando dos reglas entren en conflicto, aplica siempre este orden:
+
+1. FUNCIONALIDAD CORRECTA
+2. SINCRONIZACIÓN ENTRE INTERFAZ, MODELO Y BACKEND
+3. BUENAS PRÁCTICAS
+4. ELIMINACIÓN DE REDUNDANCIA
+5. ORGANIZACIÓN
+6. REDUCCIÓN DE CÓDIGO
+
+Nunca sacrifiques funcionalidad o sincronización para reducir código.
+
+Nunca hagas el código más corto si eso lo vuelve más difícil de entender, mantener o depurar.
+
+---
+
+# 2. REGLAS ESTRICTAS
+
+NO hagas ninguno de los siguientes cambios:
+
+- No agregues funcionalidades nuevas.
+- No agregues nuevos campos.
+- No agregues nuevos filtros.
+- No agregues nuevos botones.
+- No agregues nuevas pantallas.
+- No agregues nuevos endpoints.
+- No agregues nuevas dependencias.
+- No agregues nuevas librerías.
+- No cambies Template Driven Forms por Reactive Forms.
+- No migres el componente a Signals.
+- No cambies `ChangeDetectionStrategy`.
+- No modifiques archivos `.scss` o `.css`.
+- No cambies selectores de componentes.
+- No cambies nombres de `@Input`.
+- No cambies nombres de `@Output`.
+- No cambies nombres de `input()`.
+- No cambies nombres de `output()`.
+- No cambies contratos de servicios.
+- No modifiques interfaces o modelos externos.
+- No inventes nuevos métodos en servicios.
+- No inventes nuevos campos provenientes del backend.
+- No cambies textos visibles salvo que exista un error evidente relacionado con el modo actual.
+- No hagas cambios arquitectónicos innecesarios.
+- No modifiques otros archivos que no hayan sido proporcionados.
+
+Si detectas un problema que debe solucionarse en otro archivo:
+
+NO lo soluciones aquí.
+
+Repórtalo al final indicando:
+
+- problema detectado;
+- archivo donde debería solucionarse;
+- solución recomendada.
+
+Si tienes dudas sobre si una modificación puede romper funcionalidad existente:
+
+NO la hagas.
+
+Repórtala.
+
+---
+
+# 3. REVISIÓN PREVIA OBLIGATORIA
+
+Antes de modificar código:
+
+- Lee completamente el archivo `.ts`.
+- Lee completamente el archivo `.html`.
+- Revisa qué propiedades del `.ts` utiliza el HTML.
+- Revisa qué métodos del `.ts` utiliza el HTML.
+- Revisa qué imports realmente se utilizan.
+- Revisa qué propiedades controlan formularios.
+- Revisa qué propiedades controlan edición.
+- Revisa qué propiedades controlan filtros.
+- Revisa qué propiedades controlan switches.
+- Revisa qué propiedades controlan tabs.
+- Revisa qué propiedades almacenan resultados del backend.
+- Revisa qué propiedades representan estados de carga o procesamiento.
+
+Nunca elimines un miembro del `.ts` sin comprobar antes que tampoco sea utilizado en el `.html`.
+
+---
+
+# 4. FUNCIONALIDAD GENERAL
+
+Revisa completamente los flujos existentes:
+
+- Guardar.
+- Listar.
+- Buscar.
+- Actualizar.
+- Eliminar, si existe.
+- Cambiar estado.
+- Cancelar.
+- Cambiar filtros o pestañas.
+
+El componente debe quedar funcionalmente consistente después de cualquier operación.
+
+---
+
+# 5. GUARDAR REGISTROS
+
+Después de guardar correctamente un registro:
+
+- Recarga la lista correspondiente.
+- Respeta filtros y búsquedas activas.
+- Limpia el formulario cuando corresponda.
+- Limpia el estado de validación del formulario.
+- Sale del estado de procesamiento.
+- Mantiene la interfaz sincronizada.
+
+Si guardar falla:
+
+- NO limpies el formulario.
+- Mantén los datos ingresados.
+- Libera la bandera de procesamiento.
+- Muestra el error utilizando el servicio de notificaciones existente.
+- No dejes estados inconsistentes.
+
+---
+
+# 6. ACTUALIZAR REGISTROS
+
+Después de actualizar correctamente:
+
+- Recarga la lista.
+- Respeta filtros y búsquedas activas.
+- Sale del modo edición.
+- Limpia identificadores temporales.
+- Limpia copias originales utilizadas para comparar cambios.
+- Limpia el formulario.
+- Limpia el estado de validación.
+- Libera la bandera de procesamiento.
+
+Si actualizar falla:
+
+- Mantén el modo edición.
+- Mantén los datos introducidos.
+- Mantén el identificador del registro editado.
+- Libera la bandera de procesamiento.
+- Muestra el error.
+
+Nunca abandones el modo edición por un error HTTP.
+
+---
+
+# 7. CAMBIAR DE FILTRO O PESTAÑA DURANTE UNA EDICIÓN
+
+Si el usuario cambia:
+
+- pestaña;
+- estado Activo/Inactivo;
+- filtro principal;
+- contexto de listado;
+
+mientras existe una edición activa:
+
+- cancela correctamente la edición;
+- limpia el identificador del registro seleccionado;
+- limpia la copia original;
+- limpia el formulario cuando corresponda;
+- limpia estados temporales;
+- carga la información correspondiente al nuevo filtro.
+
+No permitas que un formulario permanezca editando un registro que ya no pertenece al listado visible.
+
+---
+
+# 8. EVITAR ENVÍOS DOBLES
+
+Toda operación que modifique datos debe impedir múltiples peticiones simultáneas.
+
+Ejemplos:
+
+- guardar;
+- actualizar;
+- eliminar;
+- cambiar estado.
+
+Usa una bandera clara cuando sea necesaria:
+
+```ts
+procesando = false;
+```
+
+Antes de ejecutar la operación:
+
+```ts
+if (this.procesando) return;
+
+this.procesando = true;
+```
+
+La bandera debe volver a:
+
+```ts
+false
+```
+
+tanto en éxito como en error.
+
+Los botones correspondientes deben deshabilitarse mientras la operación esté en curso.
+
+No agregues múltiples banderas si una sola puede controlar correctamente la misma operación.
+
+---
+
+# 9. SINCRONIZACIÓN DE SWITCHES Y CHECKBOXES
+
+Esta sección tiene PRIORIDAD ALTA.
+
+Revisa especialmente cualquier estructura como:
+
+```html
+<input
+  type="checkbox"
+  [checked]="item.estado"
+  (change)="cambiarEstado(...)"
+/>
+```
+
+Si el cambio depende de:
+
+- una confirmación;
+- una petición HTTP;
+- una operación asíncrona;
+
+debe cumplirse lo siguiente.
+
+## Si el usuario cancela
+
+El estado visual del checkbox o switch debe volver inmediatamente al valor real del modelo.
+
+## Si el backend falla
+
+El estado visual debe volver inmediatamente al valor anterior.
+
+## Si el backend responde correctamente
+
+El cambio puede mantenerse y se debe sincronizar la lista o modelo.
+
+El estado visual nunca debe quedar distinto al estado real del backend.
+
+Nunca permitas:
+
+```text
+switch visual = activo
+modelo = inactivo
+```
+
+o:
+
+```text
+switch visual = inactivo
+backend = activo
+```
+
+Si es necesario, pasa el elemento del evento:
+
+```html
+(change)="cambiarEstado(item.id, $event)"
+```
+
+para poder restaurar visualmente el valor.
+
+No modifiques el modelo definitivamente hasta que la operación sea confirmada correctamente.
+
+---
+
+# 10. SINCRONIZACIÓN DE TABS
+
+Si existe un componente de tabs como:
+
+```text
+Activos / Inactivos
+```
+
+la propiedad TypeScript debe representar exactamente la pestaña mostrada.
+
+Después de cambiar de tab:
+
+- actualiza la propiedad correspondiente;
+- cancela edición si existe;
+- carga los datos correctos;
+- sincroniza `OnPush`;
+- evita conservar información perteneciente al tab anterior.
+
+---
+
+# 11. SINCRONIZACIÓN DE FILTROS Y BÚSQUEDAS
+
+Después de:
+
+- guardar;
+- actualizar;
+- eliminar;
+- cambiar estado;
+
+la recarga debe respetar la búsqueda o filtros actualmente activos.
+
+No hagas automáticamente:
+
+```ts
+listarTodos();
+```
+
+si existe una búsqueda activa.
+
+Centraliza la carga de datos cuando sea posible para evitar que:
+
+```text
+listar
+```
+
+y:
+
+```text
+buscar
+```
+
+mantengan dos lógicas distintas que puedan desincronizarse.
+
+---
+
+# 12. CHANGE DETECTION
+
+Si el componente utiliza:
+
+```ts
+ChangeDetectionStrategy.OnPush
+```
+
+NO lo cambies.
+
+Revisa cada cambio de estado después de:
+
+- `subscribe`;
+- `await`;
+- confirmaciones;
+- peticiones HTTP;
+- callbacks asíncronos.
+
+Cuando corresponda utiliza el mecanismo ya existente:
+
+```ts
+this.cdr.markForCheck();
+```
+
+Debe existir sincronización visual después de cambios asíncronos relevantes.
+
+---
+
+# 13. SUSCRIPCIONES
+
+Si el componente ya utiliza:
+
+```ts
+takeUntilDestroyed(this.destroyRef)
+```
+
+úsalo consistentemente en todas las suscripciones relevantes.
+
+Evita tener unas suscripciones con limpieza y otras sin ella.
+
+No hagas:
+
+```ts
+observable.subscribe(() => {
+  otroObservable.subscribe(() => {
+  });
+});
+```
+
+Nunca debe existir un `subscribe` dentro de otro `subscribe`.
+
+Si necesitas encadenar observables utiliza operadores RxJS apropiados como:
+
+- `switchMap`;
+- `forkJoin`;
+- `concatMap`;
+- `mergeMap`;
+
+solo cuando realmente sea necesario.
+
+No hagas una refactorización RxJS compleja si la lógica actual no la necesita.
+
+---
+
+# 14. CICLO DE VIDA
+
+Si existe:
+
+```ts
+ngOnInit()
+```
+
+la clase debe implementar:
+
+```ts
+implements OnInit
+```
+
+e importar:
+
+```ts
+OnInit
+```
+
+Haz lo mismo con otros lifecycle hooks si existen.
+
+El lifecycle debe mantenerse simple.
+
+Ejemplo:
+
+```ts
+ngOnInit(): void {
+  this.llenarSelects();
+  this.listarRegistros();
+}
+```
+
+Evita colocar lógica extensa directamente dentro de `ngOnInit`.
+
+---
+
+# 15. FORMULARIOS
+
+Si el archivo utiliza:
+
+```ts
+FormsModule
+```
+
+y:
+
+```html
+[(ngModel)]
+```
+
+mantén Template Driven Forms.
+
+No migres a Reactive Forms.
+
+---
+
+# 16. SUBMIT DEL FORMULARIO
+
+El formulario debe utilizar:
+
+```html
+<form (ngSubmit)="...">
+```
+
+El botón principal debe utilizar:
+
+```html
+type="submit"
+```
+
+Evita depender únicamente de:
+
+```html
+(click)="guardar()"
+```
+
+para enviar el formulario.
+
+La tecla Enter debe ejecutar correctamente la acción principal.
+
+---
+
+# 17. VALIDACIONES
+
+Agrega únicamente validaciones básicas evidentes.
+
+Ejemplos:
+
+```html
+required
+```
+
+```html
+min="1"
+```
+
+```html
+maxlength="100"
+```
+
+```html
+minlength="..."
+```
+
+No inventes reglas de negocio.
+
+El botón de Guardar o Actualizar debe considerar:
+
+- `form.invalid`;
+- bandera `procesando`;
+- estado de edición;
+- cambios existentes, si el componente ya maneja comparación de cambios.
+
+---
+
+# 18. RESET DEL FORMULARIO
+
+Al cancelar o completar correctamente una operación usa:
+
+```ts
+form.resetForm(...)
+```
+
+para limpiar:
+
+- valores;
+- touched;
+- dirty;
+- errores visuales.
+
+No te limites únicamente a reasignar el objeto si eso deja el formulario marcado como modificado.
+
+---
+
+# 19. ENLACE DE INPUTS Y SELECTS
+
+Si el archivo ya utiliza `FormsModule`, prefiere una sola forma de binding.
+
+Prefiere:
+
+```html
+[(ngModel)]
+```
+
+en lugar de mezclar:
+
+```html
+[value]="valor"
+(change)="valor = referencia.value"
+#referencia
+```
+
+cuando no sea necesario.
+
+Elimina referencias `#ref` si dejan de utilizarse.
+
+No cambies el binding de un componente hijo si existe riesgo de romper su contrato.
+
+---
+
+# 20. TRACK EN @for
+
+Cuando exista un identificador único:
+
+```ts
+item.id
+```
+
+utiliza:
+
+```html
+@for (item of items; track item.id)
+```
+
+Evita:
+
+```html
+track $index
+```
+
+cuando exista un ID estable.
+
+Puedes seguir utilizando:
+
+```html
+{{ $index + 1 }}
+```
+
+únicamente para mostrar numeración.
+
+---
+
+# 21. MANEJO DE ERRORES
+
+Todo error proveniente de:
+
+- guardar;
+- listar;
+- buscar;
+- actualizar;
+- cambiar estado;
+- cargar catálogos;
+
+debe mostrarse con el servicio de notificaciones existente.
+
+Ejemplo:
+
+```ts
+this.popUp.errorDesdeBackend(...)
+```
+
+No dejes errores únicamente con:
+
+```ts
+console.error(...)
+```
+
+---
+
+# 22. ELIMINAR PRINTS DE CONSOLA
+
+Elimina todos los siguientes:
+
+```ts
+console.log
+console.error
+console.warn
+console.info
+console.debug
+console.table
+```
+
+Si el `error` de un `subscribe` solo contiene un `console`, reemplázalo por el sistema de notificaciones ya existente.
+
+No agregues un nuevo sistema de notificaciones.
+
+---
+
+# 23. CÓDIGO NO UTILIZADO
+
+Elimina:
+
+- imports no utilizados;
+- propiedades no utilizadas;
+- métodos no utilizados;
+- variables locales no utilizadas;
+- parámetros no utilizados;
+- referencias de plantilla no utilizadas;
+- código comentado obsoleto;
+- atributos HTML duplicados.
+
+ANTES de eliminar cualquier propiedad o método del `.ts`:
+
+1. búscalo en el TypeScript;
+2. búscalo en el HTML.
+
+Nunca elimines un método solo porque no se llama desde otro método TypeScript.
+
+Puede estar siendo utilizado desde la plantilla.
+
+---
+
+# 24. PRIVATE Y READONLY
+
+Las dependencias creadas mediante `inject()` que nunca se reasignan deben ser:
+
+```ts
+private readonly
+```
+
+Ejemplo:
+
+```ts
+private readonly servicio = inject(MiServicio);
+```
+
+Las propiedades y métodos que:
+
+- no se utilizan en HTML;
+- no se utilizan externamente;
+
+deben ser `private`.
+
+No conviertas en `private` un método utilizado por la plantilla.
+
+---
+
+# 25. VALORES MÁGICOS
+
+Revisa valores como:
+
+```ts
+id: 0
+```
+
+cuando representan:
+
+```text
+sin selección
+```
+
+Preferiblemente debería utilizarse:
+
+```ts
+number | null
+```
+
+PERO solo haz el cambio si puedes confirmar que:
+
+- la interfaz lo permite;
+- el servicio lo permite;
+- el backend lo permite.
+
+Si la interfaz externa requiere `number`:
+
+NO cambies `0` por `null`.
+
+Repórtalo al final como posible mejora del contrato.
+
+---
+
+# 26. MÉTODOS LLAMADOS DESDE EL HTML
+
+Los métodos utilizados directamente desde la plantilla deben ser ligeros.
+
+Está permitido algo como:
+
+```ts
+hayCambios(): boolean
+```
+
+si solamente realiza comparaciones simples.
+
+Evita colocar dentro de métodos ejecutados desde el template:
+
+- peticiones HTTP;
+- loops costosos;
+- transformaciones pesadas;
+- efectos secundarios innecesarios.
+
+---
+
+# 27. ELIMINAR REDUNDANCIA
+
+Busca objetos repetidos.
+
+Ejemplo:
+
+```ts
+{
+  nombre: '',
+  dosis: 0,
+  unidadId: 0,
+}
+```
+
+Si aparece varias veces, crea un método privado:
+
+```ts
+private crearRegistroVacio(): Tipo {
+  return {
+    nombre: '',
+    dosis: 0,
+    unidadId: 0,
+  };
+}
+```
+
+Cada llamada debe devolver un objeto nuevo.
+
+---
+
+# 28. RESET DE ESTADO REPETIDO
+
+Si existe lógica repetida como:
+
+```ts
+this.actualizar = false;
+this.idActualizar = null;
+this.original = null;
+```
+
+crea un método privado.
+
+Ejemplo:
+
+```ts
+private limpiarModoEdicion(): void {
+  this.actualizar = false;
+  this.idActualizar = null;
+  this.original = null;
+}
+```
+
+Utilízalo únicamente cuando realmente reduzca duplicación.
+
+No crees helpers innecesarios para una sola línea.
+
+---
+
+# 29. LISTAR Y BUSCAR
+
+Si `listar()` y `buscar()` tienen gran parte de la lógica repetida:
+
+- analiza si pueden compartir construcción de filtros;
+- analiza si pueden compartir carga de resultados;
+- analiza si pueden utilizar un método común.
+
+Prioriza reducir redundancia, pero NO combines métodos si eso vuelve la lógica confusa.
+
+La funcionalidad debe seguir siendo fácil de entender.
+
+---
+
+# 30. REDUCIR CÓDIGO
+
+Después de corregir:
+
+- funcionalidad;
+- sincronización;
+- buenas prácticas;
+- redundancia;
+
+puedes reducir código.
+
+Prioriza:
+
+- early returns;
+- eliminar `else` innecesarios;
+- eliminar condiciones imposibles;
+- eliminar variables innecesarias;
+- eliminar tipos obvios que TypeScript infiere;
+- reutilizar helpers.
+
+No utilices:
+
+- ternarios extensos;
+- expresiones complejas;
+- lógica demasiado compacta;
+- código difícil de depurar.
+
+Reducir código es la última prioridad.
+
+---
+
+# 31. ORDEN OBLIGATORIO DEL ARCHIVO `.ts`
+
+Organiza siempre el archivo en este orden exacto:
+
+```ts
+// ==================== INYECCIONES ====================
+
+// ==================== CICLO DE VIDA ====================
+
+// ==================== LLENADO DE SELECTS ====================
+
+// ==================== GUARDAR ====================
+
+// ==================== LISTAR ====================
+
+// ==================== BUSCAR ====================
+
+// ==================== ACTUALIZAR ====================
+
+// ==================== CAMBIAR ESTADO ====================
+
+// ==================== HELPERS ====================
+```
+
+Si una funcionalidad no existe, no crees ese bloque.
+
+No crees bloques vacíos.
+
+---
+
+# 32. REGLA PRINCIPAL DE ORGANIZACIÓN DEL `.ts`
+
+Cada bloque debe contener juntas:
+
+1. Variables de esa funcionalidad.
+2. Getters relacionados.
+3. Funciones principales.
+4. Funciones auxiliares exclusivas de esa funcionalidad.
+
+NO agrupes todas las variables al inicio del componente.
+
+NO agrupes todos los métodos al final.
+
+La organización debe ser por funcionalidad.
+
+Ejemplo correcto:
+
+```ts
+// ==================== LISTAR ====================
+
+medicamentos: MedicamentoResponse[] = [];
+mostrarActivos = true;
+
+listarMedicamentos(): void {
+  ...
+}
+```
+
+Ejemplo incorrecto:
+
+```ts
+medicamentos: MedicamentoResponse[] = [];
+mostrarActivos = true;
+
+// muchas líneas después
+
+listarMedicamentos(): void {
+}
+```
+
+---
+
+# 33. BLOQUE DE INYECCIONES
+
+Siempre debe ser el primer bloque.
+
+Ejemplo:
+
+```ts
+// ==================== INYECCIONES ====================
+
+private readonly servicioMedicamento = inject(ServicioMedicamento);
+private readonly servicioCatalogo = inject(CatalogoService);
+private readonly popUp = inject(PopUps);
+private readonly cdr = inject(ChangeDetectorRef);
+private readonly destroyRef = inject(DestroyRef);
+```
+
+Incluye únicamente dependencias.
+
+No coloques variables de estado aquí.
+
+---
+
+# 34. BLOQUE CICLO DE VIDA
+
+Debe ir después de las inyecciones.
+
+Ejemplo:
+
+```ts
+// ==================== CICLO DE VIDA ====================
+
+ngOnInit(): void {
+  this.llenarSelects();
+  this.listarMedicamentos();
+}
+```
+
+El lifecycle debe llamar métodos existentes.
+
+No dupliques lógica dentro del lifecycle.
+
+---
+
+# 35. BLOQUE LLENADO DE SELECTS
+
+Aquí deben estar:
+
+- arrays de catálogos;
+- variables utilizadas para llenar selects;
+- métodos que cargan catálogos.
+
+Ejemplo:
+
+```ts
+// ==================== LLENADO DE SELECTS ====================
+
+unidadesMedida: UnidadMedida[] = [];
+fabricantes: Base[] = [];
+presentaciones: Base[] = [];
+viasAdministracion: Base[] = [];
+
+llenarSelects(): void {
+  ...
+}
+```
+
+Si existe un getter que usa esos catálogos pero pertenece principalmente a búsqueda, colócalo en BUSCAR.
+
+Prioriza la responsabilidad principal.
+
+---
+
+# 36. BLOQUE GUARDAR
+
+Aquí debe estar todo lo relacionado con creación.
+
+Ejemplo:
+
+```ts
+// ==================== GUARDAR ====================
+
+medicamento: MedicamentoRequest = this.crearMedicamentoVacio();
+procesando = false;
+
+guardarMedicamento(formulario: NgForm): void {
+  ...
+}
+```
+
+Las variables utilizadas principalmente por el formulario de creación deben estar aquí.
+
+---
+
+# 37. BLOQUE LISTAR
+
+Aquí deben estar:
+
+- arrays con resultados;
+- estado del listado;
+- variables que almacenan datos recibidos;
+- loading del listado si ya existe;
+- métodos de carga del listado.
+
+Ejemplo:
+
+```ts
+// ==================== LISTAR ====================
+
+medicamentos: MedicamentoResponse[] = [];
+mostrarActivos = true;
+
+listarMedicamentos(): void {
+  ...
+}
+```
+
+Si una variable almacena el resultado del backend mostrado en la tabla, debe estar en este bloque.
+
+---
+
+# 38. BLOQUE BUSCAR
+
+Aquí deben estar:
+
+- criterio de búsqueda;
+- texto de búsqueda;
+- valor seleccionado;
+- filtros;
+- getters relacionados;
+- métodos que construyen filtros;
+- método principal de búsqueda.
+
+Ejemplo:
+
+```ts
+// ==================== BUSCAR ====================
+
+criterioBusqueda = 'nombre';
+textoBusqueda = '';
+valorBusquedaCatalogo = '';
+
+get opcionesBusqueda(): Base[] {
+  ...
+}
+
+cambiarCriterioBusqueda(criterio: string): void {
+  ...
+}
+
+buscarMedicamentos(): void {
+  ...
+}
+```
+
+Los helpers utilizados únicamente para construir filtros deben permanecer en este bloque.
+
+---
+
+# 39. BLOQUE ACTUALIZAR
+
+Aquí debe estar TODO el estado relacionado con edición.
+
+Ejemplo:
+
+```ts
+// ==================== ACTUALIZAR ====================
+
+actualizar = false;
+idActualizar: number | null = null;
+private medicamentoOriginal: MedicamentoRequest | null = null;
+
+preactualizar(id: number): void {
+  ...
+}
+
+actualizarMedicamento(formulario: NgForm): void {
+  ...
+}
+
+hayCambiosMedicamento(): boolean {
+  ...
+}
+
+private medicamentoTieneCambios(
+  original: MedicamentoRequest,
+  actualizado: MedicamentoRequest,
+): boolean {
+  ...
+}
+```
+
+Si una función privada solamente sirve para actualización, debe permanecer en ACTUALIZAR.
+
+No la muevas automáticamente a HELPERS.
+
+---
+
+# 40. BLOQUE CAMBIAR ESTADO
+
+Aquí deben estar:
+
+- funciones de activar/desactivar;
+- lógica de switches;
+- lógica de confirmación;
+- restauración visual después de cancelación;
+- restauración visual después de error.
+
+Ejemplo:
+
+```ts
+// ==================== CAMBIAR ESTADO ====================
+
+async cambiarEstado(id: number, evento: Event): Promise<void> {
+  ...
+}
+```
+
+Prioriza especialmente sincronización entre:
+
+```text
+switch
+modelo
+backend
+```
+
+---
+
+# 41. BLOQUE HELPERS
+
+Este bloque debe contener únicamente métodos reutilizados por más de una funcionalidad.
+
+Ejemplo:
+
+```ts
+// ==================== HELPERS ====================
+
+private crearMedicamentoVacio(): MedicamentoRequest {
+  return {
+    ...
+  };
+}
+
+private limpiarModoEdicion(): void {
+  ...
+}
+
+private resetearFormulario(formulario: NgForm): void {
+  ...
+}
+```
+
+NO conviertas HELPERS en un lugar donde colocar cualquier método privado.
+
+Si un helper solo pertenece a ACTUALIZAR, debe quedarse en ACTUALIZAR.
+
+Si solo pertenece a BUSCAR, debe quedarse en BUSCAR.
+
+---
+
+# 42. UBICACIÓN DE VARIABLES COMPARTIDAS
+
+Si una variable se usa en varios bloques, colócala en el bloque donde tenga su responsabilidad principal.
+
+No dupliques propiedades para mantener la organización.
+
+Ejemplo:
+
+Si:
+
+```ts
+medicamento
+```
+
+se usa tanto en Guardar como Actualizar, pero representa principalmente el formulario principal, puede permanecer en GUARDAR.
+
+No crees:
+
+```ts
+medicamentoGuardar
+medicamentoActualizar
+```
+
+solo para separar bloques.
+
+---
+
+# 43. UBICACIÓN DE FUNCIONES COMPARTIDAS
+
+Ubica las funciones según su responsabilidad principal.
+
+Si una función es reutilizada por varios bloques y no pertenece claramente a uno solo, muévela a HELPERS.
+
+No dupliques funciones para mantener separación visual.
+
+---
+
+# 44. ORDEN DE IMPORTS
+
+Organiza los imports así:
+
+## Angular
+
+```ts
+import { ... } from '@angular/core';
+import { ... } from '@angular/forms';
+```
+
+## RxJS y librerías externas
+
+```ts
+import { forkJoin } from 'rxjs';
+```
+
+## Archivos del proyecto
+
+```ts
+import { Servicio } from './...';
+import { Interfaz } from './...';
+```
+
+Elimina imports no utilizados.
+
+No cambies rutas sin necesidad.
+
+---
+
+# 45. INDENTACIÓN TYPESCRIPT
+
+Usa 2 espacios.
+
+Mantén formato consistente.
+
+Ejemplo:
+
+```ts
+metodo(): void {
+  if (condicion) return;
+
+  this.servicio.metodo()
+    .pipe(takeUntilDestroyed(this.destroyRef))
+    .subscribe({
+      next: (respuesta) => {
+        ...
+      },
+      error: (error) => {
+        ...
+      },
+    });
+}
+```
+
+---
+
+# 46. ORGANIZACIÓN DEL HTML
+
+Separa cada área visual utilizando comentarios con el mismo formato:
+
+```html
+<!-- ==================== BUSCADOR ==================== -->
+```
+
+```html
+<!-- ==================== FILTROS ==================== -->
+```
+
+```html
+<!-- ==================== TABLA ==================== -->
+```
+
+```html
+<!-- ==================== FORMULARIO ==================== -->
+```
+
+```html
+<!-- ==================== BOTONES ==================== -->
+```
+
+Utiliza solo los bloques que realmente existan.
+
+No crees comentarios vacíos.
+
+---
+
+# 47. INDENTACIÓN HTML
+
+Usa 2 espacios.
+
+Si un elemento tiene más de 3 atributos, coloca un atributo por línea.
+
+Ejemplo:
+
+```html
+<input
+  id="nombre"
+  class="campo"
+  type="text"
+  name="nombre"
+  aria-label="Nombre"
+  [(ngModel)]="modelo.nombre"
+/>
+```
+
+---
+
+# 48. ORDEN DE ATRIBUTOS HTML
+
+Utiliza este orden:
+
+1. Referencia de plantilla.
+2. Atributos estáticos.
+3. Accesibilidad.
+4. Property bindings.
+5. Two-way bindings.
+6. Eventos.
+
+Ejemplo:
+
+```html
+<input
+  #campo
+  id="nombre"
+  class="input"
+  type="text"
+  name="nombre"
+  aria-label="Nombre"
+  [disabled]="procesando"
+  [(ngModel)]="modelo.nombre"
+  (keydown.enter)="buscar()"
+/>
+```
+
+---
+
+# 49. INPUTS ESTÁTICOS DE COMPONENTES
+
+Para valores estáticos usa:
+
+```html
+<app-tab-switch
+  op1="Activos"
+  op2="Inactivos"
+></app-tab-switch>
+```
+
+Evita:
+
+```html
+[op1]="'Activos'"
+```
+
+si el valor nunca cambia.
+
+---
+
+# 50. ACCESIBILIDAD
+
+Todo control sin texto visible debe tener nombre accesible.
+
+Ejemplos:
+
+```html
+aria-label="Editar medicamento"
+```
+
+```html
+aria-label="Cambiar estado del medicamento"
+```
+
+Debe aplicarse a:
+
+- botones con solo icono;
+- checkbox sin label visible;
+- switches;
+- controles equivalentes.
+
+Elimina ARIA inválido.
+
+Por ejemplo, no uses:
+
+```html
+aria-selected
+```
+
+sobre un `<tr>` normal si no existe una estructura compatible como `grid`.
+
+No agregues roles innecesarios.
+
+---
+
+# 51. COMPONENTES HIJOS
+
+No agregues al selector de un componente hijo comportamiento que conceptualmente debería manejarse dentro del hijo.
+
+Ejemplo:
+
+```html
+<app-tab-switch
+  tabindex="0"
+  role="group"
+  (keydown.arrowleft)="..."
+>
+</app-tab-switch>
+```
+
+Si corregir esto requiere modificar el componente hijo y no fue proporcionado:
+
+NO lo cambies.
+
+Repórtalo.
+
+---
+
+# 52. TABLAS
+
+Revisa que la alineación de encabezados coincida con sus celdas.
+
+Ejemplo:
+
+```html
+<th class="celda_izquierda">Nombre</th>
+```
+
+debe corresponder con:
+
+```html
+<td class="celda_izquierda">
+```
+
+No modifiques CSS.
+
+Solo corrige la clase utilizada en el HTML cuando claramente esté equivocada.
+
+---
+
+# 53. NO MODIFICAR DISEÑO
+
+No cambies:
+
+- estructura visual;
+- colores;
+- tamaños;
+- estilos;
+- distribución;
+- clases CSS;
+- orden visual;
+
+salvo que sea estrictamente necesario para corregir:
+
+- funcionalidad;
+- sincronización;
+- accesibilidad evidente.
+
+No rediseñes el componente.
+
+---
+
+# 54. CRITERIO FINAL PARA CADA CAMBIO
+
+Antes de modificar cualquier línea pregúntate:
+
+```text
+¿Este cambio mejora directamente funcionalidad, sincronización,
+buenas prácticas, redundancia, organización o reducción segura?
+```
+
+Si la respuesta es NO:
+
+NO hagas el cambio.
+
+---
+
+# 55. REPORTE FINAL OBLIGATORIO
+
+Después de realizar la refactorización entrega un reporte breve dividido exactamente así:
+
+## 1. Errores de funcionalidad corregidos
+
+Para cada cambio indica:
+
+- qué estaba mal;
+- qué cambió;
+- cómo afecta al usuario.
+
+## 2. Problemas de sincronización corregidos
+
+Incluye especialmente:
+
+- switches;
+- checkbox;
+- tabs;
+- filtros;
+- búsquedas;
+- edición;
+- formularios;
+- estados asíncronos;
+- `OnPush`.
+
+## 3. Malas prácticas corregidas
+
+Incluye cuando corresponda:
+
+- lifecycle interfaces;
+- RxJS;
+- suscripciones;
+- formularios;
+- `OnPush`;
+- accesibilidad;
+- `private`;
+- `readonly`;
+- `track`;
+- bindings;
+- manejo de errores.
+
+## 4. Código eliminado o simplificado
+
+Indica:
+
+- imports eliminados;
+- variables eliminadas;
+- métodos eliminados;
+- parámetros eliminados;
+- referencias HTML eliminadas;
+- consoles eliminados;
+- código comentado eliminado;
+- redundancias unificadas;
+- helpers creados;
+- condiciones simplificadas.
+
+## 5. Problemas detectados pero NO modificados
+
+Para cada problema indica:
+
+- problema;
+- motivo por el que no se modificó;
+- archivo donde debería solucionarse;
+- solución propuesta.
+
+Si no existe ninguno escribe:
+
+```text
+No se detectaron problemas externos pendientes.
+```
+
+---
+
+# 56. RESTRICCIÓN FINAL
+
+No hagas cambios adicionales por iniciativa propia.
+
+El resultado final debe mantener exactamente la misma responsabilidad del componente original, pero con:
+
+- mejor funcionalidad;
+- mejor sincronización;
+- mejores prácticas;
+- menos redundancia;
+- mejor organización;
+- menos código únicamente cuando sea seguro.
+
+La prioridad absoluta siempre es que el componente funcione correctamente y que lo que ve el usuario coincida con el estado real del modelo y del backend.

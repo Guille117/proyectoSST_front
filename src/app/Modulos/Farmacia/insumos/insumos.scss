@@ -1,0 +1,105 @@
+:host {
+  display: block;
+}
+
+.areaTrabajo-container {
+  width: 100%;
+}
+
+.trabajoArea {
+  display: grid;
+  grid-template-columns: minmax(0, 1.9fr) minmax(280px, 1.1fr);
+  gap: 32px;
+  align-items: start;
+
+  > * {
+    min-width: 0;
+  }
+}
+
+.seccionSuperior {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.buscador-container {
+  flex: 1 1 260px;
+  min-width: 0;
+  height: 45px;
+}
+
+.buscador {
+  .selector {
+    flex: 0 0 110px;
+    width: 110px;
+  }
+
+  .inputB {
+    min-width: 0;
+    width: 0;
+  }
+
+  .btnLupa {
+    flex: 0 0 40px;
+    width: 40px;
+  }
+}
+
+.miniSub-container {
+  flex: 0 1 300px;
+  max-width: 100%;
+}
+
+app-tab-switch {
+  display: block;
+}
+
+.selector:focus-visible,
+.inputB:focus-visible,
+.btnLupa:focus-visible,
+app-tab-switch:focus-visible {
+  outline: 2px solid var(--azulSecundario);
+  outline-offset: 2px;
+}
+
+.tabla-container {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.table {
+  min-width: 600px;
+}
+
+.celda-acciones {
+  width: 88px;
+  min-width: 88px;
+  height: 32px;
+}
+
+.formulario-container {
+  width: 100%;
+  height: auto;
+}
+
+.botones {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+@media (max-width: 900px) {
+  .trabajoArea {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 24px;
+    padding: 16px;
+  }
+
+  .buscador-container {
+    flex-basis: 100%;
+  }
+}
