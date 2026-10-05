@@ -80,6 +80,18 @@ app-tab-switch:focus-visible {
   height: 32px;
 }
 
+.celda-acciones .interruptor-estado {
+  margin-left: 0;
+}
+
+.acciones-insumo {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
 .formulario-container {
   width: 100%;
   height: auto;

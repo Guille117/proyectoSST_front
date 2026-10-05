@@ -2,71 +2,198 @@
   <div class="trabajoArea">
     <section class="table-container" aria-label="Listado de insumos">
       <div class="seccionSuperior">
+
+        <!-- ==================== BUSCADOR ==================== -->
         <div class="buscador-container">
           <div class="buscador">
-            <select class="selector" name="criterioBusqueda" aria-label="Buscar insumos por">
+            <select
+              class="selector"
+              name="criterioBusqueda"
+              aria-label="Buscar insumos por"
+              [(ngModel)]="criterioBusqueda"
+              (ngModelChange)="cambiarCriterioBusqueda($event)"
+            >
               <option value="nombre">Nombre</option>
               <option value="fabricante">Fabricante</option>
             </select>
-            <input
-              class="inputB"
-              type="search"
-              name="textoBusqueda"
-              placeholder="Buscar..."
+            @if (criterioBusqueda === 'nombre') {
+              <input
+                class="inputB"
+                type="search"
+                name="textoBusqueda"
+                placeholder="Buscar..."
+                aria-label="Buscar insumo por nombre"
+                [(ngModel)]="textoBusqueda"
+                (keydown.enter)="buscarInsumos()"
+              />
+            } @else {
+              <select
+                class="inputB"
+                name="valorBusquedaMarca"
+                aria-label="Seleccionar fabricante para buscar"
+                [(ngModel)]="valorBusquedaMarca"
+              >
+                <option value="">Seleccionar...</option>
+                @for (fabricante of opcionesBusqueda; track fabricante.id) {
+                  <option [value]="fabricante.id">{{ fabricante.nombre }}</option>
+                }
+              </select>
+            }
+            <button
+              type="button"
+              class="btnLupa"
+              title="Buscar insumo"
               aria-label="Buscar insumo"
-            />
-            <button type="button" class="btnLupa" title="Buscar insumo" aria-label="Buscar insumo">
+              (click)="buscarInsumos()"
+            >
               <i class="bi bi-search fs-5" aria-hidden="true"></i>
             </button>
           </div>
         </div>
-
+        <!-- ==================== FILTRO DE ESTADO ==================== -->
         <div class="miniSub-container">
           <app-tab-switch
-            [op1]="'Activos'"
-            [op2]="'Inactivos'"
+            op1="Activos"
+            op2="Inactivos"
             role="group"
             aria-label="Estado de insumos"
+            [mostrarActivos]="mostrarActivos"
+            (opcionCambiada)="cambiarFiltroActivo($event, insumoForm)"
           ></app-tab-switch>
         </div>
       </div>
 
+      <!-- ==================== TABLA DE INSUMOS ==================== -->
       <div class="tabla-container">
         <table class="table" aria-label="Insumos">
           <thead>
             <tr>
               <th scope="col" class="celda_centrada">No.</th>
               <th scope="col" class="celda_izquierda">Nombre</th>
+              <th scope="col" class="celda_izquierda">Detalle</th>
               <th scope="col" class="celda_izquierda">Fabricante</th>
               <th scope="col" class="celda_centrada celda-acciones">Acciones</th>
             </tr>
           </thead>
-          <tbody></tbody>
+          <tbody>
+            @for (insumo of insumos | slice:(paginaActual - 1) * cantidadMostrar:paginaActual * cantidadMostrar; track insumo.id) {
+              <tr [class.selected-row]="actualizar && idActualizar === insumo.id">
+                <td class="celda_centrada">
+                  {{ (paginaActual - 1) * cantidadMostrar + $index + 1 }}
+                </td>
+                <td class="celda_izquierda">{{ insumo.nombre }}</td>
+                <td class="celda_izquierda">{{ insumo.detalle }}</td>
+                <td class="celda_izquierda">{{ insumo.marca.nombreMarca }}</td>
+                <td class="celda_centrada celda-acciones">
+                  <div
+                    class="acciones-insumo"
+                    [class.acciones-deshabilitadas]="actualizar"
+                  >
+                    @if (mostrarActivos) {
+                      <button
+                        type="button"
+                        class="iconEditar"
+                        title="Editar insumo"
+                        aria-label="Editar insumo"
+                        [disabled]="actualizar || procesando"
+                        (click)="preactualizar(insumo.id)"
+                      >
+                        <i class="bi bi-pencil-square" aria-hidden="true"></i>
+                      </button>
+                    }
+                    <label class="interruptor-estado">
+                      <input
+                        type="checkbox"
+                        role="switch"
+                        aria-label="Cambiar estado de {{ insumo.nombre }}"
+                        [checked]="insumo.estado"
+                        [disabled]="actualizar || procesando"
+                        (change)="cambiarEstadoInsumo(insumo, $event)"
+                      />
+                      <span aria-hidden="true"></span>
+                    </label>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+          <tfoot>
+            <tr>
+              <td colspan="5">
+                <app-paginacion
+                  [paginaActual]="paginaActual"
+                  [totalregistros]="insumos.length"
+                  [cantidadMostrar]="cantidadMostrar"
+                  (paginaCambiada)="paginaActual = $event"
+                ></app-paginacion>
+              </td>
+            </tr>
+          </tfoot>
         </table>
       </div>
     </section>
 
+    <!-- ==================== FORMULARIO ==================== -->
     <section class="formulario formulario-container" aria-labelledby="tituloInsumo">
-      <h3 id="tituloInsumo" class="titulo-formulario">Agregar insumo</h3>
-      <form novalidate>
+      <h3 id="tituloInsumo" class="titulo-formulario">{{ actualizar ? 'Actualizar insumo' : 'Agregar insumo' }}</h3>
+      <form
+        #insumoForm="ngForm"
+        novalidate
+        (ngSubmit)="actualizar ? actualizarInsumo(insumoForm) : guardarInsumo(insumoForm)"
+      >
         <app-campo-validado label="Nombre" fieldId="nombreInsumo">
           <input
             id="nombreInsumo"
             name="nombre"
             type="text"
             placeholder="Nombre del insumo"
+            required
+            [disabled]="procesando"
+            [(ngModel)]="insumo.nombre"
+          />
+        </app-campo-validado>
+
+        <app-campo-validado label="Detalle" fieldId="detalleInsumo">
+          <input
+            id="detalleInsumo"
+            name="detalle"
+            type="text"
+            placeholder="Detalle del insumo (opcional)"
+            [disabled]="procesando"
+            [(ngModel)]="insumo.detalle"
           />
         </app-campo-validado>
 
         <app-campo-validado label="Fabricante" fieldId="fabricanteInsumo">
-          <select id="fabricanteInsumo" name="fabricante">
-            <option value="">Seleccionar...</option>
+          <select
+            id="fabricanteInsumo"
+            name="fabricante"
+            required
+            [disabled]="procesando"
+            [(ngModel)]="insumo.marcaId"
+          >
+            <option [ngValue]="0">Seleccionar...</option>
+            @for (fabricante of fabricantes; track fabricante.id) {
+              <option [ngValue]="fabricante.id">{{ fabricante.nombre }}</option>
+            }
           </select>
         </app-campo-validado>
 
+        <!-- ==================== BOTONES ==================== -->
         <div class="botones">
-          <button type="button" class="btn _cancelar">Cancelar</button>
-          <button type="button" class="btn _guardar">Guardar</button>
+          <button
+            type="button"
+            class="btn _cancelar"
+            [disabled]="procesando"
+            (click)="cancelar(insumoForm)"
+          >Cancelar</button>
+          @if (!actualizar || mostrarActivos) {
+            <button
+              type="submit"
+              class="btn _guardar"
+              [disabled]="procesando || !formularioValido(insumoForm) || (actualizar && !hayCambiosInsumo())"
+            >{{ actualizar ? 'Actualizar' : 'Guardar' }}</button>
+          }
         </div>
       </form>
     </section>
