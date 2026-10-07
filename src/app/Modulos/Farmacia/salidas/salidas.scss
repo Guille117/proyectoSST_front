@@ -1,0 +1,399 @@
+:host {
+  display: block;
+}
+
+.areaTrabajo-container {
+  width: 100%;
+}
+
+/* ==================== CONTENEDOR PRINCIPAL (GRID 2 COLUMNAS) ==================== */
+.trabajoArea {
+  display: grid;
+  grid-template-columns: minmax(300px, 0.9fr) minmax(0, 1.5fr);
+  gap: 24px;
+  align-items: start;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+
+  > * {
+    min-width: 0;
+  }
+}
+
+/* ==================== TARJETAS ==================== */
+.panel-solicitudes,
+.panel-detalle {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 24px;
+  border: 1px solid #e8ebf3;
+  border-radius: 24px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(29, 43, 70, 0.06);
+}
+
+.titulo-panel {
+  margin: 0;
+  color: #14213d;
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+/* ==================== BUSCADOR ==================== */
+.buscador-container {
+  width: 100%;
+  height: 45px;
+}
+
+/* ==================== FILTROS (CHIPS) ==================== */
+.filtros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border: 1px solid #dbe2ec;
+  border-radius: 999px;
+  background: #fff;
+  color: #5f6a85;
+  font-size: 15px;
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease;
+
+  &:hover {
+    border-color: #b9c5d4;
+  }
+
+  &.activo {
+    border-color: #0b1739;
+    background: #0b1739;
+    color: #fff;
+    font-weight: 600;
+  }
+}
+
+.punto {
+  flex: 0 0 10px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #cbd5e1;
+}
+
+.punto-naranja {
+  background: #f59e0b;
+}
+
+.punto-azul {
+  background: #3b82f6;
+}
+
+.punto-verde {
+  background: #22c55e;
+}
+
+/* ==================== LISTA DE SOLICITUDES ==================== */
+.lista-solicitudes {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.solicitud {
+  padding: 14px 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  background: #fff;
+  cursor: pointer;
+  transition:
+    border-color 0.2s ease,
+    background-color 0.2s ease,
+    box-shadow 0.2s ease;
+
+  &:hover {
+    border-color: #b9c5d4;
+  }
+
+  &.activo {
+    border-color: #bcd7ff;
+    background: #eef5ff;
+    box-shadow: 0 6px 16px rgba(13, 110, 253, 0.12);
+  }
+}
+
+.solicitud-encabezado {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.solicitud-codigo {
+  color: #14213d;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.solicitud-paciente {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: #1f2937;
+  font-size: 0.95rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.solicitud-detalle {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  margin-top: 8px;
+  color: #667085;
+  font-size: 0.85rem;
+}
+
+.solicitud-fecha {
+  margin-left: auto;
+  color: #475467;
+  font-weight: 600;
+  line-height: 1.15;
+  text-align: right;
+}
+
+/* ==================== DETALLE DE LA SOLICITUD ==================== */
+.detalle-encabezado {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.detalle-titulo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.etiqueta-sol {
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: #e8f1ff;
+  color: #0d6efd;
+  font-size: 0.85rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* ==================== SUBMENÚ (SOLICITUDES / DEVOLUCIONES) ==================== */
+/* Reutiliza el patrón global .subMenuNav (src/styles/subMenuStyle.scss) para la
+   estructura, pero cambia el destacado de la opción activa: de rojo (#e10c05)
+   a celeste usando la variable global --azulSecundario. */
+.submenu-detalle {
+  flex: 0 0 auto;
+  width: auto;
+  margin: 0;
+  font-size: 1rem;
+
+  & .option {
+    padding: 0 18px;
+    padding-bottom: 6px;
+    font-weight: 500;
+    white-space: nowrap;
+
+    &:hover {
+      color: var(--azulSecundario);
+    }
+
+    &.active {
+      color: var(--azulSecundario);
+      border-bottom: solid 3px var(--azulSecundario);
+    }
+  }
+}
+
+.paciente-detalle {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+
+  h3 {
+    margin: 0;
+    color: #14213d;
+    font-size: 1.2rem;
+    font-weight: 700;
+  }
+}
+
+.avatar {
+  display: grid;
+  flex: 0 0 48px;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #e8f1ff;
+  color: #0d6efd;
+  font-size: 24px;
+}
+
+.aviso-lote {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid #cfe2ff;
+  border-radius: 12px;
+  background: #eef5ff;
+
+  i {
+    margin-top: 2px;
+    color: #0d6efd;
+    font-size: 1.05rem;
+  }
+
+  p {
+    margin: 0;
+    color: #334f8f;
+    font-size: 0.9rem;
+    line-height: 1.35;
+  }
+}
+
+.subtitulo-detalle {
+  margin: 4px 0 0;
+  color: #14213d;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+/* ==================== TABLAS DEL DETALLE ==================== */
+/* Usa los estilos globales de tabla (src/styles/tableStyle.scss) sin
+   sobrescribir tipografía ni encabezados; solo se agrega scroll y ancho mínimo. */
+.tabla-detalle {
+  width: 100%;
+  overflow-x: auto;
+  margin-top: 12px;
+
+  .table {
+    min-width: 940px;
+  }
+}
+
+.tipo {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.tipo-med {
+  background: #fde8e8;
+  color: #e04641;
+}
+
+.tipo-ins {
+  background: #e8f1ff;
+  color: #0d6efd;
+}
+
+.sub-dato {
+  display: block;
+  margin-top: 2px;
+  color: #8a94a6;
+  font-size: 0.72rem;
+  font-weight: 500;
+}
+
+.lote-select {
+  width: 100%;
+  max-width: 130px;
+  padding: 8px 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  background: #fff;
+  color: #101828;
+  font-size: 0.9rem;
+  font-family: inherit;
+  cursor: pointer;
+  outline: none;
+
+  &:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.14);
+  }
+}
+
+/* El select de motivo necesita más ancho que el de lote para mostrar el texto. */
+.select-motivo {
+  max-width: 180px;
+}
+
+.cantidad-input {
+  width: 100%;
+  max-width: 90px;
+  padding: 8px 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  background: #fff;
+  color: #101828;
+  font-size: 0.9rem;
+  font-family: inherit;
+  text-align: center;
+  outline: none;
+
+  &:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.14);
+  }
+}
+
+.estado {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.estado-completo {
+  background: #e7f7ec;
+  color: #16a34a;
+}
+
+/* ==================== ACCIONES ==================== */
+.botones-detalle {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 4px;
+
+  .btn {
+    margin-bottom: 0;
+    padding: 8px 28px;
+  }
+}
+
+/* ==================== RESPONSIVE ==================== */
+@media (max-width: 900px) {
+  .trabajoArea {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+

@@ -1,1 +1,301 @@
-<p>salidas works!</p>
+<div class="areaTrabajo-container">
+  <div class="trabajoArea">
+    <!-- ==================== COLUMNA IZQUIERDA: SOLICITUDES ==================== -->
+    <section class="panel-solicitudes" aria-labelledby="tituloSolicitudes">
+      <h2 id="tituloSolicitudes" class="titulo-panel">Solicitudes de salida</h2>
+
+      <div class="buscador-container">
+        <div class="buscador">
+          <input
+            class="inputB"
+            type="search"
+            placeholder="Buscar por paciente, N° solicitud o servicio..."
+            aria-label="Buscar solicitud de salida"
+          />
+          <button type="button" class="btnLupa" title="Buscar" aria-label="Buscar">
+            <i class="bi bi-search fs-5" aria-hidden="true"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="filtros" role="group" aria-label="Filtrar solicitudes por estado">
+        <button type="button" class="chip activo">Todas (12)</button>
+        <button type="button" class="chip">
+          <span class="punto punto-naranja" aria-hidden="true"></span>Pendientes (6)
+        </button>
+        <button type="button" class="chip">
+          <span class="punto punto-azul" aria-hidden="true"></span>Parciales (4)
+        </button>
+        <button type="button" class="chip">
+          <span class="punto punto-verde" aria-hidden="true"></span>Completadas (2)
+        </button>
+      </div>
+
+      <div class="lista-solicitudes">
+        <article class="solicitud activo">
+          <div class="solicitud-encabezado">
+            <span class="solicitud-codigo">SOL-1</span>
+            <span class="solicitud-paciente">María Fernanda López</span>
+            <span class="punto punto-naranja" title="Pendiente" aria-label="Pendiente"></span>
+          </div>
+          <div class="solicitud-detalle">
+            <span>3 medicamentos</span>
+            <span>2 insumos</span>
+            <span class="solicitud-fecha">12/04/2024<br />10:24</span>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <!-- ==================== COLUMNA DERECHA: DETALLE ==================== -->
+    <section class="panel-detalle" aria-labelledby="tituloDetalle">
+      <header class="detalle-encabezado">
+        <div class="detalle-titulo">
+          <h2 id="tituloDetalle" class="titulo-panel">
+            {{ enDevoluciones() ? 'Detalle de devolución' : 'Detalle de solicitud' }}
+          </h2>
+          <span class="etiqueta-sol">N° SOL-1</span>
+        </div>
+
+        <nav class="subMenuNav submenu-detalle" aria-label="Sección de la solicitud">
+          <div class="option" [class.active]="!enDevoluciones()" (click)="seleccionarVista(false)">
+            Solicitudes
+          </div>
+          <div class="option" [class.active]="enDevoluciones()" (click)="seleccionarVista(true)">
+            Devoluciones
+          </div>
+        </nav>
+      </header>
+
+      <div class="aviso-lote" role="note">
+        <i class="bi bi-info-circle" aria-hidden="true"></i>
+        @if (enDevoluciones()) {
+          <p><strong>
+            Registre la condición y el motivo de la devolución. El sistema valida el lote entregado
+            antes de actualizar el inventario.
+          </strong></p>
+        } @else {
+          <p><strong>
+            El sistema sugiere el lote con vencimiento más próximo. Puede seleccionar otro lote
+            disponible si lo requiere.
+          </strong></p>
+        }
+        
+      </div>
+
+      @if (enDevoluciones()) {
+        <!-- ==================== MEDICAMENTOS ==================== -->
+        <h4 class="subtitulo-detalle">Medicamentos (1)</h4>
+        <div class="tabla-detalle">
+          <table class="table">
+            <thead>
+              <tr>
+                <th class="celda_centrada">Tipo</th>
+                <th class="celda_izquierda">Producto</th>
+                <th class="celda_centrada">Entregado</th>
+                <th class="celda_centrada">Lote entregado</th>
+                <th class="celda_centrada">Condición</th>
+                <th class="celda_centrada">Motivo devolución</th>
+                <th class="celda_centrada">Cantidad a devolver</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="celda_centrada"><span class="tipo tipo-med">MED</span></td>
+                <td class="celda_izquierda">Paracetamol 500mg</td>
+                <td class="celda_centrada">
+                  20<span class="sub-dato">comprimidos</span>
+                </td>
+                <td class="celda_centrada">
+                  <select class="lote-select" aria-label="Lote entregado">
+                    <option selected>PCH1234</option>
+                  </select>
+                </td>
+                <td class="celda_centrada">
+                  <select class="lote-select" aria-label="Condición del producto">
+                    <option selected>Apto</option>
+                    <option>No apto</option>
+                  </select>
+                </td>
+                <td class="celda_centrada">
+                  <select class="lote-select select-motivo" aria-label="Motivo de devolución">
+                    <option selected>Seleccionar motivo...</option>
+                  </select>
+                </td>
+                <td class="celda_centrada">
+                  <input
+                    class="cantidad-input"
+                    type="number"
+                    value="20"
+                    aria-label="Cantidad a devolver"
+                  />
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- ==================== INSUMOS ==================== -->
+        <h4 class="subtitulo-detalle">Insumos (1)</h4>
+        <div class="tabla-detalle">
+          <table class="table">
+            <thead>
+              <tr>
+                <th class="celda_centrada">Tipo</th>
+                <th class="celda_izquierda">Producto</th>
+                <th class="celda_centrada">Entregado</th>
+                <th class="celda_centrada">Lote entregado</th>
+                <th class="celda_centrada">Condición</th>
+                <th class="celda_centrada">Motivo devolución</th>
+                <th class="celda_centrada">Cantidad a devolver</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="celda_centrada"><span class="tipo tipo-ins">INS</span></td>
+                <td class="celda_izquierda">
+                  Jeringa 10 ml<span class="sub-dato">Estéril desechable</span>
+                </td>
+                <td class="celda_centrada">
+                  10<span class="sub-dato">unidades</span>
+                </td>
+                <td class="celda_centrada">
+                  <select class="lote-select" aria-label="Lote entregado">
+                    <option selected>JER7781</option>
+                  </select>
+                </td>
+                <td class="celda_centrada">
+                  <select class="lote-select" aria-label="Condición del producto">
+                    <option>Apto</option>
+                    <option selected>No apto</option>
+                  </select>
+                </td>
+                <td class="celda_centrada">
+                  <select class="lote-select select-motivo" aria-label="Motivo de devolución">
+                    <option selected>Seleccionar motivo...</option>
+                  </select>
+                </td>
+                <td class="celda_centrada">
+                  <input
+                    class="cantidad-input"
+                    type="number"
+                    value="10"
+                    aria-label="Cantidad a devolver"
+                  />
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- ==================== ACCIONES ==================== -->
+        <div class="botones-detalle">
+          <button type="button" class="btn _guardar">Guardar devolución</button>
+        </div>
+      } @else {
+      <!-- ==================== MEDICAMENTOS ==================== -->
+      <h4 class="subtitulo-detalle">Medicamentos (1)</h4>
+      <div class="tabla-detalle">
+        <table class="table">
+          <thead>
+            <tr>
+              <th class="celda_centrada">Tipo</th>
+              <th class="celda_izquierda">Producto</th>
+              <th class="celda_centrada">Solicitado</th>
+              <th class="celda_centrada">Lote sugerido</th>
+              <th class="celda_centrada">Vence</th>
+              <th class="celda_centrada">Lote entregado</th>
+              <th class="celda_centrada">Cantidad a entregar</th>
+              <th class="celda_centrada">Estado</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="celda_centrada"><span class="tipo tipo-med">MED</span></td>
+              <td class="celda_izquierda">Paracetamol 500mg</td>
+              <td class="celda_centrada">
+                20<span class="sub-dato">comprimidos</span>
+              </td>
+              <td class="celda_centrada">PCH1234</td>
+              <td class="celda_centrada">12/2025</td>
+              <td class="celda_centrada">
+                <select class="lote-select" aria-label="Lote a entregar">
+                  <option selected>PCH1234</option>
+                </select>
+              </td>
+              <td class="celda_centrada">
+                <input
+                  class="cantidad-input"
+                  type="number"
+                  value="20"
+                  aria-label="Cantidad a entregar"
+                />
+              </td>
+              <td class="celda_centrada">
+                <span class="estado estado-completo">
+                  <i class="bi bi-check-lg" aria-hidden="true"></i> Completo
+                </span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- ==================== INSUMOS ==================== -->
+      <h4 class="subtitulo-detalle">Insumos (1)</h4>
+      <div class="tabla-detalle">
+        <table class="table">
+          <thead>
+            <tr>
+              <th class="celda_centrada">Tipo</th>
+              <th class="celda_izquierda">Producto</th>
+              <th class="celda_centrada">Solicitado</th>
+              <th class="celda_centrada">Lote sugerido</th>
+              <th class="celda_centrada">Vence</th>
+              <th class="celda_centrada">Lote entregado</th>
+              <th class="celda_centrada">Cantidad a entregar</th>
+              <th class="celda_centrada">Estado</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="celda_centrada"><span class="tipo tipo-ins">INS</span></td>
+              <td class="celda_izquierda">
+                Jeringa 10 ml<span class="sub-dato">Estéril desechable</span>
+              </td>
+              <td class="celda_centrada">
+                10<span class="sub-dato">unidades</span>
+              </td>
+              <td class="celda_centrada">JER7781</td>
+              <td class="celda_centrada">04/2028</td>
+              <td class="celda_centrada">
+                <select class="lote-select" aria-label="Lote a entregar">
+                  <option selected>JER7781</option>
+                </select>
+              </td>
+              <td class="celda_centrada">
+                <input
+                  class="cantidad-input"
+                  type="number"
+                  value="10"
+                  aria-label="Cantidad a entregar"
+                />
+              </td>
+              <td class="celda_centrada">
+                <span class="estado estado-completo">
+                  <i class="bi bi-check-lg" aria-hidden="true"></i> Completo
+                </span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- ==================== ACCIONES ==================== -->
+      <div class="botones-detalle">
+        <button type="button" class="btn _guardar">Guardar</button>
+      </div>
+      }
+    </section>
+  </div>
+</div>
