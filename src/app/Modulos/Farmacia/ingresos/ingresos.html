@@ -1,3 +1,6 @@
+@if (mostrarAgregarCompra()) {
+  <app-agregar-compra (cancelar)="cancelarAgregarCompra()" />
+} @else {
 <div class="areaTrabajo-container">
   <div class="trabajoArea">
     <div class="table-container">
@@ -17,7 +20,6 @@
         </div>
 
         <div class="botones-container">
-          <button class="btn _principal" (click)="abrirModalDetalleMed()">Agregar medicamento</button>
           <button class="btn _principal" (click)="abrirModalCompra()">Registrar compra</button>
         </div>
       </div>
@@ -80,8 +82,11 @@
             <p class="value">Q 3,450.00</p>
           </div>
 
-          <div>
+          <div class="acciones-compra">
             <button class="btn _principal">Ver Comprobante</button>
+            <button type="button" class="iconEditar" title="Editar compra" aria-label="Editar compra">
+              <i class="bi bi-pencil-square" aria-hidden="true"></i>
+            </button>
           </div>
         </div>
 
@@ -133,3 +138,4 @@
     </aside>
   </div>
 </div>
+}

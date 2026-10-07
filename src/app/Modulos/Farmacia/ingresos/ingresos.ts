@@ -1,11 +1,11 @@
 import { Component, inject, signal } from '@angular/core';
 import { ModalService } from '../../../modal-principal/modal-service';
 import { ModalMasDetalle } from '../modalesFarmacia/modal-mas-detalle/modal-mas-detalle';
-import { ModalMasCompra } from '../modalesFarmacia/modal-mas-compra/modal-mas-compra';
+import { AgregarCompra } from './agregar-compra/agregar-compra';
 
 @Component({
   selector: 'app-ingresos',
-  imports: [],
+  imports: [AgregarCompra],
   templateUrl: './ingresos.html',
   styleUrl: './ingresos.scss',
 })
@@ -18,11 +18,13 @@ export class Ingresos {
   }
 
   abrirModalCompra() {
-    this.modalService.open(ModalMasCompra, {
-      title: 'Registro de compra',
-      subtitle: 'Paso 1 de 2: Selección de productos',
-    });
+    this.mostrarAgregarCompra.set(true);
   }
 
+  cancelarAgregarCompra() {
+    this.mostrarAgregarCompra.set(false);
+  }
+
+  mostrarAgregarCompra = signal(false);
   nombreUsuario = signal('Usuario');
 }

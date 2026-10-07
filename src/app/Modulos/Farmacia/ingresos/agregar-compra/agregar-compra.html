@@ -1,0 +1,330 @@
+<div class="areaTrabajo-container">
+    @if(isCargandoProducto){
+        <div class="trabajoArea trabajoArea2">
+        <section class="table-container" aria-label="Listado de medicamentos">
+        <div class="seccionSuperior">
+            <!-- ==================== BUSCADOR ==================== -->
+            <div class="buscador-container">
+            <div class="buscador">
+                    <input
+                        class="inputB"
+                        type="search"
+                        name="textoBusqueda"
+                        placeholder="Buscar..."
+                        aria-label="Buscar medicamento por nombre"
+                    />
+                <button
+                type="button"
+                class="btnLupa"
+                title="Buscar medicamento"
+                aria-label="Buscar medicamento"
+                >
+                <i class="bi bi-search fs-5" aria-hidden="true"></i>
+                </button>
+            </div>
+            </div>
+            <!-- ==================== FILTRO DE ESTADO ==================== -->
+            <div class="miniSub-container">
+            <app-tab-switch
+                op1="Medicamentos"
+                op2="Insumos"
+                tabindex="0"
+                role="group"
+                aria-label="Estado de medicamentos"
+                [mostrarActivos]="isMedicamento"
+                (opcionCambiada)="isMedicamento = $event"
+            ></app-tab-switch>            
+                
+            </div>
+        </div>
+
+        <!-- ==================== TABLA DE MEDICAMENTOS ==================== -->
+        <div class="tabla-container">
+            <table class="table" aria-label="Medicamentos">
+            <thead>
+                <tr>
+                <th scope="col" class="celda_centrada">No.</th>
+                <th scope="col" class="celda_izquierda">Nombre</th>
+                @if(isMedicamento){
+                    <th scope="col" class="celda_izquierda">Fabricante</th>
+                    <th scope="col" class="celda_centrada">Concentración</th>
+                    <th scope="col" class="celda_izquierda">Presentación</th>
+                    <th scope="col" class="celda_centrada">Vía de administración</th>
+                    }@else {
+                    <th scope="col" class="celda_izquierda">Descripción</th>
+                    }
+                
+                </tr>
+            </thead>
+            <tbody>
+                <!-- @for (med of medicamentos | slice:(paginaActual - 1) * cantidadMostrar:paginaActual * cantidadMostrar; track med.id) {
+                <tr [class.selected-row]="actualizar && idActualizar === med.id">
+                    <td class="celda_centrada">
+                    {{ (paginaActual - 1) * cantidadMostrar + $index + 1 }}
+                    </td>
+                    <td class="celda_izquierda">{{ med.nombre }}</td>
+                    <td class="celda_izquierda">{{ med.marca }}</td>
+                    <td class="celda_centrada">{{ med.dosis }} {{ med.unidadMedida }}</td>
+                    <td class="celda_izquierda">{{ med.presentacion }}</td>
+                    <td class="celda_centrada">{{ med.viaAdministracion }}</td>
+                    <td class="celda_centrada celda-acciones">
+                    <div
+                        class="acciones-medicamento"
+                        [class.acciones-deshabilitadas]="actualizar"
+                    >
+                        @if (mostrarActivos) {
+                        <button
+                            type="button"
+                            class="iconEditar"
+                            title="Editar medicamento"
+                            aria-label="Editar medicamento"
+                            [disabled]="actualizar"
+                            (click)="preactualizar(med.id)"
+                        >
+                            <i class="bi bi-pencil-square" aria-hidden="true"></i>
+                        </button>
+                        }
+                        <label class="interruptor-estado">
+                        <input
+                            type="checkbox"
+                            role="switch"
+                            aria-label="Cambiar estado de {{ med.nombre }}"
+                            [checked]="med.estado"
+                            [disabled]="actualizar || procesando"
+                            (change)="manejarCambioEstado(med, $event)"
+                        />
+                        <span aria-hidden="true"></span>
+                        </label>
+                    </div>
+                    </td>
+                </tr>
+                } -->
+            </tbody>
+            <tfoot>
+                <tr>
+                <td colspan="7">
+                    <!-- <app-paginacion
+                    [paginaActual]="paginaActual"
+                    [totalregistros]="medicamentos.length"
+                    [cantidadMostrar]="cantidadMostrar"
+                    (paginaCambiada)="paginaActual = $event"
+                    ></app-paginacion> -->
+                </td>
+                </tr>
+            </tfoot>
+            </table>
+        </div>
+        </section>
+
+        <!-- ==================== FORMULARIO ==================== -->
+        <section class="formulario formulario-container" aria-labelledby="tituloMedicamento">
+        <h3 id="tituloMedicamento" class="titulo-formulario">
+        {{ 'actualizar' }}
+        </h3>
+        
+            <form #medicamentoForm="ngForm" novalidate >
+                <div class="fila">
+                    <app-campo-validado label="Lote" fieldId="nombreMedicamento" [required]="true">
+                    <input
+                        id="nombreMedicamento"
+                        name="nombre"
+                        type="text"
+                        placeholder="Lote del medicamento"
+                    ngModel
+                        required
+                    />
+                    </app-campo-validado>
+
+                    <app-campo-validado label="Fecha de vencimiento" fieldId="concentracionMedicamento" [required]="isMedicamento">
+                        <input
+                        id="concentracionMedicamento"
+                        name="concentracion"
+                        type="date"
+                        placeholder="Fecha de vencimiento"
+                    [required]="isMedicamento"
+                    ngModel
+                        />
+                    </app-campo-validado>
+                </div>
+
+                <div class="fila">
+                    <app-campo-validado label="Precio compra" fieldId="precioCompraMedicamento" [required]="true">
+                    <input
+                        id="precioCompraMedicamento"
+                        name="precioCompra"
+                        type="number"
+                        placeholder="Precio de compra"
+                        ngModel
+                        required
+                    />
+                    </app-campo-validado>
+
+                    <app-campo-validado label="Precio venta" fieldId="precioVentaMedicamento" [required]="true">
+                        <input
+                        id="precioVentaMedicamento"
+                        name="precioVenta"
+                        type="number"
+                        placeholder="Precio de venta"
+                        ngModel
+                        required
+                        />
+                    </app-campo-validado>
+
+                </div>
+
+                <div class="fila">
+                    <app-campo-validado label="Cantidad" fieldId="cantidadMedicamento" [required]="true">
+                    <input
+                        id="cantidadMedicamento"
+                        name="cantidad"
+                        type="number"
+                        placeholder="Cantidad"
+                        ngModel
+                        required
+                    />
+                    </app-campo-validado>
+                </div>
+
+            <!-- ==================== BOTONES ==================== -->
+            <div class="botones">
+            <button
+                type="button"
+                class="btn _cancelar"
+                (click)="cancelar.emit()"
+            >
+                Cancelar
+            </button>
+                <button type="submit" class="btn _guardar" [disabled]="medicamentoForm.invalid">
+                Agregar productos
+                </button>
+            </div> 
+        </form>
+        </section>
+    </div>
+    }@else {
+        <div class="trabajoArea paso2">
+            <section>
+            <h2 style="margin-bottom: 15px;">Lista de productos agregados</h2>
+            <table class="table"> 
+                <thead>
+                    <tr>
+                        <th>No.</th>
+                        <th>Producto</th>
+                        <th>Lote</th>
+                        <th>Fecha de vencimiento</th>
+                        <th>Precio compra</th>
+                        <th>Precio venta</th>
+                        <th>Cantidad</th>
+                        <th>Eliminar</th>
+                        <th>Subtotal</th>
+                    </tr>
+                </thead>
+            </table>
+        </section>
+
+        <!-- ==================== FORMULARIO REGISTRAR COMPRA ==================== -->
+        <section class="formulario formulario-container" aria-labelledby="tituloRegistrarCompra">
+            <h3 id="tituloRegistrarCompra" class="titulo-formulario">Registrar compra</h3>
+
+            <form #compraForm="ngForm" novalidate (ngSubmit)="guardarCompra(compraForm)">
+                
+                <div >
+                    <h3>Total compra <strong>Q500.00</strong></h3>
+                    
+                </div>
+
+                <app-campo-validado label="Proveedor" fieldId="proveedorCompra" [required]="true">
+                    <select
+                        id="proveedorCompra"
+                        name="proveedor"
+                        [(ngModel)]="proveedorSeleccionadoId"
+                        required
+                    >
+                        <option [ngValue]="null">Seleccione un proveedor</option>
+                        <option [ngValue]="1">Farmacia Central</option>
+                        <option [ngValue]="2">Distribuidora Salud</option>
+                        <option [ngValue]="3">Química GT</option>
+                    </select>
+                </app-campo-validado>
+
+                <!-- ==================== COMPROBANTE ==================== -->
+                <app-campo-validado label="Comprobante" fieldId="comprobanteCompra">
+                    <div class="carga-archivo" (dragover)="$event.preventDefault()" (drop)="soltarComprobante($event)">
+                        <input
+                            #comprobanteInput
+                            type="file"
+                            id="comprobanteCompra"
+                            name="comprobante"
+                            accept=".pdf,.jpg,.jpeg,.png"
+                            (change)="seleccionarComprobante($event)"
+                        />
+                        @if (!archivoComprobante) {
+                            <label for="comprobanteCompra" class="zona-carga">
+                                <i class="bi bi-cloud-arrow-up" aria-hidden="true"></i>
+                                <strong>Arrastra y suelta el comprobante aquí</strong>
+                                <span>o haz clic para seleccionar</span>
+                                <span class="boton-archivo">Seleccionar archivo</span>
+                            </label>
+                        }
+
+                        @if (archivoComprobante) {
+                            <div class="archivo-seleccionado">
+                                <i class="bi bi-file-earmark-text" aria-hidden="true"></i>
+                                <span>{{ archivoComprobante.name }}</span>
+                                <button
+                                    type="button"
+                                    aria-label="Quitar comprobante"
+                                    (click)="quitarComprobante(comprobanteInput)"
+                                >
+                                    <i class="bi bi-x-lg" aria-hidden="true"></i>
+                                </button>
+                            </div>
+                        }
+                    </div>
+                </app-campo-validado>
+
+                <!-- ==================== BOTONES ==================== -->
+                <div class="botones">
+                    <button type="button" class="btn _cancelar" (click)="cancelar.emit()">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="btn _guardar" [disabled]="compraForm.invalid">
+                        Guardar
+                    </button>
+                </div>
+            </form>
+        </section>
+        
+        </div>
+
+        
+    }
+
+    <nav class="indicador-pasos" aria-label="Progreso de la compra">
+        <ol class="pasos-compra">
+            <li>
+                <button
+                    type="button"
+                    class="paso-compra"
+                    [class.activo]="isCargandoProducto"
+                    [attr.aria-current]="isCargandoProducto ? 'step' : null"
+                    (click)="isCargandoProducto = true"
+                >
+                    <span>Paso 1</span>
+                </button>
+            </li>
+            <li>
+                <button
+                    type="button"
+                    class="paso-compra"
+                    [class.activo]="!isCargandoProducto"
+                    [attr.aria-current]="!isCargandoProducto ? 'step' : null"
+                    (click)="isCargandoProducto = false"
+                >
+                    <span>Paso 2</span>
+                </button>
+            </li>
+        </ol>
+    </nav>
+  
+</div>
