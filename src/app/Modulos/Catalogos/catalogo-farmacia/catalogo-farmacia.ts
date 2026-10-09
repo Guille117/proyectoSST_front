@@ -31,6 +31,9 @@ export class CatalogoFarmacia implements OnInit, OnDestroy {
 
   // variables
   // catálogo de grupos
+
+  // url: es la parte de la url donde se encuentra el endpoint correspondiente a cada catálogo 
+  /// key: es el llave para recibir la cantidad de registros de cada catálogo
   listaCatalogos = [
     {
       key: 'unidad_medidas',
@@ -65,7 +68,7 @@ export class CatalogoFarmacia implements OnInit, OnDestroy {
       cantidad: 0
     },
         {
-      key: 'motivo_baja',
+      key: 'motivoBaja',
       url: 'motivoBaja',
       icono: 'bi bi-bag-x-fill',
       titulo: 'Motivo baja',
