@@ -262,7 +262,7 @@ describe('CatalogoFarmacia', () => {
     expect(servicio.cambiarEstado).not.toHaveBeenCalled();
     expect(servicio.actualizar1).not.toHaveBeenCalled();
     expect(component.editar).toBe(false);
-    expect(component.variableEntrada).toEqual({ nombre: '', abreviatura: '' });
+    expect(component.variableEntrada).toEqual({ nombre: '', abreviatura: '', descripcion: '' });
   });
 
   it('no actualiza otro registro seleccionado durante la confirmacion', async () => {
@@ -477,6 +477,63 @@ describe('CatalogoFarmacia', () => {
         ? { nombre: 'Registro', abreviatura: 'mm' }
         : { nombre: 'Registro' });
     });
+
+  it('muestra las columnas No., Nombre y Descripción con formulario de nombre y descripción para Motivo baja', async () => {
+    servicio.listar.mockReturnValue(of([{ id: 6, nombre: 'Vencido', descripcion: 'Producto vencido' }]));
+    component.seleccionarCatalogo('Motivo baja', 'motivoBaja');
+    await fixture.whenStable();
+    const encabezados: NodeListOf<HTMLElement> = fixture.nativeElement.querySelectorAll('thead th');
+    expect(Array.from(encabezados).map(th => th.textContent?.trim()))
+      .toEqual(['No.', 'Nombre', 'Descripción', 'Acciones']);
+    expect(fixture.nativeElement.querySelector('tbody').textContent).toContain('Producto vencido');
+    expect(fixture.nativeElement.querySelector('tfoot td').getAttribute('colspan')).toBe('4');
+    expect(fixture.nativeElement.querySelector('#abreviaturaRegistro')).toBeNull();
+    expect(fixture.nativeElement.querySelector('#nombreRegistro').required).toBe(true);
+    expect(fixture.nativeElement.querySelector('#descripcionRegistro').required).toBe(false);
+    expect(servicio.listar).toHaveBeenLastCalledWith('motivoBaja', true);
+  });
+
+  it('exige solo el nombre y envia nombre con descripcion al guardar Motivo baja', async () => {
+    servicio.listar.mockReturnValue(of([{ id: 6, nombre: 'Vencido', descripcion: 'Producto vencido' }]));
+    component.seleccionarCatalogo('Motivo baja', 'motivoBaja');
+    await fixture.whenStable();
+    const formulario = fixture.debugElement.query(By.directive(NgForm)).injector.get(NgForm);
+    const nombre: HTMLInputElement = fixture.nativeElement.querySelector('#nombreRegistro');
+    const descripcion: HTMLInputElement = fixture.nativeElement.querySelector('#descripcionRegistro');
+
+    expect(formulario.valid).toBe(false);
+    descripcion.value = 'Empaque roto';
+    descripcion.dispatchEvent(new Event('input'));
+    await fixture.whenStable();
+    expect(formulario.valid).toBe(false);
+    nombre.value = 'Dañado';
+    nombre.dispatchEvent(new Event('input'));
+    await fixture.whenStable();
+    expect(formulario.valid).toBe(true);
+
+    component.guardar(formulario);
+    expect(servicio.crear).toHaveBeenCalledExactlyOnceWith('motivoBaja', { nombre: 'Dañado', descripcion: 'Empaque roto' });
+    await fixture.whenStable();
+  });
+
+  it('precarga y guarda la descripcion al editar Motivo baja', async () => {
+    servicio.listar.mockReturnValue(of([{ id: 6, nombre: 'Vencido', descripcion: 'Producto vencido' }]));
+    component.seleccionarCatalogo('Motivo baja', 'motivoBaja');
+    await fixture.whenStable();
+    fixture.nativeElement.querySelector('.iconEditar').click();
+    await fixture.whenStable();
+    expect(component.variableEntrada.descripcion).toBe('Producto vencido');
+
+    const descripcion: HTMLInputElement = fixture.nativeElement.querySelector('#descripcionRegistro');
+    descripcion.value = 'Empaque roto';
+    descripcion.dispatchEvent(new Event('input'));
+    await fixture.whenStable();
+    expect(component.hayCambios()).toBe(true);
+
+    const formulario = fixture.debugElement.query(By.directive(NgForm)).injector.get(NgForm);
+    await component.editarRegistro(formulario);
+    expect(servicio.actualizar1).toHaveBeenCalledExactlyOnceWith('motivoBaja', 6, { nombre: 'Vencido', descripcion: 'Empaque roto' });
+  });
 
   it('muestra switches apagados al consultar inactivos y encendidos al consultar activos', () => {
     component.traerRegistros(false);

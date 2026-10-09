@@ -4,34 +4,59 @@
         
         <div class="table-container">
             <div class="seccionSuperior">
-            
+
+                    <!-- ==================== BUSCADOR ==================== -->
                     <div class="buscador-container">
                         <div class="buscador">
-                            <select class="selector">
+                            <select class="selector" aria-label="Buscar inventario por">
                                 <option value="1" selected>Nombre</option>
                                 <option value="2">Proveedor</option>
                                 <option value="3">Administración</option>
-                                <option value="4">Por vencer</option>
-                                <option value="5">Vencidos</option>
                             </select>
-                    
-                            <input class="inputB" type="text" placeholder="Buscar...">
-                    
-                            <button class="btnLupa">
-                                <i class="bi bi-search fs-5"></i>
+
+                            <input
+                                class="inputB"
+                                type="text"
+                                placeholder="Buscar..."
+                                aria-label="Buscar en el inventario"
+                            />
+
+                            <button class="btnLupa" type="button" title="Buscar" aria-label="Buscar">
+                                <i class="bi bi-search fs-5" aria-hidden="true"></i>
                             </button>
                         </div>
                     </div>
-                    
+
+                    <!-- ==================== FILTRO POR TIPO ==================== -->
                     <div class="miniSub-container">
-                        <div class="miniSubMenu">
-                            <div class="op2">
-                                Medicamentos
-                            </div>
-                            <div class="op">
-                                Insumos
-                            </div>
-                        </div>
+                        <app-tab-switch
+                            op1="Medicamentos"
+                            op2="Insumos"
+                            role="group"
+                            aria-label="Tipo de producto del inventario"
+                            [mostrarActivos]="isMedicamento"
+                            (opcionCambiada)="isMedicamento = $event"
+                        ></app-tab-switch>
+                    </div>
+
+                    <!-- ==================== FILTROS POR ESTADO ==================== -->
+                    <div
+                        class="estados-container"
+                        role="group"
+                        aria-label="Filtrar inventario por estado"
+                    >
+                        @for (estado of estados; track estado.valor) {
+                            <button
+                                type="button"
+                                class="estado-chip"
+                                [class.activo]="estadoSeleccionado === estado.valor"
+                                [attr.aria-pressed]="estadoSeleccionado === estado.valor"
+                                (click)="seleccionarEstado(estado.valor)"
+                            >
+                                <span class="punto punto-{{ estado.valor }}" aria-hidden="true"></span>
+                                {{ estado.etiqueta }}
+                            </button>
+                        }
                     </div>
             </div>
 

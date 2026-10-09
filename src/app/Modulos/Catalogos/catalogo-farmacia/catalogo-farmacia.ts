@@ -5,8 +5,11 @@ import { finalize, Subscription } from 'rxjs';
 import { TabSwitch } from '../../../shared/tab-switch/tab-switch';
 import { PopUps } from '../../../shared/popUps/popUpsService';
 import { CatalogoService } from '../data/serviceCatalogo';
-import { Inter_base, Inter_unidadMedida, registrosCatalogos } from '../data/nombreInterfaz';
+import { Inter_base, Inter_descripcion, Inter_unidadMedida, registrosCatalogos } from '../data/nombreInterfaz';
 import { Paginacion } from '../../../shared/paginacion/paginacion';
+
+// Registro genérico de los catálogos de farmacia (unidad de medida, fabricante, vía, presentación, motivo baja)
+type RegistroFarmacia = Inter_unidadMedida & Partial<Inter_descripcion>;
 
 @Component({
   selector: 'app-catalogo-farmacia',
@@ -43,7 +46,7 @@ export class CatalogoFarmacia implements OnInit, OnDestroy {
       icono: 'bi bi-building',
       titulo: 'Fabricante',
       descripcion: 'Especifica el laboratorio fabricante del medicamento',
-      cantidad: 5
+      cantidad: 0
     },
     {
       key: 'vias_admin',
@@ -59,6 +62,14 @@ export class CatalogoFarmacia implements OnInit, OnDestroy {
       icono: 'bi bi-prescription2',
       titulo: 'Presentación',
       descripcion: 'Indica el formato físico del medicamento',
+      cantidad: 0
+    },
+        {
+      key: 'motivo_baja',
+      url: 'motivoBaja',
+      icono: 'bi bi-bag-x-fill',
+      titulo: 'Motivo baja',
+      descripcion: 'Especifica el motivo por el cual un producto se elimina o se retorna al stock',
       cantidad: 0
     },
   ]
@@ -122,7 +133,7 @@ mostrarActivos:boolean = true;
 
 // ------------ LISTAR REGISTROS ------------
 
-datos: Inter_unidadMedida[] = [];
+datos: RegistroFarmacia[] = [];
 paginaActual = 1;
 readonly cantidadMostrar = 5;
 cambiandoEstado = false;
@@ -134,7 +145,7 @@ traerRegistros(estado: boolean){
   this.peticionRegistros?.unsubscribe();
   this.cargandoRegistros = true;
   this.cdr.markForCheck();
-  this.peticionRegistros = this.servicioCatalogo.listar<Inter_unidadMedida>(this.catalogoUrl, estado).pipe(
+  this.peticionRegistros = this.servicioCatalogo.listar<RegistroFarmacia>(this.catalogoUrl, estado).pipe(
     finalize(() => {
       this.cargandoRegistros = false;
       this.cdr.markForCheck();
@@ -200,7 +211,7 @@ async activarDesactivar(event: Event, id:number){
 // ---------------------------------------------------------------------------------
 
   //---------------------------- GUARDAR REGISTROS ------------------------------
-  variableEntrada: Inter_unidadMedida = { nombre: '', abreviatura: '' };
+  variableEntrada: RegistroFarmacia = { nombre: '', abreviatura: '' };
   guardando = false;
   
   guardar(formulario: NgForm) {
@@ -236,8 +247,11 @@ async activarDesactivar(event: Event, id:number){
 
   // Helper para seleccionar el tipo de dato según el catálogo seleccionado
   selecciontipoDato(){
-    return this.catalogoSeleccionado === 'Unidad de medida'
-      ? this.variableEntrada
+    if (this.catalogoSeleccionado === 'Unidad de medida') {
+      return { nombre: this.variableEntrada.nombre, abreviatura: this.variableEntrada.abreviatura };
+    }
+    return this.catalogoSeleccionado === 'Motivo baja'
+      ? { nombre: this.variableEntrada.nombre, descripcion: this.variableEntrada.descripcion ?? '' }
       : { nombre: this.variableEntrada.nombre };
   }
   // ---------------------------------------------------------------------------------
@@ -246,24 +260,30 @@ async activarDesactivar(event: Event, id:number){
   editar: boolean = false;
   nombreOriginal = '';
   abreviaturaOriginal = '';
+  descripcionOriginal = '';
   idRegistroSeleccionado = 0;
 
   //----------------
-  precargar(nombre: string, id: number, abreviatura?: string){
+  precargar(nombre: string, id: number, abreviatura?: string, descripcion = ''){
     this.editar = true;
     this.idRegistroSeleccionado = id;
     this.variableEntrada.nombre = nombre;
     this.variableEntrada.abreviatura = abreviatura ?? '';
+    this.variableEntrada.descripcion = descripcion;
     this.nombreOriginal = this.variableEntrada.nombre;
     this.abreviaturaOriginal = this.variableEntrada.abreviatura;
+    this.descripcionOriginal = descripcion;
   }
   //----------------
   hayCambios(): boolean {
     if (this.variableEntrada.nombre.trim() !== this.nombreOriginal.trim()) {
       return true;
     }
-    return this.catalogoSeleccionado === 'Unidad de medida'
-      && this.variableEntrada.abreviatura.trim() !== this.abreviaturaOriginal.trim();
+    if (this.catalogoSeleccionado === 'Unidad de medida') {
+      return this.variableEntrada.abreviatura.trim() !== this.abreviaturaOriginal.trim();
+    }
+    return this.catalogoSeleccionado === 'Motivo baja'
+      && (this.variableEntrada.descripcion ?? '').trim() !== this.descripcionOriginal.trim();
   }
 
   //--------------
@@ -310,6 +330,7 @@ limpiarFormulario(formulario?: NgForm): void {
   formulario?.resetForm();
     this.variableEntrada.abreviatura = '';
     this.variableEntrada.nombre = '';
+    this.variableEntrada.descripcion = '';
     this.cdr.markForCheck();
   }
 }

@@ -41,6 +41,8 @@
           <th class="celda_izquierda">Nombre</th>
           @if(catalogoSeleccionado === 'Unidad de medida'){
             <th class="celda_izquierda">Abreviatura</th>
+          } @else if(catalogoSeleccionado === 'Motivo baja'){
+            <th class="celda_izquierda">Descripción</th>
           }
           <th class="celda_centrada">Acciones</th>
         </tr>
@@ -53,11 +55,15 @@
             <td class="celda_izquierda">{{ dato.nombre }}</td>
             @if(catalogoSeleccionado === 'Unidad de medida'){
               <td class="celda_izquierda">{{ dato.abreviatura }}</td>
+            } @else if(catalogoSeleccionado === 'Motivo baja'){
+              <td class="celda_izquierda">{{ dato.descripcion }}</td>
             }
             <td class="celda_centrada acciones">
               @if(mostrarActivos){
                 <button class="iconEditar" title="Editar" aria-label="Editar" 
-                  (click)="precargar(dato.nombre, dato.id!, catalogoSeleccionado === 'Unidad de medida' ? dato.abreviatura : undefined)">
+                  (click)="precargar(dato.nombre, dato.id!,
+                    catalogoSeleccionado === 'Unidad de medida' ? dato.abreviatura : undefined,
+                    catalogoSeleccionado === 'Motivo baja' ? dato.descripcion : undefined)">
                   <i class="bi bi-pencil-square"></i>
                 </button>
                 <label class="interruptor-estado" title="Desactivar">
@@ -76,7 +82,7 @@
       </tbody>
       <tfoot>
         <tr>
-          <td [attr.colspan]="catalogoSeleccionado === 'Unidad de medida' ? 4 : 3">
+          <td [attr.colspan]="catalogoSeleccionado === 'Unidad de medida' || catalogoSeleccionado === 'Motivo baja' ? 4 : 3">
             <app-paginacion
               [paginaActual]="paginaActual"
               [totalregistros]="datos.length"
@@ -113,6 +119,15 @@
             name="abreviaturaRegistro"
             placeholder="Ingrese abreviatura"
             required
+          >
+        } @else if(catalogoSeleccionado === 'Motivo baja'){
+          <label for="descripcionRegistro" class="label">Descripción</label>
+          <input
+            id="descripcionRegistro"
+            type="text"
+            [(ngModel)]="variableEntrada.descripcion"
+            name="descripcionRegistro"
+            placeholder="Ingrese descripción"
           >
         }
       </form>
