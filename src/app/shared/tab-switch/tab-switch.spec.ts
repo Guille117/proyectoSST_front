@@ -41,4 +41,27 @@ describe('TabSwitch', () => {
     expect(component.mostrarActivos).toBe(estado);
     expect(emitir).toHaveBeenLastCalledWith(estado);
   });
+
+  it('no cambia de opcion mientras esta deshabilitado', async () => {
+    fixture.componentRef.setInput('disabled', true);
+    await fixture.whenStable();
+    const emitir = vi.spyOn(component.opcionCambiada, 'emit');
+    const contenedor: HTMLDivElement = fixture.nativeElement.querySelector('.miniSubMenu');
+    const otra: HTMLDivElement = fixture.nativeElement.querySelectorAll('.miniSubMenu > div')[1];
+
+    otra.click();
+    await fixture.whenStable();
+
+    expect(component.mostrarActivos).toBe(true);
+    expect(emitir).not.toHaveBeenCalled();
+    expect(contenedor.classList.contains('deshabilitado')).toBe(true);
+    expect(contenedor.getAttribute('aria-disabled')).toBe('true');
+  });
+
+  it('no expone aria-disabled cuando esta habilitado', async () => {
+    const contenedor: HTMLDivElement = fixture.nativeElement.querySelector('.miniSubMenu');
+
+    expect(contenedor.classList.contains('deshabilitado')).toBe(false);
+    expect(contenedor.getAttribute('aria-disabled')).toBeNull();
+  });
 });

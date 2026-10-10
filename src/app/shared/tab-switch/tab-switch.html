@@ -1,4 +1,4 @@
-<div class="miniSubMenu">
+<div class="miniSubMenu" [class.deshabilitado]="disabled" [attr.aria-disabled]="disabled || null">
     <div [ngClass]="mostrarActivos ? 'op2' : 'op'" (click)="seleccionarOpcion(true)">
          {{op1}}
     </div>

@@ -23,4 +23,13 @@
         font-size: 17px;
         letter-spacing: 0.4px;
     }
+
+    &.deshabilitado {
+        opacity: 0.5;
+
+        .op,
+        .op2 {
+            cursor: not-allowed;
+        }
+    }
 }

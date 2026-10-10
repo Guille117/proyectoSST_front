@@ -10,14 +10,19 @@
                         class="inputB"
                         type="search"
                         name="textoBusqueda"
-                        placeholder="Buscar..."
-                        aria-label="Buscar medicamento por nombre"
+                        [placeholder]="isMedicamento ? 'Buscar medicamento...' : 'Buscar insumo...'"
+                        [attr.aria-label]="isMedicamento ? 'Buscar medicamento por nombre' : 'Buscar insumo por nombre'"
+                        [(ngModel)]="textoBusqueda"
+                        [disabled]="hayProductoSeleccionado"
+                        (keydown.enter)="buscarProductos()"
                     />
                 <button
                 type="button"
                 class="btnLupa"
-                title="Buscar medicamento"
-                aria-label="Buscar medicamento"
+                title="Buscar producto"
+                aria-label="Buscar producto"
+                [disabled]="hayProductoSeleccionado"
+                (click)="buscarProductos()"
                 >
                 <i class="bi bi-search fs-5" aria-hidden="true"></i>
                 </button>
@@ -30,9 +35,10 @@
                 op2="Insumos"
                 tabindex="0"
                 role="group"
-                aria-label="Estado de medicamentos"
+                aria-label="Tipo de producto"
                 [mostrarActivos]="isMedicamento"
-                (opcionCambiada)="isMedicamento = $event"
+                [disabled]="hayProductoSeleccionado"
+                (opcionCambiada)="cambiarTipoProducto($event)"
             ></app-tab-switch>            
                 
             </div>
@@ -53,62 +59,103 @@
                     }@else {
                     <th scope="col" class="celda_izquierda">Descripción</th>
                     }
-                
+                <th scope="col" class="celda_centrada celda-acciones"></th>
+
                 </tr>
             </thead>
             <tbody>
-                <!-- @for (med of medicamentos | slice:(paginaActual - 1) * cantidadMostrar:paginaActual * cantidadMostrar; track med.id) {
-                <tr [class.selected-row]="actualizar && idActualizar === med.id">
-                    <td class="celda_centrada">
-                    {{ (paginaActual - 1) * cantidadMostrar + $index + 1 }}
-                    </td>
-                    <td class="celda_izquierda">{{ med.nombre }}</td>
-                    <td class="celda_izquierda">{{ med.marca }}</td>
-                    <td class="celda_centrada">{{ med.dosis }} {{ med.unidadMedida }}</td>
-                    <td class="celda_izquierda">{{ med.presentacion }}</td>
-                    <td class="celda_centrada">{{ med.viaAdministracion }}</td>
-                    <td class="celda_centrada celda-acciones">
-                    <div
-                        class="acciones-medicamento"
-                        [class.acciones-deshabilitadas]="actualizar"
-                    >
-                        @if (mostrarActivos) {
-                        <button
-                            type="button"
-                            class="iconEditar"
-                            title="Editar medicamento"
-                            aria-label="Editar medicamento"
-                            [disabled]="actualizar"
-                            (click)="preactualizar(med.id)"
-                        >
-                            <i class="bi bi-pencil-square" aria-hidden="true"></i>
-                        </button>
-                        }
-                        <label class="interruptor-estado">
-                        <input
-                            type="checkbox"
-                            role="switch"
-                            aria-label="Cambiar estado de {{ med.nombre }}"
-                            [checked]="med.estado"
-                            [disabled]="actualizar || procesando"
-                            (change)="manejarCambioEstado(med, $event)"
-                        />
-                        <span aria-hidden="true"></span>
-                        </label>
-                    </div>
+                @if (cargandoProductos) {
+                <tr>
+                    <td [attr.colspan]="isMedicamento ? 7 : 4" class="celda_centrada" role="status">
+                    {{ isMedicamento ? 'Cargando medicamentos...' : 'Cargando insumos...' }}
                     </td>
                 </tr>
-                } -->
+                } @else if (isMedicamento) {
+                    @for (med of medicamentos | slice:(paginaActual - 1) * cantidadMostrar:paginaActual * cantidadMostrar; track med.id) {
+                    <tr
+                        [class.selected-row]="productoSeleccionadoId === med.id"
+                        [class.fila-bloqueada]="hayProductoSeleccionado && productoSeleccionadoId !== med.id"
+                        tabindex="0"
+                        (click)="seleccionarProducto(med.id)"
+                        (keydown.enter)="seleccionarProducto(med.id)"
+                    >
+                        <td class="celda_centrada">
+                        {{ (paginaActual - 1) * cantidadMostrar + $index + 1 }}
+                        </td>
+                        <td class="celda_izquierda">{{ med.nombre }}</td>
+                        <td class="celda_izquierda">{{ med.marca }}</td>
+                        <td class="celda_centrada">{{ med.dosis }} {{ med.unidadMedida }}</td>
+                        <td class="celda_izquierda">{{ med.presentacion }}</td>
+                        <td class="celda_centrada">{{ med.viaAdministracion }}</td>
+                        <td class="celda_centrada celda-acciones">
+                        @if (productoSeleccionadoId === med.id) {
+                            <button
+                            type="button"
+                            class="iconQuitar"
+                            title="Quitar selección"
+                            aria-label="Quitar selección de {{ med.nombre }}"
+                            (click)="$event.stopPropagation(); deseleccionarProducto()"
+                            >
+                            <i class="bi bi-x-lg" aria-hidden="true"></i>
+                            </button>
+                        }
+                        </td>
+                    </tr>
+                    } @empty {
+                    <tr>
+                        <td colspan="7" class="celda_centrada">No se encontraron medicamentos.</td>
+                    </tr>
+                    }
+                } @else {
+                    @for (insumo of insumos | slice:(paginaActual - 1) * cantidadMostrar:paginaActual * cantidadMostrar; track insumo.id) {
+                    <tr
+                        [class.selected-row]="productoSeleccionadoId === insumo.id"
+                        [class.fila-bloqueada]="hayProductoSeleccionado && productoSeleccionadoId !== insumo.id"
+                        tabindex="0"
+                        (click)="seleccionarProducto(insumo.id)"
+                        (keydown.enter)="seleccionarProducto(insumo.id)"
+                    >
+                        <td class="celda_centrada">
+                        {{ (paginaActual - 1) * cantidadMostrar + $index + 1 }}
+                        </td>
+                        <td class="celda_izquierda">{{ insumo.nombre }}</td>
+                        <td class="celda_izquierda">{{ insumo.detalle }}</td>
+                        <td class="celda_centrada celda-acciones">
+                        @if (productoSeleccionadoId === insumo.id) {
+                            <button
+                            type="button"
+                            class="iconQuitar"
+                            title="Quitar selección"
+                            aria-label="Quitar selección de {{ insumo.nombre }}"
+                            (click)="$event.stopPropagation(); deseleccionarProducto()"
+                            >
+                            <i class="bi bi-x-lg" aria-hidden="true"></i>
+                            </button>
+                        }
+                        </td>
+                    </tr>
+                    } @empty {
+                    <tr>
+                        <td colspan="4" class="celda_centrada">No se encontraron insumos.</td>
+                    </tr>
+                    }
+                }
             </tbody>
             <tfoot>
                 <tr>
-                <td colspan="7">
-                    <!-- <app-paginacion
+                <td [attr.colspan]="isMedicamento ? 7 : 4">
+                    <div
+                    class="paginacion-bloqueada"
+                    [class.bloqueada]="hayProductoSeleccionado"
+                    [attr.aria-disabled]="hayProductoSeleccionado || null"
+                    >
+                    <app-paginacion
                     [paginaActual]="paginaActual"
-                    [totalregistros]="medicamentos.length"
+                    [totalregistros]="totalRegistros"
                     [cantidadMostrar]="cantidadMostrar"
-                    (paginaCambiada)="paginaActual = $event"
-                    ></app-paginacion> -->
+                    (paginaCambiada)="cambiarPagina($event)"
+                    ></app-paginacion>
+                    </div>
                 </td>
                 </tr>
             </tfoot>
@@ -119,10 +166,10 @@
         <!-- ==================== FORMULARIO ==================== -->
         <section class="formulario formulario-container" aria-labelledby="tituloMedicamento">
         <h3 id="tituloMedicamento" class="titulo-formulario">
-        {{ 'actualizar' }}
+        {{ nombreProductoSeleccionado ? 'Lote de ' + nombreProductoSeleccionado : 'Seleccione un producto de la lista' }}
         </h3>
         
-            <form #medicamentoForm="ngForm" novalidate >
+            <form #medicamentoForm="ngForm" novalidate (ngSubmit)="agregarLote(medicamentoForm)">
                 <div class="fila">
                     <app-campo-validado label="Lote" fieldId="nombreMedicamento" [required]="true">
                     <input
@@ -130,7 +177,7 @@
                         name="nombre"
                         type="text"
                         placeholder="Lote del medicamento"
-                    ngModel
+                        [(ngModel)]="codigoLote"
                         required
                     />
                     </app-campo-validado>
@@ -141,8 +188,8 @@
                         name="concentracion"
                         type="date"
                         placeholder="Fecha de vencimiento"
-                    [required]="isMedicamento"
-                    ngModel
+                        [required]="isMedicamento"
+                        [(ngModel)]="fechaVencimiento"
                         />
                     </app-campo-validado>
                 </div>
@@ -154,7 +201,7 @@
                         name="precioCompra"
                         type="number"
                         placeholder="Precio de compra"
-                        ngModel
+                        [(ngModel)]="precioCompra"
                         required
                     />
                     </app-campo-validado>
@@ -165,7 +212,7 @@
                         name="precioVenta"
                         type="number"
                         placeholder="Precio de venta"
-                        ngModel
+                        [(ngModel)]="precioVenta"
                         required
                         />
                     </app-campo-validado>
@@ -179,7 +226,7 @@
                         name="cantidad"
                         type="number"
                         placeholder="Cantidad"
-                        ngModel
+                        [(ngModel)]="cantidad"
                         required
                     />
                     </app-campo-validado>
@@ -219,6 +266,41 @@
                         <th>Subtotal</th>
                     </tr>
                 </thead>
+                <tbody>
+                    @for (lote of lotes; track $index) {
+                    <tr>
+                        <td class="celda_centrada">{{ $index + 1 }}</td>
+                        <td class="celda_izquierda">
+                            {{ lote.nombreItem }}
+                            <span class="etiqueta-tipo">
+                                {{ lote.esMedicamento ? 'Medicamento' : 'Insumo' }}
+                            </span>
+                            @if (lote.descripcionItem) {
+                            <small class="detalle-item">{{ lote.descripcionItem }}</small>
+                            }
+                        </td>
+                        <td class="celda_izquierda">{{ lote.codigoLote }}</td>
+                        <td class="celda_centrada">{{ lote.fechaVencimiento || '—' }}</td>
+                        <td class="celda_centrada">Q{{ lote.precioCompra | number: '1.2-2' }}</td>
+                        <td class="celda_centrada">Q{{ lote.precioVenta | number: '1.2-2' }}</td>
+                        <td class="celda_centrada">{{ lote.cantidad }}</td>
+                        <td class="celda_centrada">
+                            <button
+                                type="button"
+                                class="iconQuitar"
+                                title="Eliminar lote"
+                                aria-label="Eliminar el lote {{ lote.codigoLote }}"
+                                (click)="eliminarLote($index)"
+                            >
+                                <i class="bi bi-trash3" aria-hidden="true"></i>
+                            </button>
+                        </td>
+                        <td class="celda_centrada">
+                            Q{{ lote.cantidad * lote.precioCompra | number: '1.2-2' }}
+                        </td>
+                    </tr>
+                    }
+                </tbody>
             </table>
         </section>
 
@@ -229,7 +311,7 @@
             <form #compraForm="ngForm" novalidate (ngSubmit)="guardarCompra(compraForm)">
                 
                 <div >
-                    <h3>Total compra <strong>Q500.00</strong></h3>
+                    <h3>Total compra <strong>Q{{ totalCompra | number: '1.2-2' }}</strong></h3>
                     
                 </div>
 
@@ -240,10 +322,12 @@
                         [(ngModel)]="proveedorSeleccionadoId"
                         required
                     >
-                        <option [ngValue]="null">Seleccione un proveedor</option>
-                        <option [ngValue]="1">Farmacia Central</option>
-                        <option [ngValue]="2">Distribuidora Salud</option>
-                        <option [ngValue]="3">Química GT</option>
+                        <option [ngValue]="null">
+                            {{ cargandoProveedores ? 'Cargando proveedores...' : 'Seleccione un proveedor' }}
+                        </option>
+                        @for (proveedor of proveedores; track proveedor.id) {
+                            <option [ngValue]="proveedor.id">{{ proveedor.nombre }}</option>
+                        }
                     </select>
                 </app-campo-validado>
 
@@ -288,7 +372,7 @@
                     <button type="button" class="btn _cancelar" (click)="cancelar.emit()">
                         Cancelar
                     </button>
-                    <button type="submit" class="btn _guardar" [disabled]="compraForm.invalid">
+                    <button type="submit" class="btn _guardar" [disabled]="compraForm.invalid || guardando">
                         Guardar
                     </button>
                 </div>
@@ -319,12 +403,24 @@
                     class="paso-compra"
                     [class.activo]="!isCargandoProducto"
                     [attr.aria-current]="!isCargandoProducto ? 'step' : null"
-                    (click)="isCargandoProducto = false"
+                    [attr.aria-disabled]="lotes.length === 0 ? 'true' : null"
+                    (click)="avanzarAlPaso2()"
                 >
                     <span>Paso 2</span>
                 </button>
             </li>
         </ol>
+
+        <!-- Contador de productos agregados: caja con el número encima, se incrementa al pulsar "Agregar productos" -->
+        <span
+            class="contador-productos"
+            role="status"
+            [attr.aria-label]="'Productos agregados: ' + totalProductosAgregados"
+            [attr.title]="'Productos agregados: ' + totalProductosAgregados"
+        >
+            <i class="bi bi-box-seam" aria-hidden="true"></i>
+            <span class="contador-productos__numero">{{ totalProductosAgregados }}</span>
+        </span>
     </nav>
   
 </div>
