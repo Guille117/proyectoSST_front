@@ -1,0 +1,151 @@
+/* ==================== DATOS DEL PACIENTE ==================== */
+/* Bloque pegado al borde derecho, desde la barra superior hasta el borde inferior de la ventana, sin
+   relleno exterior que lo separe de la pantalla. No se puede plegar ni ocultar: la pantalla que lo
+   usa le reserva su ancho en el relleno derecho y aquí solo se dibuja el bloque. El contenido se
+   desplaza en vertical cuando no cabe y nunca en horizontal. */
+.ficha {
+  position: fixed;
+  top: var(--heightTopBar);
+  right: 0;
+  bottom: 0;
+  z-index: 4;
+  width: var(--ficha-ancho, 340px);
+  max-width: 100%;
+  padding: 1.5rem;
+  overflow-x: hidden;
+  overflow-y: auto;
+  border-left: 1px solid #dfe7f3;
+  background: #fff;
+  box-shadow: -4px 0 14px rgba(15, 23, 42, 0.06);
+}
+
+.ficha-titulo {
+  margin: 0;
+  color: var(--azulPrincipal);
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+
+/* Datos del paciente: etiquetas arriba y valores debajo, en tantas columnas como quepan */
+.ficha-datos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 0.9rem 1rem;
+  margin: 0;
+  padding: 1.1rem 1.25rem;
+  border: 1px solid #e8eef7;
+  border-radius: 14px;
+  background: #f7f9fc;
+}
+
+/* Información de la atención: datos en línea separados por una línea vertical */
+.ficha-atencion {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.85rem 1rem;
+  margin: 0;
+}
+
+.ficha-dato,
+.ficha-atencion_dato {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.ficha-atencion_dato {
+  flex: 1 1 auto;
+
+  & + & {
+    padding-left: 1rem;
+    border-left: 1px solid #e4ebf5;
+  }
+}
+
+/* Etiqueta y valor de cada dato de la ficha */
+.ficha-campo_etiqueta {
+  color: #5b6b85;
+  font-size: 0.86rem;
+}
+
+.ficha-campo_valor {
+  margin: 0;
+  color: var(--azulPrincipal);
+  font-size: 0.98rem;
+  font-weight: 700;
+  line-height: 1.35;
+  /* Los valores largos se parten antes que desbordar el bloque */
+  overflow-wrap: anywhere;
+}
+
+/* Títulos de sección dentro del bloque */
+.ficha-subtitulo {
+  margin: 1.4rem 0 0.6rem;
+  color: var(--azulSecundario);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+/* Motivo de atención: tarjeta con acento azul a la izquierda */
+.motivo-card {
+  margin: 0;
+  padding: 0.9rem 1.1rem;
+  border-left: 4px solid var(--azulSecundario);
+  border-radius: 12px;
+  background: #eaf3fe;
+  color: var(--azulPrincipal);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+/* La misma tarjeta cubre el estado vacío y el listado de alergias registradas */
+.alergias-card {
+  margin: 0;
+  padding: 0.9rem 1.1rem;
+  border-left: 4px solid #ed1a0f;
+  border-radius: 12px;
+  background: #fdecec;
+  color: #c81a10;
+  font-size: 1rem;
+  font-weight: 600;
+  list-style: none;
+
+  li + li {
+    margin-top: 6px;
+  }
+}
+
+/* Últimos signos vitales: valores en línea separados por un punto medio */
+.ficha-vitales {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+  margin: 0;
+  padding: 0;
+  color: var(--azulPrincipal);
+  font-size: 0.95rem;
+  font-weight: 700;
+  list-style: none;
+
+  li + li::before {
+    margin-right: 6px;
+    color: #93a3bb;
+    content: '·';
+  }
+}
+
+/* ==================== RESPONSIVIDAD ==================== */
+@media (max-width: 900px) {
+  /* En pantallas estrechas el bloque deja de estar fijo para no tapar el contenido: fluye debajo de
+     la pantalla con el mismo aspecto de tarjeta que el resto de los paneles y sigue desplegado. */
+  .ficha {
+    position: static;
+    width: 100%;
+    max-width: 100%;
+    margin: 0 1rem 1rem;
+    overflow: visible;
+    border: 1px solid #dfe7f3;
+    border-radius: 18px;
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
+  }
+}

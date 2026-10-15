@@ -1,0 +1,25 @@
+<!-- Historia clínica: cuadro del interrogatorio (sección de Evaluación clínica) -->
+<section class="panel">
+  <form class="historia-form" (ngSubmit)="guardarHistoria()">
+    <label class="historia-label" for="historiaClinica">Historia clínica</label>
+
+    <textarea
+      id="historiaClinica"
+      name="historiaClinica"
+      class="historia-campo"
+      [class.historia-campo--lectura]="!modoEdicion"
+      [(ngModel)]="historiaClinica"
+      [readonly]="!modoEdicion"
+      [attr.aria-readonly]="!modoEdicion"
+      placeholder="Escribe la historia clínica del paciente..."
+    ></textarea>
+
+    <!-- Acciones del cuadro -->
+    <div class="acciones-formulario historia-acciones">
+      <button type="button" class="btn _editar" [disabled]="modoEdicion" (click)="activarEdicion()">
+        Editar
+      </button>
+      <button type="submit" class="btn _guardar" [disabled]="!modoEdicion">Guardar</button>
+    </div>
+  </form>
+</section>

@@ -1,0 +1,129 @@
+<!-- Diagnóstico: registro del diagnóstico principal y de los adicionales (sección de Evaluación clínica) -->
+<section class="panel" aria-labelledby="tituloDiagnostico">
+  <h3 class="panel-titulo diagnostico-titulo" id="tituloDiagnostico">Registrar diagnóstico</h3>
+  <p class="diagnostico-ayuda">
+    Registra el diagnóstico principal del paciente y agrega los diagnósticos adicionales que
+    correspondan a la atención.
+  </p>
+
+  <form class="diagnostico-form" (ngSubmit)="guardarDiagnostico()">
+    <!-- Campos del diagnóstico -->
+    <div class="diagnostico-campos">
+      <div class="diagnostico-campo">
+        <label class="diagnostico-etiqueta" for="diagnostico">
+          Diagnóstico<span class="diagnostico-obligatorio" aria-hidden="true">*</span>
+        </label>
+
+        <div class="buscador-container">
+          <div class="buscador">
+            <input
+              class="inputB"
+              id="diagnostico"
+              name="diagnostico"
+              type="text"
+              placeholder="Escribe el diagnóstico..."
+              aria-required="true"
+              [(ngModel)]="diagnostico"
+              (keyup.enter)="buscarDiagnostico()"
+            />
+
+            <button
+              class="btnLupa"
+              type="button"
+              title="Buscar en el catálogo de diagnósticos"
+              aria-label="Buscar en el catálogo de diagnósticos"
+              (click)="buscarDiagnostico()"
+            >
+              <i class="bi bi-search fs-5" aria-hidden="true"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="diagnostico-campo">
+        <span class="diagnostico-etiqueta" id="etiquetaTipoDiagnostico">
+          Tipo de diagnóstico<span class="diagnostico-obligatorio" aria-hidden="true">*</span>
+        </span>
+
+        <div class="tipo-opciones" role="group" aria-labelledby="etiquetaTipoDiagnostico">
+          @for (tipo of tiposDiagnostico; track tipo.id) {
+            <button
+              type="button"
+              class="tipo-opcion"
+              [class.tipo-opcion--activo]="tipoSeleccionado.id === tipo.id"
+              [attr.aria-pressed]="tipoSeleccionado.id === tipo.id"
+              (click)="seleccionarTipo(tipo)"
+            >
+              {{ tipo.nombre }}
+            </button>
+          }
+        </div>
+      </div>
+    </div>
+
+    <!-- Diagnósticos adicionales: MOCK de diseño -->
+    <div class="adicionales-encabezado">
+      <h4 class="adicionales-titulo">Diagnósticos adicionales</h4>
+
+      <button type="button" class="btn _principal" (click)="agregarDiagnostico()">
+        Agregar diagnóstico
+      </button>
+    </div>
+
+    <div class="tabla-container">
+      <table>
+        <thead>
+          <tr>
+            <th class="columna-acciones">Tipo</th>
+            <th>Descripción</th>
+            <th class="columna-acciones">Acciones</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          @for (adicional of diagnosticosAdicionales; track adicional.id) {
+            <tr [class.selected-row]="diagnosticoEnEdicion === adicional.id">
+              <td class="celda_izquierda">{{ adicional.tipo.nombre }}</td>
+              <td class="celda_izquierda">{{ adicional.descripcion }}</td>
+              <td class="celda_centrada">
+                <div class="acciones-fila">
+                  <button
+                    type="button"
+                    class="iconEditar"
+                    title="Editar diagnóstico"
+                    aria-label="Editar el diagnóstico {{ adicional.descripcion }}"
+                    (click)="editarDiagnostico(adicional)"
+                  >
+                    <i class="bi bi-pencil-square" aria-hidden="true"></i>
+                  </button>
+
+                  <button
+                    type="button"
+                    class="iconQuitar"
+                    title="Eliminar diagnóstico"
+                    aria-label="Eliminar el diagnóstico {{ adicional.descripcion }}"
+                    (click)="eliminarDiagnostico(adicional)"
+                  >
+                    <i class="bi bi-trash3" aria-hidden="true"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="3" class="celda_centrada tabla-vacia">
+                Aún no hay diagnósticos adicionales registrados.
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Acciones del formulario -->
+    <div class="acciones-formulario diagnostico-acciones">
+      <button type="button" class="btn _cancelar" (click)="cancelarCaptura()">Cancelar</button>
+      <button type="submit" class="btn _guardar" [disabled]="!hayDiagnostico">Guardar</button>
+    </div>
+  </form>
+</section>

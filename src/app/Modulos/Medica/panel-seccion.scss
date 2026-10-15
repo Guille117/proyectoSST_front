@@ -1,0 +1,22 @@
+/* ==================== PANEL DE LAS SECCIONES DE EVALUACIÓN CLÍNICA ==================== */
+/* Estilos que comparten los paneles de contenido de las secciones del episodio (Historia clínica y
+   Diagnóstico). Cada panel los incorpora con @use; no se importan globalmente. */
+
+:host {
+  display: block;
+}
+
+.panel {
+  padding: 1.5rem;
+  border: 1px solid #dfe7f3;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
+}
+
+.panel-titulo {
+  margin: 0 0 1rem;
+  color: var(--azulPrincipal);
+  font-size: 1.35rem;
+  font-weight: 700;
+}

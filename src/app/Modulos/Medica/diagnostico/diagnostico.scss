@@ -1,0 +1,203 @@
+@use '../panel-seccion';
+
+/* ==================== REGISTRO DEL DIAGNÓSTICO ==================== */
+.diagnostico-titulo {
+  margin-bottom: 0.35rem;
+  font-size: 1.5rem;
+}
+
+.diagnostico-ayuda {
+  margin: 0 0 1.25rem;
+  color: #5b6b85;
+  font-size: 0.98rem;
+  line-height: 1.45;
+}
+
+/* Campos del diagnóstico: el del diagnóstico ocupa más espacio que el del tipo */
+.diagnostico-campos {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+  gap: 1.5rem;
+  align-items: start;
+  margin-bottom: 1.75rem;
+}
+
+.diagnostico-campo {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.diagnostico-etiqueta {
+  color: #101828;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+/* Asterisco de campo obligatorio: mismo tratamiento del componente campo-validado compartido */
+.diagnostico-obligatorio {
+  margin-left: 3px;
+  color: #d34a42;
+  font-size: 1.35em;
+  font-weight: 800;
+}
+
+/* Buscador: el estilo vive en src/styles/otrosStyle.scss, aquí solo se fija su altura y sus anchos */
+.buscador-container {
+  height: 45px;
+}
+
+.buscador {
+  .inputB {
+    min-width: 0;
+    width: 0;
+  }
+
+  .btnLupa {
+    flex: 0 0 40px;
+    width: 40px;
+  }
+}
+
+/* ==================== TIPO DE DIAGNÓSTICO ==================== */
+/* Botones unidos que comparten los bordes para representar una sola selección */
+.tipo-opciones {
+  display: flex;
+  height: 45px;
+  min-width: 0;
+}
+
+.tipo-opcion {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 0 12px;
+  overflow: hidden;
+  border: 1px solid #cfdcee;
+  border-radius: 0;
+  background: #fff;
+  color: #3f4d66;
+  font-family: inherit;
+  font-size: 0.98rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+
+  & + & {
+    margin-left: -1px;
+  }
+
+  &:first-child {
+    border-radius: 12px 0 0 12px;
+  }
+
+  &:last-child {
+    border-radius: 0 12px 12px 0;
+  }
+
+  &:hover {
+    border-color: #b9c8e2;
+  }
+
+  &:focus-visible {
+    position: relative;
+    z-index: 1;
+    outline: 2px solid var(--azulSecundario);
+    outline-offset: 2px;
+  }
+}
+
+.tipo-opcion--activo {
+  position: relative;
+  z-index: 1;
+  border-color: var(--azulSecundario);
+  background: var(--azulSecundario);
+  color: #fff;
+  font-weight: 600;
+}
+
+/* ==================== DIAGNÓSTICOS ADICIONALES ==================== */
+.adicionales-encabezado {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.adicionales-titulo {
+  margin: 0;
+  color: var(--azulPrincipal);
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+/* La tabla usa el estilo global de src/styles/tableStyle.scss */
+.tabla-container {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.tabla-container table {
+  min-width: 420px;
+}
+
+.columna-acciones {
+  width: 120px;
+}
+
+.acciones-fila {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.tabla-vacia {
+  color: #5b6b85;
+}
+
+/* Botón de eliminar de la tabla: mismo tratamiento del botón equivalente del ingreso de compras */
+.iconQuitar {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  place-items: center;
+  color: #ed1a0f;
+  background: rgba(255, 255, 255, 0.62);
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  border-radius: 50%;
+  box-shadow: 0 2px 6px rgba(26, 37, 53, 0.12);
+  font-size: 15px;
+  cursor: pointer;
+  transition: color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+
+  &:hover {
+    color: #fff;
+    background: #ed1a0f;
+    transform: translateY(-1px);
+  }
+
+  &:focus-visible {
+    outline: 2px solid #ed1a0f;
+    outline-offset: 2px;
+  }
+}
+
+/* Separación y línea divisoria de la fila de acciones compartida (.acciones-formulario) */
+.diagnostico-acciones {
+  gap: 1rem;
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid #e4ebf5;
+}
+
+/* ==================== RESPONSIVIDAD ==================== */
+@media (max-width: 900px) {
+  .diagnostico-campos {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

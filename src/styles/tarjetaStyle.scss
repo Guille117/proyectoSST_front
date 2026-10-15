@@ -1,0 +1,75 @@
+/* ==================== TARJETA SELECCIONABLE (icono + texto) ==================== */
+.tarjeta {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  box-sizing: border-box;
+  width: 100%;
+  margin-bottom: 15px;
+  padding: 14px 16px;
+  border: 2px solid rgba(186, 188, 192, 0.5);
+  border-radius: 10px;
+  background-color: #fff;
+  color: var(--azulPrincipal);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.3s ease;
+
+  &:hover {
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.1);
+    transform: translateY(-2px);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--azulSecundario);
+    outline-offset: 2px;
+  }
+}
+
+.tarjeta_icono {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border: solid 2px #eef1f8;
+  border-radius: 50%;
+  color: var(--azulPrincipal);
+  font-size: 22px;
+  background-color: #f0f4f9;
+}
+
+.tarjeta_texto {
+  min-width: 0;
+}
+
+.tarjeta_titulo {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--azulPrincipal);
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.tarjeta_descripcion {
+  display: block;
+  color: #5b6b85;
+  font-size: 0.95rem;
+  line-height: 1.35;
+}
+
+.tarjeta--activa {
+  background-color: #f1f8fd;
+  border-color: var(--azulSecundario);
+
+  .tarjeta_icono {
+    color: var(--azulSecundario);
+    background-color: #dfebf9;
+  }
+
+  .tarjeta_titulo {
+    color: var(--azulSecundario);
+  }
+}

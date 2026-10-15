@@ -1,0 +1,651 @@
+/* ==================== CONTENEDOR (SECCIONES / EXAMEN / HALLAZGOS) ==================== */
+/* Rejilla del área de trabajo. Las áreas con nombre fijan el orden visual de los paneles
+   (secciones, examen, hallazgos) y cada pista flexible lleva mínimo 0 para que la rejilla
+   pueda encogerse sin desbordar. */
+.evaluacion {
+  /* Ancho del bloque de datos del paciente: lo comparten el propio bloque y su pestaña */
+  --ficha-ancho: 340px;
+
+  display: grid;
+  grid-template-columns: auto minmax(0, 1.7fr) minmax(290px, 1fr);
+  grid-template-areas: 'secciones examen hallazgos';
+  gap: 1.25rem;
+  box-sizing: border-box;
+  width: 100%;
+  padding: 1.5rem;
+}
+
+/* Bloque de datos abierto: las secciones se reducen al carril de iconos (64px) y se reserva a la
+   derecha el ancho del bloque, que queda pegado al borde de la pantalla sin cubrir los paneles. */
+.evaluacion--ficha-abierta {
+  padding-right: calc(var(--ficha-ancho) + 1.5rem);
+}
+
+/* Secciones que muestran siempre el bloque de datos del paciente (historia clínica y diagnóstico):
+   la rejilla le reserva su ancho y la ficha plegable con su pestaña no se dibujan para no duplicar
+   la información. */
+.evaluacion--datos-paciente {
+  padding-right: calc(var(--ficha-ancho) + 1.5rem);
+
+  .ficha-pestana,
+  .ficha {
+    display: none;
+  }
+}
+
+/* Secciones que no registran hallazgos del examen físico (historia clínica y diagnóstico): la rejilla
+   prescinde de la columna de hallazgos para que el panel de la sección use el ancho libre. */
+.evaluacion--sin-hallazgos {
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas: 'secciones examen';
+}
+
+.panel {
+  padding: 1.5rem;
+  border: 1px solid #dfe7f3;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
+}
+
+/* El panel de secciones es solo el contenedor de las tarjetas: sin fondo ni borde
+   propios, para que las tarjetas blancas se apoyen sobre el fondo de la página,
+   igual que la lista de tarjetas de Catálogos. Sin relleno izquierdo para que el
+   título y las tarjetas queden arrimados al borde del área de trabajo. */
+.panel-secciones {
+  grid-area: secciones;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  padding-left: 0;
+}
+
+/* El contenido de la sección activa (examen físico, historia clínica o diagnóstico) ocupa el área
+   central de la rejilla (ver grid-template-areas) */
+.panel-seccion {
+  grid-area: examen;
+}
+
+.panel-hallazgos {
+  grid-area: hallazgos;
+}
+
+.panel-titulo {
+  margin: 0 0 1rem;
+  color: var(--azulPrincipal);
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+
+/* ==================== SECCIONES ==================== */
+/* La tarjeta del panel de secciones (.tarjeta) usa el estilo compartido src/styles/tarjetaStyle.scss */
+
+/* ==================== PESTAÑA LATERAL Y FICHA DEL PACIENTE ==================== */
+/* Pestaña pegada al borde derecho de la pantalla: abre y cierra la ficha del paciente. Se centra
+   verticalmente en la ventana y, como está fuera del flujo de la rejilla, no consume ancho ni
+   provoca desplazamiento horizontal. */
+.ficha-pestana {
+  position: fixed;
+  top: 50%;
+  right: 0;
+  transform: translateY(-50%);
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: 40px;
+  padding: 14px 9px;
+  border: 1px solid #dfe7f3;
+  border-right: 0;
+  border-radius: 14px 0 0 14px;
+  background: #fff;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
+  color: var(--azulPrincipal);
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+
+  i {
+    color: var(--azulSecundario);
+    font-size: 1.05rem;
+  }
+
+  &:hover {
+    border-color: #b9c8e2;
+    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.1);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--azulSecundario);
+    outline-offset: 2px;
+  }
+}
+
+/* Con la ficha abierta la pestaña se reduce a un botón compacto y se arrima al borde izquierdo del
+   bloque de datos, de modo que ambos quedan unidos sin hueco entre ellos. */
+.ficha-pestana--abierta {
+  right: var(--ficha-ancho);
+  display: grid;
+  place-items: center;
+  height: 40px;
+  padding: 0;
+}
+
+.ficha-pestana_texto {
+  /* Texto en vertical que se lee de abajo hacia arriba, como una pestaña lateral */
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  font-size: 0.95rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* Bloque de datos del paciente: pegado al borde derecho, desde la barra superior hasta el borde
+   inferior de la ventana y sin relleno exterior que lo separe de la pantalla. El contenido se
+   desplaza en vertical cuando no cabe y nunca en horizontal. */
+.ficha {
+  position: fixed;
+  top: var(--heightTopBar);
+  right: 0;
+  bottom: 0;
+  z-index: 4;
+  width: var(--ficha-ancho);
+  max-width: 100%;
+  padding: 1.5rem;
+  overflow-y: auto;
+  border-left: 1px solid #dfe7f3;
+  background: #fff;
+  box-shadow: -4px 0 14px rgba(15, 23, 42, 0.06);
+}
+
+.ficha-encabezado {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.ficha-titulo {
+  margin: 0;
+  color: var(--azulPrincipal);
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+
+.ficha-plegar {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--azulPrincipal);
+  font-size: 1.15rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+
+  &:hover {
+    background: #eef3fb;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--azulSecundario);
+    outline-offset: 2px;
+  }
+}
+
+/* El cuerpo plegado deja visible únicamente el título de la ficha */
+.ficha-cuerpo--plegado {
+  display: none;
+}
+
+/* Datos del paciente: etiquetas arriba y valores debajo, en tantas columnas como quepan */
+.ficha-datos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 0.9rem 1rem;
+  margin: 0;
+  padding: 1.1rem 1.25rem;
+  border: 1px solid #e8eef7;
+  border-radius: 14px;
+  background: #f7f9fc;
+}
+
+/* Información de la atención: datos en línea separados por una línea vertical */
+.ficha-atencion {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.85rem 1rem;
+  margin: 0;
+}
+
+.ficha-dato,
+.ficha-atencion_dato {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.ficha-atencion_dato {
+  flex: 1 1 auto;
+
+  & + & {
+    padding-left: 1rem;
+    border-left: 1px solid #e4ebf5;
+  }
+}
+
+/* Etiqueta y valor de cada dato de la ficha */
+.ficha-campo_etiqueta {
+  color: #5b6b85;
+  font-size: 0.86rem;
+}
+
+.ficha-campo_valor {
+  margin: 0;
+  color: var(--azulPrincipal);
+  font-size: 0.98rem;
+  font-weight: 700;
+  line-height: 1.35;
+  /* Los valores largos se parten antes que desbordar el bloque */
+  overflow-wrap: anywhere;
+}
+
+/* Títulos de sección dentro de la ficha */
+.ficha-subtitulo {
+  margin: 1.4rem 0 0.6rem;
+  color: var(--azulSecundario);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+/* Motivo de atención: tarjeta con acento azul a la izquierda */
+.motivo-card {
+  margin: 0;
+  padding: 0.9rem 1.1rem;
+  border-left: 4px solid var(--azulSecundario);
+  border-radius: 12px;
+  background: #eaf3fe;
+  color: var(--azulPrincipal);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+/* La misma tarjeta cubre el estado vacío y el listado de alergias registradas */
+.alergias-card {
+  margin: 0;
+  padding: 0.9rem 1.1rem;
+  border-left: 4px solid #ed1a0f;
+  border-radius: 12px;
+  background: #fdecec;
+  color: #c81a10;
+  font-size: 1rem;
+  font-weight: 600;
+  list-style: none;
+
+  li + li {
+    margin-top: 6px;
+  }
+}
+
+/* Últimos signos vitales: valores en línea separados por un punto medio */
+.ficha-vitales {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+  margin: 0;
+  padding: 0;
+  color: var(--azulPrincipal);
+  font-size: 0.95rem;
+  font-weight: 700;
+  list-style: none;
+
+  li + li::before {
+    margin-right: 6px;
+    color: #93a3bb;
+    content: '·';
+  }
+}
+
+/* ==================== SECCIONES COLAPSADAS (CARRIL DE ICONOS) ==================== */
+/* Con la ficha abierta las secciones se reducen a sus iconos para que el examen físico y los
+   hallazgos ocupen el espacio libre. Los textos siguen en el DOM (ocultos a la vista) y cada
+   tarjeta usa el título de su sección como title y aria-label. */
+.panel-secciones--rail {
+  padding: 0;
+
+  .tarjeta {
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: center;
+    width: 64px;
+    height: 64px;
+    margin-bottom: 12px;
+    padding: 0;
+    border-width: 1px;
+    border-radius: 12px;
+  }
+
+  .tarjeta_icono {
+    width: auto;
+    aspect-ratio: auto;
+    border: 0;
+    border-radius: 0;
+    background-color: transparent;
+  }
+
+  .tarjeta--activa {
+    border-left: 3px solid var(--azulSecundario);
+    background-color: #eef5ff;
+  }
+
+  .tarjeta_texto {
+    display: none;
+  }
+}
+
+/* Utilidad de accesibilidad: conserva el texto para lectores de pantalla sin ocupar espacio */
+.visualmente-oculto {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ==================== EXAMEN FÍSICO ==================== */
+.examen-titulo {
+  font-size: 1.5rem;
+}
+
+.examen-ayuda {
+  margin: 0 0 1.25rem;
+  color: #5b6b85;
+  font-size: 1rem;
+}
+
+.sistemas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 1.5rem;
+}
+
+.sistema-chip {
+  padding: 10px 18px;
+  border: 1px solid #dbe4f0;
+  border-radius: 12px;
+  background: #fff;
+  color: #3f4d66;
+  font-family: inherit;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background-color 0.2s ease, color 0.2s ease;
+
+  &:hover {
+    border-color: #b9c8e2;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--azulSecundario);
+    outline-offset: 2px;
+  }
+}
+
+.sistema-chip--activo {
+  border-color: var(--azulSecundario);
+  background: var(--azulSecundario);
+  color: #fff;
+}
+
+/* Captura de hallazgos */
+.hallazgo-form {
+  display: flex;
+  flex-direction: column;
+}
+
+.hallazgo-label {
+  margin-bottom: 10px;
+  color: var(--azulPrincipal);
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.hallazgo-campo {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 190px;
+  padding: 14px 16px;
+  border: 1px solid #cfdcee;
+  border-radius: 14px;
+  background: #fff;
+  color: #21324d;
+  font-family: inherit;
+  font-size: 1rem;
+  line-height: 1.5;
+  outline: none;
+  resize: vertical;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+
+  &:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.14);
+  }
+}
+
+.contador-caracteres {
+  align-self: flex-end;
+  margin-top: 6px;
+  color: #7a8a9e;
+  font-size: 0.95rem;
+}
+
+/* Separación y línea divisoria de la fila de acciones compartida (.acciones-formulario) */
+.hallazgo-acciones {
+  gap: 1rem;
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid #e4ebf5;
+}
+
+/* ==================== HALLAZGOS REGISTRADOS ==================== */
+.hallazgo-card {
+  margin-bottom: 1rem;
+  padding: 1rem;
+  border: 1px solid #cdebdd;
+  border-radius: 16px;
+  background: #e9fbf2;
+}
+
+.hallazgo-encabezado {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 12px;
+}
+
+.hallazgo-avatar {
+  display: grid;
+  flex: 0 0 48px;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #d3f5e4;
+  color: #16a34a;
+  font-size: 22px;
+}
+
+.hallazgo-sistema {
+  flex: 1;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: #dcf6ea;
+  color: var(--azulPrincipal);
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.hallazgo-descripcion {
+  margin: 0;
+  color: #1f2f45;
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+.hallazgo-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-top: 1rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid #cfe9dc;
+  color: #33445e;
+  font-size: 0.95rem;
+
+  span {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  i {
+    color: var(--azulSecundario);
+    font-size: 1.05rem;
+  }
+}
+
+/* ==================== ESTADOS ==================== */
+.hallazgo-card--cargando {
+  border-color: #e6ecf5;
+  background: #fff;
+}
+
+.skeleton-encabezado {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.skeleton-avatar {
+  display: grid;
+  flex: 0 0 48px;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #e8f1ff;
+  color: var(--azulSecundario);
+  font-size: 22px;
+}
+
+.skeleton-lineas {
+  flex: 1;
+  min-width: 0;
+}
+
+.skeleton-linea {
+  display: block;
+  width: 100%;
+  height: 12px;
+  margin-bottom: 10px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  animation: pulsoSkeleton 1.4s ease-in-out infinite;
+}
+
+.skeleton-linea--media {
+  width: 60%;
+}
+
+.skeleton-meta {
+  display: flex;
+  gap: 12px;
+  margin-top: 1rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid #eef2f7;
+
+  .skeleton-meta-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: #b6c2d4;
+  }
+
+  .skeleton-linea {
+    width: 70px;
+    margin-bottom: 0;
+  }
+}
+
+.hallazgos-vacio {
+  margin: 0;
+  padding: 1.25rem;
+  border: 1px dashed #cfdcee;
+  border-radius: 14px;
+  color: #5b6b85;
+  font-size: 0.95rem;
+  text-align: center;
+}
+
+@keyframes pulsoSkeleton {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* ==================== RESPONSIVIDAD ==================== */
+@media (max-width: 1280px) {
+  /* Los hallazgos pasan a una fila completa para no dejar el examen físico demasiado estrecho */
+  .evaluacion {
+    grid-template-columns: auto minmax(0, 1.5fr);
+    grid-template-areas:
+      'secciones examen'
+      'hallazgos hallazgos';
+  }
+
+  /* Sin panel de hallazgos solo queda la fila de las secciones y el área central */
+  .evaluacion--sin-hallazgos {
+    grid-template-areas: 'secciones examen';
+  }
+}
+
+@media (max-width: 900px) {
+  /* Una sola columna: cada bloque en su propia fila. El bloque de datos conserva el ancho de su
+     pestaña para que esta siga siendo visible y se apoye en el borde izquierdo de la pantalla. */
+  .evaluacion {
+    --ficha-ancho: calc(100% - 40px);
+
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      'secciones'
+      'examen'
+      'hallazgos';
+    padding: 1rem;
+  }
+
+  /* Los bloques cubren casi toda la pantalla, así que no hace falta reservarles espacio extra */
+  .evaluacion--ficha-abierta,
+  .evaluacion--datos-paciente {
+    padding-right: 1rem;
+  }
+
+  /* Sin panel de hallazgos no hay fila que conservar */
+  .evaluacion--sin-hallazgos {
+    grid-template-areas:
+      'secciones'
+      'examen';
+  }
+}
+

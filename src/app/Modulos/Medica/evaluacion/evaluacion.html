@@ -1,0 +1,267 @@
+<!-- Evaluación clínica: secciones del episodio (historia clínica, examen físico y diagnóstico) -->
+<div
+  class="evaluacion"
+  [class.evaluacion--ficha-abierta]="pacienteAbierto"
+  [class.evaluacion--datos-paciente]="seccionConDatosPaciente"
+  [class.evaluacion--sin-hallazgos]="!mostrarHallazgos"
+>
+  <!-- Pestaña lateral: abre y cierra la ficha del paciente -->
+  <button
+    type="button"
+    class="ficha-pestana"
+    [class.ficha-pestana--abierta]="pacienteAbierto"
+    [attr.aria-expanded]="pacienteAbierto"
+    [attr.aria-controls]="pacienteAbierto ? 'fichaPaciente' : null"
+    [attr.title]="pacienteAbierto ? 'Ocultar datos del paciente' : 'Ver datos del paciente'"
+    (click)="alternarDatosPaciente()"
+  >
+    <i
+      class="bi"
+      [class.bi-chevron-left]="!pacienteAbierto"
+      [class.bi-chevron-right]="pacienteAbierto"
+      aria-hidden="true"
+    ></i>
+
+    @if (!pacienteAbierto) {
+      <span class="ficha-pestana_texto">Ver datos del paciente</span>
+    }
+  </button>
+
+  <!-- Ficha del paciente: bloque pegado al borde derecho de la pantalla -->
+  @if (pacienteAbierto) {
+    <aside class="ficha" id="fichaPaciente">
+      <header class="ficha-encabezado">
+        <h3 class="ficha-titulo">Información del paciente</h3>
+
+        <button
+          type="button"
+          class="ficha-plegar"
+          [attr.aria-expanded]="datosPacienteVisibles"
+          aria-controls="fichaCuerpo"
+          [attr.aria-label]="
+            datosPacienteVisibles ? 'Ocultar datos del paciente' : 'Mostrar datos del paciente'
+          "
+          (click)="alternarCuerpoFicha()"
+        >
+          <i
+            class="bi"
+            [class.bi-chevron-down]="datosPacienteVisibles"
+            [class.bi-chevron-up]="!datosPacienteVisibles"
+            aria-hidden="true"
+          ></i>
+        </button>
+      </header>
+
+      <!-- Cuerpo de la ficha: MOCK de diseño -->
+      <div
+        class="ficha-cuerpo"
+        id="fichaCuerpo"
+        [class.ficha-cuerpo--plegado]="!datosPacienteVisibles"
+      >
+        <!-- Datos del paciente -->
+        <h4 class="ficha-subtitulo">Datos del paciente</h4>
+
+        <dl class="ficha-datos">
+          @for (dato of datosPaciente; track dato.etiqueta) {
+            <div class="ficha-dato">
+              <dt class="ficha-campo_etiqueta">{{ dato.etiqueta }}</dt>
+              <dd class="ficha-campo_valor">{{ dato.valor }}</dd>
+            </div>
+          }
+        </dl>
+
+        <!-- Información de la atención -->
+        <h4 class="ficha-subtitulo">Información de la atención</h4>
+
+        <dl class="ficha-atencion">
+          @for (dato of atencionPaciente; track dato.etiqueta) {
+            <div class="ficha-atencion_dato">
+              <dt class="ficha-campo_etiqueta">{{ dato.etiqueta }}</dt>
+              <dd class="ficha-campo_valor">{{ dato.valor }}</dd>
+            </div>
+          }
+        </dl>
+
+        <!-- Motivo de atención -->
+        <h4 class="ficha-subtitulo">Motivo de atención</h4>
+        <p class="motivo-card">{{ motivoAtencion }}</p>
+
+        <!-- Alergias -->
+        <h4 class="ficha-subtitulo">Alergias</h4>
+
+        @if (alergias.length === 0) {
+          <p class="alergias-card">Ninguna conocida</p>
+        } @else {
+          <ul class="alergias-card">
+            @for (alergia of alergias; track alergia) {
+              <li>{{ alergia }}</li>
+            }
+          </ul>
+        }
+
+        <!-- Últimos signos vitales -->
+        <h4 class="ficha-subtitulo">Últimos signos vitales</h4>
+
+        <ul class="ficha-vitales">
+          @for (signo of signosVitales; track signo) {
+            <li>{{ signo }}</li>
+          }
+        </ul>
+      </div>
+    </aside>
+  }
+
+  <!-- Secciones de la evaluación -->
+  <section class="panel panel-secciones" [class.panel-secciones--rail]="pacienteAbierto">
+    <h3 class="panel-titulo" [class.visualmente-oculto]="pacienteAbierto">Secciones</h3>
+
+    @for (seccion of secciones; track seccion.id) {
+      <button
+        type="button"
+        class="tarjeta"
+        [class.tarjeta--activa]="seccionActiva === seccion.id"
+        [attr.aria-pressed]="seccionActiva === seccion.id"
+        [attr.title]="pacienteAbierto ? seccion.titulo : null"
+        [attr.aria-label]="pacienteAbierto ? seccion.titulo : null"
+        (click)="seleccionarSeccion(seccion.id)"
+      >
+        <span class="tarjeta_icono"><i class="bi {{ seccion.icono }}" aria-hidden="true"></i></span>
+        <span class="tarjeta_texto">
+          <span class="tarjeta_titulo">{{ seccion.titulo }}</span>
+          <span class="tarjeta_descripcion">{{ seccion.descripcion }}</span>
+        </span>
+      </button>
+    }
+  </section>
+
+  <!-- Contenido de la sección activa: cada tarjeta del panel de secciones muestra su panel -->
+  @switch (seccionActiva) {
+    @case ('historia-clinica') {
+      <app-historia-clinica class="panel-seccion" />
+    }
+
+    @case ('diagnostico') {
+      <app-diagnostico class="panel-seccion" />
+    }
+
+    @default {
+      <!-- Examen físico -->
+      <section class="panel panel-seccion">
+        <h3 class="panel-titulo examen-titulo">Examen físico</h3>
+        <p class="examen-ayuda">Seleccione la parte del cuerpo para registrar los hallazgos.</p>
+
+        <!-- Sistemas del examen físico -->
+        <div class="sistemas" role="group" aria-label="Sistemas del examen físico">
+          @for (sistema of sistemas; track sistema.id) {
+            <button
+              type="button"
+              class="sistema-chip"
+              [class.sistema-chip--activo]="sistemaSeleccionado === sistema.id"
+              [attr.aria-pressed]="sistemaSeleccionado === sistema.id"
+              (click)="seleccionarSistema(sistema.id)"
+            >
+              {{ sistema.nombre }}
+            </button>
+          }
+        </div>
+
+        <!-- Captura de hallazgos -->
+        <form class="hallazgo-form" (ngSubmit)="guardarHallazgo()">
+          <label class="hallazgo-label" for="hallazgoActual">Hallazgos</label>
+
+          <textarea
+            id="hallazgoActual"
+            name="hallazgoActual"
+            class="hallazgo-campo"
+            [(ngModel)]="hallazgoActual"
+            [maxlength]="maxCaracteres"
+            placeholder="Describe los hallazgos encontrados en el sistema seleccionado..."
+          ></textarea>
+
+          <span class="contador-caracteres">{{ hallazgoActual.length }}/{{ maxCaracteres }}</span>
+
+          <div class="acciones-formulario hallazgo-acciones">
+            <button type="button" class="btn _cancelar" (click)="cancelarCaptura()">
+              Cancelar
+            </button>
+            <button type="submit" class="btn _guardar">Guardar</button>
+          </div>
+        </form>
+      </section>
+    }
+  }
+
+  <!-- Datos del paciente: en las secciones de historia clínica y diagnóstico el bloque se muestra
+       siempre desplegado, pegado al borde derecho de la pantalla -->
+  @if (seccionConDatosPaciente) {
+    <app-datos-paciente></app-datos-paciente>
+  }
+
+  <!-- Hallazgos registrados: solo el examen físico los registra -->
+  @if (mostrarHallazgos) {
+    <section class="panel panel-hallazgos">
+      <h3 class="panel-titulo">Hallazgos registrados</h3>
+
+      @for (hallazgo of hallazgos; track hallazgo.id) {
+        <article class="hallazgo-card">
+          <header class="hallazgo-encabezado">
+            <span class="hallazgo-avatar">
+              <i class="bi {{ hallazgo.icono }}" aria-hidden="true"></i>
+            </span>
+            <span class="hallazgo-sistema">{{ hallazgo.sistema }}</span>
+          </header>
+
+          <p class="hallazgo-descripcion">{{ hallazgo.descripcion }}</p>
+
+          <footer class="hallazgo-meta">
+            <span><i class="bi bi-calendar3" aria-hidden="true"></i>{{ hallazgo.fecha }}</span>
+            <span><i class="bi bi-clock" aria-hidden="true"></i>{{ hallazgo.hora }}</span>
+            <span><i class="bi bi-person" aria-hidden="true"></i>{{ hallazgo.medico }}</span>
+          </footer>
+        </article>
+      }
+
+      <!-- Estado de carga -->
+      @if (cargandoHallazgos) {
+        <div
+          class="hallazgo-card hallazgo-card--cargando"
+          role="status"
+          aria-label="Cargando hallazgos registrados"
+        >
+          <div class="skeleton-encabezado">
+            <span class="skeleton-avatar">
+              <i class="bi bi-clipboard2-pulse" aria-hidden="true"></i>
+            </span>
+            <div class="skeleton-lineas">
+              <span class="skeleton-linea"></span>
+              <span class="skeleton-linea skeleton-linea--media"></span>
+            </div>
+          </div>
+
+          <span class="skeleton-linea"></span>
+
+          <div class="skeleton-meta">
+            <span class="skeleton-meta-item">
+              <i class="bi bi-calendar3" aria-hidden="true"></i>
+              <span class="skeleton-linea"></span>
+            </span>
+            <span class="skeleton-meta-item">
+              <i class="bi bi-clock" aria-hidden="true"></i>
+              <span class="skeleton-linea"></span>
+            </span>
+            <span class="skeleton-meta-item">
+              <i class="bi bi-person" aria-hidden="true"></i>
+              <span class="skeleton-linea"></span>
+            </span>
+          </div>
+        </div>
+      }
+
+      <!-- Estado vacío -->
+      @if (!cargandoHallazgos && hallazgos.length === 0) {
+        <p class="hallazgos-vacio">Aún no hay hallazgos registrados para el paciente.</p>
+      }
+    </section>
+  }
+</div>
+

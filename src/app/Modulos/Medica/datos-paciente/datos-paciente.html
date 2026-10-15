@@ -1,0 +1,54 @@
+<!-- Datos del paciente: bloque siempre desplegado y pegado al borde derecho de la pantalla -->
+<aside class="ficha" aria-labelledby="tituloFichaPaciente">
+  <h3 class="ficha-titulo" id="tituloFichaPaciente">Información del paciente</h3>
+
+  <!-- Datos del paciente -->
+  <h4 class="ficha-subtitulo">Datos del paciente</h4>
+
+  <dl class="ficha-datos">
+    @for (dato of datosPaciente; track dato.etiqueta) {
+      <div class="ficha-dato">
+        <dt class="ficha-campo_etiqueta">{{ dato.etiqueta }}</dt>
+        <dd class="ficha-campo_valor">{{ dato.valor }}</dd>
+      </div>
+    }
+  </dl>
+
+  <!-- Información de la atención -->
+  <h4 class="ficha-subtitulo">Información de la atención</h4>
+
+  <dl class="ficha-atencion">
+    @for (dato of atencionPaciente; track dato.etiqueta) {
+      <div class="ficha-atencion_dato">
+        <dt class="ficha-campo_etiqueta">{{ dato.etiqueta }}</dt>
+        <dd class="ficha-campo_valor">{{ dato.valor }}</dd>
+      </div>
+    }
+  </dl>
+
+  <!-- Motivo de atención -->
+  <h4 class="ficha-subtitulo">Motivo de atención</h4>
+  <p class="motivo-card">{{ motivoAtencion }}</p>
+
+  <!-- Alergias -->
+  <h4 class="ficha-subtitulo">Alergias</h4>
+
+  @if (alergias.length === 0) {
+    <p class="alergias-card">Ninguna conocida</p>
+  } @else {
+    <ul class="alergias-card">
+      @for (alergia of alergias; track alergia) {
+        <li>{{ alergia }}</li>
+      }
+    </ul>
+  }
+
+  <!-- Últimos signos vitales -->
+  <h4 class="ficha-subtitulo">Últimos signos vitales</h4>
+
+  <ul class="ficha-vitales">
+    @for (signo of signosVitales; track signo) {
+      <li>{{ signo }}</li>
+    }
+  </ul>
+</aside>

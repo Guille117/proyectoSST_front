@@ -83,6 +83,14 @@
     color: #fff;
 }
 
+/* Fila de acciones de formularios y paneles: los botones quedan juntos y alineados a la derecha */
+.acciones-formulario {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.75rem;
+}
+
 .iconEditar {
 	display: grid;
 	width: 40px;
