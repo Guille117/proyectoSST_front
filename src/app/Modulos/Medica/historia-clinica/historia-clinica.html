@@ -16,8 +16,19 @@
     ></textarea>
 
     <!-- Acciones del cuadro: sin historia registrada se captura directamente, por lo que "Editar"
-         solo aparece cuando ya existe un registro que habilitar -->
+         solo aparece cuando ya existe un registro que habilitar y "Cancelar" solo mientras se edita
+         ese registro registrado, para descartar los cambios y volver al estado inicial -->
     <div class="acciones-formulario historia-acciones">
+      @if (modoEdicion && idHistoriaActual !== null) {
+        <button
+          type="button"
+          class="btn _cancelar"
+          [disabled]="cargando || guardando"
+          (click)="cancelarEdicion()"
+        >
+          Cancelar
+        </button>
+      }
       @if (!modoEdicion) {
         <button
           type="button"

@@ -44,6 +44,9 @@ export class HistoriaClinica implements OnInit, OnDestroy {
   /** Descripción de la historia clínica registrada del episodio. */
   historiaClinica = '';
 
+  /** Descripción registrada de la historia: es el estado al que vuelve "Cancelar". */
+  private historiaOriginal = '';
+
   /** Identificador de la historia vigente; mientras sea nulo el guardado crea un registro nuevo. */
   idHistoriaActual: number | null = null;
 
@@ -82,6 +85,7 @@ export class HistoriaClinica implements OnInit, OnDestroy {
           const ultima = historias.length ? historias[historias.length - 1] : null;
           this.idHistoriaActual = ultima?.id ?? null;
           this.historiaClinica = ultima?.descripcion ?? '';
+          this.historiaOriginal = ultima?.descripcion ?? '';
           // Sin historia registrada no hay nada que habilitar: el cuadro arranca editable para
           // capturarla y la plantilla oculta "Editar" mientras se escribe sobre un registro nuevo.
           this.modoEdicion = ultima === null;
@@ -90,6 +94,7 @@ export class HistoriaClinica implements OnInit, OnDestroy {
           if (this.destruido) return;
           this.idHistoriaActual = null;
           this.historiaClinica = '';
+          this.historiaOriginal = '';
           this.mostrarError(error, 'No se pudo cargar la historia clínica. Intente nuevamente.');
         },
       });
@@ -100,6 +105,15 @@ export class HistoriaClinica implements OnInit, OnDestroy {
   activarEdicion(): void {
     if (this.cargando || this.guardando) return;
     this.modoEdicion = true;
+  }
+
+  /** Descarta la edición en curso y regresa al estado inicial de la historia registrada. */
+  cancelarEdicion(): void {
+    if (this.cargando || this.guardando) return;
+
+    this.historiaClinica = this.historiaOriginal;
+    // Igual que al cargar: sin historia registrada el cuadro queda editable para capturarla.
+    this.modoEdicion = this.idHistoriaActual === null;
   }
 
   /** Crea o actualiza la historia clínica del episodio según exista un registro vigente. */
@@ -146,6 +160,7 @@ export class HistoriaClinica implements OnInit, OnDestroy {
           if (this.destruido) return;
           this.idHistoriaActual = respuesta.id;
           this.historiaClinica = respuesta.descripcion;
+          this.historiaOriginal = respuesta.descripcion;
           this.modoEdicion = false;
           this.popUps.exito(
             id === null

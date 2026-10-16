@@ -23,19 +23,9 @@
               type="text"
               placeholder="Escribe el diagnóstico..."
               aria-required="true"
+              [readonly]="cargando || guardando"
               [(ngModel)]="diagnostico"
-              (keyup.enter)="buscarDiagnostico()"
             />
-
-            <button
-              class="btnLupa"
-              type="button"
-              title="Buscar en el catálogo de diagnósticos"
-              aria-label="Buscar en el catálogo de diagnósticos"
-              (click)="buscarDiagnostico()"
-            >
-              <i class="bi bi-search fs-5" aria-hidden="true"></i>
-            </button>
           </div>
         </div>
       </div>
@@ -46,12 +36,13 @@
         </span>
 
         <div class="tipo-opciones" role="group" aria-labelledby="etiquetaTipoDiagnostico">
-          @for (tipo of tiposDiagnostico; track tipo.id) {
+          @for (tipo of tiposDiagnostico; track tipo.valor) {
             <button
               type="button"
               class="tipo-opcion"
-              [class.tipo-opcion--activo]="tipoSeleccionado.id === tipo.id"
-              [attr.aria-pressed]="tipoSeleccionado.id === tipo.id"
+              [class.tipo-opcion--activo]="tipoSeleccionado === tipo.valor"
+              [attr.aria-pressed]="tipoSeleccionado === tipo.valor"
+              [disabled]="cargando || guardando"
               (click)="seleccionarTipo(tipo)"
             >
               {{ tipo.nombre }}
@@ -61,13 +52,9 @@
       </div>
     </div>
 
-    <!-- Diagnósticos adicionales: MOCK de diseño -->
+    <!-- Diagnósticos registrados en el episodio -->
     <div class="adicionales-encabezado">
-      <h4 class="adicionales-titulo">Diagnósticos adicionales</h4>
-
-      <button type="button" class="btn _principal" (click)="agregarDiagnostico()">
-        Agregar diagnóstico
-      </button>
+      <h4 class="adicionales-titulo">Diagnósticos registrados</h4>
     </div>
 
     <div class="tabla-container">
@@ -81,40 +68,48 @@
         </thead>
 
         <tbody>
-          @for (adicional of diagnosticosAdicionales; track adicional.id) {
-            <tr [class.selected-row]="diagnosticoEnEdicion === adicional.id">
-              <td class="celda_izquierda">{{ adicional.tipo.nombre }}</td>
-              <td class="celda_izquierda">{{ adicional.descripcion }}</td>
-              <td class="celda_centrada">
-                <div class="acciones-fila">
-                  <button
-                    type="button"
-                    class="iconEditar"
-                    title="Editar diagnóstico"
-                    aria-label="Editar el diagnóstico {{ adicional.descripcion }}"
-                    (click)="editarDiagnostico(adicional)"
-                  >
-                    <i class="bi bi-pencil-square" aria-hidden="true"></i>
-                  </button>
-
-                  <button
-                    type="button"
-                    class="iconQuitar"
-                    title="Eliminar diagnóstico"
-                    aria-label="Eliminar el diagnóstico {{ adicional.descripcion }}"
-                    (click)="eliminarDiagnostico(adicional)"
-                  >
-                    <i class="bi bi-trash3" aria-hidden="true"></i>
-                  </button>
-                </div>
-              </td>
-            </tr>
-          } @empty {
+          @if (cargando) {
             <tr>
-              <td colspan="3" class="celda_centrada tabla-vacia">
-                Aún no hay diagnósticos adicionales registrados.
-              </td>
+              <td colspan="3" class="celda_centrada tabla-vacia">Cargando diagnósticos...</td>
             </tr>
+          } @else {
+            @for (adicional of diagnosticos; track adicional.id) {
+              <tr [class.selected-row]="diagnosticoEnEdicion === adicional.id">
+                <td class="celda_izquierda">{{ nombreTipo(adicional.tipoDiagnostico) }}</td>
+                <td class="celda_izquierda">{{ adicional.descripcion }}</td>
+                <td class="celda_centrada">
+                  <div class="acciones-fila">
+                    <button
+                      type="button"
+                      class="iconEditar"
+                      title="Editar diagnóstico"
+                      aria-label="Editar el diagnóstico {{ adicional.descripcion }}"
+                      [disabled]="cargando || guardando"
+                      (click)="editarDiagnostico(adicional)"
+                    >
+                      <i class="bi bi-pencil-square" aria-hidden="true"></i>
+                    </button>
+
+                    <button
+                      type="button"
+                      class="iconQuitar"
+                      title="Eliminar diagnóstico"
+                      aria-label="Eliminar el diagnóstico {{ adicional.descripcion }}"
+                      [disabled]="cargando || guardando"
+                      (click)="eliminarDiagnostico(adicional)"
+                    >
+                      <i class="bi bi-trash3" aria-hidden="true"></i>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="3" class="celda_centrada tabla-vacia">
+                  Aún no hay diagnósticos registrados.
+                </td>
+              </tr>
+            }
           }
         </tbody>
       </table>
@@ -122,8 +117,21 @@
 
     <!-- Acciones del formulario -->
     <div class="acciones-formulario diagnostico-acciones">
-      <button type="button" class="btn _cancelar" (click)="cancelarCaptura()">Cancelar</button>
-      <button type="submit" class="btn _guardar" [disabled]="!hayDiagnostico">Guardar</button>
+      <button
+        type="button"
+        class="btn _cancelar"
+        [disabled]="cargando || guardando"
+        (click)="cancelarCaptura()"
+      >
+        Cancelar
+      </button>
+      <button
+        type="submit"
+        class="btn _guardar"
+        [disabled]="!hayDiagnostico || cargando || guardando"
+      >
+        Guardar
+      </button>
     </div>
   </form>
 </section>

@@ -1,29 +1,78 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { of, throwError } from 'rxjs';
 
 import { Diagnostico } from './diagnostico';
+import { AuthService } from '../../Auth/data/auth-service';
 import { PopUps } from '../../../shared/popUps/popUpsService';
+import { DiagnosticoService } from '../evaluacion/data/diagnostico-service';
+import { DiagnosticoResponse } from '../evaluacion/data/diagnosticoInterfaz';
 
 describe('Diagnostico', () => {
   let component: Diagnostico;
   let fixture: ComponentFixture<Diagnostico>;
+
+  const principal: DiagnosticoResponse = {
+    id: 30,
+    tipoDiagnostico: 'PRINCIPAL',
+    descripcion: 'Neumonía leve',
+    episodioId: 1,
+    usuarioId: 2,
+    usuarioNombre: 'Carlos Méndez',
+    fecha: '2026-10-16T11:00:00',
+    estado: true,
+  };
+
+  const adicional: DiagnosticoResponse = {
+    id: 31,
+    tipoDiagnostico: 'ASOCIADO',
+    descripcion: 'Hipertensión arterial',
+    episodioId: 1,
+    usuarioId: 2,
+    usuarioNombre: 'Carlos Méndez',
+    fecha: '2026-10-16T11:00:00',
+    estado: true,
+  };
+
+  const servicio = {
+    getDiagnosticosPorEpisodio: vi.fn(),
+    postDiagnostico: vi.fn(),
+    putDiagnostico: vi.fn(),
+    cambiarEstado: vi.fn(),
+  };
+
+  const auth = {
+    currentUser: () => ({ id: 2 }),
+  };
+
   const popUps = {
+    exito: vi.fn(),
+    error: vi.fn(),
+    errorDesdeBackend: vi.fn(),
     confirmarToast: vi.fn(),
   };
 
   beforeEach(async () => {
     vi.resetAllMocks();
+    servicio.getDiagnosticosPorEpisodio.mockReturnValue(of([]));
     popUps.confirmarToast.mockResolvedValue(true);
 
     await TestBed.configureTestingModule({
       imports: [Diagnostico],
-      providers: [{ provide: PopUps, useValue: popUps }],
+      providers: [
+        { provide: DiagnosticoService, useValue: servicio },
+        { provide: AuthService, useValue: auth },
+        { provide: PopUps, useValue: popUps },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(Diagnostico);
     component = fixture.componentInstance;
+  });
+
+  const inicializar = async (): Promise<void> => {
     fixture.detectChanges();
     await fixture.whenStable();
-  });
+  };
 
   const elementos = <T extends Element>(selector: string): NodeListOf<T> =>
     fixture.nativeElement.querySelectorAll(selector);
@@ -31,132 +80,127 @@ describe('Diagnostico', () => {
   const elemento = <T extends Element>(selector: string): T =>
     fixture.nativeElement.querySelector(selector);
 
-  // Selectores semánticos: los botones usan las clases globales de src/styles/botonesStyle.scss
   const campo = (): HTMLInputElement => elemento<HTMLInputElement>('#diagnostico');
-  const botonAgregar = (): HTMLButtonElement =>
-    elemento<HTMLButtonElement>('.adicionales-encabezado button');
-  const botonGuardar = (): HTMLButtonElement =>
-    elemento<HTMLButtonElement>('.diagnostico-acciones button[type="submit"]');
   const filas = (): NodeListOf<HTMLTableRowElement> => elementos<HTMLTableRowElement>('tbody tr');
 
-  const escribir = async (descripcion: string): Promise<void> => {
-    campo().value = descripcion;
-    campo().dispatchEvent(new Event('input'));
-    await fixture.whenStable();
-  };
-
-  it('should create', () => {
+  it('should create', async () => {
+    await inicializar();
     expect(component).toBeTruthy();
   });
 
-  it('ubica las acciones del formulario en la fila compartida y con los estilos globales', () => {
-    const acciones = elemento<HTMLElement>('.diagnostico-acciones');
+  it('lista todos los diagnósticos del episodio, incluido el principal', async () => {
+    servicio.getDiagnosticosPorEpisodio.mockReturnValue(of([principal, adicional]));
 
-    expect(acciones.classList.contains('acciones-formulario')).toBe(true);
-    expect(botonGuardar().classList.contains('_guardar')).toBe(true);
-  });
+    await inicializar();
 
-  it('abre la pantalla con el tipo Principal seleccionado y los adicionales registrados', () => {
-    expect(campo().value).toBe(component.diagnostico);
-    expect(component.tipoSeleccionado.id).toBe('principal');
-    expect(elementos<HTMLButtonElement>('.tipo-opcion').length).toBe(3);
-    expect(elemento<HTMLButtonElement>('.tipo-opcion--activo').textContent).toContain('Principal');
-
+    expect(servicio.getDiagnosticosPorEpisodio).toHaveBeenCalledWith(1, true);
     expect(filas().length).toBe(2);
-    expect(filas()[0].textContent).toContain('Secundario');
-    expect(filas()[0].textContent).toContain('Deshidratación leve');
+    expect(filas()[0].textContent).toContain('Principal');
+    expect(filas()[0].textContent).toContain('Neumonía leve');
+    expect(filas()[1].textContent).toContain('Asociado');
+    expect(campo().value).toBe('');
   });
 
-  it('agrega el diagnóstico escrito con el tipo seleccionado', async () => {
-    await escribir('Deshidratación moderada');
+  it('crea el diagnóstico con el tipo seleccionado y limpia el formulario', async () => {
+    const nuevo: DiagnosticoResponse = { ...adicional, id: 40, descripcion: 'Faringitis' };
+    servicio.postDiagnostico.mockReturnValue(of(nuevo));
+    await inicializar();
 
-    elementos<HTMLButtonElement>('.tipo-opcion')[1].click();
+    component.diagnostico = 'Faringitis';
+    component.seleccionarTipo({ valor: 'ASOCIADO', nombre: 'Asociado' });
+    component.guardarDiagnostico();
     await fixture.whenStable();
 
-    botonAgregar().click();
-    await fixture.whenStable();
-
-    expect(filas().length).toBe(3);
-    expect(filas()[2].textContent).toContain('Secundario');
-    expect(filas()[2].textContent).toContain('Deshidratación moderada');
+    expect(servicio.postDiagnostico).toHaveBeenCalledWith({
+      tipoDiagnostico: 'ASOCIADO',
+      descripcion: 'Faringitis',
+      episodioId: 1,
+      usuarioId: 2,
+    });
+    expect(component.diagnosticos.length).toBe(1);
     expect(component.diagnostico).toBe('');
-    expect(campo().value).toBe('');
-  });
-
-  it('no agrega nada cuando el campo está vacío', async () => {
-    await escribir('   ');
-
-    botonAgregar().click();
-    await fixture.whenStable();
-
-    expect(filas().length).toBe(2);
-    expect(component.diagnostico).toBe('   ');
-  });
-
-  it('carga la fila elegida en el formulario y la reemplaza al agregarla', async () => {
-    elementos<HTMLButtonElement>('tbody .iconEditar')[1].click();
-    await fixture.whenStable();
-
-    expect(component.diagnosticoEnEdicion).toBe(2);
-    expect(campo().value).toBe('Hipertensión arterial');
-    expect(component.tipoSeleccionado.id).toBe('asociado');
-    expect(filas()[1].classList.contains('selected-row')).toBe(true);
-
-    await escribir('Hipertensión arterial en control');
-
-    botonAgregar().click();
-    await fixture.whenStable();
-
-    expect(filas().length).toBe(2);
-    expect(filas()[1].textContent).toContain('Hipertensión arterial en control');
-    expect(filas()[1].classList.contains('selected-row')).toBe(false);
+    expect(component.tipoSeleccionado).toBe('PRINCIPAL');
     expect(component.diagnosticoEnEdicion).toBeNull();
+    expect(popUps.exito).toHaveBeenCalled();
   });
 
-  it('elimina el diagnóstico adicional confirmado', async () => {
-    elementos<HTMLButtonElement>('tbody .iconQuitar')[0].click();
-    await fixture.whenStable();
-
-    expect(popUps.confirmarToast).toHaveBeenCalledWith(
-      expect.stringContaining('Deshidratación leve'),
+  it('actualiza con PUT la fila en edición', async () => {
+    servicio.getDiagnosticosPorEpisodio.mockReturnValue(of([principal]));
+    servicio.putDiagnostico.mockReturnValue(
+      of({ ...principal, descripcion: 'Neumonía confirmada' }),
     );
-    expect(filas().length).toBe(1);
-    expect(filas()[0].textContent).toContain('Hipertensión arterial');
-  });
+    await inicializar();
 
-  it('conserva el diagnóstico adicional si la confirmación se cancela', async () => {
-    popUps.confirmarToast.mockResolvedValue(false);
+    component.editarDiagnostico(principal);
+    expect(component.diagnosticoEnEdicion).toBe(30);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(campo().value).toBe('Neumonía leve');
 
-    elementos<HTMLButtonElement>('tbody .iconQuitar')[0].click();
+    component.diagnostico = 'Neumonía confirmada';
+    component.guardarDiagnostico();
     await fixture.whenStable();
 
-    expect(filas().length).toBe(2);
-  });
-
-  it('deshabilita Guardar y muestra el estado vacío cuando no queda ningún diagnóstico', async () => {
-    for (let indice = 0; indice < 2; indice++) {
-      elementos<HTMLButtonElement>('tbody .iconQuitar')[0].click();
-      await fixture.whenStable();
-    }
-
-    await escribir('   ');
-
-    expect(filas().length).toBe(1);
-    expect(elemento<HTMLElement>('.tabla-vacia').textContent).toContain('Aún no hay diagnósticos');
-    expect(component.hayDiagnostico).toBe(false);
-    expect(botonGuardar().disabled).toBe(true);
-  });
-
-  it('cancela la captura y deja el formulario listo para un diagnóstico nuevo', async () => {
-    elementos<HTMLButtonElement>('tbody .iconEditar')[0].click();
-    await fixture.whenStable();
-
-    elemento<HTMLButtonElement>('.diagnostico-acciones button[type="button"]').click();
-    await fixture.whenStable();
-
-    expect(campo().value).toBe('');
-    expect(component.tipoSeleccionado.id).toBe('principal');
+    expect(servicio.putDiagnostico).toHaveBeenCalledWith(30, {
+      tipoDiagnostico: 'PRINCIPAL',
+      descripcion: 'Neumonía confirmada',
+      episodioId: 1,
+      usuarioId: 2,
+    });
+    expect(component.diagnosticos[0].descripcion).toBe('Neumonía confirmada');
     expect(component.diagnosticoEnEdicion).toBeNull();
-    expect(filas().length).toBe(2);
+  });
+
+  it('elimina el diagnóstico confirmado, lo quita de la lista y limpia el formulario', async () => {
+    servicio.getDiagnosticosPorEpisodio.mockReturnValue(of([principal, adicional]));
+    servicio.cambiarEstado.mockReturnValue(of({ ...adicional, estado: false }));
+    await inicializar();
+
+    // La captura se escribe en el campo para comprobar al final que el formulario queda realmente vacío.
+    const entrada = campo();
+    entrada.value = 'texto en captura';
+    entrada.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    expect(component.diagnostico).toBe('texto en captura');
+
+    await component.eliminarDiagnostico(adicional);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(popUps.confirmarToast).toHaveBeenCalledWith(expect.stringContaining('Hipertensión'));
+    expect(servicio.cambiarEstado).toHaveBeenCalledWith(31);
+    expect(component.diagnosticos.length).toBe(1);
+    expect(component.diagnostico).toBe('');
+    expect(component.tipoSeleccionado).toBe('PRINCIPAL');
+    expect(campo().value).toBe('');
+  });
+
+  it('conserva el diagnóstico si la confirmación se cancela', async () => {
+    servicio.getDiagnosticosPorEpisodio.mockReturnValue(of([principal, adicional]));
+    popUps.confirmarToast.mockResolvedValue(false);
+    await inicializar();
+
+    await component.eliminarDiagnostico(adicional);
+
+    expect(servicio.cambiarEstado).not.toHaveBeenCalled();
+    expect(component.diagnosticos.length).toBe(2);
+  });
+
+  it('avisa del error del backend al cargar', async () => {
+    servicio.getDiagnosticosPorEpisodio.mockReturnValue(throwError(() => new Error('fallo')));
+
+    await inicializar();
+
+    expect(popUps.errorDesdeBackend).toHaveBeenCalled();
+  });
+
+  it('exige descripción al guardar', async () => {
+    await inicializar();
+
+    component.diagnostico = '   ';
+    component.guardarDiagnostico();
+
+    expect(servicio.postDiagnostico).not.toHaveBeenCalled();
+    expect(popUps.error).toHaveBeenCalled();
   });
 });

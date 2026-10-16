@@ -43,21 +43,10 @@
   font-weight: 800;
 }
 
-/* Buscador: el estilo vive en src/styles/otrosStyle.scss, aquí solo se fija su altura y sus anchos */
+/* Campo del diagnóstico: el estilo del buscador vive en src/styles/otrosStyle.scss, aquí solo se
+   fija su altura */
 .buscador-container {
   height: 45px;
-}
-
-.buscador {
-  .inputB {
-    min-width: 0;
-    width: 0;
-  }
-
-  .btnLupa {
-    flex: 0 0 40px;
-    width: 40px;
-  }
 }
 
 /* ==================== TIPO DE DIAGNÓSTICO ==================== */

@@ -1,22 +1,25 @@
-import { Component, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { finalize, Subscription, TimeoutError } from 'rxjs';
+import { AuthService } from '../../Auth/data/auth-service';
 import { PopUps } from '../../../shared/popUps/popUpsService';
+import { EPISODIO_ID_TEMPORAL } from '../evaluacion/data/constantes-clinicas';
+import { DiagnosticoService } from '../evaluacion/data/diagnostico-service';
+import {
+  DiagnosticoRequest,
+  DiagnosticoResponse,
+  TipoDiagnostico,
+} from '../evaluacion/data/diagnosticoInterfaz';
 
-/* Tipos locales de la maqueta: se sustituirán por el contrato real del backend en la fase de integración. */
+/** Opción visible del selector de tipo de diagnóstico. */
 interface TipoDiagnosticoVista {
-  id: string;
+  valor: TipoDiagnostico;
   nombre: string;
 }
 
-interface DiagnosticoAdicionalVista {
-  id: number;
-  tipo: TipoDiagnosticoVista;
-  descripcion: string;
-}
-
 /**
- * Diagnóstico del episodio: sección de Evaluación clínica con el registro del diagnóstico principal
- * y de los diagnósticos adicionales.
+ * Diagnóstico del episodio: sección de Evaluación clínica con el registro y el listado de los
+ * diagnósticos contra el backend.
  */
 @Component({
   selector: 'app-diagnostico',
@@ -24,128 +27,259 @@ interface DiagnosticoAdicionalVista {
   templateUrl: './diagnostico.html',
   styleUrl: './diagnostico.scss',
 })
-export class Diagnostico {
-  private readonly popUps = inject(PopUps);
+export class Diagnostico implements OnInit, OnDestroy {
+  private peticion?: Subscription;
+  private destruido = false;
+
+  /** TEMPORAL: episodio fijo mientras la pantalla no recibe un episodio real. */
+  private readonly episodioId = EPISODIO_ID_TEMPORAL;
+
+  constructor(
+    private diagnosticoService: DiagnosticoService,
+    private authService: AuthService,
+    private popUps: PopUps,
+    private cdr: ChangeDetectorRef,
+  ) {}
 
   // ------------------- ESTADO DE LA VISTA -------------------
-  /** Tipo que se aplicará al diagnóstico escrito en el campo. */
-  tipoSeleccionado: TipoDiagnosticoVista;
+  /** Límite de caracteres de la descripción aceptado por el backend. */
+  readonly maxCaracteres = 2000;
 
-  /** Fila del listado en edición; null cuando lo escrito se agregará como diagnóstico nuevo. */
-  diagnosticoEnEdicion: number | null = null;
+  /** Descripción que se registra o edita. */
+  diagnostico = '';
 
-  // ------------------- MOCK: datos temporales para diseño -------------------
-  /** MOCK: diagnóstico principal del episodio. Se sustituirá por los datos reales. */
-  diagnostico = 'Gastroenteritis aguda de probable origen infeccioso';
+  /** Tipo que se aplicará al diagnóstico que se registre o edite. */
+  tipoSeleccionado: TipoDiagnostico = 'PRINCIPAL';
 
   /** Tipos de diagnóstico que se pueden asignar. */
-  readonly tipoPrincipal: TipoDiagnosticoVista = { id: 'principal', nombre: 'Principal' };
-
-  tiposDiagnostico: TipoDiagnosticoVista[] = [
-    this.tipoPrincipal,
-    { id: 'secundario', nombre: 'Secundario' },
-    { id: 'asociado', nombre: 'Asociado' },
+  readonly tiposDiagnostico: TipoDiagnosticoVista[] = [
+    { valor: 'PRINCIPAL', nombre: 'Principal' },
+    { valor: 'PROVISIONAL', nombre: 'Provisional' },
+    { valor: 'ASOCIADO', nombre: 'Asociado' },
   ];
 
-  /** MOCK: diagnósticos adicionales registrados en el episodio. */
-  diagnosticosAdicionales: DiagnosticoAdicionalVista[] = [
-    {
-      id: 1,
-      tipo: { id: 'secundario', nombre: 'Secundario' },
-      descripcion: 'Deshidratación leve',
-    },
-    { id: 2, tipo: { id: 'asociado', nombre: 'Asociado' }, descripcion: 'Hipertensión arterial' },
-  ];
+  /** Diagnósticos vigentes del episodio registrados en el servidor. */
+  diagnosticos: DiagnosticoResponse[] = [];
 
-  // ------------------- FIN MOCK -------------------
+  /** Fila del listado en edición; null cuando lo escrito se registrará como diagnóstico nuevo. */
+  diagnosticoEnEdicion: number | null = null;
 
-  constructor() {
-    this.tipoSeleccionado = this.tipoPrincipal;
-  }
+  /** Identificadores de carga para bloquear acciones incompatibles y evitar doble clic. */
+  cargando = false;
+  guardando = false;
 
   // ------------------- CONSULTAS PARA LA VISTA -------------------
-  /** El botón Guardar solo se habilita cuando hay algo que registrar: lo escrito o los adicionales. */
+  /** El botón Guardar solo se habilita cuando hay algo que registrar. */
   get hayDiagnostico(): boolean {
-    return this.diagnostico.trim().length > 0 || this.diagnosticosAdicionales.length > 0;
+    return this.diagnostico.trim().length > 0;
+  }
+
+  /** Nombre legible del tipo de diagnóstico que pinta la tabla. */
+  nombreTipo(tipo: TipoDiagnostico): string {
+    return this.tiposDiagnostico.find((opcion) => opcion.valor === tipo)?.nombre ?? tipo;
+  }
+
+  // ------------------- CICLO DE VIDA -------------------
+  ngOnInit(): void {
+    this.cargarDiagnosticos();
+  }
+
+  ngOnDestroy(): void {
+    this.destruido = true;
+    this.peticion?.unsubscribe();
+  }
+
+  // ------------------- CONSULTAR -------------------
+  /** Carga los diagnósticos vigentes del episodio, del más reciente al más antiguo. */
+  cargarDiagnosticos(): void {
+    if (this.destruido) return;
+
+    this.cargando = true;
+    this.cdr.markForCheck();
+    this.peticion?.unsubscribe();
+    this.peticion = this.diagnosticoService
+      .getDiagnosticosPorEpisodio(this.episodioId, true)
+      .pipe(
+        finalize(() => {
+          this.cargando = false;
+          if (!this.destruido) this.cdr.markForCheck();
+        }),
+      )
+      .subscribe({
+        next: (diagnosticos) => {
+          if (this.destruido) return;
+
+          this.diagnosticos = diagnosticos;
+        },
+        error: (error) => {
+          if (this.destruido) return;
+
+          this.diagnosticos = [];
+          this.mostrarError(error, 'No se pudo cargar el diagnóstico. Intente nuevamente.');
+        },
+      });
   }
 
   // ------------------- ACCIONES DE LA VISTA -------------------
+  /** Selecciona el tipo que se aplicará al diagnóstico que se registre o edite. */
   seleccionarTipo(tipo: TipoDiagnosticoVista): void {
-    this.tipoSeleccionado = tipo;
+    if (this.cargando || this.guardando) return;
+
+    this.tipoSeleccionado = tipo.valor;
   }
 
-  // MOCK: la búsqueda en el catálogo de diagnósticos se conectará al backend en la fase de integración.
-  buscarDiagnostico(): void {}
+  /** Crea el diagnóstico con el tipo seleccionado o actualiza la fila en edición. */
+  guardarDiagnostico(): void {
+    if (this.destruido || this.cargando || this.guardando) return;
 
-  /**
-   * MOCK: agrega lo escrito al listado de diagnósticos adicionales. Si hay una fila en edición se
-   * reemplazan sus datos en lugar de agregar una nueva y, en ambos casos, el campo queda vacío para
-   * la siguiente captura.
-   */
-  agregarDiagnostico(): void {
     const descripcion = this.diagnostico.trim();
-
     if (!descripcion) {
+      this.popUps.error('La descripción del diagnóstico es obligatoria.');
+      return;
+    }
+    if (descripcion.length > this.maxCaracteres) {
+      this.popUps.error(`La descripción no puede superar los ${this.maxCaracteres} caracteres.`);
       return;
     }
 
-    if (this.diagnosticoEnEdicion !== null) {
-      const idEditado = this.diagnosticoEnEdicion;
-
-      this.diagnosticosAdicionales = this.diagnosticosAdicionales.map((adicional) =>
-        adicional.id === idEditado
-          ? { ...adicional, tipo: this.tipoSeleccionado, descripcion }
-          : adicional,
+    const usuarioId = this.authService.currentUser()?.id;
+    if (!usuarioId) {
+      this.popUps.error(
+        'No se pudo identificar al usuario de la sesión. Inicie sesión nuevamente.',
       );
-      this.diagnosticoEnEdicion = null;
-    } else {
-      const ultimoId = this.diagnosticosAdicionales.reduce(
-        (mayor, adicional) => Math.max(mayor, adicional.id),
-        0,
-      );
-
-      this.diagnosticosAdicionales = [
-        ...this.diagnosticosAdicionales,
-        { id: ultimoId + 1, tipo: this.tipoSeleccionado, descripcion },
-      ];
+      return;
     }
 
-    this.diagnostico = '';
+    const cuerpo: DiagnosticoRequest = {
+      tipoDiagnostico: this.tipoSeleccionado,
+      descripcion,
+      episodioId: this.episodioId,
+      usuarioId,
+    };
+    const idEditado = this.diagnosticoEnEdicion;
+
+    this.guardando = true;
+    this.cdr.markForCheck();
+    this.peticion?.unsubscribe();
+    this.peticion = (
+      idEditado === null
+        ? this.diagnosticoService.postDiagnostico(cuerpo)
+        : this.diagnosticoService.putDiagnostico(idEditado, cuerpo)
+    )
+      .pipe(
+        finalize(() => {
+          this.guardando = false;
+          if (!this.destruido) this.cdr.markForCheck();
+        }),
+      )
+      .subscribe({
+        next: (respuesta) => {
+          if (this.destruido) return;
+
+          this.guardarEnLista(respuesta);
+          this.limpiarFormulario();
+          this.popUps.exito(
+            idEditado === null
+              ? 'Diagnóstico guardado exitosamente.'
+              : 'Diagnóstico actualizado exitosamente.',
+          );
+        },
+        error: (error) => {
+          if (this.destruido) return;
+
+          this.mostrarError(error, 'No se pudo guardar el diagnóstico. Intente nuevamente.');
+        },
+      });
   }
 
   /** Carga la fila elegida en el formulario para corregirla. */
-  editarDiagnostico(adicional: DiagnosticoAdicionalVista): void {
+  editarDiagnostico(adicional: DiagnosticoResponse): void {
+    if (this.cargando || this.guardando) return;
+
     this.diagnosticoEnEdicion = adicional.id;
     this.diagnostico = adicional.descripcion;
-    this.tipoSeleccionado = adicional.tipo;
+    this.tipoSeleccionado = adicional.tipoDiagnostico;
   }
 
-  // MOCK: la eliminación se confirma con el popup global y solo quita la fila de la maqueta.
-  async eliminarDiagnostico(adicional: DiagnosticoAdicionalVista): Promise<void> {
+  /** Confirma y cambia el estado del diagnóstico para retirarlo del listado vigente. */
+  async eliminarDiagnostico(adicional: DiagnosticoResponse): Promise<void> {
+    if (this.destruido || this.cargando || this.guardando) return;
+
     const confirmado = await this.popUps
       .confirmarToast(`¿Está seguro de eliminar el diagnóstico "${adicional.descripcion}"?`)
       .catch(() => false);
 
-    if (!confirmado) {
+    if (!confirmado || this.destruido || this.cargando || this.guardando) {
       return;
     }
 
-    this.diagnosticosAdicionales = this.diagnosticosAdicionales.filter(
-      (registrado) => registrado.id !== adicional.id,
-    );
+    this.guardando = true;
+    this.cdr.markForCheck();
+    this.peticion?.unsubscribe();
+    this.peticion = this.diagnosticoService
+      .cambiarEstado(adicional.id)
+      .pipe(
+        finalize(() => {
+          this.guardando = false;
+          if (!this.destruido) this.cdr.markForCheck();
+        }),
+      )
+      .subscribe({
+        next: () => {
+          if (this.destruido) return;
 
-    if (this.diagnosticoEnEdicion === adicional.id) {
-      this.diagnosticoEnEdicion = null;
-    }
+          this.diagnosticos = this.diagnosticos.filter(
+            (registrado) => registrado.id !== adicional.id,
+          );
+          this.limpiarFormulario();
+          this.popUps.exito('Diagnóstico eliminado exitosamente.');
+        },
+        error: (error) => {
+          if (this.destruido) return;
+
+          this.mostrarError(error, 'No se pudo eliminar el diagnóstico. Intente nuevamente.');
+        },
+      });
   }
 
   /** Deja el formulario listo para capturar un diagnóstico nuevo. */
   cancelarCaptura(): void {
+    if (this.cargando || this.guardando) return;
+
+    this.limpiarFormulario();
+  }
+
+  // ------------------- INTERNOS -------------------
+  /** Refleja el registro confirmado por el servidor sin volver a pedir la lista. */
+  private guardarEnLista(diagnostico: DiagnosticoResponse): void {
+    const indice = this.diagnosticos.findIndex((registro) => registro.id === diagnostico.id);
+
+    if (indice === -1) {
+      this.diagnosticos = [diagnostico, ...this.diagnosticos];
+      return;
+    }
+
+    const lista = [...this.diagnosticos];
+    lista[indice] = diagnostico;
+    this.diagnosticos = lista;
+  }
+
+  /** Vacía el campo y vuelve la captura a su estado inicial. */
+  private limpiarFormulario(): void {
     this.diagnostico = '';
-    this.tipoSeleccionado = this.tipoPrincipal;
+    this.tipoSeleccionado = 'PRINCIPAL';
     this.diagnosticoEnEdicion = null;
   }
 
-  // MOCK: el diagnóstico se guardará en el backend en la fase de integración.
-  guardarDiagnostico(): void {}
+  /** Distingue el timeout de comunicación del resto de errores del backend. */
+  private mostrarError(error: unknown, mensajeDefault: string): void {
+    if (error instanceof TimeoutError) {
+      this.popUps.error(
+        'Error de comunicación. El servidor no respondió dentro del tiempo esperado.',
+      );
+      return;
+    }
+
+    this.popUps.errorDesdeBackend(error, mensajeDefault);
+  }
 }

@@ -64,7 +64,9 @@ describe('HistoriaClinica', () => {
   // Selectores semánticos: los botones usan las clases globales de src/styles/botonesStyle.scss
   const campo = (): HTMLTextAreaElement => elemento<HTMLTextAreaElement>('.historia-campo');
   const botonEditar = (): HTMLButtonElement | null =>
-    elemento<HTMLButtonElement>('.historia-acciones button[type="button"]');
+    elemento<HTMLButtonElement>('.historia-acciones ._editar');
+  const botonCancelar = (): HTMLButtonElement | null =>
+    elemento<HTMLButtonElement>('.historia-acciones ._cancelar');
   const botonGuardar = (): HTMLButtonElement =>
     elemento<HTMLButtonElement>('.historia-acciones button[type="submit"]');
 
@@ -118,6 +120,7 @@ describe('HistoriaClinica', () => {
     expect(campo().classList.contains('historia-campo--lectura')).toBe(true);
     expect(botonEditar()).not.toBeNull();
     expect(botonEditar()?.disabled).toBe(false);
+    expect(botonCancelar()).toBeNull();
     expect(botonGuardar().disabled).toBe(true);
   });
 
@@ -131,10 +134,11 @@ describe('HistoriaClinica', () => {
     expect(campo().readOnly).toBe(false);
     expect(campo().classList.contains('historia-campo--lectura')).toBe(false);
     expect(botonEditar()).toBeNull();
+    expect(botonCancelar()).toBeNull();
     expect(botonGuardar().disabled).toBe(false);
   });
 
-  it('habilita la escritura y oculta Editar al pulsar Editar con una historia existente', async () => {
+  it('habilita la escritura, oculta Editar y muestra Cancelar al pulsar Editar', async () => {
     servicio.getHistoriasPorEpisodio.mockReturnValue(of([historia(7, 'Control')]));
 
     await render();
@@ -144,7 +148,31 @@ describe('HistoriaClinica', () => {
     expect(campo().readOnly).toBe(false);
     expect(campo().classList.contains('historia-campo--lectura')).toBe(false);
     expect(botonEditar()).toBeNull();
+    expect(botonCancelar()).not.toBeNull();
+    expect(botonCancelar()?.classList.contains('_cancelar')).toBe(true);
+    expect(botonCancelar()?.disabled).toBe(false);
     expect(botonGuardar().disabled).toBe(false);
+  });
+
+  it('descarta los cambios y vuelve al estado inicial al pulsar Cancelar', async () => {
+    servicio.getHistoriasPorEpisodio.mockReturnValue(of([historia(7, 'Control')]));
+
+    await render();
+    await pulsarEditar();
+    await escribir('Texto sin guardar');
+
+    botonCancelar()?.click();
+    await fixture.whenStable();
+
+    expect(component.historiaClinica).toBe('Control');
+    expect(component.modoEdicion).toBe(false);
+    expect(campo().value).toBe('Control');
+    expect(campo().readOnly).toBe(true);
+    expect(botonEditar()).not.toBeNull();
+    expect(botonCancelar()).toBeNull();
+    expect(servicio.postHistoria).not.toHaveBeenCalled();
+    expect(servicio.putHistoria).not.toHaveBeenCalled();
+    expect(popUps.error).not.toHaveBeenCalled();
   });
 
   it('crea la historia clínica del episodio cuando no existía', async () => {
@@ -163,6 +191,7 @@ describe('HistoriaClinica', () => {
     expect(component.idHistoriaActual).toBe(10);
     expect(component.modoEdicion).toBe(false);
     expect(botonEditar()).not.toBeNull();
+    expect(botonCancelar()).toBeNull();
     expect(campo().readOnly).toBe(true);
     expect(popUps.exito).toHaveBeenCalled();
   });
