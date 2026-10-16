@@ -54,21 +54,33 @@
       <!-- Examen físico -->
       <section class="panel panel-seccion">
         <h3 class="panel-titulo examen-titulo">Examen físico</h3>
-        <p class="examen-ayuda">Seleccione la parte del cuerpo para registrar los hallazgos.</p>
-
-        <!-- Sistemas del examen físico -->
-        <div class="sistemas" role="group" aria-label="Sistemas del examen físico">
-          @for (sistema of sistemas; track sistema.id) {
-            <button
-              type="button"
-              class="sistema-chip"
-              [class.sistema-chip--activo]="sistemaSeleccionado === sistema.id"
-              [attr.aria-pressed]="sistemaSeleccionado === sistema.id"
-              (click)="seleccionarSistema(sistema.id)"
-            >
-              {{ sistema.nombre }}
-            </button>
+        <p class="examen-ayuda">
+          @if (partesCuerpo.length) {
+            Seleccione la parte del cuerpo para registrar los hallazgos.
+          } @else {
+            No hay partes del cuerpo disponibles para registrar hallazgos.
           }
+        </p>
+
+        <!-- Parte del cuerpo evaluada: una sola lista desplegable con las regiones del catálogo -->
+        <div class="parte-cuerpo-campo">
+          <label class="parte-cuerpo-label" for="parteCuerpoExamen">Parte del cuerpo</label>
+
+          <select
+            id="parteCuerpoExamen"
+            name="parteCuerpoExamen"
+            class="parte-cuerpo-select"
+            [disabled]="cargando || guardando"
+            [ngModel]="parteSeleccionadaId"
+            (ngModelChange)="seleccionarParteCuerpo($event)"
+          >
+            @for (parte of partesCuerpo; track parte.id) {
+              <option [ngValue]="parte.id">{{ parte.nombre }}</option>
+            }
+            @if (!partesCuerpo.length) {
+              <option [ngValue]="null">Sin partes del cuerpo disponibles</option>
+            }
+          </select>
         </div>
 
         <!-- Captura de hallazgos -->
@@ -79,18 +91,44 @@
             id="hallazgoActual"
             name="hallazgoActual"
             class="hallazgo-campo"
+            [class.hallazgo-campo--lectura]="!modoEdicion"
             [(ngModel)]="hallazgoActual"
+            [readonly]="!modoEdicion"
+            [attr.aria-readonly]="!modoEdicion"
             [maxlength]="maxCaracteres"
-            placeholder="Describe los hallazgos encontrados en el sistema seleccionado..."
+            placeholder="Describe los hallazgos encontrados en la parte del cuerpo seleccionada..."
           ></textarea>
 
           <span class="contador-caracteres">{{ hallazgoActual.length }}/{{ maxCaracteres }}</span>
 
+          <!-- Acciones del cuadro: sin hallazgo registrado se captura directamente, por lo que "Editar"
+               solo aparece cuando ya existe un registro que habilitar -->
           <div class="acciones-formulario hallazgo-acciones">
-            <button type="button" class="btn _cancelar" (click)="cancelarCaptura()">
+            <button
+              type="button"
+              class="btn _cancelar"
+              [disabled]="cargando || guardando"
+              (click)="cancelarCaptura()"
+            >
               Cancelar
             </button>
-            <button type="submit" class="btn _guardar">Guardar</button>
+            @if (!modoEdicion) {
+              <button
+                type="button"
+                class="btn _editar"
+                [disabled]="cargando || guardando"
+                (click)="activarEdicion()"
+              >
+                Editar
+              </button>
+            }
+            <button
+              type="submit"
+              class="btn _guardar"
+              [disabled]="!modoEdicion || cargando || guardando || parteSeleccionadaId === null"
+            >
+              Guardar
+            </button>
           </div>
         </form>
       </section>
@@ -112,9 +150,9 @@
         <article class="hallazgo-card">
           <header class="hallazgo-encabezado">
             <span class="hallazgo-avatar">
-              <i class="bi {{ hallazgo.icono }}" aria-hidden="true"></i>
+              <i class="bi bi-clipboard2-pulse" aria-hidden="true"></i>
             </span>
-            <span class="hallazgo-sistema">{{ hallazgo.sistema }}</span>
+            <span class="hallazgo-sistema">{{ hallazgo.parteCuerpo }}</span>
           </header>
 
           <p class="hallazgo-descripcion">{{ hallazgo.descripcion }}</p>
@@ -122,13 +160,13 @@
           <footer class="hallazgo-meta">
             <span><i class="bi bi-calendar3" aria-hidden="true"></i>{{ hallazgo.fecha }}</span>
             <span><i class="bi bi-clock" aria-hidden="true"></i>{{ hallazgo.hora }}</span>
-            <span><i class="bi bi-person" aria-hidden="true"></i>{{ hallazgo.medico }}</span>
+            <span><i class="bi bi-person" aria-hidden="true"></i>{{ hallazgo.usuario }}</span>
           </footer>
         </article>
       }
 
       <!-- Estado de carga -->
-      @if (cargandoHallazgos) {
+      @if (cargando) {
         <div
           class="hallazgo-card hallazgo-card--cargando"
           role="status"
@@ -164,7 +202,7 @@
       }
 
       <!-- Estado vacío -->
-      @if (!cargandoHallazgos && hallazgos.length === 0) {
+      @if (!cargando && hallazgos.length === 0) {
         <p class="hallazgos-vacio">Aún no hay hallazgos registrados para el paciente.</p>
       }
     </section>

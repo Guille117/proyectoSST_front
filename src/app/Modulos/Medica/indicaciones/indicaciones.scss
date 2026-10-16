@@ -396,8 +396,8 @@ select.indicacion-input {
 }
 
 /* ==================== LISTADO DE INDICADOS (MEDICAMENTOS / EXÁMENES) ==================== */
-/* Filtros del listado: mismos chips de selección del examen físico (.sistema-chip), en píldora y con
-   salto de línea, para que las opciones quepan en el ancho de estos paneles. */
+/* Filtros del listado: chips de selección en píldora y con salto de línea, para que las opciones
+   quepan en el ancho de estos paneles. */
 .indicados-filtros {
   display: flex;
   flex-wrap: wrap;

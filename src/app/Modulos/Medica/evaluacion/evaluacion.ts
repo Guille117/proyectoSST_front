@@ -1,10 +1,19 @@
-import { Component } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { finalize, Subscription, switchMap, tap, TimeoutError } from 'rxjs';
+import { AuthService } from '../../Auth/data/auth-service';
+import { PopUps } from '../../../shared/popUps/popUpsService';
 import { DatosPaciente } from '../datos-paciente/datos-paciente';
 import { Diagnostico } from '../diagnostico/diagnostico';
 import { HistoriaClinica } from '../historia-clinica/historia-clinica';
+import { EPISODIO_ID_TEMPORAL } from './data/constantes-clinicas';
+import { ExamenFisicoService } from './data/examen-fisico-service';
+import {
+  ExamenFisicoRequest,
+  ExamenFisicoResponse,
+  ParteCuerpoResponse,
+} from './data/examenFisicoInterfaz';
 
-/* Tipos locales de la maqueta: se sustituirán por el contrato real del backend en la fase de integración. */
 interface SeccionVista {
   id: string;
   titulo: string;
@@ -12,19 +21,15 @@ interface SeccionVista {
   icono: string;
 }
 
-interface SistemaExamenVista {
-  id: string;
-  nombre: string;
-}
-
+/** Hallazgo registrado listo para la tarjeta de la lista: fecha y hora ya formateadas. */
 interface HallazgoVista {
   id: number;
-  sistema: string;
-  icono: string;
+  parteCuerpoId: number;
+  parteCuerpo: string;
   descripcion: string;
   fecha: string;
   hora: string;
-  medico: string;
+  usuario: string;
 }
 
 @Component({
@@ -33,13 +38,26 @@ interface HallazgoVista {
   templateUrl: './evaluacion.html',
   styleUrl: './evaluacion.scss',
 })
-export class Evaluacion {
+export class Evaluacion implements OnInit, OnDestroy {
+  private peticion?: Subscription;
+  private destruido = false;
+
+  /** TEMPORAL: episodio fijo mientras la pantalla no recibe un episodio real. */
+  private readonly episodioId = EPISODIO_ID_TEMPORAL;
+
+  constructor(
+    private examenFisicoService: ExamenFisicoService,
+    private authService: AuthService,
+    private popUps: PopUps,
+    private cdr: ChangeDetectorRef,
+  ) {}
+
   // ------------------- ESTADO DE LA VISTA -------------------
-  readonly maxCaracteres = 1000;
+  /** La descripción del hallazgo no puede superar los caracteres que acepta el backend. */
+  readonly maxCaracteres = 2000;
 
   /** Sección del episodio que se muestra en el área central de la pantalla. */
   seccionActiva = 'examen-fisico';
-  sistemaSeleccionado = 'abdomen';
 
   /** La pestaña lateral del área de trabajo abre y cierra la ficha del paciente. */
   pacienteAbierto = false;
@@ -47,15 +65,25 @@ export class Evaluacion {
   /** El chevron del encabezado pliega el cuerpo de la ficha sin ocultar el título. */
   datosPacienteVisibles = true;
 
-  /** Mientras está activo se representa el estado de carga del panel de hallazgos. */
-  cargandoHallazgos = true;
+  /** Mientras están activos bloquean las acciones que ya tienen una petición en curso. */
+  cargando = false;
+  guardando = false;
 
-  // ------------------- MOCK: datos temporales para diseño -------------------
-  hallazgoActual =
-    'Paciente consciente, orientado, en buen estado general, con signos vitales estables. ' +
-    'Abdomen blando, depresible, con dolor a la palpación en epigastrio y mesogastrio, sin ' +
-    'defensa ni rigidez. Ruidos intestinales presentes y normales. No datos de irritación ' +
-    'peritoneal.';
+  /** Partes del cuerpo del catálogo: cada una es una región donde se registra un hallazgo. */
+  partesCuerpo: ParteCuerpoResponse[] = [];
+  parteSeleccionadaId: number | null = null;
+
+  /** Hallazgos registrados del episodio, del más reciente al más antiguo. */
+  hallazgos: HallazgoVista[] = [];
+
+  /** Descripción del hallazgo de la parte del cuerpo seleccionada. */
+  hallazgoActual = '';
+
+  /**
+   * Cuadro en modo edición: sin hallazgo registrado para la parte seleccionada arranca habilitado
+   * para capturarlo y, con un hallazgo existente, se habilita al pulsar "Editar".
+   */
+  modoEdicion = false;
 
   secciones: SeccionVista[] = [
     {
@@ -78,32 +106,6 @@ export class Evaluacion {
     },
   ];
 
-  sistemas: SistemaExamenVista[] = [
-    { id: 'general', nombre: 'General' },
-    { id: 'respiratorio', nombre: 'Respiratorio' },
-    { id: 'cardiovascular', nombre: 'Cardiovascular' },
-    { id: 'abdomen', nombre: 'Abdomen' },
-    { id: 'neurologico', nombre: 'Neurológico' },
-    { id: 'extremidades', nombre: 'Extremidades' },
-    { id: 'otros', nombre: 'Otros' },
-  ];
-
-  hallazgos: HallazgoVista[] = [
-    {
-      id: 1,
-      sistema: 'Abdomen',
-      icono: 'bi-arrow-repeat',
-      descripcion:
-        'Abdomen blando y depresible, con dolor a la palpación en epigastrio y mesogastrio, ' +
-        'sin defensa ni rigidez. Ruidos intestinales presentes y normales. Sin datos de ' +
-        'irritación peritoneal.',
-      fecha: '10-10-2026',
-      hora: '10:35 AM',
-      medico: 'Dr. Juan Pérez',
-    },
-  ];
-  // ------------------- FIN MOCK -------------------
-
   // ------------------- CONSULTAS PARA LA VISTA -------------------
   /** Las secciones de historia clínica y diagnóstico muestran siempre el bloque de datos del paciente. */
   get seccionConDatosPaciente(): boolean {
@@ -122,6 +124,142 @@ export class Evaluacion {
   /** Solo el examen físico registra hallazgos: las demás secciones no muestran el panel de hallazgos. */
   get mostrarHallazgos(): boolean {
     return this.seccionActiva === 'examen-fisico';
+  }
+
+  // ------------------- CICLO DE VIDA -------------------
+  ngOnInit(): void {
+    this.cargarExamenFisico();
+  }
+
+  ngOnDestroy(): void {
+    this.destruido = true;
+    this.peticion?.unsubscribe();
+  }
+
+  // ------------------- DATOS DEL EXAMEN FÍSICO -------------------
+  /**
+   * Trae el catálogo de partes del cuerpo y, con la primera seleccionada, los hallazgos del episodio.
+   * Las dos consultas van encadenadas para que la selección inicial ya exista al pintar la captura.
+   */
+  cargarExamenFisico(): void {
+    if (this.destruido) return;
+
+    this.cargando = true;
+    this.cdr.markForCheck();
+    this.peticion?.unsubscribe();
+    this.peticion = this.examenFisicoService
+      .getPartesCuerpo(true)
+      .pipe(
+        tap((partesCuerpo) => {
+          this.partesCuerpo = partesCuerpo;
+          this.parteSeleccionadaId = partesCuerpo.length ? partesCuerpo[0].id : null;
+        }),
+        switchMap(() => this.examenFisicoService.getExamenesPorEpisodio(this.episodioId, true)),
+        finalize(() => {
+          this.cargando = false;
+          if (!this.destruido) {
+            this.cdr.markForCheck();
+          }
+        }),
+      )
+      .subscribe({
+        next: (examenes) => {
+          if (this.destruido) return;
+
+          this.hallazgos = examenes.map((examen) => this.aHallazgoVista(examen));
+          this.sincronizarCaptura();
+        },
+        error: (error) => {
+          if (this.destruido) return;
+
+          this.hallazgos = [];
+          this.hallazgoActual = '';
+          // Sin los hallazgos del servidor se mantiene el modo lectura con "Editar" visible: evita
+          // crear un registro duplicado cuando no se pudo confirmar si la parte ya tenía uno.
+          this.modoEdicion = false;
+          this.mostrarError(error, 'No se pudo cargar el examen físico. Intente nuevamente.');
+        },
+      });
+  }
+
+  /** Hallazgo registrado de la parte del cuerpo seleccionada; nulo mientras no exista ninguno. */
+  private hallazgoParteSeleccionada(): HallazgoVista | null {
+    if (this.parteSeleccionadaId === null) return null;
+
+    // El backend devuelve los registros del más reciente al más antiguo.
+    return (
+      this.hallazgos.find((hallazgo) => hallazgo.parteCuerpoId === this.parteSeleccionadaId) ?? null
+    );
+  }
+
+  /** Muestra el hallazgo de la parte seleccionada y decide si el cuadro se captura o se lee. */
+  private sincronizarCaptura(): void {
+    const registro = this.hallazgoParteSeleccionada();
+    this.hallazgoActual = registro?.descripcion ?? '';
+    // Sin hallazgo registrado no hay nada que habilitar: el cuadro arranca editable para capturarlo
+    // y la plantilla oculta "Editar" mientras se escribe un registro nuevo.
+    this.modoEdicion = registro === null;
+  }
+
+  /** Convierte el registro del backend en los datos que pinta la tarjeta de la lista. */
+  private aHallazgoVista(examen: ExamenFisicoResponse): HallazgoVista {
+    const fecha = new Date(examen.fecha);
+
+    return {
+      id: examen.id,
+      parteCuerpoId: examen.parteCuerpoId,
+      parteCuerpo: examen.parteCuerpoNombre,
+      descripcion: examen.descripcion,
+      fecha: this.formatearFecha(fecha),
+      hora: this.formatearHora(fecha),
+      usuario: examen.usuarioNombre,
+    };
+  }
+
+  /** Fecha del hallazgo en el formato corto de la lista (dd-MM-yyyy). */
+  private formatearFecha(fecha: Date): string {
+    if (Number.isNaN(fecha.getTime())) return '';
+
+    const dia = `${fecha.getDate()}`.padStart(2, '0');
+    const mes = `${fecha.getMonth() + 1}`.padStart(2, '0');
+    return `${dia}-${mes}-${fecha.getFullYear()}`;
+  }
+
+  /** Hora del hallazgo en el formato de la lista (h:mm AM/PM). */
+  private formatearHora(fecha: Date): string {
+    if (Number.isNaN(fecha.getTime())) return '';
+
+    const horas = fecha.getHours();
+    const minutos = `${fecha.getMinutes()}`.padStart(2, '0');
+    const sufijo = horas < 12 ? 'AM' : 'PM';
+    const hora12 = horas % 12 === 0 ? 12 : horas % 12;
+    return `${hora12}:${minutos} ${sufijo}`;
+  }
+
+  /** Refleja el registro confirmado por el servidor sin volver a pedir la lista. */
+  private guardarEnLista(hallazgo: HallazgoVista): void {
+    const indice = this.hallazgos.findIndex((registro) => registro.id === hallazgo.id);
+
+    if (indice === -1) {
+      this.hallazgos = [hallazgo, ...this.hallazgos];
+      return;
+    }
+
+    const lista = [...this.hallazgos];
+    lista[indice] = hallazgo;
+    this.hallazgos = lista;
+  }
+
+  /** Avisa del fallo de una petición, distinguiendo el servidor que no responde. */
+  private mostrarError(error: unknown, mensajeDefault: string): void {
+    if (error instanceof TimeoutError) {
+      this.popUps.error(
+        'Error de comunicación. El servidor no respondió dentro del tiempo esperado.',
+      );
+      return;
+    }
+
+    this.popUps.errorDesdeBackend(error, mensajeDefault);
   }
 
   // ------------------- ACCIONES DE LA VISTA -------------------
@@ -147,14 +285,93 @@ export class Evaluacion {
     this.pacienteAbierto = false;
   }
 
-  seleccionarSistema(id: string): void {
-    this.sistemaSeleccionado = id;
+  /** Muestra en el bloque de captura el hallazgo de la parte del cuerpo seleccionada. */
+  seleccionarParteCuerpo(id: number): void {
+    if (this.cargando || this.guardando || id === this.parteSeleccionadaId) return;
+
+    this.parteSeleccionadaId = id;
+    this.sincronizarCaptura();
   }
 
+  /** Habilita la escritura en el cuadro del hallazgo registrado. */
+  activarEdicion(): void {
+    if (this.cargando || this.guardando) return;
+
+    this.modoEdicion = true;
+  }
+
+  /** Descarta la captura en curso y vuelve al hallazgo registrado de la parte seleccionada. */
   cancelarCaptura(): void {
-    this.hallazgoActual = '';
+    if (this.cargando || this.guardando) return;
+
+    this.hallazgoActual = this.hallazgoParteSeleccionada()?.descripcion ?? '';
   }
 
-  // MOCK: la captura de hallazgos se conectará al backend en la fase de integración.
-  guardarHallazgo(): void {}
+  /** Crea el hallazgo de la parte seleccionada o actualiza el que ya estaba registrado. */
+  guardarHallazgo(): void {
+    if (this.destruido || this.cargando || this.guardando) return;
+
+    const parteCuerpoId = this.parteSeleccionadaId;
+    if (parteCuerpoId === null) {
+      this.popUps.error('Seleccione la parte del cuerpo del hallazgo.');
+      return;
+    }
+
+    const descripcion = this.hallazgoActual.trim();
+    if (!descripcion) {
+      this.popUps.error('La descripción del hallazgo es obligatoria.');
+      return;
+    }
+
+    const usuarioId = this.authService.currentUser()?.id;
+    if (!usuarioId) {
+      this.popUps.error(
+        'No se pudo identificar al usuario de la sesión. Inicie sesión nuevamente.',
+      );
+      return;
+    }
+
+    const cuerpo: ExamenFisicoRequest = {
+      descripcion,
+      episodioId: this.episodioId,
+      parteCuerpoId,
+      usuarioId,
+    };
+    const registro = this.hallazgoParteSeleccionada();
+
+    this.guardando = true;
+    this.cdr.markForCheck();
+    this.peticion?.unsubscribe();
+    this.peticion = (
+      registro === null
+        ? this.examenFisicoService.postExamen(cuerpo)
+        : this.examenFisicoService.putExamen(registro.id, cuerpo)
+    )
+      .pipe(
+        finalize(() => {
+          this.guardando = false;
+          if (!this.destruido) {
+            this.cdr.markForCheck();
+          }
+        }),
+      )
+      .subscribe({
+        next: (respuesta) => {
+          if (this.destruido) return;
+
+          this.guardarEnLista(this.aHallazgoVista(respuesta));
+          this.sincronizarCaptura();
+          this.popUps.exito(
+            registro === null
+              ? 'Hallazgo guardado exitosamente.'
+              : 'Hallazgo actualizado exitosamente.',
+          );
+        },
+        error: (error) => {
+          if (this.destruido) return;
+
+          this.mostrarError(error, 'No se pudo guardar el hallazgo. Intente nuevamente.');
+        },
+      });
+  }
 }

@@ -11,15 +11,26 @@
       [(ngModel)]="historiaClinica"
       [readonly]="!modoEdicion"
       [attr.aria-readonly]="!modoEdicion"
+      [maxlength]="maxCaracteres"
       placeholder="Escribe la historia clínica del paciente..."
     ></textarea>
 
-    <!-- Acciones del cuadro -->
+    <!-- Acciones del cuadro: sin historia registrada se captura directamente, por lo que "Editar"
+         solo aparece cuando ya existe un registro que habilitar -->
     <div class="acciones-formulario historia-acciones">
-      <button type="button" class="btn _editar" [disabled]="modoEdicion" (click)="activarEdicion()">
-        Editar
+      @if (!modoEdicion) {
+        <button
+          type="button"
+          class="btn _editar"
+          [disabled]="cargando || guardando"
+          (click)="activarEdicion()"
+        >
+          Editar
+        </button>
+      }
+      <button type="submit" class="btn _guardar" [disabled]="!modoEdicion || cargando || guardando">
+        Guardar
       </button>
-      <button type="submit" class="btn _guardar" [disabled]="!modoEdicion">Guardar</button>
     </div>
   </form>
 </section>
