@@ -4,6 +4,9 @@
 /* Rejilla de la pantalla: el registro de la evolución a la izquierda y su historial a la derecha.
    Cada pista flexible lleva mínimo 0 para que la rejilla pueda encogerse sin desbordar. */
 .evolucion {
+  /* Ancho del bloque de datos del paciente: lo comparten el propio bloque y su pestaña */
+  --ficha-ancho: 340px;
+
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(300px, 1fr);
   grid-template-areas: 'registro historial';
@@ -11,6 +14,12 @@
   box-sizing: border-box;
   width: 100%;
   padding: 1.5rem;
+}
+
+/* Ficha de los datos del paciente abierta: la rejilla le reserva a la derecha el ancho del bloque
+   compartido, que queda pegado al borde de la pantalla sin cubrir los paneles. */
+.evolucion--ficha-abierta {
+  padding-right: calc(var(--ficha-ancho) + 1.5rem);
 }
 
 /* Cada panel se ancla al alto de su contenido para no igualar el del panel de al lado. El registro
@@ -186,29 +195,24 @@
   gap: 12px;
 }
 
-/* Médico del registro con la fecha y la hora al lado: una sola línea a la izquierda del menú */
-.evolucion-datos {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 2px 8px;
-  min-width: 0;
-}
-
-.evolucion-fecha {
-  color: #667085;
-  font-size: 0.85rem;
-}
-
-.evolucion-medico {
+/* Rótulo de la tarjeta: el registro clínico del episodio, a la izquierda del menú */
+.evolucion-titulo {
   color: var(--azulPrincipal);
   font-size: 1.05rem;
   font-weight: 700;
 }
 
-/* Contenido clínico de la tarjeta: la evolución clínica y el plan médico, cada uno con su rótulo */
+/* Texto de la evolución clínica: la descripción de la tarjeta bajo su rótulo */
+.evolucion-clinica {
+  margin: 0.6rem 0 0;
+  color: #1f2f45;
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+/* Contenido clínico de la tarjeta: el plan médico del registro, con su rótulo */
 .evolucion-detalle {
-  margin: 0.5rem 0 0;
+  margin: 0.75rem 0 0;
 
   .evolucion-detalle-etiqueta {
     color: #667085;
@@ -218,16 +222,35 @@
     text-transform: uppercase;
   }
 
-  /* El rótulo del plan médico se separa del texto de la evolución clínica */
-  dd + .evolucion-detalle-etiqueta {
-    margin-top: 0.75rem;
-  }
-
   dd {
     margin: 0.15rem 0 0;
     color: #1f2f45;
     font-size: 1rem;
     line-height: 1.5;
+  }
+}
+
+/* Pie de la tarjeta: fecha, hora y médico del registro, como en las tarjetas de indicaciones */
+.evolucion-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 1rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid #e4ebf5;
+  color: #33445e;
+  font-size: 0.95rem;
+
+  span {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  i {
+    color: var(--azulSecundario);
+    font-size: 1.05rem;
   }
 }
 
@@ -345,13 +368,20 @@
 }
 
 /* ==================== RESPONSIVIDAD ==================== */
-/* Una sola columna: el registro arriba y el historial debajo */
+/* Una sola columna: el registro arriba y el historial debajo. La ficha del paciente conserva el
+   ancho de su pestaña para que esta siga siendo visible y se apoye en el borde izquierdo. */
 @media (max-width: 900px) {
   .evolucion {
+    --ficha-ancho: calc(100% - 40px);
+
     grid-template-columns: minmax(0, 1fr);
     grid-template-areas:
       'registro'
       'historial';
     padding: 1rem;
+  }
+
+  .evolucion--ficha-abierta {
+    padding-right: 1rem;
   }
 }

@@ -210,17 +210,21 @@ describe('Evolucion', () => {
       const tarjeta = tarjetas()[indice];
 
       expect(tarjeta.classList.contains(`evolucion-card--${evolucion.tono}`)).toBe(true);
-      expect(tarjeta.querySelector<HTMLElement>('.evolucion-fecha')?.textContent).toContain(
-        `${evolucion.fecha} · ${evolucion.hora}`,
+      // La tarjeta se titula con el registro clínico y deja la fecha, la hora y el médico en el pie
+      expect(tarjeta.querySelector<HTMLElement>('.evolucion-titulo')?.textContent?.trim()).toBe(
+        'Evolución clínica',
       );
-      expect(tarjeta.querySelector<HTMLElement>('.evolucion-medico')?.textContent).toContain(
-        evolucion.medico,
-      );
-      // El médico y su fecha con hora comparten la misma línea de la cabecera
-      const datos = tarjeta.querySelector<HTMLElement>('.evolucion-datos');
 
-      expect(datos?.querySelector('.evolucion-medico')).not.toBeNull();
-      expect(datos?.querySelector('.evolucion-fecha')).not.toBeNull();
+      const pie = tarjeta.querySelector<HTMLElement>('.evolucion-meta');
+
+      expect(pie?.textContent).toContain(evolucion.fecha);
+      expect(pie?.textContent).toContain(evolucion.hora);
+      expect(pie?.textContent).toContain(evolucion.medico);
+      expect([...(pie?.querySelectorAll('i') ?? [])].map((icono) => icono.className)).toEqual([
+        'bi bi-calendar3',
+        'bi bi-clock',
+        'bi bi-person',
+      ]);
       expect(
         tarjeta
           .querySelector<HTMLElement>('.evolucion-menu-trigger i')
@@ -234,9 +238,9 @@ describe('Evolucion', () => {
       const tarjeta = tarjetas()[indice];
       const rotulos = tarjeta.querySelectorAll<HTMLElement>('.evolucion-detalle-etiqueta');
 
-      expect(rotulos.length).toBe(2);
-      expect(rotulos[0].textContent?.trim()).toBe('Evolución clínica');
-      expect(rotulos[1].textContent?.trim()).toBe('Plan médico');
+      // El texto de la evolución clínica va bajo el título de la tarjeta y el plan médico con su rótulo
+      expect(rotulos.length).toBe(1);
+      expect(rotulos[0].textContent?.trim()).toBe('Plan médico');
       expect(tarjeta.querySelector<HTMLElement>('.evolucion-clinica')?.textContent).toContain(
         evolucion.evolucionClinica,
       );
@@ -296,7 +300,7 @@ describe('Evolucion', () => {
     await abrirMenu(0);
 
     tarjetas()[0]
-      .querySelector('.evolucion-medico')
+      .querySelector('.evolucion-titulo')
       ?.dispatchEvent(new Event('click', { bubbles: true }));
     await fixture.whenStable();
 
@@ -337,7 +341,8 @@ describe('Evolucion', () => {
 
     expect(component.evoluciones.length).toBe(total);
     expect(tarjetas()[1].textContent).toContain('Paciente estable, sin dolor abdominal.');
-    expect(tarjetas()[1].textContent).toContain(`${elegida.fecha} · ${elegida.hora}`);
+    expect(tarjetas()[1].textContent).toContain(elegida.fecha);
+    expect(tarjetas()[1].textContent).toContain(elegida.hora);
     expect(tarjetas()[1].textContent).toContain(elegida.medico);
     expect(tarjetas()[1].classList.contains(`evolucion-card--${elegida.tono}`)).toBe(true);
 
@@ -551,6 +556,85 @@ describe('Evolucion', () => {
     expect(filtroActivo().textContent?.trim()).toBe('Activas');
     expect(tarjetas()[0].textContent).toContain(
       'Evolución registrada desde el filtro de eliminadas.',
+    );
+  });
+  // Ficha con los datos del paciente: el mismo bloque compartido que usan evaluación clínica e
+  // indicaciones médicas
+  const botonPestanaPaciente = (): HTMLButtonElement =>
+    elemento<HTMLButtonElement>('.ficha-pestana');
+
+  const botonPlegarFicha = (): HTMLButtonElement => elemento<HTMLButtonElement>('.ficha-plegar');
+
+  const fichaPaciente = (): HTMLElement | null =>
+    fixture.nativeElement.querySelector('app-datos-paciente .ficha');
+
+  it('reutiliza el bloque de datos del paciente de las demás pantallas del módulo', () => {
+    // La pantalla no duplica la ficha: se dibuja el bloque compartido, cerrado y con su pestaña
+    expect(elemento<HTMLElement>('app-datos-paciente')).not.toBeNull();
+    expect(elemento<HTMLElement>('app-datos-paciente .ficha-pestana')).not.toBeNull();
+    expect(fichaPaciente()).toBeNull();
+  });
+
+  it('abre la ficha del paciente con la pestaña lateral y reserva su espacio', async () => {
+    expect(component.pacienteAbierto).toBe(false);
+    expect(botonPestanaPaciente().getAttribute('aria-expanded')).toBe('false');
+    expect(
+      elemento<HTMLElement>('.evolucion').classList.contains('evolucion--ficha-abierta'),
+    ).toBe(false);
+
+    botonPestanaPaciente().click();
+    await fixture.whenStable();
+
+    const rejilla = elemento<HTMLElement>('.evolucion');
+    expect(component.pacienteAbierto).toBe(true);
+    expect(botonPestanaPaciente().getAttribute('aria-expanded')).toBe('true');
+    expect(rejilla.classList.contains('evolucion--ficha-abierta')).toBe(true);
+
+    const ficha = fichaPaciente();
+    expect(ficha).not.toBeNull();
+    expect(elemento<HTMLElement>('.ficha-titulo').textContent?.trim()).toBe(
+      'Información del paciente',
+    );
+
+    botonPestanaPaciente().click();
+    await fixture.whenStable();
+
+    expect(component.pacienteAbierto).toBe(false);
+    expect(fichaPaciente()).toBeNull();
+    expect(rejilla.classList.contains('evolucion--ficha-abierta')).toBe(false);
+  });
+
+  it('pliega el cuerpo de la ficha del paciente sin ocultar el título', async () => {
+    botonPestanaPaciente().click();
+    await fixture.whenStable();
+
+    botonPlegarFicha().click();
+    await fixture.whenStable();
+
+    expect(component.datosPacienteVisibles).toBe(false);
+    expect(botonPlegarFicha().getAttribute('aria-expanded')).toBe('false');
+    expect(elemento<HTMLElement>('.ficha-titulo').textContent?.trim()).toBe(
+      'Información del paciente',
+    );
+    expect(elemento<HTMLElement>('.ficha-cuerpo').classList.contains('ficha-cuerpo--plegado')).toBe(
+      true,
+    );
+  });
+
+  it('reabre la ficha del paciente con los datos completos tras plegarla', async () => {
+    botonPestanaPaciente().click();
+    await fixture.whenStable();
+    botonPlegarFicha().click();
+    await fixture.whenStable();
+
+    botonPestanaPaciente().click();
+    await fixture.whenStable();
+    botonPestanaPaciente().click();
+    await fixture.whenStable();
+
+    expect(component.datosPacienteVisibles).toBe(true);
+    expect(elemento<HTMLElement>('.ficha-cuerpo').classList.contains('ficha-cuerpo--plegado')).toBe(
+      false,
     );
   });
 });

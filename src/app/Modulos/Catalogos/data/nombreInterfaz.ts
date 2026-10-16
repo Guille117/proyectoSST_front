@@ -62,3 +62,8 @@ export interface ConteoCatalogosUsuarios {
   especialidades: number;
 }
 
+export interface ConteoCatalogosClinica {
+  partesCuerpo: number;
+  condicionesEgreso: number;
+}
+

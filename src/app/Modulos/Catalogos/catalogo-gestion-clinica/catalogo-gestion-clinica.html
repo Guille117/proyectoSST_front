@@ -1,0 +1,121 @@
+<div class="catalogo-layout">
+  <section class="panel">
+    <h3 class="panel-title">Catálogos</h3>
+
+    @for(catalogo of listaCatalogos; track $index) {
+      <div class="catalogos" [class.selected]="catalogoSeleccionado === catalogo.titulo" (click)="seleccionarCatalogo(catalogo.titulo, catalogo.url)">
+        <div class="icono">
+          <i class="{{ catalogo.icono }}"></i>
+        </div>
+        <div class="texto">
+          <h3>{{ catalogo.titulo }}</h3>
+          <p>{{ catalogo.descripcion }}</p>
+        </div>
+        <div class="cantidad">
+          <h3>Registros</h3>
+          <h4>{{ catalogo.cantidad }}</h4>
+        </div>
+      </div>
+    }
+
+  </section>
+
+  <section class="panel panel_tabla">
+    <div class="encabezado-registros">
+      <h3 class="panel-title">{{ catalogoSeleccionado }}</h3>
+      <div class="miniSub-container">
+        <app-tab-switch
+          [op1]="'Activos'"
+          [op2]="'Inactivos'"
+          [mostrarActivos]="mostrarActivos"
+          (opcionCambiada)="traerRegistros($event)"
+        >
+        </app-tab-switch>
+      </div>
+    </div>
+
+    <table class="table tabla-registros">
+      <thead>
+        <tr>
+          <th class="celda_centrada">No.</th>
+          <th class="celda_izquierda">Nombre</th>
+          <th class="celda_centrada">Acciones</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        @for(registro of datos | slice:(paginaActual - 1) * cantidadMostrar:paginaActual * cantidadMostrar; track registro.id) {
+          <tr>
+            <td class="celda_centrada">{{(paginaActual - 1) * cantidadMostrar + $index + 1}}</td>
+            <td class="celda_izquierda">{{ registro.nombre }}</td>
+            <td class="celda_centrada acciones">
+              @if(mostrarActivos){
+                <button class="iconEditar" title="Editar" aria-label="Editar" (click)="precargar(registro.nombre, registro.id!)"><i class="bi bi-pencil-square"></i></button>
+                <label class="interruptor-estado" title="Desactivar"><input type="checkbox" checked [disabled]="cambiandoEstado || cargandoRegistros" (change)="activarDesactivar($event, registro.id!)"><span></span></label>
+              }@else {
+                <label class="interruptor-estado" title="Activar"><input type="checkbox" [disabled]="cambiandoEstado || cargandoRegistros" (change)="activarDesactivar($event, registro.id!)"><span></span></label>
+              }
+            </td>
+          </tr>
+        }
+
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="3">
+            <app-paginacion
+              [paginaActual]="paginaActual"
+              [totalregistros]="datos.length"
+              [cantidadMostrar]="cantidadMostrar"
+              (paginaCambiada)="paginaActual = $event"
+            ></app-paginacion>
+          </td>
+        </tr>
+      </tfoot>
+    </table>
+
+  </section>
+
+  <section class="panel panel_formulario">
+    <h3 class=" titulo-formulario">Guardar registro</h3>
+
+    <div class="formulario-box">
+      <form #formularioRegistro="ngForm">
+        <label for="nombreRegistro" class="label">Nombre</label>
+        <input
+          id="nombreRegistro"
+          type="text"
+          [(ngModel)]="variableEntrada.nombre"
+          name="nombreRegistro"
+          placeholder="Ingrese nombre"
+          required
+        >
+      </form>
+
+      <div class="acciones-formulario">
+        <button type="button" class="btn _cancelar" (click)="limpiarFormulario(formularioRegistro)">
+          Cancelar
+        </button>
+        @if (editar) {
+          <button
+            type="button"
+            class="btn _guardar"
+            [disabled]="guardando || !formularioRegistro.valid || !hayCambios()"
+            (click)="editarRegistro(formularioRegistro)"
+          >
+            Guardar Cambios
+          </button>
+        }@else {
+          <button
+            type="button"
+            class="btn _guardar"
+            [disabled]="guardando || !formularioRegistro.valid"
+            (click)="guardar(formularioRegistro)"
+          >
+            Guardar
+          </button>
+        }
+      </div>
+    </div>
+  </section>
+</div>

@@ -1,6 +1,6 @@
 <!-- Evolución médica: registro de la evolución del episodio y su historial en tarjetas, que se puede
      filtrar entre las evoluciones activas y las eliminadas -->
-<div class="evolucion">
+<div class="evolucion" [class.evolucion--ficha-abierta]="pacienteAbierto">
   <!-- Registro de la evolución: evolución clínica y plan médico del episodio -->
   <section class="panel panel-registro" aria-labelledby="tituloRegistrarEvolucion">
     <h3 class="panel-titulo" id="tituloRegistrarEvolucion">Registrar evolución</h3>
@@ -73,11 +73,8 @@
           [attr.data-evolucion-id]="evolucion.id"
         >
           <header class="evolucion-encabezado">
-            <!-- Médico del registro con la fecha y la hora a su lado, a la izquierda del menú -->
-            <div class="evolucion-datos">
-              <span class="evolucion-medico">{{ evolucion.medico }}</span>
-              <span class="evolucion-fecha">{{ evolucion.fecha }} · {{ evolucion.hora }}</span>
-            </div>
+            <!-- Rótulo de la tarjeta: el registro clínico del episodio, a la izquierda del menú -->
+            <span class="evolucion-titulo">Evolución clínica</span>
 
             <!-- Menú de opciones de la tarjeta: mismo despliegue del listado de indicaciones -->
             <button
@@ -94,12 +91,20 @@
           </header>
 
           <!-- Contenido clínico de la evolución: la evolución clínica y el plan médico del registro -->
+          <p class="evolucion-clinica">{{ evolucion.evolucionClinica }}</p>
+
           <dl class="evolucion-detalle">
-            <dt class="evolucion-detalle-etiqueta">Evolución clínica</dt>
-            <dd class="evolucion-clinica">{{ evolucion.evolucionClinica }}</dd>
             <dt class="evolucion-detalle-etiqueta">Plan médico</dt>
             <dd class="evolucion-plan">{{ evolucion.planMedico }}</dd>
           </dl>
+
+          <!-- Pie de la tarjeta: la fecha, la hora y el médico del registro, como en las tarjetas del
+               listado de indicaciones -->
+          <footer class="evolucion-meta">
+            <span><i class="bi bi-calendar3" aria-hidden="true"></i>{{ evolucion.fecha }}</span>
+            <span><i class="bi bi-clock" aria-hidden="true"></i>{{ evolucion.hora }}</span>
+            <span><i class="bi bi-person" aria-hidden="true"></i>{{ evolucion.medico }}</span>
+          </footer>
 
           <!-- Menú de opciones: se dibuja al final de la tarjeta y flota sobre ella -->
           @if (menuEvolucionAbierta === evolucion.id) {
@@ -143,4 +148,15 @@
       }
     </div>
   </section>
+
+  <!-- Datos del paciente: bloque compartido con las demás pantallas del módulo, pegado al borde
+       derecho de la pantalla. Se abre y se cierra con su pestaña lateral, igual que en evaluación
+       clínica y en indicaciones médicas. -->
+  <app-datos-paciente
+    [plegable]="true"
+    [abierto]="pacienteAbierto"
+    (abiertoCambia)="cambiarFichaPaciente($event)"
+    [cuerpoVisible]="datosPacienteVisibles"
+    (cuerpoVisibleCambia)="datosPacienteVisibles = $event"
+  ></app-datos-paciente>
 </div>

@@ -1,6 +1,7 @@
 import { Component, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { PopUps } from '../../../shared/popUps/popUpsService';
+import { DatosPaciente } from '../datos-paciente/datos-paciente';
 
 /* Tipos locales de la maqueta: se sustituirán por el contrato real del backend en la fase de integración. */
 /** Colores del acento de las tarjetas del historial de evoluciones. */
@@ -43,7 +44,7 @@ interface FiltroEvolucionVista {
  */
 @Component({
   selector: 'app-evolucion',
-  imports: [FormsModule],
+  imports: [FormsModule, DatosPaciente],
   templateUrl: './evolucion.html',
   styleUrl: './evolucion.scss',
   host: {
@@ -60,6 +61,12 @@ export class Evolucion {
   /** Campos del formulario del registro. */
   evolucionClinica = '';
   planMedico = '';
+
+  /** La ficha con los datos del paciente está desplegada; la abre su pestaña lateral. */
+  pacienteAbierto = false;
+
+  /** El cuerpo de la ficha del paciente está desplegado; el chevron de su encabezado lo pliega. */
+  datosPacienteVisibles = true;
 
   /** Tarjeta del historial con su menú de opciones desplegado; null si no hay ninguna. */
   menuEvolucionAbierta: number | null = null;
@@ -161,6 +168,20 @@ export class Evolucion {
   }
 
   // ------------------- ACCIONES DE LA VISTA -------------------
+  /**
+   * Abre o cierra la ficha con los datos del paciente desde la pestaña lateral del bloque
+   * compartido, igual que en evaluación clínica y en indicaciones médicas. Al abrirla se muestran
+   * los datos completos para que el usuario vea la información de contexto aunque la hubiera
+   * plegado antes.
+   */
+  cambiarFichaPaciente(abierto: boolean): void {
+    this.pacienteAbierto = abierto;
+
+    if (abierto) {
+      this.datosPacienteVisibles = true;
+    }
+  }
+
   /** Deja el formulario vacío para capturar una evolución nueva. */
   limpiarFormulario(): void {
     this.evolucionClinica = '';

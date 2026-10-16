@@ -2,7 +2,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable, map } from 'rxjs';
 import { environment } from '../../../../environments/environment';
-import { ConteoCatalogosUsuarios, Nombre, NombreGet, registrosCatalogos, tipoDato2, tipoDato2Post } from './nombreInterfaz';
+import { ConteoCatalogosClinica, ConteoCatalogosUsuarios, Nombre, NombreGet, registrosCatalogos, tipoDato2, tipoDato2Post } from './nombreInterfaz';
 
 @Injectable({ providedIn: 'root' })
 export class CatalogoService<TEntrada extends Nombre = Nombre, TRespuesta extends NombreGet = NombreGet> {
@@ -87,6 +87,11 @@ export class CatalogoService<TEntrada extends Nombre = Nombre, TRespuesta extend
     // entrega la cantidad de registros de los catálogos de pacientes
     obtenerRegistrosCatalogosPacientes(): Observable<registrosCatalogos[]> {
         return this.http.get<registrosCatalogos[]>(`${this.apiUrl}/areas/conteo-catalogos`);
+    }
+
+    // entrega la cantidad de registros de los catálogos de gestión clínica
+    obtenerConteoCatalogosClinica(): Observable<ConteoCatalogosClinica> {
+        return this.http.get<ConteoCatalogosClinica>(`${this.apiUrl}/partesCuerpo/conteo`);
     }
 
 
