@@ -1,0 +1,357 @@
+@use '../panel-seccion';
+
+/* ==================== CONTENEDOR (REGISTRO / HISTORIAL) ==================== */
+/* Rejilla de la pantalla: el registro de la evolución a la izquierda y su historial a la derecha.
+   Cada pista flexible lleva mínimo 0 para que la rejilla pueda encogerse sin desbordar. */
+.evolucion {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 1fr);
+  grid-template-areas: 'registro historial';
+  gap: 1.25rem;
+  box-sizing: border-box;
+  width: 100%;
+  padding: 1.5rem;
+}
+
+/* Cada panel se ancla al alto de su contenido para no igualar el del panel de al lado. El registro
+   usa un relleno algo menor que el del panel base para que la sección quede compacta. */
+.panel-registro {
+  grid-area: registro;
+  align-self: start;
+  padding: 1.25rem;
+}
+
+.panel-historial {
+  grid-area: historial;
+  align-self: start;
+}
+
+/* ==================== REGISTRO DE LA EVOLUCIÓN ==================== */
+.evolucion-form {
+  display: flex;
+  flex-direction: column;
+  margin-top: 1rem;
+}
+
+.evolucion-etiqueta {
+  margin: 0 0 10px;
+  color: var(--azulPrincipal);
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+/* El segundo campo (plan médico) se separa de la etiqueta anterior */
+.evolucion-campo + .evolucion-etiqueta {
+  margin-top: 1rem;
+}
+
+/* Cuadro de la evolución: mismo lenguaje del cuadro de la historia clínica */
+.evolucion-campo {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 130px;
+  padding: 12px 14px;
+  border: 1px solid #cfdcee;
+  border-radius: 14px;
+  background: #fff;
+  color: #21324d;
+  font-family: inherit;
+  font-size: 1rem;
+  line-height: 1.6;
+  outline: none;
+  resize: vertical;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+
+  &:focus {
+    border-color: var(--azulSecundario);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.14);
+  }
+
+  &::placeholder {
+    color: #8fa0b8;
+  }
+}
+
+/* Separación y línea divisoria de la fila de acciones compartida (.acciones-formulario); los dos
+   botones conservan el tamaño normal de .btn y quedan juntos y alineados a la derecha */
+.evolucion-acciones {
+  gap: 1rem;
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e4ebf5;
+}
+
+/* ==================== HISTORIAL DE EVOLUCIONES (FILTROS Y TARJETAS) ==================== */
+/* Filtros del historial: mismos chips en píldora del listado de indicaciones (.indicados-filtro) */
+.historial-filtros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 1rem;
+}
+
+.historial-filtro {
+  padding: 8px 15px;
+  border: 1px solid #dbe4f0;
+  border-radius: 999px;
+  background: #fff;
+  color: #3f4d66;
+  font-family: inherit;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition:
+    border-color 0.2s ease,
+    background-color 0.2s ease,
+    color 0.2s ease;
+
+  &:hover {
+    border-color: #b9c8e2;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--azulSecundario);
+    outline-offset: 2px;
+  }
+}
+
+/* Opción elegida: mismo azul de selección del resto de controles del módulo */
+.historial-filtro--activo {
+  border-color: var(--azulSecundario);
+  background: var(--azulSecundario);
+  color: #fff;
+  font-weight: 600;
+}
+
+.historial-lista {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Tarjeta de una evolución: misma tarjeta del listado de indicaciones (borde, radio y sombra), con
+   el acento de color a la izquierda que le toca a la evolución. */
+.evolucion-card {
+  position: relative;
+  margin-bottom: 1rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid #dfe7f3;
+  border-left: 4px solid #dfe7f3;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+
+  /* Acento lateral con el color de la evolución: verde, azul, naranja o morado */
+  &.evolucion-card--verde {
+    border-left-color: #22c55e;
+  }
+
+  &.evolucion-card--azul {
+    border-left-color: #3b82f6;
+  }
+
+  &.evolucion-card--naranja {
+    border-left-color: #ff921c;
+  }
+
+  &.evolucion-card--morado {
+    border-left-color: #8b5cf6;
+  }
+
+  /* Evolución dada de baja: el acento pasa a gris, como en las tarjetas eliminadas del listado */
+  &.evolucion-card--eliminada {
+    border-left-color: #b6c2d4;
+  }
+
+  /* Con el menú desplegado la tarjeta pasa al frente para dibujarse sobre las siguientes */
+  &.evolucion-card--menu-abierto {
+    z-index: 2;
+  }
+
+  /* Tarjeta cuyos datos están cargados en el registro para corregirlos */
+  &.evolucion-card--edicion {
+    border-left-color: #f59e0b;
+    background: #fffbf2;
+  }
+}
+
+.evolucion-encabezado {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+/* Médico del registro con la fecha y la hora al lado: una sola línea a la izquierda del menú */
+.evolucion-datos {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 8px;
+  min-width: 0;
+}
+
+.evolucion-fecha {
+  color: #667085;
+  font-size: 0.85rem;
+}
+
+.evolucion-medico {
+  color: var(--azulPrincipal);
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+/* Contenido clínico de la tarjeta: la evolución clínica y el plan médico, cada uno con su rótulo */
+.evolucion-detalle {
+  margin: 0.5rem 0 0;
+
+  .evolucion-detalle-etiqueta {
+    color: #667085;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+  }
+
+  /* El rótulo del plan médico se separa del texto de la evolución clínica */
+  dd + .evolucion-detalle-etiqueta {
+    margin-top: 0.75rem;
+  }
+
+  dd {
+    margin: 0.15rem 0 0;
+    color: #1f2f45;
+    font-size: 1rem;
+    line-height: 1.5;
+  }
+}
+
+/* ==================== MENÚ DE OPCIONES DE LA TARJETA ==================== */
+/* Botón de tres puntos: mismo tratamiento del botón equivalente del listado de indicaciones */
+.evolucion-menu-trigger {
+  display: grid;
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  place-items: center;
+  color: #52627f;
+  background: transparent;
+  border: 0;
+  border-radius: 50%;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    color 0.2s ease,
+    background 0.2s ease;
+
+  &:hover,
+  &:focus-visible {
+    color: #1e293b;
+    background: #eef4ff;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--azulSecundario);
+    outline-offset: 2px;
+  }
+}
+
+/* El menú flota sobre la tarjeta: al no ocupar espacio en el flujo, desplegarlo y replegarlo no
+   redimensiona la tarjeta ni desplaza el resto del historial */
+.evolucion-menu {
+  position: absolute;
+  z-index: 3;
+  top: 2.7rem;
+  right: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-sizing: border-box;
+  width: 162px;
+  max-width: calc(100% - 2rem);
+  padding: 10px 12px;
+  background: #fff;
+  border: 1px solid #dfe7f3;
+  border-radius: 12px;
+  box-shadow: 0 12px 26px rgba(15, 23, 42, 0.14);
+
+  /* Botón de editar: el ámbar viene de los estilos globales de src/styles/botonesStyle.scss */
+  .iconEditar {
+    width: 34px;
+    height: 34px;
+    box-shadow: none;
+    font-size: 17px;
+  }
+}
+
+/* Cada opción alinea su nombre a la izquierda y su botón a la derecha */
+.evolucion-menu-opcion {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  color: #475569;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+/* Botón de eliminar: mismo tratamiento del botón equivalente de los diagnósticos adicionales */
+.iconQuitar {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  place-items: center;
+  color: #ed1a0f;
+  background: rgba(255, 255, 255, 0.62);
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  border-radius: 50%;
+  box-shadow: 0 2px 6px rgba(26, 37, 53, 0.12);
+  font-size: 15px;
+  cursor: pointer;
+  transition:
+    color 0.2s ease,
+    background 0.2s ease,
+    transform 0.2s ease;
+
+  &:hover {
+    color: #fff;
+    background: #ed1a0f;
+    transform: translateY(-1px);
+  }
+
+  &:focus-visible {
+    outline: 2px solid #ed1a0f;
+    outline-offset: 2px;
+  }
+}
+
+.historial-vacio {
+  margin: 0;
+  padding: 1.25rem;
+  border: 1px dashed #cfdcee;
+  border-radius: 14px;
+  color: #5b6b85;
+  font-size: 0.95rem;
+  text-align: center;
+}
+
+/* ==================== RESPONSIVIDAD ==================== */
+/* Una sola columna: el registro arriba y el historial debajo */
+@media (max-width: 900px) {
+  .evolucion {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      'registro'
+      'historial';
+    padding: 1rem;
+  }
+}
