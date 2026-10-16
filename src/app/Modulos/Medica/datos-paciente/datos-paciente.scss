@@ -1,8 +1,11 @@
 /* ==================== DATOS DEL PACIENTE ==================== */
 /* Bloque pegado al borde derecho, desde la barra superior hasta el borde inferior de la ventana, sin
-   relleno exterior que lo separe de la pantalla. No se puede plegar ni ocultar: la pantalla que lo
-   usa le reserva su ancho en el relleno derecho y aquí solo se dibuja el bloque. El contenido se
-   desplaza en vertical cuando no cabe y nunca en horizontal. */
+   relleno exterior que lo separe de la pantalla: la pantalla que lo usa le reserva su ancho en el
+   relleno derecho y aquí solo se dibuja el bloque. El contenido se desplaza en vertical cuando no
+   cabe y nunca en horizontal.
+
+   En su forma plegable el bloque lo abre y lo cierra una pestaña lateral y su encabezado pliega el
+   cuerpo con un chevron; en su forma fija se muestra siempre desplegado. */
 .ficha {
   position: fixed;
   top: var(--heightTopBar);
@@ -17,6 +20,106 @@
   border-left: 1px solid #dfe7f3;
   background: #fff;
   box-shadow: -4px 0 14px rgba(15, 23, 42, 0.06);
+}
+
+/* Encabezado del bloque: el título y, en la forma plegable, el chevron que pliega el cuerpo */
+.ficha-encabezado {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.ficha-plegar {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--azulPrincipal);
+  font-size: 1.15rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+
+  &:hover {
+    background: #eef3fb;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--azulSecundario);
+    outline-offset: 2px;
+  }
+}
+
+/* El cuerpo plegado deja visible únicamente el título de la ficha. El bloque fijo no lleva chevron,
+   así que su cuerpo se dibuja siempre desplegado. */
+.ficha-cuerpo--plegado {
+  display: none;
+}
+
+/* Pestaña pegada al borde derecho de la pantalla: abre y cierra la ficha del paciente. Se centra
+   verticalmente en la ventana y, como está fuera del flujo de la rejilla, no consume ancho ni
+   provoca desplazamiento horizontal. */
+.ficha-pestana {
+  position: fixed;
+  top: 50%;
+  right: 0;
+  transform: translateY(-50%);
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: 40px;
+  padding: 14px 9px;
+  border: 1px solid #dfe7f3;
+  border-right: 0;
+  border-radius: 14px 0 0 14px;
+  background: #fff;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
+  color: var(--azulPrincipal);
+  font-family: inherit;
+  cursor: pointer;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+
+  i {
+    color: var(--azulSecundario);
+    font-size: 1.05rem;
+  }
+
+  &:hover {
+    border-color: #b9c8e2;
+    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.1);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--azulSecundario);
+    outline-offset: 2px;
+  }
+}
+
+/* Con la ficha abierta la pestaña se reduce a un botón compacto y se arrima al borde izquierdo del
+   bloque de datos, de modo que ambos quedan unidos sin hueco entre ellos. */
+.ficha-pestana--abierta {
+  right: var(--ficha-ancho, 340px);
+  display: grid;
+  place-items: center;
+  height: 40px;
+  padding: 0;
+}
+
+.ficha-pestana_texto {
+  /* Texto en vertical que se lee de abajo hacia arriba, como una pestaña lateral */
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  font-size: 0.95rem;
+  font-weight: 600;
+  white-space: nowrap;
 }
 
 .ficha-titulo {
@@ -136,9 +239,11 @@
 
 /* ==================== RESPONSIVIDAD ==================== */
 @media (max-width: 900px) {
-  /* En pantallas estrechas el bloque deja de estar fijo para no tapar el contenido: fluye debajo de
-     la pantalla con el mismo aspecto de tarjeta que el resto de los paneles y sigue desplegado. */
-  .ficha {
+  /* En pantallas estrechas el bloque fijo deja de estar pegado a la pantalla para no tapar el
+     contenido: fluye debajo con el mismo aspecto de tarjeta que el resto de los paneles y sigue
+     desplegado. El bloque plegable conserva su forma fija y el ancho que la pantalla le fija en
+     --ficha-ancho para que su pestaña siga siendo visible. */
+  .ficha:not(.ficha--plegable) {
     position: static;
     width: 100%;
     max-width: 100%;

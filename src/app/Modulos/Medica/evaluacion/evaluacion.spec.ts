@@ -142,14 +142,19 @@ describe('Evaluacion', () => {
   });
 
   it('muestra el bloque de datos del paciente en historia clínica y diagnóstico', async () => {
-    // El examen físico usa la ficha plegable con su pestaña lateral
-    expect(elemento('app-datos-paciente')).toBeNull();
-    expect(elemento('.ficha-pestana')).not.toBeNull();
+    const bloque = (): HTMLElement => elemento<HTMLElement>('app-datos-paciente');
+
+    // El examen físico usa la ficha plegable: el bloque compartido arranca cerrado y con su pestaña
+    expect(bloque().querySelector('.ficha-pestana')).not.toBeNull();
+    expect(bloque().querySelector('.ficha')).toBeNull();
 
     elementos<HTMLButtonElement>('.tarjeta')[0].click();
     await fixture.whenStable();
 
-    expect(elemento<HTMLElement>('app-datos-paciente .ficha')).not.toBeNull();
+    // Historia clínica y diagnóstico muestran siempre los datos: el bloque se dibuja desplegado y
+    // sin pestaña, porque no hay nada que abrir
+    expect(bloque().querySelector('.ficha')).not.toBeNull();
+    expect(bloque().querySelector('.ficha-pestana')).toBeNull();
     expect(component.seccionConDatosPaciente).toBe(true);
     expect(component.pacienteAbierto).toBe(false);
     expect(
@@ -159,7 +164,7 @@ describe('Evaluacion', () => {
     elementos<HTMLButtonElement>('.tarjeta')[2].click();
     await fixture.whenStable();
 
-    expect(elemento<HTMLElement>('app-datos-paciente .ficha')).not.toBeNull();
+    expect(bloque().querySelector('.ficha')).not.toBeNull();
   });
 
   it('vuelve a la ficha plegable al regresar al examen físico', async () => {
@@ -169,7 +174,8 @@ describe('Evaluacion', () => {
     elementos<HTMLButtonElement>('.tarjeta')[1].click();
     await fixture.whenStable();
 
-    expect(elemento('app-datos-paciente')).toBeNull();
+    // Vuelve la ficha plegable: el bloque se cierra y reaparece su pestaña lateral
+    expect(elemento<HTMLElement>('app-datos-paciente .ficha')).toBeNull();
     expect(elemento('.ficha-pestana')).not.toBeNull();
     expect(
       elemento<HTMLElement>('.evaluacion').classList.contains('evaluacion--datos-paciente'),
@@ -312,9 +318,9 @@ describe('Evaluacion', () => {
     expect(elementos<HTMLElement>('.panel-secciones .tarjeta').length).toBe(3);
     expect(elementos<HTMLElement>('.panel-secciones .tarjeta_icono i').length).toBe(3);
     expect(elementos<HTMLElement>('.panel-secciones .tarjeta_texto').length).toBe(3);
-    expect(
-      elemento<HTMLButtonElement>('.panel-secciones .tarjeta').getAttribute('title'),
-    ).toBe('Historia clínica');
+    expect(elemento<HTMLButtonElement>('.panel-secciones .tarjeta').getAttribute('title')).toBe(
+      'Historia clínica',
+    );
     expect(
       elemento<HTMLButtonElement>('.panel-secciones .tarjeta').getAttribute('aria-label'),
     ).toBe('Historia clínica');
@@ -327,7 +333,9 @@ describe('Evaluacion', () => {
     expect(
       elemento<HTMLElement>('.panel-secciones').classList.contains('panel-secciones--rail'),
     ).toBe(false);
-    expect(elemento<HTMLButtonElement>('.panel-secciones .tarjeta').getAttribute('title')).toBeNull();
+    expect(
+      elemento<HTMLButtonElement>('.panel-secciones .tarjeta').getAttribute('title'),
+    ).toBeNull();
     expect(
       elemento<HTMLButtonElement>('.panel-secciones .tarjeta').getAttribute('aria-label'),
     ).toBeNull();
@@ -349,15 +357,15 @@ describe('Evaluacion', () => {
     expect(rejilla().classList.contains('evaluacion--ficha-abierta')).toBe(false);
   });
 
-  it('mantiene la pestaña y el bloque de datos como hijas directas de la vista', async () => {
+  it('delega la pestaña y el bloque de datos en el componente compartido', async () => {
     botonPestanaPaciente().click();
     await fixture.whenStable();
 
-    // Ninguno de los dos depende de un carril intermedio ni vive dentro de un panel: la pestaña se
-    // posiciona contra el borde de la pantalla y el bloque se ancla a ese mismo borde.
+    // Ninguno de los dos depende de un carril intermedio ni vive dentro de un panel: el componente
+    // compartido los dibuja pegados al borde derecho de la pantalla.
     expect(elemento<HTMLElement>('.carril')).toBeNull();
-    expect(botonPestanaPaciente().parentElement?.classList.contains('evaluacion')).toBe(true);
-    expect(ficha()?.parentElement?.classList.contains('evaluacion')).toBe(true);
+    expect(botonPestanaPaciente().closest('app-datos-paciente')).not.toBeNull();
+    expect(ficha()?.closest('app-datos-paciente')).not.toBeNull();
     expect(botonPestanaPaciente().closest('.panel')).toBeNull();
   });
 
@@ -368,9 +376,9 @@ describe('Evaluacion', () => {
     const plegar = botonPlegarFicha();
     expect(plegar.getAttribute('aria-expanded')).toBe('true');
     expect(plegar.querySelector('i')?.classList.contains('bi-chevron-down')).toBe(true);
-    expect(
-      elemento<HTMLElement>('.ficha-cuerpo').classList.contains('ficha-cuerpo--plegado'),
-    ).toBe(false);
+    expect(elemento<HTMLElement>('.ficha-cuerpo').classList.contains('ficha-cuerpo--plegado')).toBe(
+      false,
+    );
 
     plegar.click();
     await fixture.whenStable();
@@ -382,9 +390,9 @@ describe('Evaluacion', () => {
     expect(elemento<HTMLElement>('.ficha-titulo').textContent?.trim()).toBe(
       'Información del paciente',
     );
-    expect(
-      elemento<HTMLElement>('.ficha-cuerpo').classList.contains('ficha-cuerpo--plegado'),
-    ).toBe(true);
+    expect(elemento<HTMLElement>('.ficha-cuerpo').classList.contains('ficha-cuerpo--plegado')).toBe(
+      true,
+    );
   });
 
   it('reabre la ficha con los datos completos tras plegarla', async () => {
@@ -399,26 +407,9 @@ describe('Evaluacion', () => {
     await fixture.whenStable();
 
     expect(component.datosPacienteVisibles).toBe(true);
-    expect(
-      elemento<HTMLElement>('.ficha-cuerpo').classList.contains('ficha-cuerpo--plegado'),
-    ).toBe(false);
-    expect(
-      elemento<HTMLElement>('.ficha-plegar').getAttribute('aria-expanded'),
-    ).toBe('true');
-  });
-
-  it('lista las alergias registradas cuando el paciente las tiene', async () => {
-    component.alergias = ['Penicilina'];
-    fixture.detectChanges();
-
-    botonPestanaPaciente().click();
-    await fixture.whenStable();
-
-    const alergias = elemento<HTMLElement>('.alergias-card');
-    expect(alergias.tagName).toBe('UL');
-    expect(alergias.textContent).not.toContain('Ninguna conocida');
-    expect(elementos<HTMLElement>('.alergias-card li').length).toBe(1);
-    expect(elementos<HTMLElement>('.alergias-card li')[0].textContent?.trim()).toBe('Penicilina');
+    expect(elemento<HTMLElement>('.ficha-cuerpo').classList.contains('ficha-cuerpo--plegado')).toBe(
+      false,
+    );
+    expect(elemento<HTMLElement>('.ficha-plegar').getAttribute('aria-expanded')).toBe('true');
   });
 });
-

@@ -5,111 +5,17 @@
   [class.evaluacion--datos-paciente]="seccionConDatosPaciente"
   [class.evaluacion--sin-hallazgos]="!mostrarHallazgos"
 >
-  <!-- Pestaña lateral: abre y cierra la ficha del paciente -->
-  <button
-    type="button"
-    class="ficha-pestana"
-    [class.ficha-pestana--abierta]="pacienteAbierto"
-    [attr.aria-expanded]="pacienteAbierto"
-    [attr.aria-controls]="pacienteAbierto ? 'fichaPaciente' : null"
-    [attr.title]="pacienteAbierto ? 'Ocultar datos del paciente' : 'Ver datos del paciente'"
-    (click)="alternarDatosPaciente()"
-  >
-    <i
-      class="bi"
-      [class.bi-chevron-left]="!pacienteAbierto"
-      [class.bi-chevron-right]="pacienteAbierto"
-      aria-hidden="true"
-    ></i>
-
-    @if (!pacienteAbierto) {
-      <span class="ficha-pestana_texto">Ver datos del paciente</span>
-    }
-  </button>
-
-  <!-- Ficha del paciente: bloque pegado al borde derecho de la pantalla -->
-  @if (pacienteAbierto) {
-    <aside class="ficha" id="fichaPaciente">
-      <header class="ficha-encabezado">
-        <h3 class="ficha-titulo">Información del paciente</h3>
-
-        <button
-          type="button"
-          class="ficha-plegar"
-          [attr.aria-expanded]="datosPacienteVisibles"
-          aria-controls="fichaCuerpo"
-          [attr.aria-label]="
-            datosPacienteVisibles ? 'Ocultar datos del paciente' : 'Mostrar datos del paciente'
-          "
-          (click)="alternarCuerpoFicha()"
-        >
-          <i
-            class="bi"
-            [class.bi-chevron-down]="datosPacienteVisibles"
-            [class.bi-chevron-up]="!datosPacienteVisibles"
-            aria-hidden="true"
-          ></i>
-        </button>
-      </header>
-
-      <!-- Cuerpo de la ficha: MOCK de diseño -->
-      <div
-        class="ficha-cuerpo"
-        id="fichaCuerpo"
-        [class.ficha-cuerpo--plegado]="!datosPacienteVisibles"
-      >
-        <!-- Datos del paciente -->
-        <h4 class="ficha-subtitulo">Datos del paciente</h4>
-
-        <dl class="ficha-datos">
-          @for (dato of datosPaciente; track dato.etiqueta) {
-            <div class="ficha-dato">
-              <dt class="ficha-campo_etiqueta">{{ dato.etiqueta }}</dt>
-              <dd class="ficha-campo_valor">{{ dato.valor }}</dd>
-            </div>
-          }
-        </dl>
-
-        <!-- Información de la atención -->
-        <h4 class="ficha-subtitulo">Información de la atención</h4>
-
-        <dl class="ficha-atencion">
-          @for (dato of atencionPaciente; track dato.etiqueta) {
-            <div class="ficha-atencion_dato">
-              <dt class="ficha-campo_etiqueta">{{ dato.etiqueta }}</dt>
-              <dd class="ficha-campo_valor">{{ dato.valor }}</dd>
-            </div>
-          }
-        </dl>
-
-        <!-- Motivo de atención -->
-        <h4 class="ficha-subtitulo">Motivo de atención</h4>
-        <p class="motivo-card">{{ motivoAtencion }}</p>
-
-        <!-- Alergias -->
-        <h4 class="ficha-subtitulo">Alergias</h4>
-
-        @if (alergias.length === 0) {
-          <p class="alergias-card">Ninguna conocida</p>
-        } @else {
-          <ul class="alergias-card">
-            @for (alergia of alergias; track alergia) {
-              <li>{{ alergia }}</li>
-            }
-          </ul>
-        }
-
-        <!-- Últimos signos vitales -->
-        <h4 class="ficha-subtitulo">Últimos signos vitales</h4>
-
-        <ul class="ficha-vitales">
-          @for (signo of signosVitales; track signo) {
-            <li>{{ signo }}</li>
-          }
-        </ul>
-      </div>
-    </aside>
-  }
+  <!-- Datos del paciente: bloque compartido con las demás pantallas del módulo, pegado al borde
+       derecho de la pantalla. En el examen físico lo abre y lo cierra la pestaña lateral y en
+       historia clínica y diagnóstico, que siempre muestran los datos, se dibuja desplegado y sin
+       pestaña. -->
+  <app-datos-paciente
+    [plegable]="!seccionConDatosPaciente"
+    [abierto]="fichaAbierta"
+    (abiertoCambia)="cambiarFicha($event)"
+    [cuerpoVisible]="datosPacienteVisibles"
+    (cuerpoVisibleCambia)="datosPacienteVisibles = $event"
+  ></app-datos-paciente>
 
   <!-- Secciones de la evaluación -->
   <section class="panel panel-secciones" [class.panel-secciones--rail]="pacienteAbierto">
@@ -264,4 +170,3 @@
     </section>
   }
 </div>
-

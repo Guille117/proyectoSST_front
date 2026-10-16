@@ -21,16 +21,10 @@
   padding-right: calc(var(--ficha-ancho) + 1.5rem);
 }
 
-/* Secciones que muestran siempre el bloque de datos del paciente (historia clínica y diagnóstico):
-   la rejilla le reserva su ancho y la ficha plegable con su pestaña no se dibujan para no duplicar
-   la información. */
+/* Secciones que muestran siempre el bloque de datos del paciente (historia clínica y diagnóstico): el
+   bloque compartido se dibuja desplegado y sin pestaña, y la rejilla le reserva su ancho. */
 .evaluacion--datos-paciente {
   padding-right: calc(var(--ficha-ancho) + 1.5rem);
-
-  .ficha-pestana,
-  .ficha {
-    display: none;
-  }
 }
 
 /* Secciones que no registran hallazgos del examen físico (historia clínica y diagnóstico): la rejilla
@@ -80,235 +74,9 @@
 /* ==================== SECCIONES ==================== */
 /* La tarjeta del panel de secciones (.tarjeta) usa el estilo compartido src/styles/tarjetaStyle.scss */
 
-/* ==================== PESTAÑA LATERAL Y FICHA DEL PACIENTE ==================== */
-/* Pestaña pegada al borde derecho de la pantalla: abre y cierra la ficha del paciente. Se centra
-   verticalmente en la ventana y, como está fuera del flujo de la rejilla, no consume ancho ni
-   provoca desplazamiento horizontal. */
-.ficha-pestana {
-  position: fixed;
-  top: 50%;
-  right: 0;
-  transform: translateY(-50%);
-  z-index: 5;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-  width: 40px;
-  padding: 14px 9px;
-  border: 1px solid #dfe7f3;
-  border-right: 0;
-  border-radius: 14px 0 0 14px;
-  background: #fff;
-  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
-  color: var(--azulPrincipal);
-  font-family: inherit;
-  cursor: pointer;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
-
-  i {
-    color: var(--azulSecundario);
-    font-size: 1.05rem;
-  }
-
-  &:hover {
-    border-color: #b9c8e2;
-    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.1);
-  }
-
-  &:focus-visible {
-    outline: 2px solid var(--azulSecundario);
-    outline-offset: 2px;
-  }
-}
-
-/* Con la ficha abierta la pestaña se reduce a un botón compacto y se arrima al borde izquierdo del
-   bloque de datos, de modo que ambos quedan unidos sin hueco entre ellos. */
-.ficha-pestana--abierta {
-  right: var(--ficha-ancho);
-  display: grid;
-  place-items: center;
-  height: 40px;
-  padding: 0;
-}
-
-.ficha-pestana_texto {
-  /* Texto en vertical que se lee de abajo hacia arriba, como una pestaña lateral */
-  writing-mode: vertical-rl;
-  transform: rotate(180deg);
-  font-size: 0.95rem;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-/* Bloque de datos del paciente: pegado al borde derecho, desde la barra superior hasta el borde
-   inferior de la ventana y sin relleno exterior que lo separe de la pantalla. El contenido se
-   desplaza en vertical cuando no cabe y nunca en horizontal. */
-.ficha {
-  position: fixed;
-  top: var(--heightTopBar);
-  right: 0;
-  bottom: 0;
-  z-index: 4;
-  width: var(--ficha-ancho);
-  max-width: 100%;
-  padding: 1.5rem;
-  overflow-y: auto;
-  border-left: 1px solid #dfe7f3;
-  background: #fff;
-  box-shadow: -4px 0 14px rgba(15, 23, 42, 0.06);
-}
-
-.ficha-encabezado {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-}
-
-.ficha-titulo {
-  margin: 0;
-  color: var(--azulPrincipal);
-  font-size: 1.3rem;
-  font-weight: 700;
-}
-
-.ficha-plegar {
-  display: grid;
-  flex: 0 0 auto;
-  place-items: center;
-  width: 34px;
-  height: 34px;
-  border: 0;
-  border-radius: 10px;
-  background: transparent;
-  color: var(--azulPrincipal);
-  font-size: 1.15rem;
-  cursor: pointer;
-  transition: background-color 0.2s ease;
-
-  &:hover {
-    background: #eef3fb;
-  }
-
-  &:focus-visible {
-    outline: 2px solid var(--azulSecundario);
-    outline-offset: 2px;
-  }
-}
-
-/* El cuerpo plegado deja visible únicamente el título de la ficha */
-.ficha-cuerpo--plegado {
-  display: none;
-}
-
-/* Datos del paciente: etiquetas arriba y valores debajo, en tantas columnas como quepan */
-.ficha-datos {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-  gap: 0.9rem 1rem;
-  margin: 0;
-  padding: 1.1rem 1.25rem;
-  border: 1px solid #e8eef7;
-  border-radius: 14px;
-  background: #f7f9fc;
-}
-
-/* Información de la atención: datos en línea separados por una línea vertical */
-.ficha-atencion {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.85rem 1rem;
-  margin: 0;
-}
-
-.ficha-dato,
-.ficha-atencion_dato {
-  display: grid;
-  gap: 4px;
-  min-width: 0;
-}
-
-.ficha-atencion_dato {
-  flex: 1 1 auto;
-
-  & + & {
-    padding-left: 1rem;
-    border-left: 1px solid #e4ebf5;
-  }
-}
-
-/* Etiqueta y valor de cada dato de la ficha */
-.ficha-campo_etiqueta {
-  color: #5b6b85;
-  font-size: 0.86rem;
-}
-
-.ficha-campo_valor {
-  margin: 0;
-  color: var(--azulPrincipal);
-  font-size: 0.98rem;
-  font-weight: 700;
-  line-height: 1.35;
-  /* Los valores largos se parten antes que desbordar el bloque */
-  overflow-wrap: anywhere;
-}
-
-/* Títulos de sección dentro de la ficha */
-.ficha-subtitulo {
-  margin: 1.4rem 0 0.6rem;
-  color: var(--azulSecundario);
-  font-size: 1rem;
-  font-weight: 700;
-}
-
-/* Motivo de atención: tarjeta con acento azul a la izquierda */
-.motivo-card {
-  margin: 0;
-  padding: 0.9rem 1.1rem;
-  border-left: 4px solid var(--azulSecundario);
-  border-radius: 12px;
-  background: #eaf3fe;
-  color: var(--azulPrincipal);
-  font-size: 1rem;
-  font-weight: 700;
-}
-
-/* La misma tarjeta cubre el estado vacío y el listado de alergias registradas */
-.alergias-card {
-  margin: 0;
-  padding: 0.9rem 1.1rem;
-  border-left: 4px solid #ed1a0f;
-  border-radius: 12px;
-  background: #fdecec;
-  color: #c81a10;
-  font-size: 1rem;
-  font-weight: 600;
-  list-style: none;
-
-  li + li {
-    margin-top: 6px;
-  }
-}
-
-/* Últimos signos vitales: valores en línea separados por un punto medio */
-.ficha-vitales {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 6px;
-  margin: 0;
-  padding: 0;
-  color: var(--azulPrincipal);
-  font-size: 0.95rem;
-  font-weight: 700;
-  list-style: none;
-
-  li + li::before {
-    margin-right: 6px;
-    color: #93a3bb;
-    content: '·';
-  }
-}
+/* ==================== FICHA DEL PACIENTE ==================== */
+/* La ficha con los datos del paciente la dibuja el componente compartido app-datos-paciente, que
+   trae sus propios estilos; esta pantalla solo le reserva el ancho del bloque. */
 
 /* ==================== SECCIONES COLAPSADAS (CARRIL DE ICONOS) ==================== */
 /* Con la ficha abierta las secciones se reducen a sus iconos para que el examen físico y los
@@ -385,7 +153,10 @@
   font-family: inherit;
   font-size: 1rem;
   cursor: pointer;
-  transition: border-color 0.2s ease, background-color 0.2s ease, color 0.2s ease;
+  transition:
+    border-color 0.2s ease,
+    background-color 0.2s ease,
+    color 0.2s ease;
 
   &:hover {
     border-color: #b9c8e2;
@@ -430,7 +201,9 @@
   line-height: 1.5;
   outline: none;
   resize: vertical;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
 
   &:focus {
     border-color: #3b82f6;
@@ -648,4 +421,3 @@
       'examen';
   }
 }
-

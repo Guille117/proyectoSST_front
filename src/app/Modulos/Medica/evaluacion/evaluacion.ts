@@ -27,11 +27,6 @@ interface HallazgoVista {
   medico: string;
 }
 
-interface DatoPacienteVista {
-  etiqueta: string;
-  valor: string;
-}
-
 @Component({
   selector: 'app-evaluacion',
   imports: [FormsModule, HistoriaClinica, Diagnostico, DatosPaciente],
@@ -56,28 +51,6 @@ export class Evaluacion {
   cargandoHallazgos = true;
 
   // ------------------- MOCK: datos temporales para diseño -------------------
-  /** MOCK: identificación del paciente en la ficha. Se sustituirá por los datos reales. */
-  datosPaciente: DatoPacienteVista[] = [
-    { etiqueta: 'Expediente', valor: 'EXP-0241' },
-    { etiqueta: 'Paciente', valor: 'Juan Pérez' },
-  ];
-
-  /** MOCK: datos de la atención vigente del paciente. */
-  atencionPaciente: DatoPacienteVista[] = [
-    { etiqueta: 'Tipo de atención', valor: 'Hospitalización' },
-    { etiqueta: 'Fecha de ingreso', valor: '10-10-2026' },
-    { etiqueta: 'Cama', valor: 'A-105' },
-  ];
-
-  /** MOCK: motivo de atención registrado en el episodio actual. */
-  motivoAtencion = 'Dolor abdominal y vómitos';
-
-  /** Arreglo vacío: en la maqueta representa que el paciente no tiene alergias registradas. */
-  alergias: string[] = [];
-
-  /** MOCK: últimas constantes vitales tomadas al paciente. */
-  signosVitales: string[] = ['PA 120/80', 'FC 82', 'Temp 37.2 °C', 'SpO2 97%'];
-
   hallazgoActual =
     'Paciente consciente, orientado, en buen estado general, con signos vitales estables. ' +
     'Abdomen blando, depresible, con dolor a la palpación en epigastrio y mesogastrio, sin ' +
@@ -137,6 +110,15 @@ export class Evaluacion {
     return this.seccionActiva !== 'examen-fisico';
   }
 
+  /**
+   * La ficha con los datos del paciente está desplegada: en el examen físico la abre su pestaña
+   * lateral y en historia clínica y diagnóstico, que siempre muestran los datos, se dibuja desplegada
+   * y sin pestaña.
+   */
+  get fichaAbierta(): boolean {
+    return this.pacienteAbierto || this.seccionConDatosPaciente;
+  }
+
   /** Solo el examen físico registra hallazgos: las demás secciones no muestran el panel de hallazgos. */
   get mostrarHallazgos(): boolean {
     return this.seccionActiva === 'examen-fisico';
@@ -144,20 +126,16 @@ export class Evaluacion {
 
   // ------------------- ACCIONES DE LA VISTA -------------------
   /**
-   * Abre o cierra la ficha del paciente. Al abrirla se muestran los datos completos para que
-   * el usuario vea la información de contexto aunque la hubiera plegado antes.
+   * Abre o cierra la ficha del paciente desde la pestaña lateral del bloque compartido, que avisa del
+   * estado pedido. Al abrirla se muestran los datos completos para que el usuario vea la información
+   * de contexto aunque la hubiera plegado antes.
    */
-  alternarDatosPaciente(): void {
-    this.pacienteAbierto = !this.pacienteAbierto;
+  cambiarFicha(abierto: boolean): void {
+    this.pacienteAbierto = abierto;
 
-    if (this.pacienteAbierto) {
+    if (abierto) {
       this.datosPacienteVisibles = true;
     }
-  }
-
-  /** Pliega o despliega el cuerpo de la ficha desde el chevron del encabezado. */
-  alternarCuerpoFicha(): void {
-    this.datosPacienteVisibles = !this.datosPacienteVisibles;
   }
 
   /**

@@ -1,54 +1,117 @@
-<!-- Datos del paciente: bloque siempre desplegado y pegado al borde derecho de la pantalla -->
-<aside class="ficha" aria-labelledby="tituloFichaPaciente">
-  <h3 class="ficha-titulo" id="tituloFichaPaciente">Información del paciente</h3>
+<!-- Datos del paciente: bloque pegado al borde derecho de la pantalla. En su forma plegable lo abre
+     y lo cierra la pestaña lateral y su encabezado pliega el cuerpo con el chevron. -->
+@if (plegable) {
+  <!-- Pestaña lateral: abre y cierra la ficha del paciente -->
+  <button
+    type="button"
+    class="ficha-pestana"
+    [class.ficha-pestana--abierta]="abierto"
+    [attr.aria-expanded]="abierto"
+    [attr.aria-controls]="abierto ? 'fichaPaciente' : null"
+    [attr.title]="abierto ? 'Ocultar datos del paciente' : 'Ver datos del paciente'"
+    (click)="alternarFicha()"
+  >
+    <i
+      class="bi"
+      [class.bi-chevron-left]="!abierto"
+      [class.bi-chevron-right]="abierto"
+      aria-hidden="true"
+    ></i>
 
-  <!-- Datos del paciente -->
-  <h4 class="ficha-subtitulo">Datos del paciente</h4>
-
-  <dl class="ficha-datos">
-    @for (dato of datosPaciente; track dato.etiqueta) {
-      <div class="ficha-dato">
-        <dt class="ficha-campo_etiqueta">{{ dato.etiqueta }}</dt>
-        <dd class="ficha-campo_valor">{{ dato.valor }}</dd>
-      </div>
+    @if (!abierto) {
+      <span class="ficha-pestana_texto">Ver datos del paciente</span>
     }
-  </dl>
+  </button>
+}
 
-  <!-- Información de la atención -->
-  <h4 class="ficha-subtitulo">Información de la atención</h4>
+@if (abierto) {
+  <aside
+    class="ficha"
+    [class.ficha--plegable]="plegable"
+    id="fichaPaciente"
+    aria-labelledby="tituloFichaPaciente"
+  >
+    <header class="ficha-encabezado">
+      <h3 class="ficha-titulo" id="tituloFichaPaciente">Información del paciente</h3>
 
-  <dl class="ficha-atencion">
-    @for (dato of atencionPaciente; track dato.etiqueta) {
-      <div class="ficha-atencion_dato">
-        <dt class="ficha-campo_etiqueta">{{ dato.etiqueta }}</dt>
-        <dd class="ficha-campo_valor">{{ dato.valor }}</dd>
-      </div>
-    }
-  </dl>
-
-  <!-- Motivo de atención -->
-  <h4 class="ficha-subtitulo">Motivo de atención</h4>
-  <p class="motivo-card">{{ motivoAtencion }}</p>
-
-  <!-- Alergias -->
-  <h4 class="ficha-subtitulo">Alergias</h4>
-
-  @if (alergias.length === 0) {
-    <p class="alergias-card">Ninguna conocida</p>
-  } @else {
-    <ul class="alergias-card">
-      @for (alergia of alergias; track alergia) {
-        <li>{{ alergia }}</li>
+      <!-- El chevron solo existe en la forma plegable: pliega el cuerpo sin ocultar el título -->
+      @if (plegable) {
+        <button
+          type="button"
+          class="ficha-plegar"
+          [attr.aria-expanded]="cuerpoVisible"
+          aria-controls="fichaCuerpo"
+          [attr.aria-label]="
+            cuerpoVisible ? 'Ocultar datos del paciente' : 'Mostrar datos del paciente'
+          "
+          (click)="alternarCuerpo()"
+        >
+          <i
+            class="bi"
+            [class.bi-chevron-down]="cuerpoVisible"
+            [class.bi-chevron-up]="!cuerpoVisible"
+            aria-hidden="true"
+          ></i>
+        </button>
       }
-    </ul>
-  }
+    </header>
 
-  <!-- Últimos signos vitales -->
-  <h4 class="ficha-subtitulo">Últimos signos vitales</h4>
+    <!-- Cuerpo de la ficha: MOCK de diseño. El bloque fijo no tiene chevron, así que se dibuja
+         siempre desplegado. -->
+    <div
+      class="ficha-cuerpo"
+      id="fichaCuerpo"
+      [class.ficha-cuerpo--plegado]="plegable && !cuerpoVisible"
+    >
+      <!-- Datos del paciente -->
+      <h4 class="ficha-subtitulo">Datos del paciente</h4>
 
-  <ul class="ficha-vitales">
-    @for (signo of signosVitales; track signo) {
-      <li>{{ signo }}</li>
-    }
-  </ul>
-</aside>
+      <dl class="ficha-datos">
+        @for (dato of datosPaciente; track dato.etiqueta) {
+          <div class="ficha-dato">
+            <dt class="ficha-campo_etiqueta">{{ dato.etiqueta }}</dt>
+            <dd class="ficha-campo_valor">{{ dato.valor }}</dd>
+          </div>
+        }
+      </dl>
+
+      <!-- Información de la atención -->
+      <h4 class="ficha-subtitulo">Información de la atención</h4>
+
+      <dl class="ficha-atencion">
+        @for (dato of atencionPaciente; track dato.etiqueta) {
+          <div class="ficha-atencion_dato">
+            <dt class="ficha-campo_etiqueta">{{ dato.etiqueta }}</dt>
+            <dd class="ficha-campo_valor">{{ dato.valor }}</dd>
+          </div>
+        }
+      </dl>
+
+      <!-- Motivo de atención -->
+      <h4 class="ficha-subtitulo">Motivo de atención</h4>
+      <p class="motivo-card">{{ motivoAtencion }}</p>
+
+      <!-- Alergias -->
+      <h4 class="ficha-subtitulo">Alergias</h4>
+
+      @if (alergias.length === 0) {
+        <p class="alergias-card">Ninguna conocida</p>
+      } @else {
+        <ul class="alergias-card">
+          @for (alergia of alergias; track alergia) {
+            <li>{{ alergia }}</li>
+          }
+        </ul>
+      }
+
+      <!-- Últimos signos vitales -->
+      <h4 class="ficha-subtitulo">Últimos signos vitales</h4>
+
+      <ul class="ficha-vitales">
+        @for (signo of signosVitales; track signo) {
+          <li>{{ signo }}</li>
+        }
+      </ul>
+    </div>
+  </aside>
+}
