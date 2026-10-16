@@ -16,6 +16,9 @@ describe('Paginacion', () => {
     await fixture.whenStable();
   });
 
+  const elemento = <T extends Element>(selector: string): T =>
+    fixture.nativeElement.querySelector(selector);
+
   it('should create', () => {
     expect(component).toBeTruthy();
   });
@@ -31,5 +34,31 @@ describe('Paginacion', () => {
     component.paginaActual = 1;
     expect(component.mostrando).toBe(0);
     expect(component.totalPaginas).toBe(1);
+  });
+
+  it('compone el recuento de registros con el total del listado', () => {
+    component.cantidadMostrar = 5;
+    component.totalregistros = 11;
+    component.paginaActual = 3;
+
+    expect(component.textoMostrando).toBe('Mostrando 1 de 11 resultados');
+  });
+
+  it('intercala el texto alterno con el recuento cuando la pantalla lo precisa', () => {
+    // Los valores se comunican como en la pantalla real para que el recuento quede estable
+    fixture.componentRef.setInput('cantidadMostrar', 5);
+    fixture.componentRef.setInput('totalregistros', 2);
+    fixture.detectChanges();
+
+    expect(elemento<HTMLElement>('.texto').textContent).toContain('Mostrando 2 de 2 resultados');
+    expect(elemento('.texto-alterno--intercalado')).toBeNull();
+
+    fixture.componentRef.setInput('textoAlterno', 'Seleccione un medicamento');
+    fixture.detectChanges();
+
+    const alterno = elemento<HTMLElement>('.texto-alterno--intercalado');
+
+    expect(alterno.textContent?.trim()).toBe('Seleccione un medicamento');
+    expect(elemento<HTMLElement>('.texto').textContent).toContain('Mostrando 2 de 2 resultados');
   });
 });

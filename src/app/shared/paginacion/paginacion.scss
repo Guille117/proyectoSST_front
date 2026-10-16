@@ -6,10 +6,47 @@
 }
 
 .texto{
+    display: grid;
     font-size: 17px;
     color: var(--texto);
     color:rgb(112, 112, 111);
     font-style:italic
+}
+
+/* Recuento y texto alterno: ocupan la misma celda de la barra y se van turnando con un desvanecido,
+   de modo que siempre se lee uno de los dos */
+.texto-alterno{
+    grid-area: 1 / 1;
+    animation: alternarTexto 6s ease-in-out infinite;
+}
+
+.texto-alterno--intercalado{
+    animation-delay: 3s;
+}
+
+@keyframes alternarTexto {
+    0%, 45% {
+        opacity: 1;
+    }
+
+    55%, 95% {
+        opacity: 0;
+    }
+
+    100% {
+        opacity: 1;
+    }
+}
+
+/* Con el movimiento reducido se muestra solo el recuento de registros */
+@media (prefers-reduced-motion: reduce) {
+    .texto-alterno{
+        animation: none;
+    }
+
+    .texto-alterno--intercalado{
+        display: none;
+    }
 }
 
 nav{

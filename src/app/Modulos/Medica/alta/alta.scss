@@ -1,0 +1,242 @@
+@use '../panel-seccion';
+
+/* ==================== CONTENEDOR (SECCIONES / REGISTRO DEL EGRESO) ==================== */
+/* Rejilla de la pantalla: el panel de secciones a la izquierda y el registro del egreso, común a las
+   tres secciones, en el área central. Cada pista flexible lleva mínimo 0 para que la rejilla pueda
+   encogerse sin desbordar. */
+.alta {
+  /* Ancho del bloque de datos del paciente: lo comparten el propio bloque y su pestaña */
+  --ficha-ancho: 340px;
+
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas: 'secciones registro';
+  gap: 1.25rem;
+  box-sizing: border-box;
+  width: 100%;
+  padding: 1.5rem;
+}
+
+/* Ficha de los datos del paciente abierta: la rejilla le reserva a la derecha el ancho del bloque
+   compartido, que queda pegado al borde de la pantalla sin cubrir los paneles. */
+.alta--ficha-abierta {
+  padding-right: calc(var(--ficha-ancho) + 1.5rem);
+}
+
+/* El panel de secciones es solo el contenedor de las tarjetas: sin fondo ni borde propios, para que
+   las tarjetas blancas se apoyen sobre el fondo de la página. Sin relleno a los lados para que el
+   título y las tarjetas queden arrimados al borde del área de trabajo y con el mismo relleno superior
+   del panel del registro, de modo que los dos títulos queden a la misma altura. */
+.panel-secciones {
+  grid-area: secciones;
+  align-self: start;
+  padding: 1.25rem 0 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+/* Registro del egreso: el mismo formulario para las tres secciones del egreso */
+.panel-registro {
+  grid-area: registro;
+  align-self: start;
+  padding: 1.25rem;
+}
+
+/* ==================== REGISTRO DEL EGRESO ==================== */
+/* El formulario va precedido solo por el título del panel: el margen superior lo separa de él */
+.egreso-form {
+  display: flex;
+  flex-direction: column;
+  margin-top: 1rem;
+}
+
+.egreso-campo {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+
+  & + & {
+    margin-top: 1.25rem;
+  }
+}
+
+.egreso-etiqueta {
+  color: var(--azulPrincipal);
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+/* Asterisco de campo obligatorio: mismo tratamiento del componente campo-validado compartido */
+.egreso-obligatorio {
+  margin-left: 3px;
+  color: #d34a42;
+  font-size: 1.35em;
+  font-weight: 800;
+}
+
+/* Campo de texto y desplegable: mismo lenguaje visual de los formularios del módulo */
+.egreso-input {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 45px;
+  padding: 10px 12px;
+  border: 1px solid #cfdcee;
+  border-radius: 14px;
+  background: #fff;
+  color: #21324d;
+  font-family: inherit;
+  font-size: 1rem;
+  outline: none;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+
+  &:focus,
+  &:focus-visible {
+    border-color: var(--azulSecundario);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.14);
+  }
+
+  &::placeholder {
+    color: #8fa0b8;
+  }
+}
+
+select.egreso-input {
+  cursor: pointer;
+}
+
+/* La observación del egreso es el cuadro largo del registro */
+.egreso-textarea {
+  min-height: 130px;
+  line-height: 1.6;
+  resize: vertical;
+}
+
+/* Separación y línea divisoria de la fila de acciones compartida (.acciones-formulario) */
+.egreso-acciones {
+  gap: 1rem;
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e4ebf5;
+}
+
+/* ==================== TRATAMIENTO DEL EGRESO ==================== */
+/* Tarjeta de medicamentos del componente compartido: ocupa el área del registro del egreso mientras
+   el médico agrega el tratamiento */
+.panel-tratamiento {
+  grid-area: registro;
+  align-self: start;
+}
+
+/* Listado de los medicamentos agregados al tratamiento: separado del último campo del registro */
+.tratamiento-lista {
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e4ebf5;
+}
+
+.tratamiento-titulo {
+  margin: 0 0 0.75rem;
+  color: var(--azulPrincipal);
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.tratamiento-items {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Cada medicamento agregado: sus datos a la izquierda y el botón con el que se quita a la derecha */
+.tratamiento-item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid #dfe7f3;
+  border-radius: 12px;
+  background: #f7fafd;
+}
+
+.tratamiento-datos {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.tratamiento-nombre {
+  color: #101828;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.tratamiento-detalle {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.9rem;
+  color: #5b6b85;
+  font-size: 0.9rem;
+}
+
+.tratamiento-observaciones {
+  color: #5b6b85;
+  font-size: 0.9rem;
+  font-style: italic;
+}
+
+/* Botón de quitar: mismo tratamiento del botón de eliminar de los listados del módulo */
+.tratamiento-quitar {
+  flex: 0 0 auto;
+  display: grid;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  place-items: center;
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  border-radius: 50%;
+  background: #fff;
+  color: #ed1a0f;
+  font-size: 15px;
+  cursor: pointer;
+  transition:
+    color 0.2s ease,
+    background 0.2s ease;
+
+  &:hover {
+    color: #fff;
+    background: #ed1a0f;
+  }
+
+  &:focus-visible {
+    outline: 2px solid #ed1a0f;
+    outline-offset: 2px;
+  }
+}
+
+/* ==================== RESPONSIVIDAD ==================== */
+/* Una sola columna: las secciones arriba y el registro debajo. La ficha del paciente conserva el
+   ancho de su pestaña para que esta siga siendo visible y se apoye en el borde izquierdo. */
+@media (max-width: 900px) {
+  .alta {
+    --ficha-ancho: calc(100% - 40px);
+
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      'secciones'
+      'registro';
+    padding: 1rem;
+  }
+
+  .alta--ficha-abierta {
+    padding-right: 1rem;
+  }
+}

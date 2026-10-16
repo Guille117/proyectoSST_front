@@ -1,6 +1,12 @@
 <div class="contenido">
     <div class="texto">
-        Mostrando {{mostrando}} de {{totalregistros}} resultados
+        @if (textoAlterno) {
+            <!-- El recuento y el texto alterno comparten el sitio y se van turnando -->
+            <span class="texto-alterno">{{ textoMostrando }}</span>
+            <span class="texto-alterno texto-alterno--intercalado">{{ textoAlterno }}</span>
+        } @else {
+            {{ textoMostrando }}
+        }
     </div>
     <nav>
         <button type="button" class="izquierda" [disabled]="paginaActual <= 1" (click)="paginaAnterior()">

@@ -464,123 +464,214 @@
         <h3 class="panel-titulo indicacion-titulo" id="tituloMedicamentos">Medicamentos</h3>
 
         <form class="indicacion-form" (ngSubmit)="agregarIndicacion()">
-          <!-- Medicamento: búsqueda en el catálogo -->
-          <div class="indicacion-campo">
-            <label class="indicacion-etiqueta" for="medicamentoIndicado">
-              Medicamento<span class="indicacion-obligatorio" aria-hidden="true">*</span>
-            </label>
+          <!-- Medicamento elegido: ocupa el lugar del buscador y de la tabla de resultados -->
+          @if (medicamentoElegido) {
+            <div class="indicacion-campo">
+              <span class="indicacion-etiqueta" id="etiquetaMedicamento">
+                Medicamento<span class="indicacion-obligatorio" aria-hidden="true">*</span>
+              </span>
 
-            <div class="indicacion-buscador">
-              <div class="buscador">
-                <input
-                  class="inputB"
-                  id="medicamentoIndicado"
-                  name="medicamento"
-                  type="text"
-                  placeholder="Buscar medicamento..."
-                  aria-required="true"
-                  [(ngModel)]="medicamento"
-                  (keyup.enter)="buscarMedicamento()"
-                />
+              <div class="medicamento-elegido" role="group" aria-labelledby="etiquetaMedicamento">
+                <span class="medicamento-elegido-texto">{{ textoMedicamentoElegido }}</span>
 
                 <button
-                  class="btnLupa"
                   type="button"
-                  title="Buscar en el catálogo de medicamentos"
-                  aria-label="Buscar en el catálogo de medicamentos"
-                  (click)="buscarMedicamento()"
+                  class="medicamento-elegido-cambiar"
+                  title="Cambiar medicamento"
+                  aria-label="Cambiar el medicamento indicado"
+                  (click)="cambiarMedicamento()"
                 >
-                  <i class="bi bi-search fs-5" aria-hidden="true"></i>
+                  <i class="bi bi-arrow-repeat" aria-hidden="true"></i>
                 </button>
               </div>
             </div>
-          </div>
+          }
 
-          <!-- Cantidad y frecuencia: la frecuencia solo admite números -->
-          <div class="indicacion-fila indicacion-fila--dos">
+          <!-- Medicamento: búsqueda en el catálogo mientras no se haya elegido ninguno -->
+          @if (!medicamentoElegido) {
             <div class="indicacion-campo">
-              <label class="indicacion-etiqueta" for="cantidadIndicada">
-                Cantidad<span class="indicacion-obligatorio" aria-hidden="true">*</span>
+              <label class="indicacion-etiqueta" for="medicamentoIndicado">
+                Medicamento<span class="indicacion-obligatorio" aria-hidden="true">*</span>
               </label>
-              <input
-                class="indicacion-input"
-                id="cantidadIndicada"
-                name="cantidad"
-                type="text"
-                placeholder="Ej. 500 mg"
-                aria-required="true"
-                [(ngModel)]="cantidad"
-              />
+
+              <div class="indicacion-buscador">
+                <div class="buscador">
+                  <input
+                    class="inputB"
+                    id="medicamentoIndicado"
+                    name="medicamento"
+                    type="text"
+                    placeholder="Buscar medicamento..."
+                    aria-required="true"
+                    [(ngModel)]="medicamento"
+                    (keyup.enter)="buscarMedicamento()"
+                  />
+
+                  <button
+                    class="btnLupa"
+                    type="button"
+                    title="Buscar en el catálogo de medicamentos"
+                    aria-label="Buscar en el catálogo de medicamentos"
+                    (click)="buscarMedicamento()"
+                  >
+                    <i class="bi bi-search fs-5" aria-hidden="true"></i>
+                  </button>
+                </div>
+              </div>
             </div>
 
-            <div class="indicacion-campo">
-              <label class="indicacion-etiqueta" for="frecuenciaIndicada">
-                Frecuencia<span class="indicacion-obligatorio" aria-hidden="true">*</span>
-              </label>
-              <input
-                class="indicacion-input"
-                id="frecuenciaIndicada"
-                name="frecuencia"
-                type="number"
-                min="1"
-                step="1"
-                inputmode="numeric"
-                placeholder="Ej. 8"
-                aria-required="true"
-                [(ngModel)]="frecuencia"
-              />
-            </div>
-          </div>
+            <!-- Resultados de la búsqueda: tabla paginada con el número, la descripción del
+                 medicamento y su vía de administración; cada fila elige el medicamento -->
+            @if (busquedaMedicamentoRealizada) {
+              <div class="indicacion-resultados" aria-live="polite">
+                @if (medicamentosEncontrados.length) {
+                  <div class="tabla-container">
+                    <table aria-label="Medicamentos encontrados en el catálogo">
+                      <thead>
+                        <tr>
+                          <th class="columna-numero" scope="col">No.</th>
+                          <th scope="col">Descripción</th>
+                          <th scope="col">Administración</th>
+                        </tr>
+                      </thead>
 
-          <!-- Duración y observaciones -->
-          <div class="indicacion-fila">
-            <div class="indicacion-campo">
-              <label class="indicacion-etiqueta" for="duracionCantidadIndicada">
-                Duración
-                @if (duracionTipo === 'dias') {
-                  <span class="indicacion-obligatorio" aria-hidden="true">*</span>
+                      <tbody>
+                        @for (
+                          opcion of medicamentosDeLaPagina;
+                          track opcion.id;
+                          let indice = $index
+                        ) {
+                          <tr
+                            class="fila-seleccionable"
+                            tabindex="0"
+                            [title]="
+                              'Usar «' + descripcionMedicamento(opcion) + '» en la indicación'
+                            "
+                            (click)="seleccionarMedicamento(opcion)"
+                            (keyup.enter)="seleccionarMedicamento(opcion)"
+                          >
+                            <td class="celda_centrada">{{ numeroInicialDeLaPagina + indice }}</td>
+                            <td class="celda_izquierda">{{ descripcionMedicamento(opcion) }}</td>
+                            <td class="celda_izquierda">{{ opcion.administracion }}</td>
+                          </tr>
+                        }
+                      </tbody>
+
+                      <!-- Pie de la tabla: los medicamentos se reparten de cinco en cinco y el
+                           recuento de la paginación alterna con la ayuda para elegir -->
+                      <tfoot>
+                        <tr>
+                          <td colspan="3">
+                            <app-paginacion
+                              [paginaActual]="paginaMedicamentos"
+                              [totalregistros]="medicamentosEncontrados.length"
+                              [cantidadMostrar]="medicamentosPorPagina"
+                              [textoAlterno]="'Seleccione un medicamento'"
+                              (paginaCambiada)="seleccionarPaginaMedicamentos($event)"
+                            ></app-paginacion>
+                          </td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                } @else {
+                  <p class="indicacion-vacio">{{ mensajeSinMedicamentosEncontrados }}</p>
                 }
-              </label>
-              <input
-                class="indicacion-input"
-                id="duracionCantidadIndicada"
-                name="duracionCantidad"
-                type="number"
-                min="1"
-                step="1"
-                inputmode="numeric"
-                placeholder="Ej. 7"
-                [attr.aria-required]="duracionTipo === 'dias'"
-                [(ngModel)]="duracionCantidad"
-              />
+              </div>
+            }
+          }
+
+          <!-- Resto de la captura: espera al medicamento elegido, porque con la tabla de resultados
+               desplegada el formulario solo muestra el buscador y sus resultados -->
+          @if (!busquedaMedicamentoRealizada) {
+            <!-- Cantidad y frecuencia: la frecuencia solo admite números -->
+            <div class="indicacion-fila indicacion-fila--dos">
+              <div class="indicacion-campo">
+                <label class="indicacion-etiqueta" for="cantidadIndicada">
+                  Cantidad<span class="indicacion-obligatorio" aria-hidden="true">*</span>
+                </label>
+                <input
+                  class="indicacion-input"
+                  id="cantidadIndicada"
+                  name="cantidad"
+                  type="text"
+                  placeholder="Ej. 500 mg"
+                  aria-required="true"
+                  [(ngModel)]="cantidad"
+                />
+              </div>
+
+              <div class="indicacion-campo">
+                <label class="indicacion-etiqueta" for="frecuenciaIndicada">
+                  Frecuencia<span class="indicacion-obligatorio" aria-hidden="true">*</span>
+                </label>
+                <input
+                  class="indicacion-input"
+                  id="frecuenciaIndicada"
+                  name="frecuencia"
+                  type="number"
+                  min="1"
+                  step="1"
+                  inputmode="numeric"
+                  placeholder="Ej. 8"
+                  aria-required="true"
+                  [(ngModel)]="frecuencia"
+                />
+              </div>
             </div>
 
-            <div class="indicacion-campo">
-              <label class="indicacion-etiqueta" for="duracionTipoIndicada">Tipo de duración</label>
-              <select
-                class="indicacion-input"
-                id="duracionTipoIndicada"
-                name="duracionTipo"
-                [(ngModel)]="duracionTipo"
-              >
-                <option value="">Seleccionar...</option>
-                @for (opcion of tiposDuracion; track opcion.id) {
-                  <option [value]="opcion.id">{{ opcion.nombre }}</option>
-                }
-              </select>
-            </div>
+            <!-- Duración y observaciones -->
+            <div class="indicacion-fila">
+              <div class="indicacion-campo">
+                <label class="indicacion-etiqueta" for="duracionCantidadIndicada">
+                  Duración
+                  @if (duracionTipo === 'dias') {
+                    <span class="indicacion-obligatorio" aria-hidden="true">*</span>
+                  }
+                </label>
+                <input
+                  class="indicacion-input"
+                  id="duracionCantidadIndicada"
+                  name="duracionCantidad"
+                  type="number"
+                  min="1"
+                  step="1"
+                  inputmode="numeric"
+                  placeholder="Ej. 7"
+                  [attr.aria-required]="duracionTipo === 'dias'"
+                  [(ngModel)]="duracionCantidad"
+                />
+              </div>
 
-            <div class="indicacion-campo">
-              <label class="indicacion-etiqueta" for="observacionesIndicadas">Observaciones</label>
-              <textarea
-                class="indicacion-input indicacion-textarea"
-                id="observacionesIndicadas"
-                name="observaciones"
-                placeholder="Indicaciones adicionales..."
-                [(ngModel)]="observaciones"
-              ></textarea>
+              <div class="indicacion-campo">
+                <label class="indicacion-etiqueta" for="duracionTipoIndicada">
+                  Tipo de duración
+                </label>
+                <select
+                  class="indicacion-input"
+                  id="duracionTipoIndicada"
+                  name="duracionTipo"
+                  [(ngModel)]="duracionTipo"
+                >
+                  <option value="">Seleccionar...</option>
+                  @for (opcion of tiposDuracion; track opcion.id) {
+                    <option [value]="opcion.id">{{ opcion.nombre }}</option>
+                  }
+                </select>
+              </div>
+
+              <div class="indicacion-campo">
+                <label class="indicacion-etiqueta" for="observacionesIndicadas">Observaciones</label>
+                <textarea
+                  class="indicacion-input indicacion-textarea"
+                  id="observacionesIndicadas"
+                  name="observaciones"
+                  placeholder="Indicaciones adicionales..."
+                  [(ngModel)]="observaciones"
+                ></textarea>
+              </div>
             </div>
-          </div>
+          }
 
           <!-- Acciones del formulario -->
           <div class="acciones-formulario indicacion-acciones">

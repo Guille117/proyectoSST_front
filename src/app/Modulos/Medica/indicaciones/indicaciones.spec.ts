@@ -143,6 +143,26 @@ describe('Indicaciones', () => {
     await fixture.whenStable();
   };
 
+  // Tabla de resultados de la búsqueda de medicamentos: la lupa del buscador, sus filas y su pie
+  const botonBuscar = (): HTMLButtonElement =>
+    elemento<HTMLButtonElement>('.indicacion-buscador .btnLupa');
+
+  const filasResultados = (): NodeListOf<HTMLTableRowElement> =>
+    elementos<HTMLTableRowElement>('.indicacion-resultados tbody tr.fila-seleccionable');
+
+  const pieDeResultados = (): HTMLElement => elemento<HTMLElement>('.indicacion-resultados tfoot');
+
+  const paginaSiguiente = async (): Promise<void> => {
+    elemento<HTMLButtonElement>('.indicacion-resultados tfoot .derecha').click();
+    await fixture.whenStable();
+  };
+
+  const buscarMedicamento = async (texto: string): Promise<void> => {
+    await escribir('#medicamentoIndicado', texto);
+    botonBuscar().click();
+    await fixture.whenStable();
+  };
+
   it('should create', () => {
     expect(component).toBeTruthy();
   });
@@ -293,6 +313,142 @@ describe('Indicaciones', () => {
     expect(component.medicamento).toBe('');
     expect(component.cantidad).toBe('');
     expect(component.frecuencia).toBeNull();
+  });
+
+  // ------------------- RESULTADOS DE LA BÚSQUEDA DE MEDICAMENTOS -------------------
+  it('muestra la tabla de resultados con No., Descripción y Administración al buscar', async () => {
+    // La tabla aparece solo después de buscar en el catálogo
+    expect(elemento('.indicacion-resultados')).toBeNull();
+
+    await buscarMedicamento('amoxicilina');
+
+    const encabezados = [...elementos<HTMLTableCellElement>('.indicacion-resultados thead th')].map(
+      (encabezado) => encabezado.textContent?.trim(),
+    );
+
+    expect(encabezados).toEqual(['No.', 'Descripción', 'Administración']);
+    expect(filasResultados().length).toBe(2);
+    expect(filasResultados()[0].textContent).toContain('1');
+    expect(filasResultados()[0].textContent).toContain('Amoxicilina Bayer tabletas de 500 mg');
+    expect(filasResultados()[0].textContent).toContain('Oral');
+    expect(filasResultados()[1].textContent).toContain('2');
+    expect(filasResultados()[1].textContent).toContain('Amoxicilina Bayer suspensión inyectable');
+    expect(filasResultados()[1].textContent).toContain('Intravenosa');
+    // Cada fila se elige con el ratón o con el teclado
+    expect(filasResultados()[1].tabIndex).toBe(0);
+  });
+
+  it('deja el medicamento elegido en el lugar del buscador y de la tabla', async () => {
+    await buscarMedicamento('amoxicilina');
+
+    filasResultados()[1].click();
+    await fixture.whenStable();
+
+    // La tabla con su buscador desaparecen y en su sitio queda el medicamento elegido
+    expect(elemento('.indicacion-resultados')).toBeNull();
+    expect(elemento('#medicamentoIndicado')).toBeNull();
+    expect(component.medicamento).toBe('Amoxicilina Bayer suspensión inyectable de 500 mg');
+    expect(component.medicamentoElegido?.id).toBe(2);
+    expect(elemento<HTMLElement>('.medicamento-elegido-texto').textContent?.trim()).toBe(
+      'Amoxicilina Bayer, suspensión inyectable de 500 mg, administración intravenosa',
+    );
+    expect(botonGuardar().disabled).toBe(false);
+  });
+
+  it('oculta el resto del formulario mientras la tabla de resultados está desplegada', async () => {
+    expect(elemento('#cantidadIndicada')).not.toBeNull();
+
+    await buscarMedicamento('amoxicilina');
+
+    // Solo quedan el buscador y su tabla: la captura espera al medicamento elegido
+    expect(elemento<HTMLInputElement>('#medicamentoIndicado').value).toBe('amoxicilina');
+    expect(elemento('.indicacion-resultados')).not.toBeNull();
+    expect(elemento('#cantidadIndicada')).toBeNull();
+    expect(elemento('#frecuenciaIndicada')).toBeNull();
+    expect(elemento('#duracionCantidadIndicada')).toBeNull();
+    expect(elemento('#duracionTipoIndicada')).toBeNull();
+    expect(elemento('#observacionesIndicadas')).toBeNull();
+    // Sin medicamento elegido todavía no hay nada que guardar
+    expect(botonGuardar().disabled).toBe(true);
+
+    filasResultados()[0].click();
+    await fixture.whenStable();
+
+    expect(elemento('#cantidadIndicada')).not.toBeNull();
+    expect(elemento('#frecuenciaIndicada')).not.toBeNull();
+    expect(elemento('#duracionCantidadIndicada')).not.toBeNull();
+    expect(elemento('#duracionTipoIndicada')).not.toBeNull();
+    expect(elemento('#observacionesIndicadas')).not.toBeNull();
+  });
+
+  it('reparte los resultados en páginas de cinco medicamentos desde el pie de la tabla', async () => {
+    // La búsqueda sin texto lista el catálogo completo, de cinco en cinco
+    await buscarMedicamento('');
+
+    expect(component.medicamentosEncontrados.length).toBe(8);
+    expect(filasResultados().length).toBe(5);
+    expect(filasResultados()[0].textContent).toContain('1');
+    expect(filasResultados()[4].textContent).toContain('5');
+    expect(filasResultados()[4].textContent).toContain('Omeprazol La Santé');
+    expect(pieDeResultados().textContent).toContain('Mostrando 5 de 8 resultados');
+    expect(pieDeResultados().textContent).toContain('Seleccione un medicamento');
+
+    await paginaSiguiente();
+
+    // La página siguiente continúa la numeración y solo muestra los tres que quedan
+    expect(filasResultados().length).toBe(3);
+    expect(filasResultados()[0].textContent).toContain('6');
+    expect(filasResultados()[0].textContent).toContain('Metoclopramida Genfar');
+    expect(pieDeResultados().textContent).toContain('Mostrando 3 de 8 resultados');
+  });
+
+  it('vuelve al buscador al cambiar el medicamento elegido', async () => {
+    await buscarMedicamento('amoxicilina');
+    filasResultados()[0].click();
+    await fixture.whenStable();
+
+    elemento<HTMLButtonElement>('.medicamento-elegido-cambiar').click();
+    await fixture.whenStable();
+
+    // El medicamento elegido suelta su sitio y la búsqueda vuelve con el catálogo completo
+    expect(elemento('.medicamento-elegido')).toBeNull();
+    expect(elemento<HTMLInputElement>('#medicamentoIndicado').value).toBe('');
+    expect(component.medicamento).toBe('');
+    expect(component.medicamentoElegido).toBeNull();
+    expect(filasResultados().length).toBe(5);
+  });
+
+  it('no registra la indicación mientras la tabla de resultados esté desplegada', async () => {
+    await buscarMedicamento('amoxicilina');
+
+    // Aunque se envíe el formulario, el texto escrito es solo la búsqueda
+    component.agregarIndicacion();
+    await fixture.whenStable();
+
+    expect(tarjetas().length).toBe(4);
+    expect(component.medicamentosEncontrados.length).toBe(2);
+  });
+
+  it('informa cuando la búsqueda no encuentra medicamentos en el catálogo', async () => {
+    await buscarMedicamento('ranitidina');
+
+    expect(filasResultados().length).toBe(0);
+    expect(
+      elemento<HTMLElement>('.indicacion-resultados .indicacion-vacio').textContent,
+    ).toContain('No se encontraron medicamentos que coincidan con «ranitidina»');
+  });
+
+  it('cierra la tabla de resultados al cancelar la captura', async () => {
+    await buscarMedicamento('amoxicilina');
+
+    expect(elemento('.indicacion-resultados')).not.toBeNull();
+
+    botonCancelar().click();
+    await fixture.whenStable();
+
+    expect(elemento('.indicacion-resultados')).toBeNull();
+    expect(component.medicamentosEncontrados.length).toBe(0);
+    expect(component.medicamentoElegido).toBeNull();
   });
 
   it('reemplaza el botón de eliminar del pie por un menú de opciones en cada tarjeta', () => {

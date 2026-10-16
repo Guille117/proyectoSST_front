@@ -1,1 +1,154 @@
-<p>alta works!</p>
+<!-- Alta médica: secciones del egreso del paciente (indicación médica, retiro voluntario y
+     referencia o traslado) y el registro del egreso, que es el mismo para las tres secciones -->
+<div class="alta" [class.alta--ficha-abierta]="pacienteAbierto">
+  <!-- Secciones del egreso: cada tarjeta es un motivo de egreso y la pulsada queda activa -->
+  <section class="panel panel-secciones" aria-labelledby="tituloSeccionesAlta">
+    <h3 class="panel-titulo" id="tituloSeccionesAlta">Secciones</h3>
+
+    @for (seccion of secciones; track seccion.id) {
+      <button
+        type="button"
+        class="tarjeta"
+        [class.tarjeta--activa]="seccionActiva === seccion.id"
+        [attr.aria-pressed]="seccionActiva === seccion.id"
+        (click)="seleccionarSeccion(seccion.id)"
+      >
+        <span class="tarjeta_icono"><i class="bi {{ seccion.icono }}" aria-hidden="true"></i></span>
+        <span class="tarjeta_texto">
+          <span class="tarjeta_titulo">{{ seccion.titulo }}</span>
+          <span class="tarjeta_descripcion">{{ seccion.descripcion }}</span>
+        </span>
+      </button>
+    }
+  </section>
+
+  <!-- Tratamiento del egreso: la tarjeta de medicamentos ocupa el lugar del registro mientras el
+       médico agrega el tratamiento; al guardar un medicamento o al cancelar vuelve el registro -->
+  @if (mostrandoMedicamentos) {
+    <app-medicamento-indicacion
+      class="panel-tratamiento"
+      (medicamentoAgregado)="registrarMedicamento($event)"
+      (cancelado)="cancelarTratamiento()"
+    ></app-medicamento-indicacion>
+  } @else {
+    <!-- Registro del egreso: diagnóstico, condición y observación, con las acciones del formulario -->
+    <section class="panel panel-registro" aria-labelledby="tituloRegistroEgreso">
+      <h3 class="panel-titulo" id="tituloRegistroEgreso">Registrar egreso</h3>
+
+      <form class="egreso-form" (ngSubmit)="guardarEgreso()">
+        <!-- Diagnóstico de egreso -->
+        <div class="egreso-campo">
+          <label class="egreso-etiqueta" for="diagnosticoEgreso">
+            Diagnóstico de egreso<span class="egreso-obligatorio" aria-hidden="true">*</span>
+          </label>
+
+          <input
+            class="egreso-input"
+            id="diagnosticoEgreso"
+            name="diagnosticoEgreso"
+            type="text"
+            placeholder="Escribe el diagnóstico con el que egresa el paciente..."
+            aria-required="true"
+            [(ngModel)]="diagnosticoEgreso"
+          />
+        </div>
+
+        <!-- Condición de egreso -->
+        <div class="egreso-campo">
+          <label class="egreso-etiqueta" for="condicionEgreso">Condición de egreso</label>
+
+          <select
+            class="egreso-input"
+            id="condicionEgreso"
+            name="condicionEgreso"
+            [(ngModel)]="condicionEgreso"
+          >
+            <option value="" disabled>Seleccione la condición de egreso</option>
+
+            @for (condicion of condicionesEgreso; track condicion.id) {
+              <option [value]="condicion.id">{{ condicion.nombre }}</option>
+            }
+          </select>
+        </div>
+
+        <!-- Observación de egreso -->
+        <div class="egreso-campo">
+          <label class="egreso-etiqueta" for="observacionEgreso">Observación de egreso</label>
+
+          <textarea
+            class="egreso-input egreso-textarea"
+            id="observacionEgreso"
+            name="observacionEgreso"
+            placeholder="Indicaciones y recomendaciones para el egreso del paciente..."
+            [maxlength]="maxCaracteres"
+            [(ngModel)]="observacionEgreso"
+          ></textarea>
+        </div>
+
+        <!-- Tratamiento del egreso: los medicamentos que se fueron agregando desde la tarjeta de
+           medicamentos, con su cantidad, su frecuencia, su duración y sus observaciones -->
+        @if (tratamiento.length) {
+          <div class="tratamiento-lista">
+            <h4 class="tratamiento-titulo">Tratamiento indicado ({{ tratamiento.length }})</h4>
+
+            <ul class="tratamiento-items">
+              @for (medicamento of tratamiento; track $index) {
+                <li class="tratamiento-item">
+                  <span class="tratamiento-datos">
+                    <span class="tratamiento-nombre">{{ medicamento.nombre }}</span>
+
+                    <span class="tratamiento-detalle">
+                      @if (medicamento.cantidad) {
+                        <span>{{ medicamento.cantidad }}</span>
+                      }
+                      @if (medicamento.frecuencia) {
+                        <span>Cada {{ medicamento.frecuencia }} horas</span>
+                      }
+                      @if (medicamento.duracionTipo) {
+                        <span>{{ duracionDelMedicamento(medicamento) }}</span>
+                      }
+                    </span>
+
+                    @if (medicamento.observaciones) {
+                      <span class="tratamiento-observaciones">{{ medicamento.observaciones }}</span>
+                    }
+                  </span>
+
+                  <button
+                    type="button"
+                    class="tratamiento-quitar"
+                    title="Quitar del tratamiento"
+                    [attr.aria-label]="'Quitar ' + medicamento.nombre + ' del tratamiento'"
+                    (click)="quitarMedicamento($index)"
+                  >
+                    <i class="bi bi-trash3" aria-hidden="true"></i>
+                  </button>
+                </li>
+              }
+            </ul>
+          </div>
+        }
+
+        <!-- Acciones del formulario -->
+        <div class="acciones-formulario egreso-acciones">
+          <button type="button" class="btn _cancelar" (click)="cancelarCaptura()">Cancelar</button>
+
+          <button type="button" class="btn _principal" (click)="agregarTratamiento()">
+            Agregar tratamiento
+          </button>
+
+          <button type="submit" class="btn _guardar" [disabled]="!puedeGuardar">Guardar</button>
+        </div>
+      </form>
+    </section>
+  }
+
+  <!-- Datos del paciente: bloque compartido con las demás pantallas del módulo -->
+  <app-datos-paciente
+    [plegable]="true"
+    [abierto]="pacienteAbierto"
+    (abiertoCambia)="cambiarFichaPaciente($event)"
+    [cuerpoVisible]="datosPacienteVisibles"
+    (cuerpoVisibleCambia)="datosPacienteVisibles = $event"
+  ></app-datos-paciente>
+</div>

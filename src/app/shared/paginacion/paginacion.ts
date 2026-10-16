@@ -10,10 +10,17 @@ export class Paginacion {
   @Input() paginaActual = 1;
   @Input() totalregistros = 0;
   @Input() cantidadMostrar = 0;
+  /** Texto que se intercala con el recuento de registros; vacío cuando la pantalla no lo precisa. */
+  @Input() textoAlterno = '';
   @Output() paginaCambiada = new EventEmitter<number>();
 
   get mostrando(): number {
     return Math.max(0, Math.min(this.cantidadMostrar, this.totalregistros - (this.paginaActual - 1) * this.cantidadMostrar));
+  }
+
+  /** Recuento de los registros que muestra la página actual del listado. */
+  get textoMostrando(): string {
+    return `Mostrando ${this.mostrando} de ${this.totalregistros} resultados`;
   }
 
   get totalPaginas(): number {

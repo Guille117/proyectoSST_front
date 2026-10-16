@@ -1,0 +1,223 @@
+@use '../panel-seccion';
+
+/* ==================== TARJETA DE MEDICAMENTOS DEL TRATAMIENTO ==================== */
+/* Tarjeta del bloque de medicamentos: la usan la pantalla de indicaciones y el alta médica cuando el
+   médico abre el tratamiento del egreso. Cada pantalla decide en qué área de su rejilla la coloca. */
+:host {
+  display: block;
+}
+
+/* Encabezado de la tarjeta: el título comparte el estilo de los paneles del módulo */
+.medicamento-titulo {
+  margin-bottom: 0.35rem;
+  font-size: 1.5rem;
+}
+
+/* El formulario va precedido solo por el título de la tarjeta: el margen superior lo separa de él */
+.medicamento-form {
+  display: flex;
+  flex-direction: column;
+  margin-top: 1.25rem;
+}
+
+.medicamento-campo {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.medicamento-etiqueta {
+  color: #101828;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+/* Asterisco de campo obligatorio: mismo tratamiento del componente campo-validado compartido */
+.medicamento-obligatorio {
+  margin-left: 3px;
+  color: #d34a42;
+  font-size: 1.35em;
+  font-weight: 800;
+}
+
+/* Contenedor del buscador: fija su altura; el estilo base vive en src/styles/otrosStyle.scss */
+.medicamento-buscador {
+  height: 45px;
+}
+
+.medicamento-buscador .buscador {
+  .inputB {
+    min-width: 0;
+    width: 0;
+  }
+
+  .btnLupa {
+    flex: 0 0 40px;
+    width: 40px;
+  }
+}
+
+/* Medicamento elegido: ocupa el lugar del buscador y de la tabla de resultados con su nombre, su
+   presentación y su vía de administración, y ofrece volver a la búsqueda */
+.medicamento-elegido {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 45px;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border: 1px solid #cfdcee;
+  border-radius: 12px;
+  background: #f5f9ff;
+}
+
+.medicamento-elegido-texto {
+  color: #21324d;
+  font-size: 1rem;
+  line-height: 1.4;
+}
+
+.medicamento-elegido-cambiar {
+  flex: 0 0 auto;
+  display: grid;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  place-items: center;
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  border-radius: 50%;
+  background: #fff;
+  color: var(--azulSecundario);
+  font-size: 1rem;
+  cursor: pointer;
+  transition:
+    color 0.2s ease,
+    background 0.2s ease;
+
+  &:hover {
+    color: #fff;
+    background: var(--azulSecundario);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--azulSecundario);
+    outline-offset: 2px;
+  }
+}
+
+/* ==================== RESULTADOS DE LA BÚSQUEDA DE MEDICAMENTOS ==================== */
+/* La tabla usa el estilo global de src/styles/tableStyle.scss: aquí solo se fija su separación del
+   buscador, el desplazamiento horizontal y el ancho de sus columnas */
+.medicamento-resultados {
+  margin-top: 1.25rem;
+}
+
+.medicamento-resultados .tabla-container {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.medicamento-resultados table {
+  min-width: 480px;
+}
+
+/* Columna del número de la fila: ocupa el ancho mínimo de su encabezado */
+.columna-numero {
+  width: 80px;
+}
+
+/* Las filas del listado se eligen para llevar el medicamento al campo del formulario */
+.fila-seleccionable {
+  cursor: pointer;
+
+  &:hover td {
+    background: #f5f9ff;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--azulSecundario);
+    outline-offset: -2px;
+  }
+}
+
+/* Fila de campos: rejilla de tres columnas para la duración y sus observaciones; cantidad y
+   frecuencia se reparten en dos columnas */
+.medicamento-fila {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.25rem;
+  align-items: start;
+  margin-top: 1.25rem;
+
+  > * {
+    min-width: 0;
+  }
+}
+
+.medicamento-fila--dos {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+/* Campo de texto y desplegables: mismo lenguaje visual del buscador y de las tarjetas */
+.medicamento-input {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 45px;
+  padding: 10px 12px;
+  border: 1px solid #cfdcee;
+  border-radius: 12px;
+  background: #fff;
+  color: #21324d;
+  font-family: inherit;
+  font-size: 1rem;
+  outline: none;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+
+  &:focus,
+  &:focus-visible {
+    border-color: var(--azulSecundario);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.14);
+  }
+}
+
+select.medicamento-input {
+  cursor: pointer;
+}
+
+.medicamento-textarea {
+  min-height: 96px;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+/* Separación y línea divisoria de la fila de acciones compartida (.acciones-formulario) */
+.medicamento-acciones {
+  gap: 1rem;
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid #e4ebf5;
+}
+
+/* Texto de la tabla cuando la búsqueda no encuentra medicamentos */
+.medicamento-vacio {
+  margin: 0;
+  padding: 1.25rem;
+  border: 1px dashed #cfdcee;
+  border-radius: 14px;
+  color: #5b6b85;
+  font-size: 0.95rem;
+  text-align: center;
+}
+
+/* ==================== RESPONSIVIDAD ==================== */
+/* En pantallas estrechas los campos se apilan en una sola columna */
+@media (max-width: 900px) {
+  .medicamento-fila,
+  .medicamento-fila--dos {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
