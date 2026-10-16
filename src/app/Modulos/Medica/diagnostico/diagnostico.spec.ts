@@ -141,6 +141,7 @@ describe('Diagnostico', () => {
     component.guardarDiagnostico();
     await fixture.whenStable();
 
+    expect(popUps.confirmarToast).toHaveBeenCalled();
     expect(servicio.putDiagnostico).toHaveBeenCalledWith(30, {
       tipoDiagnostico: 'PRINCIPAL',
       descripcion: 'Neumonía confirmada',
@@ -149,6 +150,22 @@ describe('Diagnostico', () => {
     });
     expect(component.diagnosticos[0].descripcion).toBe('Neumonía confirmada');
     expect(component.diagnosticoEnEdicion).toBeNull();
+  });
+
+  it('no actualiza la fila en edición si la confirmación se cancela', async () => {
+    servicio.getDiagnosticosPorEpisodio.mockReturnValue(of([principal]));
+    popUps.confirmarToast.mockResolvedValue(false);
+    await inicializar();
+
+    component.editarDiagnostico(principal);
+    component.diagnostico = 'Neumonía confirmada';
+    component.guardarDiagnostico();
+    await fixture.whenStable();
+
+    expect(popUps.confirmarToast).toHaveBeenCalled();
+    expect(servicio.putDiagnostico).not.toHaveBeenCalled();
+    expect(component.diagnosticos[0].descripcion).toBe('Neumonía leve');
+    expect(component.diagnosticoEnEdicion).toBe(30);
   });
 
   it('elimina el diagnóstico confirmado, lo quita de la lista y limpia el formulario', async () => {

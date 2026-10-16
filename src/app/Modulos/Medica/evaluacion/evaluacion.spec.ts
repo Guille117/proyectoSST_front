@@ -19,10 +19,16 @@ describe('Evaluacion', () => {
     getExamenesPorEpisodio: vi.fn(),
     postExamen: vi.fn(),
     putExamen: vi.fn(),
+    cambiarEstado: vi.fn(),
   };
   const historiaClinicaService = { getHistoriasPorEpisodio: vi.fn() };
   const authService = { currentUser: vi.fn() };
-  const popUps = { exito: vi.fn(), error: vi.fn(), errorDesdeBackend: vi.fn() };
+  const popUps = {
+    exito: vi.fn(),
+    error: vi.fn(),
+    errorDesdeBackend: vi.fn(),
+    confirmarToast: vi.fn(),
+  };
 
   const partesCuerpo: ParteCuerpoResponse[] = [
     { id: 3, nombre: 'Tórax', estado: true },
@@ -56,6 +62,10 @@ describe('Evaluacion', () => {
     examenFisicoService.putExamen.mockReturnValue(
       of(examen(21, 3, 'Tórax', 'Dolor a la palpación')),
     );
+    examenFisicoService.cambiarEstado.mockReturnValue(
+      of(examen(21, 3, 'Tórax', 'Ruidos cardiacos normales')),
+    );
+    popUps.confirmarToast.mockResolvedValue(true);
     historiaClinicaService.getHistoriasPorEpisodio.mockReturnValue(of([]));
     authService.currentUser.mockReturnValue({ id: 2 });
 
@@ -99,11 +109,42 @@ describe('Evaluacion', () => {
   const botonCancelar = (): HTMLButtonElement =>
     elemento<HTMLButtonElement>('.hallazgo-acciones ._cancelar');
 
-  const botonEditar = (): HTMLButtonElement | null =>
+  /** El formulario ya no lleva botón "Editar": la edición se dispara desde el menú de la tarjeta. */
+  const botonEditarInline = (): HTMLButtonElement | null =>
     elemento<HTMLButtonElement>('.hallazgo-acciones ._editar');
 
   const botonGuardar = (): HTMLButtonElement =>
     elemento<HTMLButtonElement>('.hallazgo-acciones ._guardar');
+
+  /** Tarjetas de hallazgos registrados, sin contar el esqueleto de carga. */
+  const tarjetasHallazgo = (): HTMLElement[] =>
+    Array.from(elementos<HTMLElement>('.hallazgo-card:not(.hallazgo-card--cargando)'));
+
+  const botonMenuHallazgo = (indice = 0): HTMLButtonElement =>
+    tarjetasHallazgo()[indice].querySelector<HTMLButtonElement>('.hallazgo-menu-trigger')!;
+
+  const menuHallazgo = (indice = 0): HTMLElement | null =>
+    tarjetasHallazgo()[indice].querySelector<HTMLElement>('.hallazgo-menu');
+
+  const botonEditarHallazgo = (indice = 0): HTMLButtonElement | null =>
+    tarjetasHallazgo()[indice].querySelector<HTMLButtonElement>('.hallazgo-menu .iconEditar');
+
+  const botonEliminarHallazgo = (indice = 0): HTMLButtonElement | null =>
+    tarjetasHallazgo()[indice].querySelector<HTMLButtonElement>('.hallazgo-menu .iconQuitar');
+
+  /** Abre el menú de opciones de la tarjeta indicada. */
+  const abrirMenuHallazgo = async (indice = 0): Promise<void> => {
+    botonMenuHallazgo(indice).click();
+    await fixture.whenStable();
+  };
+
+  /** Carga en el formulario la tarjeta indicada desde el menú de opciones. */
+  const pulsarEditarHallazgo = async (indice = 0): Promise<void> => {
+    const boton = botonEditarHallazgo(indice);
+    if (!boton) throw new Error('La opción "Editar" del menú de la tarjeta no está disponible');
+    boton.click();
+    await fixture.whenStable();
+  };
 
   /** Remonta la pantalla después de cambiar los datos simulados: la carga arranca al crearla. */
   const remontar = async (): Promise<void> => {
@@ -118,14 +159,6 @@ describe('Evaluacion', () => {
   const escribir = async (texto: string): Promise<void> => {
     campoHallazgo().value = texto;
     campoHallazgo().dispatchEvent(new Event('input'));
-    await fixture.whenStable();
-  };
-
-  /** Pulsa "Editar" fallando de forma explícita si el botón no está disponible. */
-  const pulsarEditar = async (): Promise<void> => {
-    const boton = botonEditar();
-    if (!boton) throw new Error('El botón "Editar" no está disponible en la vista');
-    boton.click();
     await fixture.whenStable();
   };
 
@@ -309,36 +342,34 @@ describe('Evaluacion', () => {
     );
   });
 
-  it('captura directamente el hallazgo de una parte sin registro y oculta Editar', () => {
-    // Sin hallazgo registrado la captura arranca habilitada y no hay nada que "Editar"
-    expect(component.modoEdicion).toBe(true);
+  it('arranca con el formulario vacío, sin botón Editar y con Guardar deshabilitado', () => {
+    expect(component.modoEdicion).toBe(false);
+    expect(component.hallazgoActual).toBe('');
     expect(campoHallazgo().readOnly).toBe(false);
-    expect(campoHallazgo().classList.contains('hallazgo-campo--lectura')).toBe(false);
-    expect(botonEditar()).toBeNull();
-    expect(botonGuardar().disabled).toBe(false);
+    expect(botonEditarInline()).toBeNull();
+    expect(botonGuardar().disabled).toBe(true);
   });
 
-  it('muestra en modo lectura el hallazgo registrado de la parte seleccionada', async () => {
+  it('no precarga el hallazgo registrado: este se corrige desde la tarjeta', async () => {
     examenFisicoService.getExamenesPorEpisodio.mockReturnValue(
       of([examen(21, 3, 'Tórax', 'Ruidos cardiacos normales')]),
     );
     await remontar();
 
+    // El registro aparece en la lista, pero el formulario sigue vacío
+    expect(tarjetasHallazgo().length).toBe(1);
+    expect(component.hallazgoActual).toBe('');
     expect(component.modoEdicion).toBe(false);
-    expect(component.hallazgoActual).toBe('Ruidos cardiacos normales');
-    expect(campoHallazgo().readOnly).toBe(true);
-    expect(campoHallazgo().classList.contains('hallazgo-campo--lectura')).toBe(true);
-    expect(botonEditar()).not.toBeNull();
+    expect(campoHallazgo().readOnly).toBe(false);
     expect(botonGuardar().disabled).toBe(true);
   });
 
-  it('cambia de parte del cuerpo y trae el hallazgo que tenía registrado', async () => {
+  it('cambia de parte del cuerpo manteniendo el formulario vacío', async () => {
     examenFisicoService.getExamenesPorEpisodio.mockReturnValue(
       of([examen(21, 4, 'Abdomen', 'Inspección abdominal')]),
     );
     await remontar();
 
-    // La parte seleccionada por defecto es la primera del catálogo y no tiene hallazgo
     expect(component.parteSeleccionadaId).toBe(3);
     expect(component.hallazgoActual).toBe('');
 
@@ -347,7 +378,7 @@ describe('Evaluacion', () => {
     expect(component.parteSeleccionadaId).toBe(4);
     expect(selectParte().selectedIndex).toBe(1);
     expect(component.modoEdicion).toBe(false);
-    expect(component.hallazgoActual).toBe('Inspección abdominal');
+    expect(component.hallazgoActual).toBe('');
   });
 
   it('crea el hallazgo del episodio cuando la parte no tenía ninguno', async () => {
@@ -371,17 +402,26 @@ describe('Evaluacion', () => {
     expect(popUps.exito).toHaveBeenCalled();
   });
 
-  it('actualiza el hallazgo vigente cuando ya existía', async () => {
+  it('actualiza el hallazgo cargado desde la tarjeta cuando se edita', async () => {
     examenFisicoService.getExamenesPorEpisodio.mockReturnValue(
       of([examen(21, 3, 'Tórax', 'Ruidos cardiacos normales')]),
     );
     await remontar();
-    await pulsarEditar();
+    await abrirMenuHallazgo();
+    await pulsarEditarHallazgo();
+
+    expect(component.modoEdicion).toBe(true);
+    expect(component.hallazgoActual).toBe('Ruidos cardiacos normales');
+    // Guardar sigue bloqueado hasta que haya un cambio real
+    expect(botonGuardar().disabled).toBe(true);
+
     await escribir('Dolor a la palpación');
+    expect(botonGuardar().disabled).toBe(false);
 
     botonGuardar().click();
     await fixture.whenStable();
 
+    expect(popUps.confirmarToast).toHaveBeenCalled();
     expect(examenFisicoService.putExamen).toHaveBeenCalledExactlyOnceWith(21, {
       descripcion: 'Dolor a la palpación',
       episodioId: EPISODIO_ID_TEMPORAL,
@@ -390,19 +430,65 @@ describe('Evaluacion', () => {
     });
     expect(examenFisicoService.postExamen).not.toHaveBeenCalled();
     expect(component.hallazgos.length).toBe(1);
-    expect(component.hallazgoActual).toBe('Dolor a la palpación');
+    expect(component.hallazgoActual).toBe('');
+    expect(component.modoEdicion).toBe(false);
     expect(popUps.exito).toHaveBeenCalled();
   });
 
-  it('no guarda una descripción vacía y avisa al usuario', async () => {
+  it('no actualiza el hallazgo si se cancela la confirmación del cambio', async () => {
+    examenFisicoService.getExamenesPorEpisodio.mockReturnValue(
+      of([examen(21, 3, 'Tórax', 'Ruidos cardiacos normales')]),
+    );
+    await remontar();
+    await abrirMenuHallazgo();
+    await pulsarEditarHallazgo();
+    await escribir('Dolor a la palpación');
+    popUps.confirmarToast.mockResolvedValue(false);
+
+    botonGuardar().click();
+    await fixture.whenStable();
+
+    expect(popUps.confirmarToast).toHaveBeenCalled();
+    expect(examenFisicoService.putExamen).not.toHaveBeenCalled();
+    expect(component.hallazgoActual).toBe('Dolor a la palpación');
+  });
+
+  it('permite cambiar la parte del cuerpo al editar y guarda la parte elegida', async () => {
+    examenFisicoService.getExamenesPorEpisodio.mockReturnValue(
+      of([examen(21, 3, 'Tórax', 'Ruidos cardiacos normales')]),
+    );
+    await remontar();
+    await abrirMenuHallazgo();
+    await pulsarEditarHallazgo();
+
+    // El selector sigue habilitado durante la edición
+    expect(selectParte().disabled).toBe(false);
+
+    await elegirParte(1);
+    expect(component.parteSeleccionadaId).toBe(4);
+    expect(botonGuardar().disabled).toBe(false);
+
+    botonGuardar().click();
+    await fixture.whenStable();
+
+    expect(examenFisicoService.putExamen).toHaveBeenCalledExactlyOnceWith(21, {
+      descripcion: 'Ruidos cardiacos normales',
+      episodioId: EPISODIO_ID_TEMPORAL,
+      parteCuerpoId: 4,
+      usuarioId: 2,
+    });
+  });
+
+  it('mantiene Guardar deshabilitado mientras la descripción está vacía', async () => {
     await escribir('   ');
+
+    expect(botonGuardar().disabled).toBe(true);
 
     botonGuardar().click();
     await fixture.whenStable();
 
     expect(examenFisicoService.postExamen).not.toHaveBeenCalled();
     expect(examenFisicoService.putExamen).not.toHaveBeenCalled();
-    expect(popUps.error).toHaveBeenCalled();
   });
 
   it('avisa cuando no se puede identificar al usuario de la sesión', async () => {
@@ -416,14 +502,13 @@ describe('Evaluacion', () => {
     expect(popUps.error).toHaveBeenCalled();
   });
 
-  it('conserva lo escrito y la edición cuando el guardado falla', async () => {
+  it('conserva lo escrito cuando el guardado falla', async () => {
     examenFisicoService.postExamen.mockReturnValue(throwError(() => new Error('fallo')));
 
     await escribir('Ruidos cardiacos normales');
     botonGuardar().click();
     await fixture.whenStable();
 
-    expect(component.modoEdicion).toBe(true);
     expect(component.hallazgoActual).toBe('Ruidos cardiacos normales');
     expect(campoHallazgo().readOnly).toBe(false);
     expect(popUps.errorDesdeBackend).toHaveBeenCalled();
@@ -521,6 +606,88 @@ describe('Evaluacion', () => {
   it('muestra el estado vacío cuando el paciente aún no tiene hallazgos', () => {
     expect(elemento<HTMLElement>('.hallazgo-card')).toBeNull();
     expect(elemento<HTMLElement>('.hallazgos-vacio')).not.toBeNull();
+  });
+
+  // Menú de opciones de la tarjeta de hallazgo: editar y eliminar
+  it('despliega el menú de la tarjeta con las opciones Editar y Eliminar', async () => {
+    examenFisicoService.getExamenesPorEpisodio.mockReturnValue(
+      of([examen(21, 3, 'Tórax', 'Ruidos cardiacos normales')]),
+    );
+    await remontar();
+
+    expect(menuHallazgo()).toBeNull();
+
+    await abrirMenuHallazgo();
+
+    expect(component.menuHallazgoAbierto).toBe(21);
+    expect(botonMenuHallazgo().getAttribute('aria-expanded')).toBe('true');
+    expect(menuHallazgo()?.textContent).toContain('Editar');
+    expect(menuHallazgo()?.textContent).toContain('Eliminar');
+    expect(botonEditarHallazgo()).not.toBeNull();
+    expect(botonEliminarHallazgo()).not.toBeNull();
+  });
+
+  it('cierra el menú al volver a pulsar el botón de tres puntos', async () => {
+    examenFisicoService.getExamenesPorEpisodio.mockReturnValue(
+      of([examen(21, 3, 'Tórax', 'Ruidos cardiacos normales')]),
+    );
+    await remontar();
+    await abrirMenuHallazgo();
+
+    await abrirMenuHallazgo();
+
+    expect(component.menuHallazgoAbierto).toBeNull();
+    expect(menuHallazgo()).toBeNull();
+  });
+
+  it('cierra el menú al pulsar fuera de la tarjeta', async () => {
+    examenFisicoService.getExamenesPorEpisodio.mockReturnValue(
+      of([examen(21, 3, 'Tórax', 'Ruidos cardiacos normales')]),
+    );
+    await remontar();
+    await abrirMenuHallazgo();
+    expect(menuHallazgo()).not.toBeNull();
+
+    elemento<HTMLElement>('.examen-titulo').click();
+    await fixture.whenStable();
+
+    expect(component.menuHallazgoAbierto).toBeNull();
+    expect(menuHallazgo()).toBeNull();
+  });
+
+  it('elimina el hallazgo tras confirmar en el popup', async () => {
+    examenFisicoService.getExamenesPorEpisodio.mockReturnValue(
+      of([
+        examen(21, 3, 'Tórax', 'Ruidos cardiacos normales'),
+        examen(22, 4, 'Abdomen', 'Inspección abdominal'),
+      ]),
+    );
+    await remontar();
+    await abrirMenuHallazgo();
+
+    botonEliminarHallazgo()!.click();
+    await fixture.whenStable();
+
+    expect(popUps.confirmarToast).toHaveBeenCalled();
+    expect(examenFisicoService.cambiarEstado).toHaveBeenCalledExactlyOnceWith(21);
+    expect(component.hallazgos.length).toBe(1);
+    expect(tarjetasHallazgo().length).toBe(1);
+    expect(popUps.exito).toHaveBeenCalled();
+  });
+
+  it('no elimina el hallazgo si se cancela la confirmación', async () => {
+    popUps.confirmarToast.mockResolvedValue(false);
+    examenFisicoService.getExamenesPorEpisodio.mockReturnValue(
+      of([examen(21, 3, 'Tórax', 'Ruidos cardiacos normales')]),
+    );
+    await remontar();
+    await abrirMenuHallazgo();
+
+    botonEliminarHallazgo()!.click();
+    await fixture.whenStable();
+
+    expect(examenFisicoService.cambiarEstado).not.toHaveBeenCalled();
+    expect(component.hallazgos.length).toBe(1);
   });
 
   // Ficha del paciente y secciones colapsadas: datos y comportamiento simulados (fase de diseño)

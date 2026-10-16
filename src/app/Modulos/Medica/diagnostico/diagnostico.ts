@@ -129,7 +129,7 @@ export class Diagnostico implements OnInit, OnDestroy {
   }
 
   /** Crea el diagnóstico con el tipo seleccionado o actualiza la fila en edición. */
-  guardarDiagnostico(): void {
+  async guardarDiagnostico(): Promise<void> {
     if (this.destruido || this.cargando || this.guardando) return;
 
     const descripcion = this.diagnostico.trim();
@@ -150,13 +150,25 @@ export class Diagnostico implements OnInit, OnDestroy {
       return;
     }
 
+    const idEditado = this.diagnosticoEnEdicion;
+
+    // Al corregir un diagnóstico existente se confirma el cambio antes de enviarlo
+    if (idEditado !== null) {
+      const confirmado = await this.popUps
+        .confirmarToast('¿Está seguro de guardar los cambios del diagnóstico?')
+        .catch(() => false);
+
+      if (!confirmado || this.destruido || this.cargando || this.guardando) {
+        return;
+      }
+    }
+
     const cuerpo: DiagnosticoRequest = {
       tipoDiagnostico: this.tipoSeleccionado,
       descripcion,
       episodioId: this.episodioId,
       usuarioId,
     };
-    const idEditado = this.diagnosticoEnEdicion;
 
     this.guardando = true;
     this.cdr.markForCheck();

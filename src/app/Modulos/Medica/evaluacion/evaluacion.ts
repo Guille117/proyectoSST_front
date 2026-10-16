@@ -37,6 +37,9 @@ interface HallazgoVista {
   imports: [FormsModule, HistoriaClinica, Diagnostico, DatosPaciente],
   templateUrl: './evaluacion.html',
   styleUrl: './evaluacion.scss',
+  host: {
+    '(document:click)': 'cerrarMenuAlClicFuera($event)',
+  },
 })
 export class Evaluacion implements OnInit, OnDestroy {
   private peticion?: Subscription;
@@ -68,6 +71,7 @@ export class Evaluacion implements OnInit, OnDestroy {
   /** Mientras están activos bloquean las acciones que ya tienen una petición en curso. */
   cargando = false;
   guardando = false;
+  eliminando = false;
 
   /** Partes del cuerpo del catálogo: cada una es una región donde se registra un hallazgo. */
   partesCuerpo: ParteCuerpoResponse[] = [];
@@ -76,14 +80,45 @@ export class Evaluacion implements OnInit, OnDestroy {
   /** Hallazgos registrados del episodio, del más reciente al más antiguo. */
   hallazgos: HallazgoVista[] = [];
 
-  /** Descripción del hallazgo de la parte del cuerpo seleccionada. */
+  /** Texto del cuadro de captura: el formulario arranca vacío y solo se llena al editar una tarjeta. */
   hallazgoActual = '';
 
+  /** Hallazgo cargado en el formulario para corregirlo; nulo mientras se captura uno nuevo. */
+  hallazgoEnEdicion: HallazgoVista | null = null;
+
+  /** Descripción con la que se cargó el hallazgo en edición; sirve para detectar cambios. */
+  private textoOriginal = '';
+
+  /** Parte del cuerpo con la que se cargó el hallazgo en edición; sirve para detectar cambios. */
+  private parteOriginal: number | null = null;
+
+  /** Menú de opciones desplegado de la tarjeta de hallazgo, por identificador del registro. */
+  menuHallazgoAbierto: number | null = null;
+
+  /** El cuadro está en modo edición mientras haya un hallazgo cargado desde una tarjeta. */
+  get modoEdicion(): boolean {
+    return this.hallazgoEnEdicion !== null;
+  }
+
   /**
-   * Cuadro en modo edición: sin hallazgo registrado para la parte seleccionada arranca habilitado
-   * para capturarlo y, con un hallazgo existente, se habilita al pulsar "Editar".
+   * Habilita "Guardar" solo cuando hay algo que registrar: en una captura nueva exige texto y una
+   * parte del cuerpo seleccionada y, en edición, exige que la descripción o la parte hayan cambiado.
    */
-  modoEdicion = false;
+  get puedeGuardar(): boolean {
+    if (this.cargando || this.guardando || this.eliminando) return false;
+
+    const descripcion = this.hallazgoActual.trim();
+    if (!descripcion) return false;
+
+    if (this.hallazgoEnEdicion === null) {
+      return this.parteSeleccionadaId !== null;
+    }
+
+    return (
+      descripcion !== this.textoOriginal.trim() ||
+      this.parteSeleccionadaId !== this.parteOriginal
+    );
+  }
 
   secciones: SeccionVista[] = [
     {
@@ -167,38 +202,25 @@ export class Evaluacion implements OnInit, OnDestroy {
           if (this.destruido) return;
 
           this.hallazgos = examenes.map((examen) => this.aHallazgoVista(examen));
-          this.sincronizarCaptura();
+          // El formulario arranca vacío: los registros existentes se corrigen desde la tarjeta
+          this.limpiarCaptura();
         },
         error: (error) => {
           if (this.destruido) return;
 
           this.hallazgos = [];
-          this.hallazgoActual = '';
-          // Sin los hallazgos del servidor se mantiene el modo lectura con "Editar" visible: evita
-          // crear un registro duplicado cuando no se pudo confirmar si la parte ya tenía uno.
-          this.modoEdicion = false;
+          this.limpiarCaptura();
           this.mostrarError(error, 'No se pudo cargar el examen físico. Intente nuevamente.');
         },
       });
   }
 
-  /** Hallazgo registrado de la parte del cuerpo seleccionada; nulo mientras no exista ninguno. */
-  private hallazgoParteSeleccionada(): HallazgoVista | null {
-    if (this.parteSeleccionadaId === null) return null;
-
-    // El backend devuelve los registros del más reciente al más antiguo.
-    return (
-      this.hallazgos.find((hallazgo) => hallazgo.parteCuerpoId === this.parteSeleccionadaId) ?? null
-    );
-  }
-
-  /** Muestra el hallazgo de la parte seleccionada y decide si el cuadro se captura o se lee. */
-  private sincronizarCaptura(): void {
-    const registro = this.hallazgoParteSeleccionada();
-    this.hallazgoActual = registro?.descripcion ?? '';
-    // Sin hallazgo registrado no hay nada que habilitar: el cuadro arranca editable para capturarlo
-    // y la plantilla oculta "Editar" mientras se escribe un registro nuevo.
-    this.modoEdicion = registro === null;
+  /** Deja el cuadro listo para capturar un hallazgo nuevo y sale del modo edición. */
+  private limpiarCaptura(): void {
+    this.hallazgoActual = '';
+    this.textoOriginal = '';
+    this.parteOriginal = null;
+    this.hallazgoEnEdicion = null;
   }
 
   /** Convierte el registro del backend en los datos que pinta la tarjeta de la lista. */
@@ -285,32 +307,65 @@ export class Evaluacion implements OnInit, OnDestroy {
     this.pacienteAbierto = false;
   }
 
-  /** Muestra en el bloque de captura el hallazgo de la parte del cuerpo seleccionada. */
+  /** Elige la parte del cuerpo que se está capturando; el cuadro permanece vacío hasta escribir. */
   seleccionarParteCuerpo(id: number): void {
-    if (this.cargando || this.guardando || id === this.parteSeleccionadaId) return;
+    if (this.cargando || this.guardando || this.eliminando) return;
+    if (id === this.parteSeleccionadaId) return;
 
     this.parteSeleccionadaId = id;
-    this.sincronizarCaptura();
   }
 
-  /** Habilita la escritura en el cuadro del hallazgo registrado. */
-  activarEdicion(): void {
-    if (this.cargando || this.guardando) return;
-
-    this.modoEdicion = true;
+  /** Muestra u oculta el menú de opciones de la tarjeta de hallazgo pulsada. */
+  alternarMenuHallazgo(id: number): void {
+    this.menuHallazgoAbierto = this.menuHallazgoAbierto === id ? null : id;
   }
 
-  /** Descarta la captura en curso y vuelve al hallazgo registrado de la parte seleccionada. */
+  /** Cierra el menú de opciones que esté desplegado. */
+  cerrarMenuHallazgo(): void {
+    this.menuHallazgoAbierto = null;
+  }
+
+  /** Cierra el menú al pulsar fuera de la tarjeta que lo tiene abierto. */
+  cerrarMenuAlClicFuera(evento: Event): void {
+    if (this.menuHallazgoAbierto === null || !(evento.target instanceof Element)) {
+      return;
+    }
+
+    const tarjeta = evento.target.closest<HTMLElement>('.hallazgo-card');
+    if (tarjeta?.dataset['hallazgoId'] !== String(this.menuHallazgoAbierto)) {
+      this.cerrarMenuHallazgo();
+    }
+  }
+
+  /** Carga en el formulario el hallazgo de la tarjeta elegida para corregirlo. */
+  editarHallazgo(hallazgo: HallazgoVista): void {
+    if (this.cargando || this.guardando || this.eliminando) return;
+
+    this.hallazgoEnEdicion = hallazgo;
+    this.parteSeleccionadaId = hallazgo.parteCuerpoId;
+    this.hallazgoActual = hallazgo.descripcion;
+    this.textoOriginal = hallazgo.descripcion;
+    this.parteOriginal = hallazgo.parteCuerpoId;
+    this.cerrarMenuHallazgo();
+  }
+
+  /** Descarta la captura en curso y deja el formulario vacío para un hallazgo nuevo. */
   cancelarCaptura(): void {
-    if (this.cargando || this.guardando) return;
+    if (this.cargando || this.guardando || this.eliminando) return;
 
-    this.hallazgoActual = this.hallazgoParteSeleccionada()?.descripcion ?? '';
+    this.limpiarCaptura();
   }
 
-  /** Crea el hallazgo de la parte seleccionada o actualiza el que ya estaba registrado. */
-  guardarHallazgo(): void {
-    if (this.destruido || this.cargando || this.guardando) return;
+  /**
+   * Crea el hallazgo de la parte seleccionada o actualiza el que se cargó en edición. Al corregir un
+   * registro se confirma el cambio con el popup y, en ambos casos, el formulario queda vacío tras
+   * guardar para la siguiente captura.
+   */
+  async guardarHallazgo(): Promise<void> {
+    if (this.destruido || this.cargando || this.guardando || this.eliminando) return;
+    if (!this.puedeGuardar) return;
 
+    const enEdicion = this.hallazgoEnEdicion;
     const parteCuerpoId = this.parteSeleccionadaId;
     if (parteCuerpoId === null) {
       this.popUps.error('Seleccione la parte del cuerpo del hallazgo.');
@@ -331,21 +386,31 @@ export class Evaluacion implements OnInit, OnDestroy {
       return;
     }
 
+    // Al corregir un hallazgo existente se confirma el cambio antes de enviarlo
+    if (enEdicion) {
+      const confirmado = await this.popUps
+        .confirmarToast('¿Está seguro de guardar los cambios del hallazgo?')
+        .catch(() => false);
+
+      if (!confirmado || this.destruido) {
+        return;
+      }
+    }
+
     const cuerpo: ExamenFisicoRequest = {
       descripcion,
       episodioId: this.episodioId,
       parteCuerpoId,
       usuarioId,
     };
-    const registro = this.hallazgoParteSeleccionada();
 
     this.guardando = true;
     this.cdr.markForCheck();
     this.peticion?.unsubscribe();
     this.peticion = (
-      registro === null
-        ? this.examenFisicoService.postExamen(cuerpo)
-        : this.examenFisicoService.putExamen(registro.id, cuerpo)
+      enEdicion
+        ? this.examenFisicoService.putExamen(enEdicion.id, cuerpo)
+        : this.examenFisicoService.postExamen(cuerpo)
     )
       .pipe(
         finalize(() => {
@@ -360,17 +425,60 @@ export class Evaluacion implements OnInit, OnDestroy {
           if (this.destruido) return;
 
           this.guardarEnLista(this.aHallazgoVista(respuesta));
-          this.sincronizarCaptura();
+          this.limpiarCaptura();
           this.popUps.exito(
-            registro === null
-              ? 'Hallazgo guardado exitosamente.'
-              : 'Hallazgo actualizado exitosamente.',
+            enEdicion ? 'Hallazgo actualizado exitosamente.' : 'Hallazgo guardado exitosamente.',
           );
         },
         error: (error) => {
           if (this.destruido) return;
 
           this.mostrarError(error, 'No se pudo guardar el hallazgo. Intente nuevamente.');
+        },
+      });
+  }
+
+  /** Confirma con el popup y da de baja el hallazgo de la tarjeta elegida. */
+  async eliminarHallazgo(hallazgo: HallazgoVista): Promise<void> {
+    if (this.destruido || this.cargando || this.guardando || this.eliminando) return;
+
+    this.cerrarMenuHallazgo();
+
+    const confirmado = await this.popUps
+      .confirmarToast(`¿Está seguro de eliminar el hallazgo de "${hallazgo.parteCuerpo}"?`)
+      .catch(() => false);
+
+    if (!confirmado || this.destruido) {
+      return;
+    }
+
+    this.eliminando = true;
+    this.cdr.markForCheck();
+    this.peticion?.unsubscribe();
+    this.peticion = this.examenFisicoService
+      .cambiarEstado(hallazgo.id)
+      .pipe(
+        finalize(() => {
+          this.eliminando = false;
+          if (!this.destruido) {
+            this.cdr.markForCheck();
+          }
+        }),
+      )
+      .subscribe({
+        next: () => {
+          if (this.destruido) return;
+
+          this.hallazgos = this.hallazgos.filter((registro) => registro.id !== hallazgo.id);
+          if (this.hallazgoEnEdicion?.id === hallazgo.id) {
+            this.limpiarCaptura();
+          }
+          this.popUps.exito('Hallazgo eliminado exitosamente.');
+        },
+        error: (error) => {
+          if (this.destruido) return;
+
+          this.mostrarError(error, 'No se pudo eliminar el hallazgo. Intente nuevamente.');
         },
       });
   }

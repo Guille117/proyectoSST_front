@@ -70,7 +70,7 @@
             id="parteCuerpoExamen"
             name="parteCuerpoExamen"
             class="parte-cuerpo-select"
-            [disabled]="cargando || guardando"
+            [disabled]="cargando || guardando || eliminando"
             [ngModel]="parteSeleccionadaId"
             (ngModelChange)="seleccionarParteCuerpo($event)"
           >
@@ -83,7 +83,7 @@
           </select>
         </div>
 
-        <!-- Captura de hallazgos -->
+        <!-- Captura de hallazgos: el cuadro arranca vacío y se llena solo al editar una tarjeta -->
         <form class="hallazgo-form" (ngSubmit)="guardarHallazgo()">
           <label class="hallazgo-label" for="hallazgoActual">Hallazgos</label>
 
@@ -91,44 +91,26 @@
             id="hallazgoActual"
             name="hallazgoActual"
             class="hallazgo-campo"
-            [class.hallazgo-campo--lectura]="!modoEdicion"
             [(ngModel)]="hallazgoActual"
-            [readonly]="!modoEdicion"
-            [attr.aria-readonly]="!modoEdicion"
+            [readonly]="cargando || guardando || eliminando"
+            [attr.aria-readonly]="cargando || guardando || eliminando"
             [maxlength]="maxCaracteres"
             placeholder="Describe los hallazgos encontrados en la parte del cuerpo seleccionada..."
           ></textarea>
 
           <span class="contador-caracteres">{{ hallazgoActual.length }}/{{ maxCaracteres }}</span>
 
-          <!-- Acciones del cuadro: sin hallazgo registrado se captura directamente, por lo que "Editar"
-               solo aparece cuando ya existe un registro que habilitar -->
+          <!-- Acciones del cuadro: "Guardar" se habilita solo cuando hay un cambio que registrar -->
           <div class="acciones-formulario hallazgo-acciones">
             <button
               type="button"
               class="btn _cancelar"
-              [disabled]="cargando || guardando"
+              [disabled]="cargando || guardando || eliminando"
               (click)="cancelarCaptura()"
             >
               Cancelar
             </button>
-            @if (!modoEdicion) {
-              <button
-                type="button"
-                class="btn _editar"
-                [disabled]="cargando || guardando"
-                (click)="activarEdicion()"
-              >
-                Editar
-              </button>
-            }
-            <button
-              type="submit"
-              class="btn _guardar"
-              [disabled]="!modoEdicion || cargando || guardando || parteSeleccionadaId === null"
-            >
-              Guardar
-            </button>
+            <button type="submit" class="btn _guardar" [disabled]="!puedeGuardar">Guardar</button>
           </div>
         </form>
       </section>
@@ -147,12 +129,27 @@
       <h3 class="panel-titulo">Hallazgos registrados</h3>
 
       @for (hallazgo of hallazgos; track hallazgo.id) {
-        <article class="hallazgo-card">
+        <article
+          class="hallazgo-card"
+          [class.hallazgo-card--menu-abierto]="menuHallazgoAbierto === hallazgo.id"
+          [class.hallazgo-card--edicion]="hallazgoEnEdicion?.id === hallazgo.id"
+          [attr.data-hallazgo-id]="hallazgo.id"
+        >
           <header class="hallazgo-encabezado">
-            <span class="hallazgo-avatar">
-              <i class="bi bi-clipboard2-pulse" aria-hidden="true"></i>
-            </span>
-            <span class="hallazgo-sistema">{{ hallazgo.parteCuerpo }}</span>
+            <span class="hallazgo-nombre">{{ hallazgo.parteCuerpo }}</span>
+
+            <!-- Menú de opciones de la tarjeta: editar o eliminar el hallazgo -->
+            <button
+              type="button"
+              class="hallazgo-menu-trigger"
+              title="Más opciones"
+              aria-haspopup="menu"
+              [attr.aria-label]="'Más opciones para el hallazgo de ' + hallazgo.parteCuerpo"
+              [attr.aria-expanded]="menuHallazgoAbierto === hallazgo.id"
+              (click)="alternarMenuHallazgo(hallazgo.id)"
+            >
+              <i class="bi bi-three-dots-vertical" aria-hidden="true"></i>
+            </button>
           </header>
 
           <p class="hallazgo-descripcion">{{ hallazgo.descripcion }}</p>
@@ -162,6 +159,43 @@
             <span><i class="bi bi-clock" aria-hidden="true"></i>{{ hallazgo.hora }}</span>
             <span><i class="bi bi-person" aria-hidden="true"></i>{{ hallazgo.usuario }}</span>
           </footer>
+
+          <!-- Menú de opciones: se dibuja al final de la tarjeta y flota sobre ella -->
+          @if (menuHallazgoAbierto === hallazgo.id) {
+            <div
+              class="hallazgo-menu"
+              role="menu"
+              [attr.aria-label]="'Opciones para el hallazgo de ' + hallazgo.parteCuerpo"
+            >
+              <div class="hallazgo-menu-opcion">
+                <span>Editar</span>
+                <button
+                  type="button"
+                  class="iconEditar"
+                  role="menuitem"
+                  title="Editar hallazgo"
+                  [attr.aria-label]="'Editar el hallazgo de ' + hallazgo.parteCuerpo"
+                  (click)="editarHallazgo(hallazgo)"
+                >
+                  <i class="bi bi-pencil-square" aria-hidden="true"></i>
+                </button>
+              </div>
+
+              <div class="hallazgo-menu-opcion">
+                <span>Eliminar</span>
+                <button
+                  type="button"
+                  class="iconQuitar"
+                  role="menuitem"
+                  title="Eliminar hallazgo"
+                  [attr.aria-label]="'Eliminar el hallazgo de ' + hallazgo.parteCuerpo"
+                  (click)="eliminarHallazgo(hallazgo)"
+                >
+                  <i class="bi bi-trash3" aria-hidden="true"></i>
+                </button>
+              </div>
+            </div>
+          }
         </article>
       }
 
@@ -173,9 +207,6 @@
           aria-label="Cargando hallazgos registrados"
         >
           <div class="skeleton-encabezado">
-            <span class="skeleton-avatar">
-              <i class="bi bi-clipboard2-pulse" aria-hidden="true"></i>
-            </span>
             <div class="skeleton-lineas">
               <span class="skeleton-linea"></span>
               <span class="skeleton-linea skeleton-linea--media"></span>

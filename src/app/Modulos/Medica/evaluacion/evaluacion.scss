@@ -226,18 +226,6 @@
   }
 }
 
-/* Fuera del modo edición el cuadro se muestra como texto de lectura */
-.hallazgo-campo--lectura {
-  border-color: #e4ebf5;
-  background: #f7f9fc;
-  cursor: default;
-
-  &:focus {
-    border-color: #e4ebf5;
-    box-shadow: none;
-  }
-}
-
 .contador-caracteres {
   align-self: flex-end;
   margin-top: 6px;
@@ -254,40 +242,45 @@
 }
 
 /* ==================== HALLAZGOS REGISTRADOS ==================== */
+/* Tarjeta del hallazgo: mismo lenguaje de la tarjeta de indicaciones médicas (borde, radio y
+   sombra), con un acento de color a la izquierda. */
 .hallazgo-card {
+  position: relative;
   margin-bottom: 1rem;
-  padding: 1rem;
-  border: 1px solid #cdebdd;
-  border-radius: 16px;
-  background: #e9fbf2;
+  padding: 1rem 1.1rem;
+  border: 1px solid #dfe7f3;
+  border-left: 4px solid #22c55e;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+
+  /* Con el menú desplegado la tarjeta pasa al frente para dibujarse sobre las siguientes */
+  &.hallazgo-card--menu-abierto {
+    z-index: 2;
+  }
+
+  /* Tarjeta cuyos datos están cargados en el formulario para corregirlos */
+  &.hallazgo-card--edicion {
+    border-left-color: #f59e0b;
+    background: #fffbf2;
+  }
 }
 
 .hallazgo-encabezado {
   display: flex;
   align-items: center;
-  gap: 14px;
+  justify-content: space-between;
+  gap: 12px;
   margin-bottom: 12px;
 }
 
-.hallazgo-avatar {
-  display: grid;
-  flex: 0 0 48px;
-  place-items: center;
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  background: #d3f5e4;
-  color: #16a34a;
-  font-size: 22px;
-}
-
-.hallazgo-sistema {
-  flex: 1;
-  padding: 10px 14px;
-  border-radius: 10px;
-  background: #dcf6ea;
+.hallazgo-nombre {
   color: var(--azulPrincipal);
-  font-size: 1.15rem;
+  font-size: 1.05rem;
   font-weight: 700;
 }
 
@@ -304,7 +297,7 @@
   gap: 1rem;
   margin-top: 1rem;
   padding-top: 0.85rem;
-  border-top: 1px solid #cfe9dc;
+  border-top: 1px solid #e4ebf5;
   color: #33445e;
   font-size: 0.95rem;
 
@@ -320,6 +313,109 @@
   }
 }
 
+/* ==================== MENÚ DE OPCIONES DE LA TARJETA ==================== */
+/* Botón de tres puntos de la tarjeta de hallazgo, igual que el de indicaciones médicas. */
+.hallazgo-menu-trigger {
+  display: grid;
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  place-items: center;
+  color: #52627f;
+  background: transparent;
+  border: 0;
+  border-radius: 50%;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    color 0.2s ease,
+    background 0.2s ease;
+
+  &:hover,
+  &:focus-visible {
+    color: #1e293b;
+    background: #eef4ff;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--azulSecundario);
+    outline-offset: 2px;
+  }
+}
+
+/* El menú flota sobre la tarjeta: al no ocupar espacio en el flujo, desplegarlo y replegarlo no
+   redimensiona la tarjeta ni desplaza el resto del listado. */
+.hallazgo-menu {
+  position: absolute;
+  z-index: 3;
+  top: 2.7rem;
+  right: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-sizing: border-box;
+  width: 162px;
+  max-width: calc(100% - 2rem);
+  padding: 10px 12px;
+  background: #fff;
+  border: 1px solid #dfe7f3;
+  border-radius: 12px;
+  box-shadow: 0 12px 26px rgba(15, 23, 42, 0.14);
+
+  /* Botón de editar: el ámbar viene de los estilos globales de src/styles/botonesStyle.scss */
+  .iconEditar {
+    width: 34px;
+    height: 34px;
+    box-shadow: none;
+    font-size: 17px;
+  }
+}
+
+/* Cada opción alinea su nombre a la izquierda y su botón a la derecha */
+.hallazgo-menu-opcion {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  color: #475569;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+/* Botón de eliminar: mismo tratamiento del botón equivalente de las indicaciones médicas */
+.iconQuitar {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  place-items: center;
+  color: #ed1a0f;
+  background: rgba(255, 255, 255, 0.62);
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  border-radius: 50%;
+  box-shadow: 0 2px 6px rgba(26, 37, 53, 0.12);
+  font-size: 15px;
+  cursor: pointer;
+  transition:
+    color 0.2s ease,
+    background 0.2s ease,
+    transform 0.2s ease;
+
+  &:hover {
+    color: #fff;
+    background: #ed1a0f;
+    transform: translateY(-1px);
+  }
+
+  &:focus-visible {
+    outline: 2px solid #ed1a0f;
+    outline-offset: 2px;
+  }
+}
+
 /* ==================== ESTADOS ==================== */
 .hallazgo-card--cargando {
   border-color: #e6ecf5;
@@ -331,18 +427,6 @@
   align-items: center;
   gap: 14px;
   margin-bottom: 14px;
-}
-
-.skeleton-avatar {
-  display: grid;
-  flex: 0 0 48px;
-  place-items: center;
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  background: #e8f1ff;
-  color: var(--azulSecundario);
-  font-size: 22px;
 }
 
 .skeleton-lineas {
