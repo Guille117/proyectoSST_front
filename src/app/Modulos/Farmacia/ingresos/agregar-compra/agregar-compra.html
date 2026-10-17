@@ -306,7 +306,9 @@
 
         <!-- ==================== FORMULARIO REGISTRAR COMPRA ==================== -->
         <section class="formulario formulario-container" aria-labelledby="tituloRegistrarCompra">
-            <h3 id="tituloRegistrarCompra" class="titulo-formulario">Registrar compra</h3>
+            <h3 id="tituloRegistrarCompra" class="titulo-formulario">
+                {{ esEdicion ? 'Editar compra' : 'Registrar compra' }}
+            </h3>
 
             <form #compraForm="ngForm" novalidate (ngSubmit)="guardarCompra(compraForm)">
                 
@@ -328,11 +330,21 @@
                         @for (proveedor of proveedores; track proveedor.id) {
                             <option [ngValue]="proveedor.id">{{ proveedor.nombre }}</option>
                         }
+                        @if (proveedorActualNoListado) {
+                            <option [ngValue]="proveedorSeleccionadoId">
+                                {{ compraEdicion?.proveedorNombre }}
+                            </option>
+                        }
                     </select>
                 </app-campo-validado>
 
                 <!-- ==================== COMPROBANTE ==================== -->
                 <app-campo-validado label="Comprobante" fieldId="comprobanteCompra">
+                    @if (esEdicion && comprobanteActual) {
+                        <p class="comprobante-actual">
+                            Se conservará el comprobante actual si no seleccionas otro.
+                        </p>
+                    }
                     <div class="carga-archivo" (dragover)="$event.preventDefault()" (drop)="soltarComprobante($event)">
                         <input
                             #comprobanteInput
@@ -372,8 +384,12 @@
                     <button type="button" class="btn _cancelar" (click)="cancelar.emit()">
                         Cancelar
                     </button>
-                    <button type="submit" class="btn _guardar" [disabled]="compraForm.invalid || guardando">
-                        Guardar
+                    <button
+                        type="submit"
+                        class="btn _guardar"
+                        [disabled]="compraForm.invalid || !puedeGuardar"
+                    >
+                        {{ esEdicion ? 'Guardar cambios' : 'Guardar' }}
                     </button>
                 </div>
             </form>

@@ -43,6 +43,7 @@ export interface ReferenciaRequest {
 // --------------------- datos resumidos de paciente ------------------------- 
 export interface PacienteResumido {
   codigoExpediente: string;
+  episodioId: number | null;
   nombreCompleto: string;
   telefono: string;
   tipoTratamiento: TipoAtencion;

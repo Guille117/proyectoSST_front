@@ -7,25 +7,89 @@
 
                     <!-- ==================== BUSCADOR ==================== -->
                     <div class="buscador-container">
-                        <div class="buscador">
-                            <select class="selector" aria-label="Buscar inventario por">
-                                <option value="1" selected>Nombre</option>
-                                <option value="2">Proveedor</option>
-                                <option value="3">Administración</option>
-                            </select>
+                            <div class="buscador">
+                                <select
+                                    class="selector"
+                                    aria-label="Buscar inventario por"
+                                    [(ngModel)]="criterioBusqueda"
+                                    (ngModelChange)="cambiarCriterioBusqueda()"
+                                >
+                                    <option value="nombre">Nombre</option>
+                                    @if (!esVistaBajas) {
+                                        <option value="proveedorId">Proveedor</option>
+                                        @if (isMedicamento) {
+                                            <option value="viaAdminId">Administración</option>
+                                        }
+                                    }
+                                </select>
 
-                            <input
-                                class="inputB"
-                                type="text"
-                                placeholder="Buscar..."
-                                aria-label="Buscar en el inventario"
-                            />
+                                @if (criterioBusqueda === 'nombre') {
+                                    <input
+                                        class="inputB"
+                                        type="search"
+                                        [placeholder]="
+                                            esVistaBajas
+                                                ? 'Buscar por nombre...'
+                                                : 'Buscar por nombre o código...'
+                                        "
+                                        aria-label="Buscar en el inventario"
+                                        [(ngModel)]="textoBusqueda"
+                                        (keydown.enter)="buscarInventario()"
+                                    />
+                                } @else if (criterioBusqueda === 'proveedorId') {
+                                    <select
+                                        class="inputB"
+                                        aria-label="Buscar inventario por proveedor"
+                                        [disabled]="cargandoCatalogos"
+                                        [(ngModel)]="proveedorIdBusqueda"
+                                    >
+                                        <option [ngValue]="null">
+                                            {{
+                                                cargandoCatalogos
+                                                    ? 'Cargando proveedores...'
+                                                    : 'Seleccione un proveedor'
+                                            }}
+                                        </option>
+                                        @for (proveedor of proveedores; track proveedor.id) {
+                                            <option [ngValue]="proveedor.id">
+                                                {{ proveedor.nombre }}
+                                            </option>
+                                        }
+                                    </select>
+                                } @else {
+                                    <select
+                                        class="inputB"
+                                        aria-label="Buscar inventario por administración"
+                                        [disabled]="cargandoCatalogos"
+                                        [(ngModel)]="viaAdminIdBusqueda"
+                                    >
+                                        <option [ngValue]="null">
+                                            {{
+                                                cargandoCatalogos
+                                                    ? 'Cargando administraciones...'
+                                                    : 'Seleccione una administración'
+                                            }}
+                                        </option>
+                                        @for (via of viasAdmin; track via.id) {
+                                            <option [ngValue]="via.id">{{ via.nombre }}</option>
+                                        }
+                                    </select>
+                                }
 
-                            <button class="btnLupa" type="button" title="Buscar" aria-label="Buscar">
-                                <i class="bi bi-search fs-5" aria-hidden="true"></i>
-                            </button>
+                                <button
+                                    type="button"
+                                    class="btnLupa"
+                                    title="Buscar"
+                                    aria-label="Buscar"
+                                    [disabled]="
+                                        cargandoInventario || cargandoBajas || cargandoCatalogos
+                                    "
+                                    (click)="buscarInventario()"
+                                >
+                                    <i class="bi bi-search fs-5" aria-hidden="true"></i>
+                                </button>
+                            </div>
                         </div>
-                    </div>
 
                     <!-- ==================== FILTRO POR TIPO ==================== -->
                     <div class="miniSub-container">
@@ -35,7 +99,7 @@
                             role="group"
                             aria-label="Tipo de producto del inventario"
                             [mostrarActivos]="isMedicamento"
-                            (opcionCambiada)="isMedicamento = $event"
+                            (opcionCambiada)="cambiarTipoProducto($event)"
                         ></app-tab-switch>
                     </div>
 
@@ -53,63 +117,218 @@
                                 [attr.aria-pressed]="estadoSeleccionado === estado.valor"
                                 (click)="seleccionarEstado(estado.valor)"
                             >
-                                <span class="punto punto-{{ estado.valor }}" aria-hidden="true"></span>
+                                @if (estado.valor && estado.valor !== 'eliminados') {
+                                    <span
+                                        [class]="'punto punto-' + estado.valor"
+                                        aria-hidden="true"
+                                    ></span>
+                                }
                                 {{ estado.etiqueta }}
                             </button>
                         }
                     </div>
             </div>
 
-            <table class="table">
+            @if (esVistaBajas) {
+                <table class="table" [attr.aria-busy]="cargandoBajas">
+                    <thead>
+                        <tr>
+                            <th class="celda_izquierda">
+                                {{ isMedicamento ? 'Medicamento' : 'Insumo' }}
+                            </th>
+                            <th class="celda_centrada">Lote</th>
+                            <th class="celda_izquierda">Motivo</th>
+                            <th class="celda_izquierda">Observación</th>
+                            <th class="celda_centrada">Fecha</th>
+                            <th class="celda_izquierda">Usuario</th>
+                            <th class="celda_centrada">Revertir</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (cargandoBajas) {
+                            <tr>
+                                <td colspan="7" class="celda_centrada" role="status">
+                                    Cargando bajas...
+                                </td>
+                            </tr>
+                        } @else if (errorBajas) {
+                            <tr>
+                                <td colspan="7" class="celda_centrada" role="alert">
+                                    {{ errorBajas }}
+                                    <button
+                                        type="button"
+                                        class="btn _principal"
+                                        (click)="reintentar()"
+                                    >
+                                        Reintentar
+                                    </button>
+                                </td>
+                            </tr>
+                        } @else {
+                            @for (baja of bajasPaginadas; track baja.idBaja) {
+                                <tr>
+                                    <td class="celda_izquierda">{{ baja.producto }}</td>
+                                    <td class="celda_centrada">{{ baja.lote }}</td>
+                                    <td class="celda_izquierda">{{ baja.motivo }}</td>
+                                    <td class="celda_izquierda">{{ baja.observacion || '—' }}</td>
+                                    <td class="celda_centrada">
+                                        {{ formatearFecha(baja.fecha) }}
+                                    </td>
+                                    <td class="celda_izquierda">{{ baja.usuario }}</td>
+                                    <td class="celda_centrada">
+                                        <button
+                                            type="button"
+                                            class="iconRevertir"
+                                            title="Revertir baja"
+                                            [attr.aria-label]="
+                                                'Revertir la baja de ' + baja.producto
+                                            "
+                                            [disabled]="revirtiendoBajaId !== null"
+                                            (click)="revertirBaja(baja)"
+                                        >
+                                            <i
+                                                class="bi bi-arrow-counterclockwise"
+                                                aria-hidden="true"
+                                            ></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            } @empty {
+                                <tr>
+                                    <td colspan="7" class="celda_centrada">
+                                        No se encontraron bajas.
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="7">
+                                <app-paginacion
+                                    [paginaActual]="paginaActual"
+                                    [totalregistros]="bajas.length"
+                                    [cantidadMostrar]="cantidadMostrar"
+                                    (paginaCambiada)="cambiarPagina($event)"
+                                ></app-paginacion>
+                            </td>
+                        </tr>
+                    </tfoot>
+                </table>
+            } @else {
+                <table class="table" [attr.aria-busy]="cargandoInventario">
                     <thead>
                         <tr>
                             <th class="celda_centrada">Código</th>
                             <th class="celda_izquierda">Nombre</th>
-                            <th class="celda_centrada">Administración</th>
-                            <th class="celda_centrada">Presentación</th>
+                            @if (isMedicamento) {
+                                <th class="celda_centrada">Administración</th>
+                                <th class="celda_centrada">Presentación</th>
+                            } @else {
+                                <th class="celda_izquierda">Descripción</th>
+                            }
                             <th class="celda_centrada">Cantidad</th>
                             <th class="celda_izquierda">Proveedor</th>
                             <th class="celda_centrada">Lote</th>
                             <th class="celda_centrada">Vencimiento</th>
-                    
+                            <th class="celda_centrada">Eliminar</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <tr>
-                            <td class="celda_centrada">MED-001</td>
-                            <td class="celda_izquierda">Amoxicilina 500mg</td>
-                            <td class="celda_centrada">Oral</td>
-                            <td class="celda_centrada">Tabletas</td>
-                            <td class="celda_centrada">8</td>
-                            <td class="celda_izquierda">Bioarma Guatemala</td>
-                            <td class="celda_centrada">Lt-2025</td>
-                            <td class="celda_centrada">10-12-2028</td>
-                        </tr>
-        
-                        <tr>
-                            <td class="celda_centrada">MED-001</td>
-                            <td class="celda_izquierda">Ibuprofeno 500mg</td>
-                            <td class="celda_centrada">Oral</td>
-                            <td class="celda_centrada">Capsulas</td>
-                            <td class="celda_centrada">8</td>
-                            <td class="celda_izquierda">Bayer</td>
-                            <td class="celda_centrada">Lt-2025</td>
-                            <td class="celda_centrada">10-12-2028</td>
-                        </tr>
-        
-                        <tr>
-                            <td class="celda_centrada">MED-001</td>
-                            <td class="celda_izquierda">Amoxicilina 500mg</td>
-                            <td class="celda_centrada">Oral</td>
-                            <td class="celda_centrada">Tabletas</td>
-                            <td class="celda_centrada">8</td>
-                            <td class="celda_izquierda">Bioarma Guatemala</td>
-                            <td class="celda_centrada">Lt-2025</td>
-                            <td class="celda_centrada">10-12-2028</td>
-                        </tr>
+                        @if (cargandoInventario) {
+                            <tr>
+                                <td [attr.colspan]="isMedicamento ? 9 : 8" class="celda_centrada" role="status">
+                                    Cargando inventario...
+                                </td>
+                            </tr>
+                        } @else if (errorInventario) {
+                            <tr>
+                                <td [attr.colspan]="isMedicamento ? 9 : 8" class="celda_centrada" role="alert">
+                                    {{ errorInventario }}
+                                    <button
+                                        type="button"
+                                        class="btn _principal"
+                                        (click)="reintentar()"
+                                    >
+                                        Reintentar
+                                    </button>
+                                </td>
+                            </tr>
+                        } @else {
+                            @for (item of inventarioPaginado; track item.id) {
+                                <tr>
+                                    <td class="celda_centrada">{{ item.codigo }}</td>
+                                    <td class="celda_izquierda" [title]="item.descripcion ?? ''">
+                                        {{ item.nombre }}
+                                    </td>
+                                    @if (isMedicamento) {
+                                        <td class="celda_centrada">
+                                            {{ item.administracion ?? '—' }}
+                                        </td>
+                                        <td class="celda_centrada">
+                                            {{ item.presentacion ?? '—' }}
+                                        </td>
+                                    } @else {
+                                        <td class="celda_izquierda">
+                                            {{ item.descripcion ?? '—' }}
+                                        </td>
+                                    }
+                                    <td
+                                        class="celda_centrada"
+                                        [class.stock-bajo]="esStockBajo(item)"
+                                        [class.sin-stock]="esSinStock(item)"
+                                        [title]="'Disponible de ' + item.cantidad"
+                                    >
+                                        {{ item.disponible }}
+                                    </td>
+                                    <td class="celda_izquierda">{{ item.proveedor ?? '—' }}</td>
+                                    <td class="celda_centrada">{{ item.codigoLote }}</td>
+                                    <td
+                                        class="celda_centrada"
+                                        [class.fecha-vencida]="esFechaVencida(item.fechaVencimiento)"
+                                        [class.fecha-por-vencer]="
+                                            esFechaPorVencer(item.fechaVencimiento)
+                                        "
+                                    >
+                                        {{ formatearFecha(item.fechaVencimiento) }}
+                                    </td>
+                                    <td class="celda_centrada">
+                                        <button
+                                            type="button"
+                                            class="iconEliminar"
+                                            title="Eliminar lote"
+                                            [attr.aria-label]="
+                                                'Eliminar el lote ' + item.codigoLote
+                                            "
+                                            (click)="abrirModalBaja(item)"
+                                        >
+                                            <i class="bi bi-trash3" aria-hidden="true"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            } @empty {
+                                <tr>
+                                    <td [attr.colspan]="isMedicamento ? 9 : 8" class="celda_centrada">
+                                        No se encontraron registros en el inventario.
+                                    </td>
+                                </tr>
+                            }
+                        }
                     </tbody>
-            </table>
+                    <tfoot>
+                        <tr>
+                            <td [attr.colspan]="isMedicamento ? 9 : 8">
+                                <app-paginacion
+                                    [paginaActual]="paginaActual"
+                                    [totalregistros]="inventario.length"
+                                    [cantidadMostrar]="cantidadMostrar"
+                                    (paginaCambiada)="cambiarPagina($event)"
+                                ></app-paginacion>
+                            </td>
+                        </tr>
+                    </tfoot>
+                </table>
+            }
         </div>
     </div>
 </div>
-

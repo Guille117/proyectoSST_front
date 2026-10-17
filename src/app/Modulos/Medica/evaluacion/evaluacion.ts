@@ -4,9 +4,9 @@ import { finalize, Subscription, switchMap, tap, TimeoutError } from 'rxjs';
 import { AuthService } from '../../Auth/data/auth-service';
 import { PopUps } from '../../../shared/popUps/popUpsService';
 import { DatosPaciente } from '../datos-paciente/datos-paciente';
+import { EpisodioActivoService } from '../data/episodio-activo-service';
 import { Diagnostico } from './diagnostico/diagnostico';
 import { HistoriaClinica } from './historia-clinica/historia-clinica';
-import { EPISODIO_ID_TEMPORAL } from './data/constantes-clinicas';
 import { ExamenFisicoService } from './data/examen-fisico-service';
 import {
   ExamenFisicoRequest,
@@ -45,12 +45,15 @@ export class Evaluacion implements OnInit, OnDestroy {
   private peticion?: Subscription;
   private destruido = false;
 
-  /** TEMPORAL: episodio fijo mientras la pantalla no recibe un episodio real. */
-  private readonly episodioId = EPISODIO_ID_TEMPORAL;
+  /** Episodio activo del módulo: lo abre la selección del paciente y se conserva hasta cerrarlo. */
+  private get episodioId(): number | null {
+    return this.episodioActivo.obtener();
+  }
 
   constructor(
     private examenFisicoService: ExamenFisicoService,
     private authService: AuthService,
+    private episodioActivo: EpisodioActivoService,
     private popUps: PopUps,
     private cdr: ChangeDetectorRef,
   ) {}
@@ -179,6 +182,16 @@ export class Evaluacion implements OnInit, OnDestroy {
   cargarExamenFisico(): void {
     if (this.destruido) return;
 
+    const episodioId = this.episodioId;
+    if (episodioId === null) {
+      this.cargando = false;
+      this.partesCuerpo = [];
+      this.hallazgos = [];
+      this.limpiarCaptura();
+      this.popUps.advertencia('No hay un episodio activo. Abra el episodio del paciente.');
+      return;
+    }
+
     this.cargando = true;
     this.cdr.markForCheck();
     this.peticion?.unsubscribe();
@@ -189,7 +202,7 @@ export class Evaluacion implements OnInit, OnDestroy {
           this.partesCuerpo = partesCuerpo;
           this.parteSeleccionadaId = partesCuerpo.length ? partesCuerpo[0].id : null;
         }),
-        switchMap(() => this.examenFisicoService.getExamenesPorEpisodio(this.episodioId, true)),
+        switchMap(() => this.examenFisicoService.getExamenesPorEpisodio(episodioId, true)),
         finalize(() => {
           this.cargando = false;
           if (!this.destruido) {
@@ -386,6 +399,12 @@ export class Evaluacion implements OnInit, OnDestroy {
       return;
     }
 
+    const episodioId = this.episodioId;
+    if (episodioId === null) {
+      this.popUps.advertencia('No hay un episodio activo. Abra el episodio del paciente.');
+      return;
+    }
+
     // Al corregir un hallazgo existente se confirma el cambio antes de enviarlo
     if (enEdicion) {
       const confirmado = await this.popUps
@@ -399,7 +418,7 @@ export class Evaluacion implements OnInit, OnDestroy {
 
     const cuerpo: ExamenFisicoRequest = {
       descripcion,
-      episodioId: this.episodioId,
+      episodioId,
       parteCuerpoId,
       usuarioId,
     };

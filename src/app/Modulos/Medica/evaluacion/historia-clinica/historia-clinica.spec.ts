@@ -3,10 +3,12 @@ import { of, throwError, TimeoutError } from 'rxjs';
 
 import { HistoriaClinica } from './historia-clinica';
 import { HistoriaClinicaService } from '../data/historia-clinica-service';
-import { EPISODIO_ID_TEMPORAL } from '../data/constantes-clinicas';
+import { EpisodioActivoService } from '../../data/episodio-activo-service';
 import { HistoriaClinicaResponse } from '../data/historiaClinicaInterfaz';
 import { AuthService } from '../../../Auth/data/auth-service';
 import { PopUps } from '../../../../shared/popUps/popUpsService';
+
+const EPISODIO_ID = 1;
 
 describe('HistoriaClinica', () => {
   let component: HistoriaClinica;
@@ -21,12 +23,17 @@ describe('HistoriaClinica', () => {
     cambiarEstado: vi.fn(),
   };
   const auth = { currentUser: vi.fn() };
-  const popUps = { exito: vi.fn(), error: vi.fn(), errorDesdeBackend: vi.fn() };
+  const popUps = { exito: vi.fn(), error: vi.fn(), errorDesdeBackend: vi.fn(), advertencia: vi.fn() };
+  const episodioActivo = {
+    obtener: vi.fn(() => EPISODIO_ID),
+    guardar: vi.fn(),
+    limpiar: vi.fn(),
+  };
 
   const historia = (id: number, descripcion: string): HistoriaClinicaResponse => ({
     id,
     descripcion,
-    episodioId: EPISODIO_ID_TEMPORAL,
+    episodioId: EPISODIO_ID,
     usuarioId: 2,
     usuarioNombre: 'Carlos Mendez',
     fecha: '2026-10-16T09:30:00',
@@ -45,6 +52,7 @@ describe('HistoriaClinica', () => {
       providers: [
         { provide: HistoriaClinicaService, useValue: servicio },
         { provide: AuthService, useValue: auth },
+        { provide: EpisodioActivoService, useValue: episodioActivo },
         { provide: PopUps, useValue: popUps },
       ],
     }).compileComponents();
@@ -89,7 +97,7 @@ describe('HistoriaClinica', () => {
 
     expect(component).toBeTruthy();
     expect(servicio.getHistoriasPorEpisodio).toHaveBeenCalledExactlyOnceWith(
-      EPISODIO_ID_TEMPORAL,
+      EPISODIO_ID,
       true,
     );
   });
@@ -184,7 +192,7 @@ describe('HistoriaClinica', () => {
 
     expect(servicio.postHistoria).toHaveBeenCalledExactlyOnceWith({
       descripcion: 'Paciente estable',
-      episodioId: EPISODIO_ID_TEMPORAL,
+      episodioId: EPISODIO_ID,
       usuarioId: 2,
     });
     expect(servicio.putHistoria).not.toHaveBeenCalled();
@@ -208,7 +216,7 @@ describe('HistoriaClinica', () => {
 
     expect(servicio.putHistoria).toHaveBeenCalledExactlyOnceWith(7, {
       descripcion: 'Paciente en observacion',
-      episodioId: EPISODIO_ID_TEMPORAL,
+      episodioId: EPISODIO_ID,
       usuarioId: 2,
     });
     expect(servicio.postHistoria).not.toHaveBeenCalled();

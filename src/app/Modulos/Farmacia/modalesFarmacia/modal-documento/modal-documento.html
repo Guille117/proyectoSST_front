@@ -1,0 +1,17 @@
+<div class="documento-viewer">
+  @if (cargando()) {
+    <div class="estado" role="status">Cargando documento...</div>
+  } @else {
+    @if (error()) {
+      <div class="estado estado-error" role="alert">{{ error() }}</div>
+    }
+
+    @if (esImagen()) {
+      @if (urlImagen(); as url) {
+        <img [src]="url" alt="Documento" />
+      }
+    } @else if (urlDocumento(); as url) {
+      <iframe [src]="url" title="Documento"></iframe>
+    }
+  }
+</div>

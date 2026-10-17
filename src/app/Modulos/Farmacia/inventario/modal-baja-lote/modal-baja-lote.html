@@ -1,0 +1,116 @@
+<div class="baja-lote">
+  <section class="resumen" aria-label="Información del lote">
+    <h4>{{ nombreMedicamento }}</h4>
+
+    <dl class="datos">
+      <div>
+        <dt>Código</dt>
+        <dd>{{ lote?.codigo ?? '—' }}</dd>
+      </div>
+      <div>
+        <dt>Lote</dt>
+        <dd>{{ lote?.codigoLote ?? '—' }}</dd>
+      </div>
+      <div>
+        <dt>Proveedor</dt>
+        <dd>{{ lote?.proveedor ?? '—' }}</dd>
+      </div>
+      <div>
+        <dt>Cantidad comprada</dt>
+        <dd>{{ lote?.cantidad ?? '—' }}</dd>
+      </div>
+      <div>
+        <dt>Disponible</dt>
+        <dd class="disponible">{{ lote?.disponible ?? '—' }}</dd>
+      </div>
+      <div>
+        <dt>Compra</dt>
+        <dd>{{ lote?.codigoCompra ?? '—' }}</dd>
+      </div>
+      <div>
+        <dt>Vencimiento</dt>
+        <dd [class.fecha-vencida]="esFechaVencida(lote?.fechaVencimiento)">
+          {{ formatearFecha(lote?.fechaVencimiento) }}
+        </dd>
+      </div>
+      @if (lote?.tipo === 'MEDICAMENTO') {
+        <div>
+          <dt>Administración</dt>
+          <dd>{{ lote?.administracion ?? '—' }}</dd>
+        </div>
+        <div>
+          <dt>Presentación</dt>
+          <dd>{{ lote?.presentacion ?? '—' }}</dd>
+        </div>
+        <div>
+          <dt>Fabricante</dt>
+          <dd>{{ fabricante }}</dd>
+        </div>
+      }
+    </dl>
+  </section>
+
+  <form novalidate (ngSubmit)="confirmar()">
+    <div class="fila-campos">
+      <app-campo-validado
+        label="Cantidad a eliminar"
+        fieldId="cantidadBaja"
+        [required]="true"
+        [showError]="!!(cantidadControl.touched && cantidadControl.invalid)"
+        [errorMessage]="mensajeErrorCantidad"
+      >
+        <input
+          id="cantidadBaja"
+          name="cantidad"
+          type="number"
+          min="1"
+          [max]="lote?.disponible ?? null"
+          placeholder="Cantidad"
+          [(ngModel)]="cantidad"
+          #cantidadControl="ngModel"
+          [class.input-invalid]="cantidadControl.touched && cantidadControl.invalid"
+          required
+        />
+      </app-campo-validado>
+
+      <app-campo-validado
+        label="Motivo"
+        fieldId="motivoBaja"
+        [required]="true"
+        [showError]="!!(motivoControl.touched && motivoControl.invalid)"
+        [errorMessage]="'Seleccione motivo'"
+      >
+        <select
+          id="motivoBaja"
+          name="motivo"
+          [disabled]="cargandoMotivos"
+          [(ngModel)]="motivoBajaId"
+          #motivoControl="ngModel"
+          [class.input-invalid]="motivoControl.touched && motivoControl.invalid"
+          required
+        >
+          <option [ngValue]="null">
+            {{ cargandoMotivos ? 'Cargando motivos...' : 'Seleccione un motivo' }}
+          </option>
+          @for (motivo of motivos; track motivo.id) {
+            <option [ngValue]="motivo.id">{{ motivo.nombre }}</option>
+          }
+        </select>
+        @if (errorMotivos) {
+          <p class="error-motivos" role="alert">{{ errorMotivos }}</p>
+        }
+      </app-campo-validado>
+    </div>
+
+    <app-campo-validado label="Observación" fieldId="observacionBaja">
+      <textarea
+        id="observacionBaja"
+        name="observacion"
+        rows="3"
+        maxlength="500"
+        placeholder="Detalle adicional de la baja"
+        [(ngModel)]="observacion"
+      ></textarea>
+    </app-campo-validado>
+  </form>
+</div>

@@ -3,6 +3,8 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { PacienteService } from '../../Pacientes/paciente/data/paciente-service';
 import { PacienteResumido, TipoAtencion } from '../../Pacientes/paciente/data/pacienteInterfaz';
+import { PopUps } from '../../../shared/popUps/popUpsService';
+import { EpisodioActivoService } from '../data/episodio-activo-service';
 
 /** Filtro del listado de pacientes por tipo de atención. */
 type FiltroAtencion = 'todos' | 'emergencia' | 'hospitalizacion';
@@ -23,6 +25,7 @@ interface SignoVitalVista {
 /** Paciente del listado: datos reales del resumen y detalle temporal mientras no hay contrato. */
 interface PacienteAtencionVista {
   expediente: string;
+  episodioId: number | null;
   nombre: string;
   edad: number;
   sexo: string;
@@ -113,6 +116,8 @@ export class Atencion implements OnInit, OnDestroy {
   private readonly servicioPaciente = inject(PacienteService);
   private readonly router = inject(Router);
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly popUps = inject(PopUps);
+  private readonly episodioActivo = inject(EpisodioActivoService);
 
   private destruido = false;
 
@@ -206,6 +211,7 @@ export class Atencion implements OnInit, OnDestroy {
 
         this.pacientes = pacientes.map((paciente, posicion) => this.aVista(paciente, posicion));
         this.pacienteSeleccionado = this.pacientesFiltrados[0] ?? null;
+        this.episodioActivo.guardar(this.pacienteSeleccionado?.episodioId ?? null);
         this.cargando = false;
         this.cdr.detectChanges();
       },
@@ -222,9 +228,10 @@ export class Atencion implements OnInit, OnDestroy {
     });
   }
 
-  /** Elige el paciente cuyo detalle muestra el panel de la derecha. */
+  /** Elige el paciente cuyo detalle muestra el panel de la derecha y guarda su episodio activo. */
   seleccionarPaciente(paciente: PacienteAtencionVista): void {
     this.pacienteSeleccionado = paciente;
+    this.episodioActivo.guardar(paciente.episodioId);
   }
 
   /** Cambia el filtro del listado y ajusta la selección a lo que queda a la vista. */
@@ -244,6 +251,7 @@ export class Atencion implements OnInit, OnDestroy {
       !visibles.some((paciente) => paciente.expediente === this.pacienteSeleccionado?.expediente)
     ) {
       this.pacienteSeleccionado = visibles[0] ?? null;
+      this.episodioActivo.guardar(this.pacienteSeleccionado?.episodioId ?? null);
     }
   }
 
@@ -251,6 +259,12 @@ export class Atencion implements OnInit, OnDestroy {
   abrirEpisodio(): void {
     if (!this.pacienteSeleccionado) return;
 
+    if (this.pacienteSeleccionado.episodioId === null) {
+      this.popUps.advertencia('El paciente seleccionado no tiene un episodio activo.');
+      return;
+    }
+
+    this.episodioActivo.guardar(this.pacienteSeleccionado.episodioId);
     this.router.navigate(['/medica', 'evaluacion']);
   }
 
@@ -272,6 +286,7 @@ export class Atencion implements OnInit, OnDestroy {
 
     return {
       expediente: paciente.codigoExpediente,
+      episodioId: paciente.episodioId,
       nombre: paciente.nombreCompleto,
       tipoAtencion: paciente.tipoTratamiento,
       ...detalle,

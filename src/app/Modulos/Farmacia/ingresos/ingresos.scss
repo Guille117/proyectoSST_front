@@ -34,6 +34,15 @@
 
 .table-container{
     --ancho: 1;
+
+    tbody tr {
+        cursor: pointer;
+        transition: background-color 0.15s ease;
+
+        &:not(.selected-row):hover td {
+            background: #f5f9ff;
+        }
+    }
 }
 
 
@@ -91,10 +100,35 @@
     .btn {
         margin-bottom: 0;
     }
+
+    .iconEliminar {
+        color: #dc2626;
+
+        &:hover:not(:disabled) {
+            color: #fff;
+            background: #dc2626;
+        }
+
+        &:focus-visible {
+            outline-color: #dc2626;
+        }
+    }
 }
 
 .row{
     display: flex;
     justify-content: space-between;
+}
+
+.detalle-estado {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    min-height: 220px;
+    padding: 24px;
+    color: #5f6a85;
+    text-align: center;
 }
 

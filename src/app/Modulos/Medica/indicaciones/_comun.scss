@@ -337,6 +337,36 @@ select.indicacion-input {
     box-shadow: none;
     font-size: 17px;
   }
+
+  /* Botón de finalizar o reactivar: verde, como las acciones de confirmación del módulo */
+  .iconEstado {
+    display: grid;
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    place-items: center;
+    color: #15803d;
+    background: rgba(34, 197, 94, 0.12);
+    border: 1px solid rgba(34, 197, 94, 0.35);
+    border-radius: 50%;
+    font-size: 17px;
+    cursor: pointer;
+    transition:
+      color 0.2s ease,
+      background 0.2s ease,
+      transform 0.2s ease;
+
+    &:hover {
+      color: #fff;
+      background: #16a34a;
+      transform: translateY(-1px);
+    }
+
+    &:focus-visible {
+      outline: 2px solid #22c55e;
+      outline-offset: 2px;
+    }
+  }
 }
 
 /* Cada opción alinea su nombre a la izquierda y su botón a la derecha */

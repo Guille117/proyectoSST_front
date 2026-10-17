@@ -4,6 +4,7 @@ import { of, throwError } from 'rxjs';
 import { Diagnostico } from './diagnostico';
 import { AuthService } from '../../../Auth/data/auth-service';
 import { PopUps } from '../../../../shared/popUps/popUpsService';
+import { EpisodioActivoService } from '../../data/episodio-activo-service';
 import { DiagnosticoService } from '../data/diagnostico-service';
 import { DiagnosticoResponse } from '../data/diagnosticoInterfaz';
 
@@ -49,6 +50,13 @@ describe('Diagnostico', () => {
     error: vi.fn(),
     errorDesdeBackend: vi.fn(),
     confirmarToast: vi.fn(),
+    advertencia: vi.fn(),
+  };
+
+  const episodioActivo = {
+    obtener: vi.fn(() => 1),
+    guardar: vi.fn(),
+    limpiar: vi.fn(),
   };
 
   beforeEach(async () => {
@@ -61,6 +69,7 @@ describe('Diagnostico', () => {
       providers: [
         { provide: DiagnosticoService, useValue: servicio },
         { provide: AuthService, useValue: auth },
+        { provide: EpisodioActivoService, useValue: episodioActivo },
         { provide: PopUps, useValue: popUps },
       ],
     }).compileComponents();

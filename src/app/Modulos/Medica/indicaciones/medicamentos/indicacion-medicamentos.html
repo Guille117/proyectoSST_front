@@ -43,7 +43,7 @@
               placeholder="Buscar medicamento..."
               aria-required="true"
               [(ngModel)]="medicamento"
-              (keyup.enter)="buscarMedicamento()"
+              (keydown.enter)="$event.preventDefault(); buscarMedicamento()"
             />
 
             <button
@@ -51,6 +51,7 @@
               type="button"
               title="Buscar en el catálogo de medicamentos"
               aria-label="Buscar en el catálogo de medicamentos"
+              [disabled]="cargandoCatalogo"
               (click)="buscarMedicamento()"
             >
               <i class="bi bi-search fs-5" aria-hidden="true"></i>
@@ -63,7 +64,9 @@
            medicamento y su vía de administración; cada fila elige el medicamento -->
       @if (busquedaMedicamentoRealizada) {
         <div class="indicacion-resultados" aria-live="polite">
-          @if (medicamentosEncontrados.length) {
+          @if (cargandoCatalogo) {
+            <p class="indicacion-vacio">Buscando medicamentos en el catálogo...</p>
+          } @else if (medicamentosEncontrados.length) {
             <div class="tabla-container">
               <table aria-label="Medicamentos encontrados en el catálogo">
                 <thead>
@@ -89,7 +92,7 @@
                     >
                       <td class="celda_centrada">{{ numeroInicialDeLaPagina + indice }}</td>
                       <td class="celda_izquierda">{{ descripcionMedicamento(opcion) }}</td>
-                      <td class="celda_izquierda">{{ opcion.administracion }}</td>
+                      <td class="celda_izquierda">{{ opcion.viaAdministracion }}</td>
                     </tr>
                   }
                 </tbody>
@@ -131,8 +134,11 @@
             class="indicacion-input"
             id="cantidadIndicada"
             name="cantidad"
-            type="text"
-            placeholder="Ej. 500 mg"
+            type="number"
+            min="1"
+            step="1"
+            inputmode="numeric"
+            placeholder="Ej. 2"
             aria-required="true"
             [(ngModel)]="cantidad"
           />
@@ -202,6 +208,7 @@
             id="observacionesIndicadas"
             name="observaciones"
             placeholder="Indicaciones adicionales..."
+            maxlength="2000"
             [(ngModel)]="observaciones"
           ></textarea>
         </div>
@@ -210,7 +217,9 @@
 
     <!-- Acciones del formulario -->
     <div class="acciones-formulario indicacion-acciones">
-      <button type="button" class="btn _cancelar" (click)="limpiarFormulario()">Cancelar</button>
+      <button type="button" class="btn _cancelar" [disabled]="guardando" (click)="limpiarFormulario()">
+        Cancelar
+      </button>
       <button type="submit" class="btn _guardar" [disabled]="!puedeGuardar">Guardar</button>
     </div>
   </form>
@@ -241,7 +250,16 @@
 
   <!-- Listado de medicamentos: solo las tarjetas se desplazan bajo el título y los filtros fijos -->
   <div class="indicados-lista">
-    @for (indicacion of indicacionesFiltradas; track indicacion.id) {
+    @if (cargando) {
+      <p class="indicacion-vacio">Cargando indicaciones...</p>
+    } @else if (sinEpisodioActivo) {
+      <p class="indicacion-vacio">Abra un episodio para consultar sus indicaciones.</p>
+    } @else if (errorCarga) {
+      <p class="indicacion-vacio">
+        No se pudieron cargar las indicaciones. Intente nuevamente.
+      </p>
+    } @else {
+      @for (indicacion of indicacionesFiltradas; track indicacion.id) {
       <article
         class="indicacion-card"
         [ngClass]="'indicacion-card--' + indicacion.tono"
@@ -294,6 +312,36 @@
             role="menu"
             [attr.aria-label]="'Opciones para ' + indicacion.nombre"
           >
+            @if (indicacion.estado === 'activa') {
+              <div class="indicacion-menu-opcion">
+                <span>Finalizar</span>
+                <button
+                  type="button"
+                  class="iconEstado"
+                  role="menuitem"
+                  title="Finalizar indicación"
+                  [attr.aria-label]="'Finalizar la indicación ' + indicacion.nombre"
+                  (click)="finalizarIndicacion(indicacion)"
+                >
+                  <i class="bi bi-check2-circle" aria-hidden="true"></i>
+                </button>
+              </div>
+            } @else {
+              <div class="indicacion-menu-opcion">
+                <span>Reactivar</span>
+                <button
+                  type="button"
+                  class="iconEstado"
+                  role="menuitem"
+                  title="Reactivar indicación"
+                  [attr.aria-label]="'Reactivar la indicación ' + indicacion.nombre"
+                  (click)="reactivarIndicacion(indicacion)"
+                >
+                  <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>
+                </button>
+              </div>
+            }
+
             <div class="indicacion-menu-opcion">
               <span>Editar</span>
               <button
@@ -308,24 +356,27 @@
               </button>
             </div>
 
-            <div class="indicacion-menu-opcion">
-              <span>Eliminar</span>
-              <button
-                type="button"
-                class="iconQuitar"
-                role="menuitem"
-                title="Eliminar indicación"
-                [attr.aria-label]="'Eliminar la indicación ' + indicacion.nombre"
-                (click)="eliminarIndicacion(indicacion)"
-              >
-                <i class="bi bi-trash3" aria-hidden="true"></i>
-              </button>
-            </div>
+            @if (indicacion.estado !== 'eliminada') {
+              <div class="indicacion-menu-opcion">
+                <span>Eliminar</span>
+                <button
+                  type="button"
+                  class="iconQuitar"
+                  role="menuitem"
+                  title="Eliminar indicación"
+                  [attr.aria-label]="'Eliminar la indicación ' + indicacion.nombre"
+                  (click)="eliminarIndicacion(indicacion)"
+                >
+                  <i class="bi bi-trash3" aria-hidden="true"></i>
+                </button>
+              </div>
+            }
           </div>
         }
       </article>
     } @empty {
-      <p class="indicacion-vacio">{{ mensajeSinIndicaciones }}</p>
+        <p class="indicacion-vacio">{{ mensajeSinIndicaciones }}</p>
+      }
     }
   </div>
 </section>

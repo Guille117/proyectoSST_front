@@ -1,0 +1,85 @@
+.baja-lote {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.resumen {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+
+  h4 {
+    margin: 0;
+    color: #111827;
+    font-size: 1.1rem;
+  }
+}
+
+.datos {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px 20px;
+  margin: 0;
+
+  div {
+    min-width: 0;
+  }
+
+  dt {
+    color: #667085;
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  dd {
+    margin: 2px 0 0;
+    color: #111827;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+  }
+
+  dd.fecha-vencida {
+    color: #dc2626;
+  }
+}
+
+.disponible {
+  color: var(--azulSecundario) !important;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.fila-campos {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 20px;
+}
+
+input,
+select,
+textarea {
+  width: 100%;
+}
+
+textarea {
+  resize: vertical;
+}
+
+.error-motivos {
+  margin: 6px 0 0;
+  color: #b42318;
+  font-size: 12px;
+}
+
+@media (max-width: 520px) {
+  .datos,
+  .fila-campos {
+    grid-template-columns: 1fr;
+  }
+}

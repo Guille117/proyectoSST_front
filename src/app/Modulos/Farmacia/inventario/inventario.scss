@@ -18,6 +18,18 @@
     height: 45px;
 }
 
+.buscador .inputB {
+    min-width: 0;
+
+    &[disabled] {
+        cursor: wait;
+    }
+}
+
+.buscador select.inputB {
+    cursor: pointer;
+}
+
 // el switch es el componente compartido app-tab-switch (shared/tab-switch)
 .miniSub-container {
     flex: 0 1 300px;
@@ -62,8 +74,8 @@ app-tab-switch {
     }
 
     &.activo {
-        border-color: #0b1739;
-        background: #0b1739;
+        border-color: var(--azulSecundario);
+        background: var(--azulSecundario);
         color: #fff;
         font-weight: 600;
     }
@@ -93,8 +105,89 @@ app-tab-switch {
     background: #94a3b8;
 }
 
-.punto-eliminados {
-    background: #475569;
+.iconEliminar {
+    display: grid;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    place-items: center;
+    color: #dc2626;
+    background: rgba(255, 255, 255, 0.62);
+    border: 1px solid rgba(148, 163, 184, 0.45);
+    border-radius: 50%;
+    font-size: 15px;
+    cursor: pointer;
+    transition:
+        color 0.2s ease,
+        background 0.2s ease;
+
+    &:hover:not(:disabled) {
+        color: #fff;
+        background: #dc2626;
+    }
+
+    &:disabled {
+        color: #cbd5e1;
+        cursor: default;
+    }
+
+    &:focus-visible {
+        outline: 2px solid #dc2626;
+        outline-offset: 2px;
+    }
+}
+
+.iconRevertir {
+    display: grid;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    place-items: center;
+    color: var(--azulSecundario);
+    background: rgba(255, 255, 255, 0.62);
+    border: 1px solid rgba(148, 163, 184, 0.45);
+    border-radius: 50%;
+    font-size: 16px;
+    cursor: pointer;
+    transition:
+        color 0.2s ease,
+        background 0.2s ease;
+
+    &:hover:not(:disabled) {
+        color: #fff;
+        background: var(--azulSecundario);
+    }
+
+    &:disabled {
+        color: #cbd5e1;
+        cursor: default;
+    }
+
+    &:focus-visible {
+        outline: 2px solid var(--azulSecundario);
+        outline-offset: 2px;
+    }
+}
+
+// colores de vencimiento y stock en la tabla
+.fecha-vencida {
+    color: #dc2626;
+    font-weight: 600;
+}
+
+.fecha-por-vencer {
+    color: #f59e0b;
+    font-weight: 600;
+}
+
+.stock-bajo {
+    color: #ca8a04;
+    font-weight: 600;
+}
+
+.sin-stock {
+    color: #94a3b8;
+    font-weight: 600;
 }
 
 // unicamente se indica el tamaño el estilo esta en el archivo otrosStyle

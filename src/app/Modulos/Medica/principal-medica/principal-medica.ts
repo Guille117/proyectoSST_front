@@ -2,6 +2,7 @@ import { Component, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { filter } from 'rxjs';
+import { EpisodioActivoService } from '../data/episodio-activo-service';
 
 /** Rutas del módulo que se muestran sin los submódulos: la raíz y la selección del paciente. */
 const RUTAS_SIN_SUBMENU = ['/medica', '/medica/atencion'];
@@ -14,6 +15,7 @@ const RUTAS_SIN_SUBMENU = ['/medica', '/medica/atencion'];
 })
 export class PrincipalMedica {
   private readonly router = inject(Router);
+  private readonly episodioActivo = inject(EpisodioActivoService);
 
   /**
    * Submódulos del módulo a la vista. El módulo arranca en la selección del paciente, que se muestra
@@ -36,6 +38,7 @@ export class PrincipalMedica {
    * entrada del módulo.
    */
   cerrarEpisodio(): void {
+    this.episodioActivo.limpiar();
     this.router.navigate(['/medica', 'atencion']);
   }
 

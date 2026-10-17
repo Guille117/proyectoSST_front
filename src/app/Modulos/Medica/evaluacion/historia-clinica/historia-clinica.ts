@@ -3,7 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { finalize, Subscription, TimeoutError } from 'rxjs';
 import { AuthService } from '../../../Auth/data/auth-service';
 import { PopUps } from '../../../../shared/popUps/popUpsService';
-import { EPISODIO_ID_TEMPORAL } from '../data/constantes-clinicas';
+import { EpisodioActivoService } from '../../data/episodio-activo-service';
 import { HistoriaClinicaService } from '../data/historia-clinica-service';
 import { HistoriaClinicaRequest } from '../data/historiaClinicaInterfaz';
 
@@ -21,12 +21,15 @@ export class HistoriaClinica implements OnInit, OnDestroy {
   private peticion?: Subscription;
   private destruido = false;
 
-  /** TEMPORAL: episodio fijo mientras la pantalla no recibe un episodio real. */
-  private readonly episodioId = EPISODIO_ID_TEMPORAL;
+  /** Episodio activo del módulo: lo abre la selección del paciente y se conserva hasta cerrarlo. */
+  private get episodioId(): number | null {
+    return this.episodioActivo.obtener();
+  }
 
   constructor(
     private historiaClinicaService: HistoriaClinicaService,
     private authService: AuthService,
+    private episodioActivo: EpisodioActivoService,
     private popUps: PopUps,
     private cdr: ChangeDetectorRef,
   ) {}
@@ -68,11 +71,23 @@ export class HistoriaClinica implements OnInit, OnDestroy {
   /** Carga la historia clínica vigente del episodio y muestra la más reciente. */
   cargarHistoria(): void {
     if (this.destruido) return;
+
+    const episodioId = this.episodioId;
+    if (episodioId === null) {
+      this.cargando = false;
+      this.idHistoriaActual = null;
+      this.historiaClinica = '';
+      this.historiaOriginal = '';
+      this.modoEdicion = false;
+      this.popUps.advertencia('No hay un episodio activo. Abra el episodio del paciente.');
+      return;
+    }
+
     this.cargando = true;
     this.cdr.markForCheck();
     this.peticion?.unsubscribe();
     this.peticion = this.historiaClinicaService
-      .getHistoriasPorEpisodio(this.episodioId, true)
+      .getHistoriasPorEpisodio(episodioId, true)
       .pipe(
         finalize(() => {
           this.cargando = false;
@@ -138,7 +153,13 @@ export class HistoriaClinica implements OnInit, OnDestroy {
       return;
     }
 
-    const cuerpo: HistoriaClinicaRequest = { descripcion, episodioId: this.episodioId, usuarioId };
+    const episodioId = this.episodioId;
+    if (episodioId === null) {
+      this.popUps.advertencia('No hay un episodio activo. Abra el episodio del paciente.');
+      return;
+    }
+
+    const cuerpo: HistoriaClinicaRequest = { descripcion, episodioId, usuarioId };
     const id = this.idHistoriaActual;
     this.guardando = true;
     this.cdr.markForCheck();

@@ -25,11 +25,25 @@
     }
 }
 
+/* Las filas del listado son seleccionables: el detalle se muestra a la derecha */
+tbody tr {
+	cursor: pointer;
+	transition: background-color 0.2s ease;
 
+	&:not(.selected-row):hover td {
+		background-color: #f1f5f9;
+	}
+
+	&:focus-visible {
+		outline: 2px solid var(--azulSecundario);
+		outline-offset: -2px;
+	}
+}
 
 .derecha {
 	display: flex;
 	flex-direction: column;
+	gap: 14px;
 	box-sizing: border-box;
 	min-width: 300px;
 	padding: 16px;
@@ -46,6 +60,130 @@
 			font-size: 20px;
 			font-weight: 700;
 		}
+	}
+
+	/* Identificación del paciente: nombre y expediente en un bloque destacado */
+	.cabecera {
+		padding: 12px 14px;
+		border-radius: 12px;
+		background: #eef5ff;
+
+		h2 {
+			margin: 0;
+			color: var(--azulPrincipal);
+			font-size: 20px;
+			font-weight: 700;
+			line-height: 1.2;
+			overflow-wrap: anywhere;
+		}
+
+		p {
+			margin: 4px 0 0;
+			color: #64748b;
+			font-size: 0.9rem;
+		}
+	}
+
+	.seccion h4 {
+		margin: 0 0 8px;
+		padding-bottom: 5px;
+		border-bottom: 1px solid #e6edf7;
+		color: var(--azulSecundario);
+		font-size: 16px;
+		font-weight: 700;
+	}
+
+	.datos {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+		gap: 12px;
+	}
+
+	.data {
+		display: grid;
+		gap: 2px;
+		min-width: 0;
+
+		.rotulo {
+			color: #64748b;
+			font-size: 0.8rem;
+		}
+
+		.valor {
+			color: var(--azulPrincipal);
+			font-size: 0.98rem;
+			font-weight: 700;
+			overflow-wrap: anywhere;
+		}
+	}
+
+	.diagnostico,
+	.alergias {
+		margin: 0;
+		padding: 12px 14px;
+		border-radius: 12px;
+		font-size: 0.95rem;
+	}
+
+	.diagnostico {
+		background: #eef5ff;
+		color: var(--azulPrincipal);
+	}
+
+	.alergias {
+		background: rgba(34, 197, 94, 0.14);
+		color: #166534;
+		font-weight: 600;
+	}
+
+	/* Los cuatro signos vitales en un mismo recuadro, separados por columnas */
+	.vitales {
+		display: grid;
+		grid-template-columns: repeat(4, minmax(0, 1fr));
+		border: 1px solid #e6edf7;
+		border-radius: 12px;
+		overflow: hidden;
+	}
+
+	.vital {
+		min-width: 0;
+		padding: 10px 12px;
+		border-left: 1px solid #eef2f8;
+
+		&:first-child {
+			border-left: none;
+		}
+	}
+
+	.vital-rotulo {
+		color: #94a3b8;
+		font-size: 0.78rem;
+		font-weight: 600;
+	}
+
+	.vital-valor {
+		display: block;
+		margin-top: 2px;
+		color: var(--azulPrincipal);
+		font-size: 1.05rem;
+		font-weight: 700;
+	}
+
+	.vital-unidad {
+		display: block;
+		color: #94a3b8;
+		font-size: 0.76rem;
+		font-weight: 600;
+	}
+
+	.sin-seleccion {
+		margin: 0;
+		padding: 40px 20px;
+		border: 1px dashed var(--colorBorde);
+		border-radius: 14px;
+		color: #64748b;
+		font-style: italic;
+		text-align: center;
 	}
 }
 

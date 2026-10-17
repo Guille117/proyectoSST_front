@@ -2,12 +2,15 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of, throwError, TimeoutError } from 'rxjs';
 
 import { Evaluacion } from './evaluacion';
-import { EPISODIO_ID_TEMPORAL } from './data/constantes-clinicas';
 import { ExamenFisicoService } from './data/examen-fisico-service';
 import { ExamenFisicoResponse, ParteCuerpoResponse } from './data/examenFisicoInterfaz';
 import { HistoriaClinicaService } from './data/historia-clinica-service';
+import { DiagnosticoService } from './data/diagnostico-service';
+import { EpisodioActivoService } from '../data/episodio-activo-service';
 import { AuthService } from '../../Auth/data/auth-service';
 import { PopUps } from '../../../shared/popUps/popUpsService';
+
+const EPISODIO_ID = 1;
 
 describe('Evaluacion', () => {
   let component: Evaluacion;
@@ -22,12 +25,24 @@ describe('Evaluacion', () => {
     cambiarEstado: vi.fn(),
   };
   const historiaClinicaService = { getHistoriasPorEpisodio: vi.fn() };
+  const diagnosticoService = {
+    getDiagnosticosPorEpisodio: vi.fn(),
+    postDiagnostico: vi.fn(),
+    putDiagnostico: vi.fn(),
+    cambiarEstado: vi.fn(),
+  };
   const authService = { currentUser: vi.fn() };
   const popUps = {
     exito: vi.fn(),
     error: vi.fn(),
     errorDesdeBackend: vi.fn(),
     confirmarToast: vi.fn(),
+    advertencia: vi.fn(),
+  };
+  const episodioActivo = {
+    obtener: vi.fn(() => EPISODIO_ID),
+    guardar: vi.fn(),
+    limpiar: vi.fn(),
   };
 
   const partesCuerpo: ParteCuerpoResponse[] = [
@@ -43,7 +58,7 @@ describe('Evaluacion', () => {
   ): ExamenFisicoResponse => ({
     id,
     descripcion,
-    episodioId: EPISODIO_ID_TEMPORAL,
+    episodioId: EPISODIO_ID,
     parteCuerpoId,
     parteCuerpoNombre,
     usuarioId: 2,
@@ -67,6 +82,7 @@ describe('Evaluacion', () => {
     );
     popUps.confirmarToast.mockResolvedValue(true);
     historiaClinicaService.getHistoriasPorEpisodio.mockReturnValue(of([]));
+    diagnosticoService.getDiagnosticosPorEpisodio.mockReturnValue(of([]));
     authService.currentUser.mockReturnValue({ id: 2 });
 
     await TestBed.configureTestingModule({
@@ -74,7 +90,9 @@ describe('Evaluacion', () => {
       providers: [
         { provide: ExamenFisicoService, useValue: examenFisicoService },
         { provide: HistoriaClinicaService, useValue: historiaClinicaService },
+        { provide: DiagnosticoService, useValue: diagnosticoService },
         { provide: AuthService, useValue: authService },
+        { provide: EpisodioActivoService, useValue: episodioActivo },
         { provide: PopUps, useValue: popUps },
       ],
     }).compileComponents();
@@ -166,7 +184,7 @@ describe('Evaluacion', () => {
     expect(component).toBeTruthy();
     expect(examenFisicoService.getPartesCuerpo).toHaveBeenCalledExactlyOnceWith(true);
     expect(examenFisicoService.getExamenesPorEpisodio).toHaveBeenCalledExactlyOnceWith(
-      EPISODIO_ID_TEMPORAL,
+      EPISODIO_ID,
       true,
     );
   });
@@ -389,7 +407,7 @@ describe('Evaluacion', () => {
 
     expect(examenFisicoService.postExamen).toHaveBeenCalledExactlyOnceWith({
       descripcion: 'Ruidos cardiacos normales',
-      episodioId: EPISODIO_ID_TEMPORAL,
+      episodioId: EPISODIO_ID,
       parteCuerpoId: 3,
       usuarioId: 2,
     });
@@ -424,7 +442,7 @@ describe('Evaluacion', () => {
     expect(popUps.confirmarToast).toHaveBeenCalled();
     expect(examenFisicoService.putExamen).toHaveBeenCalledExactlyOnceWith(21, {
       descripcion: 'Dolor a la palpación',
-      episodioId: EPISODIO_ID_TEMPORAL,
+      episodioId: EPISODIO_ID,
       parteCuerpoId: 3,
       usuarioId: 2,
     });
@@ -473,7 +491,7 @@ describe('Evaluacion', () => {
 
     expect(examenFisicoService.putExamen).toHaveBeenCalledExactlyOnceWith(21, {
       descripcion: 'Ruidos cardiacos normales',
-      episodioId: EPISODIO_ID_TEMPORAL,
+      episodioId: EPISODIO_ID,
       parteCuerpoId: 4,
       usuarioId: 2,
     });

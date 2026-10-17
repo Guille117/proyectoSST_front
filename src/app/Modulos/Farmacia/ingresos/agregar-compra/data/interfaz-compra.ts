@@ -30,6 +30,10 @@ export interface LoteCompraVista extends LoteCompraRequest {
   nombreItem: string;
   /** Marca, presentación y concentración del producto (solo para la tabla). */
   descripcionItem: string;
+  /** Id del lote existente al editar una compra; no se envía al backend. */
+  idLote?: number;
+  /** Unidades disponibles del lote; permite bloquear la eliminación de lotes ya despachados. */
+  disponible?: number;
 }
 
 
@@ -43,45 +47,39 @@ export interface resumenCompraResponse{
   total: number;
 }
 
+export interface resumenCompraFiltros {
+  codigo?: string;
+  proveedorId?: number;
+  fecha?: string;
+  activos?: boolean;
+}
+
 export interface detalleCompraResponse {
   id: number;
   codigo: string;
+  total: number;
+  comprobante: string | null;
+  estado: boolean;
   proveedorId: number;
   proveedorNombre: string;
   fecha: string; // ISO 8601 format
-  total: number;
   lotes: LoteDetalleResponse[];
 }
- 
+
 export interface LoteDetalleResponse {
   id: number;
   codigoLote: string;
-  codigo: string;
-  esMedicamento: boolean;
-  nombre: string;
-  dosis: number;
-  unidadMedida: string;
-  fabricante: string;
-  presentacion: string;
-  detalle: string
   cantidad: number;
-  precioCompra: number;
+  disponible: number;
+  estado: boolean;
   fechaVencimiento: string;
-  idItem: number;
-  descripcionItem: string;
+  precioCompra: number;
   precioVenta: number;
+  total: number;
+  idInsumoLog: number | null;
+  nombreInsumo: string | null;
+  idMedicamentoLog: number | null;
+  nombreMedicamento: string | null;
+  idCompra: number;
+  codigoCompra: string;
 }
-// `
-//             String codigoLote,
-//             String codigo,
-//             boolean esMedicamento,
-//             String nombre,
-//             BigDecimal dosis,
-//             String unidadMedida,
-//             String fabricante,
-//             String presentacion,
-//             String detalle,
-//             Integer cantidad,
-//             BigDecimal precioCompra,
-//             LocalDate fechaVencimiento
-//   `

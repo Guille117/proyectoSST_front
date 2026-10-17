@@ -5,6 +5,8 @@ import { Subject } from 'rxjs';
 import { Atencion } from './atencion';
 import { PacienteService } from '../../Pacientes/paciente/data/paciente-service';
 import { PacienteResumido } from '../../Pacientes/paciente/data/pacienteInterfaz';
+import { EpisodioActivoService } from '../data/episodio-activo-service';
+import { PopUps } from '../../../shared/popUps/popUpsService';
 
 describe('Atencion', () => {
   let component: Atencion;
@@ -14,6 +16,7 @@ describe('Atencion', () => {
   const pacientes: PacienteResumido[] = [
     {
       codigoExpediente: 'EXP-001',
+      episodioId: 101,
       nombreCompleto: 'Juan Pérez',
       telefono: '70000001',
       tipoTratamiento: 'HOSPITALIZACION',
@@ -21,6 +24,7 @@ describe('Atencion', () => {
     },
     {
       codigoExpediente: 'EXP-002',
+      episodioId: 102,
       nombreCompleto: 'María López',
       telefono: '70000002',
       tipoTratamiento: 'EMERGENCIA',
@@ -28,6 +32,7 @@ describe('Atencion', () => {
     },
     {
       codigoExpediente: 'EXP-003',
+      episodioId: 103,
       nombreCompleto: 'Carlos Méndez',
       telefono: '70000003',
       tipoTratamiento: 'HOSPITALIZACION',
@@ -35,6 +40,7 @@ describe('Atencion', () => {
     },
     {
       codigoExpediente: 'EXP-004',
+      episodioId: 104,
       nombreCompleto: 'Ana Rodríguez',
       telefono: '70000004',
       tipoTratamiento: 'EMERGENCIA',
@@ -43,6 +49,14 @@ describe('Atencion', () => {
   ];
 
   const servicio = { listarPacientes: vi.fn() };
+  const episodioActivo = { guardar: vi.fn(), limpiar: vi.fn(), obtener: vi.fn() };
+  const popUps = {
+    advertencia: vi.fn(),
+    error: vi.fn(),
+    exito: vi.fn(),
+    errorDesdeBackend: vi.fn(),
+    confirmarToast: vi.fn(),
+  };
 
   beforeEach(async () => {
     vi.resetAllMocks();
@@ -51,7 +65,12 @@ describe('Atencion', () => {
 
     await TestBed.configureTestingModule({
       imports: [Atencion],
-      providers: [{ provide: PacienteService, useValue: servicio }, provideRouter([])],
+      providers: [
+        { provide: PacienteService, useValue: servicio },
+        { provide: EpisodioActivoService, useValue: episodioActivo },
+        { provide: PopUps, useValue: popUps },
+        provideRouter([]),
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(Atencion);
@@ -172,6 +191,7 @@ describe('Atencion', () => {
 
     component.abrirEpisodio();
 
+    expect(episodioActivo.guardar).toHaveBeenCalledWith(101);
     expect(navegar).toHaveBeenCalledWith(['/medica', 'evaluacion']);
   });
 

@@ -1,5 +1,9 @@
 @if (mostrarAgregarCompra()) {
-  <app-agregar-compra (cancelar)="cancelarAgregarCompra()" />
+  <app-agregar-compra
+    [compraEdicion]="compraEditar"
+    (cancelar)="cancelarAgregarCompra()"
+    (actualizado)="finalizarEdicion()"
+  />
 } @else {
 <div class="areaTrabajo-container">
   <div class="trabajoArea">
@@ -7,14 +11,59 @@
       <div class="seccionSuperior">
         <div class="buscador-container">
           <div class="buscador">
-            <select class="selector">
-              <option value="1" selected>Proveedor</option>
-              <option value="2">Fecha</option>
-              <option value="3">Código</option>
+            <select
+              class="selector"
+              aria-label="Filtro de búsqueda"
+              [(ngModel)]="criterioBusqueda"
+              (ngModelChange)="cambiarCriterioBusqueda()"
+            >
+              <option value="codigo">Código</option>
+              <option value="proveedorId">Proveedor</option>
+              <option value="fecha">Fecha</option>
             </select>
-            <input class="inputB" type="text" placeholder="Buscar...">
-            <button class="btnLupa">
-              <i class="bi bi-search fs-5"></i>
+
+            @if (criterioBusqueda === 'codigo') {
+              <input
+                class="inputB"
+                type="search"
+                placeholder="Buscar por código..."
+                aria-label="Buscar compras por código"
+                [(ngModel)]="textoBusqueda"
+                (keydown.enter)="buscarCompras()"
+              />
+            } @else if (criterioBusqueda === 'proveedorId') {
+              <select
+                class="inputB"
+                aria-label="Buscar compras por proveedor"
+                [disabled]="cargandoProveedores"
+                [(ngModel)]="proveedorIdBusqueda"
+              >
+                <option [ngValue]="null">
+                  {{ cargandoProveedores ? 'Cargando proveedores...' : 'Seleccione un proveedor' }}
+                </option>
+                @for (proveedor of proveedores; track proveedor.id) {
+                  <option [ngValue]="proveedor.id">{{ proveedor.nombre }}</option>
+                }
+              </select>
+            } @else {
+              <input
+                class="inputB"
+                type="date"
+                aria-label="Buscar compras por fecha"
+                [(ngModel)]="fechaBusqueda"
+                (keydown.enter)="buscarCompras()"
+              />
+            }
+
+            <button
+              type="button"
+              class="btnLupa"
+              title="Buscar compras"
+              aria-label="Buscar compras"
+              [disabled]="cargandoCompras || (criterioBusqueda === 'proveedorId' && cargandoProveedores)"
+              (click)="buscarCompras()"
+            >
+              <i class="bi bi-search fs-5" aria-hidden="true"></i>
             </button>
           </div>
         </div>
@@ -35,105 +84,156 @@
           </tr>
         </thead>
         <tbody>
-          <tr>
-            <td class="celda_centrada">COMP-001</td>
-            <td class="celda_izquierda">Farmacia Central</td>
-            <td class="celda_centrada">02-04-20op26</td>
-            <td class="celda_centrada">12</td>
-            <td class="celda_centrada">Q 3,450.00</td>
-          </tr>
-          <tr>
-            <td class="celda_centrada">COMP-002</td>
-            <td class="celda_izquierda">Distribuidora Salud</td>
-            <td class="celda_centrada">15-04-2026</td>
-            <td class="celda_centrada">8</td>
-            <td class="celda_centrada">Q 1,980.00</td>
-          </tr>
-          <tr>
-            <td class="celda_centrada">COMP-003</td>
-            <td class="celda_izquierda">Química GT</td>
-            <td class="celda_centrada">24-04-2026</td>
-            <td class="celda_centrada">20</td>
-            <td class="celda_centrada">Q 5,620.00</td>
-          </tr>
+          @if (cargandoCompras) {
+            <tr>
+              <td colspan="5" class="celda_centrada" role="status">Cargando compras...</td>
+            </tr>
+          } @else if (errorCompras) {
+            <tr>
+              <td colspan="5" class="celda_centrada" role="alert">
+                {{ errorCompras }}
+                <button type="button" class="btn _principal" (click)="listarCompras()">
+                  Reintentar
+                </button>
+              </td>
+            </tr>
+          } @else {
+            @for (compra of compras; track compra.id) {
+              <tr
+                [class.selected-row]="compraSeleccionadaId === compra.id"
+                tabindex="0"
+                (click)="seleccionarCompra(compra.id)"
+                (keydown.enter)="seleccionarCompra(compra.id)"
+              >
+                <td class="celda_centrada">{{ compra.codigo }}</td>
+                <td class="celda_izquierda">{{ compra.proveedor }}</td>
+                <td class="celda_centrada">{{ formatearFecha(compra.fecha) }}</td>
+                <td class="celda_centrada">{{ compra.cantidadProductos }}</td>
+                <td class="celda_centrada">Q {{ compra.total | number: '1.2-2' }}</td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="5" class="celda_centrada">No se encontraron compras registradas.</td>
+              </tr>
+            }
+          }
         </tbody>
       </table>
     </div>
 
     <aside class="detalle-compra">
       <div class="detalle-card">
-        <div class="row">
-          <div>
-            <h6>DETALLE DE COMPRA</h6>
-            <h3>COMP-001</h3>
-          </div>
-          <h4>02 de marzo de 2026</h4>
-        </div>
-
-        <!-- <hr> -->
-        <div class="row">
-          <div>
-            <p class="label">Proveedor</p>
-            <p class="value">Farmacia Central</p>
+        @if (detalleCompra || resumenSeleccionado) {
+          <div class="row">
+            <div>
+              <h6>DETALLE DE COMPRA</h6>
+              <h3>{{ detalleCompra?.codigo ?? resumenSeleccionado?.codigo }}</h3>
+            </div>
+            <h4>
+              {{ formatearFecha(detalleCompra?.fecha ?? resumenSeleccionado?.fecha ?? '') }}
+            </h4>
           </div>
 
-          <div>
-            <p class="label">Total</p>
-            <p class="value">Q 3,450.00</p>
+          <div class="row">
+            <div>
+              <p class="label">Proveedor</p>
+              <p class="value">
+                {{ detalleCompra?.proveedorNombre ?? resumenSeleccionado?.proveedor }}
+              </p>
+            </div>
+
+            <div>
+              <p class="label">Total</p>
+              <p class="value">
+                Q
+                {{
+                  (detalleCompra?.total ?? resumenSeleccionado?.total ?? 0)
+                    | number: '1.2-2'
+                }}
+              </p>
+            </div>
+
+            @if (detalleCompra) {
+              <div class="acciones-compra">
+                <button
+                  type="button"
+                  class="btn _principal"
+                  [disabled]="!detalleCompra.comprobante || eliminandoCompra"
+                  (click)="abrirComprobante()"
+                >
+                  Ver Comprobante
+                </button>
+                <button
+                  type="button"
+                  class="iconEditar"
+                  title="Editar compra"
+                  aria-label="Editar compra"
+                  [disabled]="eliminandoCompra"
+                  (click)="editarCompra()"
+                >
+                  <i class="bi bi-pencil-square" aria-hidden="true"></i>
+                </button>
+                <button
+                  type="button"
+                  class="iconEditar iconEliminar"
+                  title="Eliminar compra"
+                  aria-label="Eliminar compra"
+                  [disabled]="eliminandoCompra"
+                  (click)="eliminarCompra()"
+                >
+                  <i class="bi bi-trash3" aria-hidden="true"></i>
+                </button>
+              </div>
+            }
           </div>
 
-          <div class="acciones-compra">
-            <button class="btn _principal">Ver Comprobante</button>
-            <button type="button" class="iconEditar" title="Editar compra" aria-label="Editar compra">
-              <i class="bi bi-pencil-square" aria-hidden="true"></i>
-            </button>
-          </div>
-        </div>
+          <hr>
 
-        <hr>
-
-        <h6>MEDICAMENTOS ADQUIRIDOS</h6>
-        <table class="table">
-          <thead>
-            <tr>
-              <th class="celda_centrada">Código</th>
-              <th class="celda_izquierda">Medicamento</th>
-              <th class="celda_centrada">Cant.</th>
-              <th class="celda_centrada">Precio</th>
-              <th class="celda_centrada">Sub.</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td class="celda_centrada">MED-001</td>
-              <td class="celda_izquierda">Amoxicilina 500mg</td>
-              <td class="celda_centrada">5</td>
-              <td class="celda_centrada">Q 85.00</td>
-              <td class="celda_centrada">Q 425.00</td>
-            </tr>
-            <tr>
-              <td class="celda_centrada">MED-002</td>
-              <td class="celda_izquierda">Paracetamol 500mg</td>
-              <td class="celda_centrada">3</td>
-              <td class="celda_centrada">Q 42.00</td>
-              <td class="celda_centrada">Q 126.00</td>
-            </tr>
-            <tr>
-              <td class="celda_centrada">MED-003</td>
-              <td class="celda_izquierda">Ibuprofeno 400mg</td>
-              <td class="celda_centrada">2</td>
-              <td class="celda_centrada">Q 65.00</td>
-              <td class="celda_centrada">Q 130.00</td>
-            </tr>
-            <tr>
-              <td class="celda_centrada">MED-003</td>
-              <td class="celda_izquierda">Ibuprofeno 400mg</td>
-              <td class="celda_centrada">2</td>
-              <td class="celda_centrada">Q 65.00</td>
-              <td class="celda_centrada">Q 130.00</td>
-            </tr>
-          </tbody>
-        </table>
+          @if (detalleCompra; as detalle) {
+            <h6>MEDICAMENTOS ADQUIRIDOS</h6>
+            <table class="table">
+              <thead>
+                <tr>
+                  <th class="celda_centrada">Código</th>
+                  <th class="celda_izquierda">Medicamento</th>
+                  <th class="celda_centrada">Cant.</th>
+                  <th class="celda_centrada">Precio</th>
+                  <th class="celda_centrada">Sub.</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (lote of detalle.lotes; track lote.id) {
+                  <tr>
+                    <td class="celda_centrada">{{ lote.codigoLote }}</td>
+                    <td class="celda_izquierda">
+                      {{ lote.nombreMedicamento ?? lote.nombreInsumo ?? '—' }}
+                    </td>
+                    <td class="celda_centrada">{{ lote.cantidad }}</td>
+                    <td class="celda_centrada">Q {{ lote.precioCompra | number: '1.2-2' }}</td>
+                    <td class="celda_centrada">Q {{ lote.total | number: '1.2-2' }}</td>
+                  </tr>
+                } @empty {
+                  <tr>
+                    <td colspan="5" class="celda_centrada">
+                      Esta compra no tiene lotes registrados.
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          } @else if (cargandoDetalle) {
+            <div class="detalle-estado" role="status">Cargando detalles de los productos...</div>
+          } @else if (errorDetalle) {
+            <div class="detalle-estado" role="alert">
+              <p>{{ errorDetalle }}</p>
+              <button type="button" class="btn _principal" (click)="reintentarDetalle()">
+                Reintentar
+              </button>
+            </div>
+          }
+        } @else {
+          <div class="detalle-estado">Selecciona una compra para ver el detalle.</div>
+        }
       </div>
     </aside>
   </div>

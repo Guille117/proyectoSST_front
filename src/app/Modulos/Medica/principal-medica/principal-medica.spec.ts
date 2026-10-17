@@ -3,6 +3,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 
 import { PrincipalMedica } from './principal-medica';
+import { EpisodioActivoService } from '../data/episodio-activo-service';
 
 /** Pantalla de relleno: sustituye a los submódulos para probar la navegación del contenedor. */
 @Component({ selector: 'app-pantalla-prueba', template: '' })
@@ -11,11 +12,15 @@ class PantallaPrueba {}
 describe('PrincipalMedica', () => {
   let component: PrincipalMedica;
   let fixture: ComponentFixture<PrincipalMedica>;
+  const episodioActivo = { limpiar: vi.fn(), guardar: vi.fn(), obtener: vi.fn() };
 
   beforeEach(async () => {
+    vi.resetAllMocks();
+
     await TestBed.configureTestingModule({
       imports: [PrincipalMedica, PantallaPrueba],
       providers: [
+        { provide: EpisodioActivoService, useValue: episodioActivo },
         provideRouter([
           { path: 'medica/atencion', component: PantallaPrueba },
           { path: 'medica/evaluacion', component: PantallaPrueba },
@@ -63,5 +68,14 @@ describe('PrincipalMedica', () => {
 
     expect(component.submenuVisible()).toBe(true);
     expect(fixture.nativeElement.querySelector('.subMenuNav')).not.toBeNull();
+  });
+
+  it('limpia el episodio activo al cerrarlo', () => {
+    const navegar = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+
+    component.cerrarEpisodio();
+
+    expect(episodioActivo.limpiar).toHaveBeenCalled();
+    expect(navegar).toHaveBeenCalledWith(['/medica', 'atencion']);
   });
 });

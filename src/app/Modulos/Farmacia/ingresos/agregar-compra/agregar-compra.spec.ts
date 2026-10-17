@@ -14,7 +14,7 @@ import { proveedorResponse } from '../../proveedores/data/proveedorInterfaz';
 import { ProveedorService } from '../../proveedores/data/proveedor-service';
 
 import { AgregarCompra } from './agregar-compra';
-import { CompraMultipartRequest } from './data/interfaz-compra';
+import { CompraMultipartRequest, detalleCompraResponse } from './data/interfaz-compra';
 import { ServicioCompra } from './data/servicio-compra';
 
 describe('AgregarCompra', () => {
@@ -37,6 +37,9 @@ describe('AgregarCompra', () => {
   };
   const servicioCompra = {
     registrarCompra: vi.fn<(compra: CompraMultipartRequest) => Observable<void>>(() => of(void 0)),
+    actualizarCompra: vi.fn<(id: number, compra: CompraMultipartRequest) => Observable<void>>(() =>
+      of(void 0),
+    ),
   };
   const servicioProveedor = {
     getProveedores: vi.fn<(activos: boolean) => Observable<proveedorResponse[]>>(() => of([])),
@@ -46,6 +49,8 @@ describe('AgregarCompra', () => {
     advertencia: vi.fn(),
     formIncompleto: vi.fn(),
     errorDesdeBackend: vi.fn(),
+    error: vi.fn(),
+    confirmarToast: vi.fn(async () => true),
   };
 
   const medicamento: MedicamentoLogResponse = {
@@ -75,6 +80,13 @@ describe('AgregarCompra', () => {
     estado: true,
   };
 
+  const otroProveedor: proveedorResponse = {
+    ...proveedor,
+    id: 3,
+    codigo: 'PRV-003',
+    nombre: 'Farmacia Central',
+  };
+
   beforeEach(async () => {
     servicioMedicamento.traerMedicamentoLog.mockReset();
     servicioMedicamento.traerMedicamentoLog.mockReturnValue(of([]));
@@ -86,12 +98,17 @@ describe('AgregarCompra', () => {
     servicioInsumos.buscarInsumos.mockReturnValue(of([]));
     servicioCompra.registrarCompra.mockReset();
     servicioCompra.registrarCompra.mockReturnValue(of(void 0));
+    servicioCompra.actualizarCompra.mockReset();
+    servicioCompra.actualizarCompra.mockReturnValue(of(void 0));
     servicioProveedor.getProveedores.mockReset();
     servicioProveedor.getProveedores.mockReturnValue(of([]));
     popUp.exito.mockReset();
     popUp.advertencia.mockReset();
     popUp.formIncompleto.mockReset();
     popUp.errorDesdeBackend.mockReset();
+    popUp.error.mockReset();
+    popUp.confirmarToast.mockReset();
+    popUp.confirmarToast.mockResolvedValue(true);
 
     await TestBed.configureTestingModule({
       imports: [AgregarCompra],
@@ -130,6 +147,16 @@ describe('AgregarCompra', () => {
     fixture.detectChanges();
   };
 
+  /** Crea una instancia del componente en modo edición con la compra indicada. */
+  const crearFixtureEdicion = (
+    compra: detalleCompraResponse = compraDetalle,
+  ): ComponentFixture<AgregarCompra> => {
+    const editFixture = TestBed.createComponent(AgregarCompra);
+    editFixture.componentRef.setInput('compraEdicion', compra);
+    editFixture.detectChanges();
+    return editFixture;
+  };
+
   const loteCompleto: Record<string, string> = {
     nombre: 'LOTE-001',
     concentracion: '2027-05-31',
@@ -153,6 +180,36 @@ describe('AgregarCompra', () => {
     ...loteEsperado,
     nombreItem: medicamento.nombre,
     descripcionItem: 'Genfar · Cápsula · 500 mg',
+  };
+
+  const compraDetalle: detalleCompraResponse = {
+    id: 1,
+    codigo: 'COMP-001',
+    total: 500,
+    comprobante: 'http://localhost:8080/api/v1/compras/1/comprobante',
+    estado: true,
+    proveedorId: proveedor.id,
+    proveedorNombre: proveedor.nombre,
+    fecha: '2026-10-16T10:30:00',
+    lotes: [
+      {
+        id: 10,
+        codigoLote: 'LOTE-001',
+        cantidad: 50,
+        disponible: 40,
+        estado: true,
+        fechaVencimiento: '2027-10-16',
+        precioCompra: 10,
+        precioVenta: 15,
+        total: 500,
+        idInsumoLog: null,
+        nombreInsumo: null,
+        idMedicamentoLog: medicamento.id,
+        nombreMedicamento: medicamento.nombre,
+        idCompra: 1,
+        codigoCompra: 'COMP-001',
+      },
+    ],
   };
 
   it('should create', () => {
@@ -503,6 +560,43 @@ describe('AgregarCompra', () => {
     expect(popUp.advertencia).not.toHaveBeenCalled();
   });
 
+  it('no agrega un medicamento con fecha de vencimiento anterior a la actual', () => {
+    cargarMedicamentos();
+    component.seleccionarProducto(medicamento.id);
+    escribirLote({ ...loteCompleto, concentracion: '2000-01-01' });
+
+    component.agregarLote(formularioVisible());
+
+    expect(component.lotes).toEqual([]);
+    expect(popUp.advertencia).toHaveBeenCalledWith(
+      'La fecha de vencimiento no puede ser menor a la fecha actual.',
+    );
+  });
+
+  it('no agrega un lote si el precio de compra es mayor al precio de venta', () => {
+    cargarMedicamentos();
+    component.seleccionarProducto(medicamento.id);
+    escribirLote({ ...loteCompleto, precioCompra: '20', precioVenta: '15' });
+
+    component.agregarLote(formularioVisible());
+
+    expect(component.lotes).toEqual([]);
+    expect(popUp.advertencia).toHaveBeenCalledWith(
+      'El precio de compra no puede ser mayor al precio de venta.',
+    );
+  });
+
+  it('no agrega un lote si la cantidad es menor o igual a 0', () => {
+    cargarMedicamentos();
+    component.seleccionarProducto(medicamento.id);
+    escribirLote({ ...loteCompleto, cantidad: '0' });
+
+    component.agregarLote(formularioVisible());
+
+    expect(component.lotes).toEqual([]);
+    expect(popUp.advertencia).toHaveBeenCalledWith('La cantidad debe ser mayor a 0.');
+  });
+
   it('agrega el lote con los datos del paso 1 y permanece en el paso 1', async () => {
     cargarMedicamentos();
     component.seleccionarProducto(medicamento.id);
@@ -776,5 +870,130 @@ describe('AgregarCompra', () => {
 
     expect(component.lotes).toEqual([loteVista]);
     expect(component.isCargandoProducto).toBe(false);
+  });
+
+  // ==================== MODO EDICIÓN ====================
+
+  it('precarga el proveedor y los lotes al editar una compra', () => {
+    const editFixture = crearFixtureEdicion();
+    const editComponent = editFixture.componentInstance;
+
+    expect(editComponent.esEdicion).toBe(true);
+    expect(editComponent.proveedorSeleccionadoId).toBe(proveedor.id);
+    expect(editComponent.isCargandoProducto).toBe(false);
+    expect(editComponent.lotes).toHaveLength(1);
+    expect(editComponent.lotes[0]).toMatchObject({
+      esMedicamento: true,
+      idItem: medicamento.id,
+      codigoLote: 'LOTE-001',
+      cantidad: 50,
+      fechaVencimiento: '2027-10-16',
+      precioCompra: 10,
+      precioVenta: 15,
+      idLote: 10,
+      disponible: 40,
+    });
+    expect(editComponent.hayCambios).toBe(false);
+
+    const guardar: HTMLButtonElement =
+      editFixture.nativeElement.querySelector('button._guardar');
+    expect(guardar.disabled).toBe(true);
+
+    editFixture.destroy();
+  });
+
+  it('habilita el guardado al cambiar el proveedor y actualiza la compra', async () => {
+    servicioProveedor.getProveedores.mockReturnValue(of([proveedor, otroProveedor]));
+
+    const editFixture = crearFixtureEdicion();
+    const editComponent = editFixture.componentInstance;
+    const emitirActualizado = vi.spyOn(editComponent.actualizado, 'emit');
+
+    editComponent.proveedorSeleccionadoId = otroProveedor.id;
+    editFixture.componentRef.changeDetectorRef.detectChanges();
+
+    expect(editComponent.puedeGuardar).toBe(true);
+
+    const formulario: NgForm = editFixture.debugElement
+      .query(By.directive(NgForm))
+      .injector.get(NgForm);
+
+    await editComponent.guardarCompra(formulario);
+
+    expect(popUp.confirmarToast).toHaveBeenCalledWith(
+      '¿Deseas guardar los cambios de esta compra?',
+    );
+    expect(servicioCompra.actualizarCompra).toHaveBeenCalledWith(1, {
+      request: {
+        proveedorId: otroProveedor.id,
+        lotes: [
+          {
+            esMedicamento: true,
+            idItem: medicamento.id,
+            codigoLote: 'LOTE-001',
+            cantidad: 50,
+            fechaVencimiento: '2027-10-16',
+            precioCompra: 10,
+            precioVenta: 15,
+          },
+        ],
+      },
+      comprobante: null,
+    });
+    expect(emitirActualizado).toHaveBeenCalled();
+
+    editFixture.destroy();
+  });
+
+  it('no actualiza la compra si el usuario cancela la confirmación', async () => {
+    servicioProveedor.getProveedores.mockReturnValue(of([proveedor, otroProveedor]));
+
+    const editFixture = crearFixtureEdicion();
+    const editComponent = editFixture.componentInstance;
+    editComponent.proveedorSeleccionadoId = otroProveedor.id;
+    const formulario: NgForm = editFixture.debugElement
+      .query(By.directive(NgForm))
+      .injector.get(NgForm);
+    popUp.confirmarToast.mockResolvedValue(false);
+
+    await editComponent.guardarCompra(formulario);
+
+    expect(popUp.confirmarToast).toHaveBeenCalledWith(
+      '¿Deseas guardar los cambios de esta compra?',
+    );
+    expect(servicioCompra.actualizarCompra).not.toHaveBeenCalled();
+    expect(editComponent.guardando).toBe(false);
+
+    editFixture.destroy();
+  });
+
+  it('bloquea la eliminación de un lote que ya tiene unidades despachadas', () => {
+    const editFixture = crearFixtureEdicion();
+    const editComponent = editFixture.componentInstance;
+
+    editComponent.eliminarLote(0);
+
+    expect(editComponent.lotes).toHaveLength(1);
+    expect(popUp.advertencia).toHaveBeenCalledWith(
+      'No se puede eliminar el lote porque ya tiene unidades despachadas.',
+    );
+
+    editFixture.destroy();
+  });
+
+  it('permite eliminar un lote cuando no tiene unidades despachadas', () => {
+    const compraSinDespachos: detalleCompraResponse = {
+      ...compraDetalle,
+      lotes: [{ ...compraDetalle.lotes[0], disponible: 50 }],
+    };
+    const editFixture = crearFixtureEdicion(compraSinDespachos);
+    const editComponent = editFixture.componentInstance;
+
+    editComponent.eliminarLote(0);
+
+    expect(editComponent.lotes).toEqual([]);
+    expect(editComponent.isCargandoProducto).toBe(true);
+
+    editFixture.destroy();
   });
 });

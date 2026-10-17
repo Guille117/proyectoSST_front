@@ -30,7 +30,12 @@
             <tbody>
                 <!-- Quitar esto -->
                 @for(paciente of pacientes; track $index){
-                    <tr>
+                    <tr
+                        [class.selected-row]="esSeleccionado(paciente)"
+                        tabindex="0"
+                        (click)="seleccionarPaciente(paciente)"
+                        (keydown.enter)="seleccionarPaciente(paciente)"
+                    >
                         <td class="celda_centrada">{{$index +1}}</td>
                         <td class="celda_centrada">{{paciente.codigoExpediente}}</td>
                         <td class="celda_izquierda">{{paciente.nombreCompleto}}</td>
@@ -47,5 +52,62 @@
         <div class="titulo">
             <h3>Detalle de paciente</h3>
         </div>
+
+        @if (pacienteSeleccionado; as paciente) {
+            <div class="cabecera">
+                <h2>{{ paciente.nombreCompleto }}</h2>
+                <p>{{ paciente.codigoExpediente }} | {{ paciente.edad }} años | {{ paciente.sexo }}</p>
+            </div>
+
+            <div class="seccion">
+                <h4>Información de la atención</h4>
+
+                <div class="datos">
+                    <div class="data">
+                        <span class="rotulo">Tipo de atención</span>
+                        <span class="valor">{{ etiquetasTipo[paciente.tipoTratamiento] }}</span>
+                    </div>
+
+                    <div class="data">
+                        <span class="rotulo">Fecha de ingreso</span>
+                        <span class="valor">{{ paciente.fechaIngreso }}</span>
+                    </div>
+
+                    @if (esHospitalizacion(paciente)) {
+                        <div class="data">
+                            <span class="rotulo">Cama</span>
+                            <span class="valor">{{ paciente.ubicacion }}</span>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <div class="seccion">
+                <h4>Diagnóstico actual</h4>
+                <p class="diagnostico">{{ paciente.diagnostico }}</p>
+            </div>
+
+            <div class="seccion">
+                <h4>Alergias</h4>
+                <p class="alergias">{{ paciente.alergias }}</p>
+            </div>
+
+            <div class="seccion">
+                <h4>Últimos signos vitales</h4>
+
+                <div class="vitales">
+                    @for (signo of paciente.signosVitales; track signo.etiqueta) {
+                        <div class="vital">
+                            <span class="vital-rotulo">{{ signo.etiqueta }}</span>
+                            <span class="vital-valor">
+                                {{ signo.valor }}<span class="vital-unidad">{{ signo.unidad }}</span>
+                            </span>
+                        </div>
+                    }
+                </div>
+            </div>
+        } @else {
+            <p class="sin-seleccion">Seleccione un paciente de la lista para ver su detalle.</p>
+        }
     </div>
 </div>
