@@ -4,8 +4,8 @@ import { finalize, Subscription, switchMap, tap, TimeoutError } from 'rxjs';
 import { AuthService } from '../../Auth/data/auth-service';
 import { PopUps } from '../../../shared/popUps/popUpsService';
 import { DatosPaciente } from '../datos-paciente/datos-paciente';
-import { Diagnostico } from '../diagnostico/diagnostico';
-import { HistoriaClinica } from '../historia-clinica/historia-clinica';
+import { Diagnostico } from './diagnostico/diagnostico';
+import { HistoriaClinica } from './historia-clinica/historia-clinica';
 import { EPISODIO_ID_TEMPORAL } from './data/constantes-clinicas';
 import { ExamenFisicoService } from './data/examen-fisico-service';
 import {

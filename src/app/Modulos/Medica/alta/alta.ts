@@ -5,7 +5,7 @@ import {
   MedicamentoIndicacion,
   MedicamentoTratamiento,
   textoDuracion,
-} from '../medicamento-indicacion/medicamento-indicacion';
+} from '../indicaciones/medicamentos/medicamento-indicacion/medicamento-indicacion';
 
 /* Tipos locales de la maqueta: se sustituirán por el contrato real del backend en la fase de integración. */
 /** Motivos de egreso que ofrece la pantalla de alta médica. */

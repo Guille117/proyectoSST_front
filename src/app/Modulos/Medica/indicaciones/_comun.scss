@@ -1,0 +1,402 @@
+/* ==================== ESTILOS COMUNES DE LAS SECCIONES DE INDICACIONES ==================== */
+/* Los comparten las tres secciones (medicamentos, exámenes y cuidados): el registro de la sección
+   activa, su listado, las tarjetas y el menú de opciones. */
+
+/* Contenido de la sección activa: el registro de la sección */
+/* El panel se ancla al alto de su propio contenido (align-self: start) para no heredar el alto del
+   listado de al lado: el formulario conserva su tamaño pequeño aunque el listado sea más alto. */
+.panel-seccion {
+  grid-area: formulario;
+  align-self: start;
+}
+
+/* Listado de las indicaciones registradas en el episodio: la sección nunca supera el alto de la
+   ventana (--alto-fuera-de-indicados, definido en .indicaciones) y reparte ese alto entre el
+   título, los filtros y el listado de tarjetas. */
+.panel-indicados {
+  grid-area: indicados;
+  display: flex;
+  flex-direction: column;
+  max-height: calc(var(--heightNavBar) - var(--alto-fuera-de-indicados));
+  overflow: hidden;
+}
+
+/* Pista del desplazamiento: solo las tarjetas se mueven dentro del panel, de modo que el título y
+   los filtros quedan fijos en su parte superior. El relleno derecho separa la barra de las tarjetas
+   y el alto libre se reparte con la pista encogible, sin desbordar el panel. */
+.indicados-lista {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding-right: 0.4rem;
+  overflow-y: auto;
+}
+
+/* ==================== ENCABEZADOS DE LOS PANELES ==================== */
+.indicacion-titulo {
+  margin-bottom: 0.35rem;
+  font-size: 1.5rem;
+}
+
+/* ==================== FORMULARIO DE LA SECCIÓN ACTIVA ==================== */
+/* El formulario va precedido solo por el título del panel: el margen superior lo separa de él */
+.indicacion-form {
+  display: flex;
+  flex-direction: column;
+  margin-top: 1.25rem;
+}
+
+.indicacion-campo {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.indicacion-etiqueta {
+  color: #101828;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+/* Asterisco de campo obligatorio: mismo tratamiento del componente campo-validado compartido */
+.indicacion-obligatorio {
+  margin-left: 3px;
+  color: #d34a42;
+  font-size: 1.35em;
+  font-weight: 800;
+}
+
+/* Fila de campos: rejilla de tres columnas para la duración y sus observaciones; cantidad y
+   frecuencia se reparten en dos columnas */
+.indicacion-fila {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.25rem;
+  align-items: start;
+  margin-top: 1.25rem;
+
+  > * {
+    min-width: 0;
+  }
+}
+
+.indicacion-fila--dos {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+/* Campo de texto y desplegables: mismo lenguaje visual del buscador y de las tarjetas */
+.indicacion-input {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 45px;
+  padding: 10px 12px;
+  border: 1px solid #cfdcee;
+  border-radius: 12px;
+  background: #fff;
+  color: #21324d;
+  font-family: inherit;
+  font-size: 1rem;
+  outline: none;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+
+  &:focus,
+  &:focus-visible {
+    border-color: var(--azulSecundario);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.14);
+  }
+}
+
+select.indicacion-input {
+  cursor: pointer;
+}
+
+.indicacion-textarea {
+  min-height: 96px;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+/* Separación y línea divisoria de la fila de acciones compartida (.acciones-formulario) */
+.indicacion-acciones {
+  gap: 1rem;
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid #e4ebf5;
+}
+
+/* ==================== LISTADO DE INDICADOS (MEDICAMENTOS / EXÁMENES / CUIDADOS) ==================== */
+/* Filtros del listado: chips de selección en píldora y con salto de línea, para que las opciones
+   quepan en el ancho de estos paneles. */
+.indicados-filtros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 1rem;
+}
+
+.indicados-filtro {
+  padding: 8px 15px;
+  border: 1px solid #dbe4f0;
+  border-radius: 999px;
+  background: #fff;
+  color: #3f4d66;
+  font-family: inherit;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition:
+    border-color 0.2s ease,
+    background-color 0.2s ease,
+    color 0.2s ease;
+
+  &:hover {
+    border-color: #b9c8e2;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--azulSecundario);
+    outline-offset: 2px;
+  }
+}
+
+/* Opción elegida: mismo azul de selección del resto de controles del módulo */
+.indicados-filtro--activo {
+  border-color: var(--azulSecundario);
+  background: var(--azulSecundario);
+  color: #fff;
+  font-weight: 600;
+}
+
+/* Tarjeta del medicamento indicado: mismo lenguaje de tarjeta del panel (borde, radio y sombra),
+   con un acento de color a la izquierda del motivo de atención de la ficha del paciente. */
+.indicacion-card {
+  position: relative;
+  margin-bottom: 1rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid #dfe7f3;
+  border-left: 4px solid #dfe7f3;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+
+  /* Acento lateral según el color de la indicación: verde de acciones, rojo de alerta y naranja. El
+     borde base mantiene el gris del contorno del panel, así ninguna tarjeta queda con acento azul. */
+  &.indicacion-card--verde {
+    border-left-color: #22c55e;
+  }
+
+  &.indicacion-card--rojo {
+    border-left-color: #ed1a0f;
+  }
+
+  &.indicacion-card--naranja {
+    border-left-color: #ff921c;
+  }
+
+  /* Indicación o examen eliminado: pierde el acento de su estado y queda con el gris del contorno */
+  &.indicacion-card--eliminada {
+    border-left-color: #b6c2d4;
+  }
+
+  /* Con el menú desplegado la tarjeta pasa al frente para dibujarse sobre las siguientes */
+  &.indicacion-card--menu-abierto {
+    z-index: 2;
+  }
+
+  /* Tarjeta cuyos datos están cargados en el formulario para corregirlos */
+  &.indicacion-card--edicion {
+    border-left-color: #f59e0b;
+    background: #fffbf2;
+  }
+}
+
+.indicacion-encabezado {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.indicacion-nombre {
+  color: var(--azulPrincipal);
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+/* Valores de la indicación en línea, separados por un punto medio */
+.indicacion-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+  margin: 0;
+  padding: 0;
+  color: var(--azulPrincipal);
+  font-size: 0.95rem;
+  font-weight: 700;
+  list-style: none;
+
+  li + li::before {
+    margin-right: 6px;
+    color: #93a3bb;
+    content: '·';
+  }
+}
+
+.indicacion-observaciones {
+  margin: 0.6rem 0 0;
+  color: #1f2f45;
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+/* Pie de la tarjeta: fecha, hora y médico de la indicación */
+.indicacion-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 1rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid #e4ebf5;
+  color: #33445e;
+  font-size: 0.95rem;
+
+  span {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  i {
+    color: var(--azulSecundario);
+    font-size: 1.05rem;
+  }
+}
+
+/* ==================== MENÚ DE OPCIONES DE LA TARJETA ==================== */
+/* Botón de tres puntos: mismo tratamiento del botón equivalente del listado de camas */
+.indicacion-menu-trigger {
+  display: grid;
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  place-items: center;
+  color: #52627f;
+  background: transparent;
+  border: 0;
+  border-radius: 50%;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    color 0.2s ease,
+    background 0.2s ease;
+
+  &:hover,
+  &:focus-visible {
+    color: #1e293b;
+    background: #eef4ff;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--azulSecundario);
+    outline-offset: 2px;
+  }
+}
+
+/* El menú flota sobre la tarjeta: al no ocupar espacio en el flujo, desplegarlo y replegarlo no
+   redimensiona la tarjeta ni desplaza el resto del listado */
+.indicacion-menu {
+  position: absolute;
+  z-index: 3;
+  top: 2.7rem;
+  right: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-sizing: border-box;
+  width: 162px;
+  max-width: calc(100% - 2rem);
+  padding: 10px 12px;
+  background: #fff;
+  border: 1px solid #dfe7f3;
+  border-radius: 12px;
+  box-shadow: 0 12px 26px rgba(15, 23, 42, 0.14);
+
+  /* Botón de editar: el ámbar viene de los estilos globales de src/styles/botonesStyle.scss */
+  .iconEditar {
+    width: 34px;
+    height: 34px;
+    box-shadow: none;
+    font-size: 17px;
+  }
+}
+
+/* Cada opción alinea su nombre a la izquierda y su botón a la derecha */
+.indicacion-menu-opcion {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  color: #475569;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+/* Botón de eliminar: mismo tratamiento del botón equivalente de los diagnósticos adicionales */
+.iconQuitar {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  place-items: center;
+  color: #ed1a0f;
+  background: rgba(255, 255, 255, 0.62);
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  border-radius: 50%;
+  box-shadow: 0 2px 6px rgba(26, 37, 53, 0.12);
+  font-size: 15px;
+  cursor: pointer;
+  transition:
+    color 0.2s ease,
+    background 0.2s ease,
+    transform 0.2s ease;
+
+  &:hover {
+    color: #fff;
+    background: #ed1a0f;
+    transform: translateY(-1px);
+  }
+
+  &:focus-visible {
+    outline: 2px solid #ed1a0f;
+    outline-offset: 2px;
+  }
+}
+
+/* Estado vacío del listado de indicaciones */
+.indicacion-vacio {
+  margin: 0;
+  padding: 1.25rem;
+  border: 1px dashed #cfdcee;
+  border-radius: 14px;
+  color: #5b6b85;
+  font-size: 0.95rem;
+  text-align: center;
+}
+
+/* ==================== RESPONSIVIDAD ==================== */
+@media (max-width: 900px) {
+  .indicacion-fila,
+  .indicacion-fila--dos {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

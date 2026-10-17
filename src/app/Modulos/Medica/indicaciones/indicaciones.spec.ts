@@ -1,6 +1,10 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 
 import { Indicaciones } from './indicaciones';
+import { IndicacionCuidados } from './cuidados/indicacion-cuidados';
+import { IndicacionExamenes } from './examenes/indicacion-examenes';
+import { IndicacionMedicamentos } from './medicamentos/indicacion-medicamentos';
 import { PopUps } from '../../../shared/popUps/popUpsService';
 
 describe('Indicaciones', () => {
@@ -31,6 +35,16 @@ describe('Indicaciones', () => {
 
   const elemento = <T extends Element>(selector: string): T =>
     fixture.nativeElement.querySelector(selector);
+
+  // Cada sección del rail tiene su propio componente: se consulta el que está montado
+  const medicamentos = (): IndicacionMedicamentos =>
+    fixture.debugElement.query(By.directive(IndicacionMedicamentos))!.componentInstance;
+
+  const examenes = (): IndicacionExamenes =>
+    fixture.debugElement.query(By.directive(IndicacionExamenes))!.componentInstance;
+
+  const cuidados = (): IndicacionCuidados =>
+    fixture.debugElement.query(By.directive(IndicacionCuidados))!.componentInstance;
 
   // Selectores semánticos: los botones usan las clases globales de src/styles/botonesStyle.scss
   // y las tarjetas del rail las de src/styles/tarjetaStyle.scss
@@ -232,7 +246,7 @@ describe('Indicaciones', () => {
     expect(tarjetas().length).toBe(4);
     expect(tarjetas()[0].textContent).toContain('Paracetamol 500 mg');
     expect(tarjetas()[0].textContent).toContain('Dr. Gómez');
-    expect(component.hayMedicamento).toBe(false);
+    expect(medicamentos().hayMedicamento).toBe(false);
     expect(botonGuardar().disabled).toBe(true);
     expect(elemento('.indicacion-vacio')).toBeNull();
   });
@@ -240,7 +254,7 @@ describe('Indicaciones', () => {
   it('habilita Guardar en cuanto se escribe un medicamento', async () => {
     await escribir('#medicamentoIndicado', 'Ibuprofeno 400 mg');
 
-    expect(component.hayMedicamento).toBe(true);
+    expect(medicamentos().hayMedicamento).toBe(true);
     expect(botonGuardar().disabled).toBe(false);
   });
 
@@ -261,7 +275,7 @@ describe('Indicaciones', () => {
     expect(tarjetas()[4].textContent).toContain('Después de los alimentos.');
 
     // El formulario queda listo para la siguiente captura
-    expect(component.medicamento).toBe('');
+    expect(medicamentos().medicamento).toBe('');
     expect(elemento<HTMLInputElement>('#medicamentoIndicado').value).toBe('');
     expect(botonGuardar().disabled).toBe(true);
   });
@@ -269,11 +283,11 @@ describe('Indicaciones', () => {
   it('no agrega nada cuando el medicamento está vacío', async () => {
     await escribir('#medicamentoIndicado', '   ');
 
-    component.agregarIndicacion();
+    medicamentos().agregarIndicacion();
     await fixture.whenStable();
 
     expect(tarjetas().length).toBe(4);
-    expect(component.medicamento).toBe('   ');
+    expect(medicamentos().medicamento).toBe('   ');
   });
 
   it('exige la cantidad de días cuando la duración se marca en días', async () => {
@@ -281,18 +295,18 @@ describe('Indicaciones', () => {
     await escribir('#cantidadIndicada', '400 mg');
     await elegir('#duracionTipoIndicada', 'dias');
 
-    expect(component.faltaDuracionEnDias).toBe(true);
+    expect(medicamentos().faltaDuracionEnDias).toBe(true);
     expect(botonGuardar().disabled).toBe(true);
 
     // Tampoco se registra si el formulario se envía sin la cantidad de días
-    component.agregarIndicacion();
+    medicamentos().agregarIndicacion();
     await fixture.whenStable();
 
     expect(tarjetas().length).toBe(4);
 
     await escribir('#duracionCantidadIndicada', '5');
 
-    expect(component.faltaDuracionEnDias).toBe(false);
+    expect(medicamentos().faltaDuracionEnDias).toBe(false);
     expect(botonGuardar().disabled).toBe(false);
 
     botonGuardar().click();
@@ -310,9 +324,9 @@ describe('Indicaciones', () => {
     await fixture.whenStable();
 
     expect(tarjetas().length).toBe(4);
-    expect(component.medicamento).toBe('');
-    expect(component.cantidad).toBe('');
-    expect(component.frecuencia).toBeNull();
+    expect(medicamentos().medicamento).toBe('');
+    expect(medicamentos().cantidad).toBe('');
+    expect(medicamentos().frecuencia).toBeNull();
   });
 
   // ------------------- RESULTADOS DE LA BÚSQUEDA DE MEDICAMENTOS -------------------
@@ -347,8 +361,8 @@ describe('Indicaciones', () => {
     // La tabla con su buscador desaparecen y en su sitio queda el medicamento elegido
     expect(elemento('.indicacion-resultados')).toBeNull();
     expect(elemento('#medicamentoIndicado')).toBeNull();
-    expect(component.medicamento).toBe('Amoxicilina Bayer suspensión inyectable de 500 mg');
-    expect(component.medicamentoElegido?.id).toBe(2);
+    expect(medicamentos().medicamento).toBe('Amoxicilina Bayer suspensión inyectable de 500 mg');
+    expect(medicamentos().medicamentoElegido?.id).toBe(2);
     expect(elemento<HTMLElement>('.medicamento-elegido-texto').textContent?.trim()).toBe(
       'Amoxicilina Bayer, suspensión inyectable de 500 mg, administración intravenosa',
     );
@@ -385,7 +399,7 @@ describe('Indicaciones', () => {
     // La búsqueda sin texto lista el catálogo completo, de cinco en cinco
     await buscarMedicamento('');
 
-    expect(component.medicamentosEncontrados.length).toBe(8);
+    expect(medicamentos().medicamentosEncontrados.length).toBe(8);
     expect(filasResultados().length).toBe(5);
     expect(filasResultados()[0].textContent).toContain('1');
     expect(filasResultados()[4].textContent).toContain('5');
@@ -413,8 +427,8 @@ describe('Indicaciones', () => {
     // El medicamento elegido suelta su sitio y la búsqueda vuelve con el catálogo completo
     expect(elemento('.medicamento-elegido')).toBeNull();
     expect(elemento<HTMLInputElement>('#medicamentoIndicado').value).toBe('');
-    expect(component.medicamento).toBe('');
-    expect(component.medicamentoElegido).toBeNull();
+    expect(medicamentos().medicamento).toBe('');
+    expect(medicamentos().medicamentoElegido).toBeNull();
     expect(filasResultados().length).toBe(5);
   });
 
@@ -422,11 +436,11 @@ describe('Indicaciones', () => {
     await buscarMedicamento('amoxicilina');
 
     // Aunque se envíe el formulario, el texto escrito es solo la búsqueda
-    component.agregarIndicacion();
+    medicamentos().agregarIndicacion();
     await fixture.whenStable();
 
     expect(tarjetas().length).toBe(4);
-    expect(component.medicamentosEncontrados.length).toBe(2);
+    expect(medicamentos().medicamentosEncontrados.length).toBe(2);
   });
 
   it('informa cuando la búsqueda no encuentra medicamentos en el catálogo', async () => {
@@ -447,8 +461,8 @@ describe('Indicaciones', () => {
     await fixture.whenStable();
 
     expect(elemento('.indicacion-resultados')).toBeNull();
-    expect(component.medicamentosEncontrados.length).toBe(0);
-    expect(component.medicamentoElegido).toBeNull();
+    expect(medicamentos().medicamentosEncontrados.length).toBe(0);
+    expect(medicamentos().medicamentoElegido).toBeNull();
   });
 
   it('reemplaza el botón de eliminar del pie por un menú de opciones en cada tarjeta', () => {
@@ -464,7 +478,7 @@ describe('Indicaciones', () => {
   it('despliega el menú de la tarjeta pulsada y lo repliega al volver a pulsarla', async () => {
     await abrirMenu(1);
 
-    expect(component.menuIndicacionAbierta).toBe(2);
+    expect(medicamentos().menuIndicacionAbierta).toBe(2);
     expect(tarjetas()[1].querySelector('.indicacion-menu')).not.toBeNull();
     expect(tarjetas()[1].classList.contains('indicacion-card--menu-abierto')).toBe(true);
     expect(disparadoresMenu()[1].getAttribute('aria-expanded')).toBe('true');
@@ -472,7 +486,7 @@ describe('Indicaciones', () => {
 
     await abrirMenu(1);
 
-    expect(component.menuIndicacionAbierta).toBeNull();
+    expect(medicamentos().menuIndicacionAbierta).toBeNull();
     expect(elemento('.indicacion-menu')).toBeNull();
     expect(disparadoresMenu()[1].getAttribute('aria-expanded')).toBe('false');
   });
@@ -481,7 +495,7 @@ describe('Indicaciones', () => {
     await abrirMenu(0);
     await abrirMenu(2);
 
-    expect(component.menuIndicacionAbierta).toBe(3);
+    expect(medicamentos().menuIndicacionAbierta).toBe(3);
     expect(elementos('.indicacion-menu').length).toBe(1);
     expect(tarjetas()[2].querySelector('.indicacion-menu')).not.toBeNull();
   });
@@ -493,7 +507,7 @@ describe('Indicaciones', () => {
     elemento<HTMLElement>('.panel-indicados').dispatchEvent(new Event('click', { bubbles: true }));
     await fixture.whenStable();
 
-    expect(component.menuIndicacionAbierta).toBeNull();
+    expect(medicamentos().menuIndicacionAbierta).toBeNull();
     expect(elemento('.indicacion-menu')).toBeNull();
   });
 
@@ -505,7 +519,7 @@ describe('Indicaciones', () => {
       ?.dispatchEvent(new Event('click', { bubbles: true }));
     await fixture.whenStable();
 
-    expect(component.menuIndicacionAbierta).toBe(1);
+    expect(medicamentos().menuIndicacionAbierta).toBe(1);
     expect(elementos('.indicacion-menu').length).toBe(1);
   });
 
@@ -514,13 +528,13 @@ describe('Indicaciones', () => {
     botonEditarDelMenu().click();
     await fixture.whenStable();
 
-    expect(component.indicacionEnEdicion).toBe(2);
-    expect(component.medicamento).toBe('Omeprazol 40 mg');
-    expect(component.cantidad).toBe('40 mg');
-    expect(component.frecuencia).toBe(24);
-    expect(component.duracionTipo).toBe('dias');
-    expect(component.duracionCantidad).toBe(7);
-    expect(component.observaciones).toBe('Administrar 30 minutos antes del desayuno.');
+    expect(medicamentos().indicacionEnEdicion).toBe(2);
+    expect(medicamentos().medicamento).toBe('Omeprazol 40 mg');
+    expect(medicamentos().cantidad).toBe('40 mg');
+    expect(medicamentos().frecuencia).toBe(24);
+    expect(medicamentos().duracionTipo).toBe('dias');
+    expect(medicamentos().duracionCantidad).toBe(7);
+    expect(medicamentos().observaciones).toBe('Administrar 30 minutos antes del desayuno.');
     expect(elemento<HTMLInputElement>('#medicamentoIndicado').value).toBe('Omeprazol 40 mg');
     expect(elemento<HTMLInputElement>('#frecuenciaIndicada').value).toBe('24');
     expect(elemento<HTMLSelectElement>('#duracionTipoIndicada').value).toBe('dias');
@@ -548,8 +562,8 @@ describe('Indicaciones', () => {
     expect(tarjetas()[1].textContent).toContain('Dr. Gómez');
 
     // El formulario queda libre y ninguna tarjeta sigue marcada como edición
-    expect(component.indicacionEnEdicion).toBeNull();
-    expect(component.medicamento).toBe('');
+    expect(medicamentos().indicacionEnEdicion).toBeNull();
+    expect(medicamentos().medicamento).toBe('');
     expect(elemento('.indicacion-card--edicion')).toBeNull();
   });
 
@@ -561,7 +575,7 @@ describe('Indicaciones', () => {
     botonCancelar().click();
     await fixture.whenStable();
 
-    expect(component.indicacionEnEdicion).toBeNull();
+    expect(medicamentos().indicacionEnEdicion).toBeNull();
 
     await escribir('#medicamentoIndicado', 'Ibuprofeno 400 mg');
     botonGuardar().click();
@@ -582,8 +596,8 @@ describe('Indicaciones', () => {
     await fixture.whenStable();
 
     expect(tarjetas().length).toBe(3);
-    expect(component.indicacionEnEdicion).toBeNull();
-    expect(component.medicamento).toBe('');
+    expect(medicamentos().indicacionEnEdicion).toBeNull();
+    expect(medicamentos().medicamento).toBe('');
     expect(elemento('.indicacion-card--edicion')).toBeNull();
   });
 
@@ -729,7 +743,7 @@ describe('Indicaciones', () => {
 
     await elegirFiltro('Activas');
 
-    expect(component.menuIndicacionAbierta).toBeNull();
+    expect(medicamentos().menuIndicacionAbierta).toBeNull();
 
     await abrirMenu(0);
     botonEditarDelMenu().click();
@@ -738,14 +752,14 @@ describe('Indicaciones', () => {
     // La indicación sigue en el listado: la edición continúa
     await elegirFiltro('Todas');
 
-    expect(component.indicacionEnEdicion).toBe(1);
-    expect(component.medicamento).toBe('Paracetamol 500 mg');
+    expect(medicamentos().indicacionEnEdicion).toBe(1);
+    expect(medicamentos().medicamento).toBe('Paracetamol 500 mg');
 
     // Al quedar fuera del listado, el formulario se libera
     await elegirFiltro('Eliminadas');
 
-    expect(component.indicacionEnEdicion).toBeNull();
-    expect(component.medicamento).toBe('');
+    expect(medicamentos().indicacionEnEdicion).toBeNull();
+    expect(medicamentos().medicamento).toBe('');
     expect(elemento('.indicacion-card--edicion')).toBeNull();
   });
 
@@ -814,8 +828,8 @@ describe('Indicaciones', () => {
     expect(tarjetas()[4].textContent).toContain('Perfil lipídico');
     expect(tarjetas()[4].textContent).toContain('Repetir en 3 meses.');
     // El formulario queda listo para la siguiente captura
-    expect(component.nombreExamen).toBe('');
-    expect(component.observacionExamen).toBe('');
+    expect(examenes().nombreExamen).toBe('');
+    expect(examenes().observacionExamen).toBe('');
   });
 
   it('no registra el examen cuando el nombre está vacío', async () => {
@@ -839,7 +853,7 @@ describe('Indicaciones', () => {
     await fixture.whenStable();
 
     expect(tarjetas().length).toBe(4);
-    expect(component.nombreExamen).toBe('');
+    expect(examenes().nombreExamen).toBe('');
   });
 
   it('abre el listado de exámenes con el filtro Todas', async () => {
@@ -931,22 +945,20 @@ describe('Indicaciones', () => {
 
     Object.defineProperty(window, 'open', { value: abrirPestana, configurable: true });
 
-    component.examenes = component.examenes.map((examen) =>
-      examen.id === 1
-        ? {
-            ...examen,
-            archivo: {
-              archivo: placa,
-              nombre: placa.name,
-              peso: '1 KB',
-              extension: 'png',
-              esImagen: true,
-              icono: 'bi-file-earmark-image',
-            },
-          }
-        : examen,
-    );
     await irASeccion('Exámenes');
+
+    const examenConAdjunto = examenes().examenes.find((examen) => examen.id === 1)!;
+
+    examenConAdjunto.archivo = {
+      archivo: placa,
+      nombre: placa.name,
+      peso: '1 KB',
+      extension: 'png',
+      esImagen: true,
+      icono: 'bi-file-earmark-image',
+    };
+    fixture.detectChanges(false);
+    await fixture.whenStable();
 
     elemento<HTMLButtonElement>('.examen-ojo').click();
     await fixture.whenStable();
@@ -996,9 +1008,9 @@ describe('Indicaciones', () => {
     botonEditarDelMenu().click();
     await fixture.whenStable();
 
-    expect(component.examenEnEdicion).toBe(1);
-    expect(component.nombreExamen).toBe('Hemograma completo');
-    expect(component.observacionExamen).toBe('Tomar la muestra en ayunas.');
+    expect(examenes().examenEnEdicion).toBe(1);
+    expect(examenes().nombreExamen).toBe('Hemograma completo');
+    expect(examenes().observacionExamen).toBe('Tomar la muestra en ayunas.');
     expect(tarjetas()[0].classList.contains('indicacion-card--edicion')).toBe(true);
 
     await escribir('#nombreExamen', 'Hemograma completo y coagulación');
@@ -1008,8 +1020,8 @@ describe('Indicaciones', () => {
     // Los cambios se guardan en la misma tarjeta y el formulario queda libre para otra captura
     expect(tarjetas().length).toBe(4);
     expect(tarjetas()[0].textContent).toContain('Hemograma completo y coagulación');
-    expect(component.examenEnEdicion).toBeNull();
-    expect(component.nombreExamen).toBe('');
+    expect(examenes().examenEnEdicion).toBeNull();
+    expect(examenes().nombreExamen).toBe('');
   });
 
   it('cierra el menú del examen al pulsar fuera de su tarjeta', async () => {
@@ -1017,12 +1029,12 @@ describe('Indicaciones', () => {
 
     await abrirMenu(0);
 
-    expect(component.menuIndicacionAbierta).toBe(1);
+    expect(examenes().menuIndicacionAbierta).toBe(1);
 
     elemento<HTMLElement>('.panel-indicados').dispatchEvent(new Event('click', { bubbles: true }));
     await fixture.whenStable();
 
-    expect(component.menuIndicacionAbierta).toBeNull();
+    expect(examenes().menuIndicacionAbierta).toBeNull();
   });
 
   it('pasa el examen eliminado al filtro Eliminados con el borde gris', async () => {
@@ -1049,8 +1061,10 @@ describe('Indicaciones', () => {
   });
 
   it('muestra el estado vacío cuando el filtro de exámenes no tiene coincidencias', async () => {
-    component.examenes = component.examenes.map((examen) => ({ ...examen, disponible: true }));
     await irASeccion('Exámenes');
+
+    examenes().examenes = examenes().examenes.map((examen) => ({ ...examen, disponible: true }));
+    await fixture.whenStable();
     await elegirFiltro('No disponibles');
 
     expect(tarjetas().length).toBe(0);
@@ -1097,7 +1111,7 @@ describe('Indicaciones', () => {
       'radiografia.png',
     );
     // El formulario queda listo para la siguiente captura, sin el adjunto anterior
-    expect(component.archivoExamen).toBeNull();
+    expect(examenes().archivoExamen).toBeNull();
     expect(adjuntoDelFormulario()).toBeNull();
     expect(elemento<HTMLInputElement>('#archivoExamen').value).toBe('');
   });
@@ -1107,7 +1121,7 @@ describe('Indicaciones', () => {
 
     await soltarArchivo(archivoDePrueba('resultado.pdf', 'application/pdf'));
 
-    expect(component.archivoExamen?.nombre).toBe('resultado.pdf');
+    expect(examenes().archivoExamen?.nombre).toBe('resultado.pdf');
     expect(adjuntoDelFormulario()?.textContent).toContain('resultado.pdf');
     expect(
       elemento<HTMLElement>('.archivo-seleccionado i').classList.contains('bi-file-earmark-pdf'),
@@ -1127,7 +1141,7 @@ describe('Indicaciones', () => {
     expect(popUps.advertencia).toHaveBeenCalledWith(
       'Formato no permitido. Solo se admiten imágenes JPG o PNG y documentos PDF.',
     );
-    expect(component.archivoExamen).toBeNull();
+    expect(examenes().archivoExamen).toBeNull();
     expect(adjuntoDelFormulario()).toBeNull();
     // El input queda vacío para poder elegir otro archivo
     expect(elemento<HTMLInputElement>('#archivoExamen').value).toBe('');
@@ -1139,7 +1153,7 @@ describe('Indicaciones', () => {
     await elegirArchivo(archivoDePrueba('informe.pdf', 'application/pdf', 11 * 1024 * 1024));
 
     expect(popUps.advertencia).toHaveBeenCalledWith('El archivo supera el tamaño máximo de 10 MB.');
-    expect(component.archivoExamen).toBeNull();
+    expect(examenes().archivoExamen).toBeNull();
     expect(adjuntoDelFormulario()).toBeNull();
   });
 
@@ -1151,11 +1165,11 @@ describe('Indicaciones', () => {
     botonQuitarArchivo().click();
     await fixture.whenStable();
 
-    expect(component.archivoExamen).toBeNull();
+    expect(examenes().archivoExamen).toBeNull();
     expect(adjuntoDelFormulario()).toBeNull();
     expect(elemento<HTMLInputElement>('#archivoExamen').value).toBe('');
     // Lo escrito en el formulario se conserva
-    expect(component.nombreExamen).toBe('Perfil lipídico');
+    expect(examenes().nombreExamen).toBe('Perfil lipídico');
   });
 
   it('registra el examen sin adjunto cuando no se carga ningún archivo', async () => {
@@ -1201,7 +1215,7 @@ describe('Indicaciones', () => {
 
     await escribir('#nombreCuidado', 'Dieta blanda');
 
-    expect(component.hayCuidado).toBe(true);
+    expect(cuidados().hayCuidado).toBe(true);
     expect(botonGuardar().disabled).toBe(false);
 
     await escribir('#frecuenciaCuidado', '6');
@@ -1218,7 +1232,7 @@ describe('Indicaciones', () => {
     expect(tarjetas()[4].textContent).toContain('Sin residuos y en porciones pequeñas.');
 
     // El formulario queda listo para la siguiente captura
-    expect(component.nombreCuidado).toBe('');
+    expect(cuidados().nombreCuidado).toBe('');
     expect(elemento<HTMLInputElement>('#nombreCuidado').value).toBe('');
     expect(botonGuardar().disabled).toBe(true);
   });
@@ -1229,18 +1243,18 @@ describe('Indicaciones', () => {
     await escribir('#nombreCuidado', 'Dieta blanda');
     await elegir('#duracionTipoCuidado', 'dias');
 
-    expect(component.faltaDuracionEnDiasCuidado).toBe(true);
+    expect(cuidados().faltaDuracionEnDiasCuidado).toBe(true);
     expect(botonGuardar().disabled).toBe(true);
 
     // Tampoco se registra si el formulario se envía sin la cantidad de días
-    component.agregarCuidado();
+    cuidados().agregarCuidado();
     await fixture.whenStable();
 
     expect(tarjetas().length).toBe(4);
 
     await escribir('#duracionCuidado', '4');
 
-    expect(component.faltaDuracionEnDiasCuidado).toBe(false);
+    expect(cuidados().faltaDuracionEnDiasCuidado).toBe(false);
     expect(botonGuardar().disabled).toBe(false);
 
     botonGuardar().click();
@@ -1255,11 +1269,11 @@ describe('Indicaciones', () => {
 
     await escribir('#nombreCuidado', '   ');
 
-    component.agregarCuidado();
+    cuidados().agregarCuidado();
     await fixture.whenStable();
 
     expect(tarjetas().length).toBe(4);
-    expect(component.nombreCuidado).toBe('   ');
+    expect(cuidados().nombreCuidado).toBe('   ');
   });
 
   it('cancela la captura del cuidado sin registrar nada', async () => {
@@ -1274,10 +1288,10 @@ describe('Indicaciones', () => {
     await fixture.whenStable();
 
     expect(tarjetas().length).toBe(4);
-    expect(component.nombreCuidado).toBe('');
-    expect(component.frecuenciaCuidado).toBeNull();
-    expect(component.duracionTipoCuidado).toBe('');
-    expect(component.duracionCantidadCuidado).toBeNull();
+    expect(cuidados().nombreCuidado).toBe('');
+    expect(cuidados().frecuenciaCuidado).toBeNull();
+    expect(cuidados().duracionTipoCuidado).toBe('');
+    expect(cuidados().duracionCantidadCuidado).toBeNull();
   });
 
   it('abre el listado de cuidados con el filtro Todas y deja fuera los eliminados', async () => {
@@ -1443,13 +1457,13 @@ describe('Indicaciones', () => {
 
     await abrirMenu(0);
 
-    expect(component.menuIndicacionAbierta).toBe(1);
+    expect(cuidados().menuIndicacionAbierta).toBe(1);
     expect(elementos('.indicacion-menu').length).toBe(1);
 
     elemento<HTMLElement>('.panel-indicados').dispatchEvent(new Event('click', { bubbles: true }));
     await fixture.whenStable();
 
-    expect(component.menuIndicacionAbierta).toBeNull();
+    expect(cuidados().menuIndicacionAbierta).toBeNull();
     expect(elemento('.indicacion-menu')).toBeNull();
   });
 
@@ -1460,12 +1474,12 @@ describe('Indicaciones', () => {
     botonEditarDelMenu().click();
     await fixture.whenStable();
 
-    expect(component.cuidadoEnEdicion).toBe(1);
-    expect(component.nombreCuidado).toBe('Cambio de posición');
-    expect(component.frecuenciaCuidado).toBe(2);
-    expect(component.duracionTipoCuidado).toBe('dias');
-    expect(component.duracionCantidadCuidado).toBe(5);
-    expect(component.observacionesCuidado).toBe(
+    expect(cuidados().cuidadoEnEdicion).toBe(1);
+    expect(cuidados().nombreCuidado).toBe('Cambio de posición');
+    expect(cuidados().frecuenciaCuidado).toBe(2);
+    expect(cuidados().duracionTipoCuidado).toBe('dias');
+    expect(cuidados().duracionCantidadCuidado).toBe(5);
+    expect(cuidados().observacionesCuidado).toBe(
       'Alternar decúbito lateral y evitar apoyar la zona de la úlcera.',
     );
     expect(elemento<HTMLInputElement>('#frecuenciaCuidado').value).toBe('2');
@@ -1484,8 +1498,8 @@ describe('Indicaciones', () => {
     expect(insignias(0)).toEqual(['4', '5 días']);
     expect(tarjetas()[0].textContent).toContain('10/10/2026');
     expect(tarjetas()[0].classList.contains('indicacion-card--naranja')).toBe(true);
-    expect(component.cuidadoEnEdicion).toBeNull();
-    expect(component.nombreCuidado).toBe('');
+    expect(cuidados().cuidadoEnEdicion).toBeNull();
+    expect(cuidados().nombreCuidado).toBe('');
   });
 
   it('libera el formulario cuando se elimina el cuidado en edición', async () => {
@@ -1500,8 +1514,8 @@ describe('Indicaciones', () => {
     await fixture.whenStable();
 
     expect(tarjetas().length).toBe(3);
-    expect(component.cuidadoEnEdicion).toBeNull();
-    expect(component.nombreCuidado).toBe('');
+    expect(cuidados().cuidadoEnEdicion).toBeNull();
+    expect(cuidados().nombreCuidado).toBe('');
     expect(elemento('.indicacion-card--edicion')).toBeNull();
   });
 
@@ -1512,7 +1526,7 @@ describe('Indicaciones', () => {
 
     await elegirFiltro('En proceso');
 
-    expect(component.menuIndicacionAbierta).toBeNull();
+    expect(cuidados().menuIndicacionAbierta).toBeNull();
 
     await abrirMenu(0);
     botonEditarDelMenu().click();
@@ -1521,14 +1535,14 @@ describe('Indicaciones', () => {
     // El cuidado sigue en el listado: la edición continúa
     await elegirFiltro('Todas');
 
-    expect(component.cuidadoEnEdicion).toBe(1);
-    expect(component.nombreCuidado).toBe('Cambio de posición');
+    expect(cuidados().cuidadoEnEdicion).toBe(1);
+    expect(cuidados().nombreCuidado).toBe('Cambio de posición');
 
     // Al quedar fuera del listado, el formulario se libera
     await elegirFiltro('Completadas');
 
-    expect(component.cuidadoEnEdicion).toBeNull();
-    expect(component.nombreCuidado).toBe('');
+    expect(cuidados().cuidadoEnEdicion).toBeNull();
+    expect(cuidados().nombreCuidado).toBe('');
     expect(elemento('.indicacion-card--edicion')).toBeNull();
   });
 
@@ -1638,3 +1652,4 @@ describe('Indicaciones', () => {
     expect(elementos<HTMLElement>('.panel-secciones .tarjeta_icono i').length).toBe(3);
   });
 });
+

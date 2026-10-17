@@ -1,0 +1,208 @@
+<!-- Cuidados indicados: registro del cuidado y listado con el filtro por estado -->
+<section class="panel panel-seccion" aria-labelledby="tituloCuidados">
+  <h3 class="panel-titulo indicacion-titulo" id="tituloCuidados">Cuidados</h3>
+
+  <form class="indicacion-form" (ngSubmit)="agregarCuidado()">
+    <!-- Nombre del cuidado y su frecuencia: la frecuencia solo admite números -->
+    <div class="indicacion-fila indicacion-fila--dos">
+      <div class="indicacion-campo">
+        <label class="indicacion-etiqueta" for="nombreCuidado">
+          Nombre de cuidado<span class="indicacion-obligatorio" aria-hidden="true">*</span>
+        </label>
+        <input
+          class="indicacion-input"
+          id="nombreCuidado"
+          name="nombreCuidado"
+          type="text"
+          placeholder="Ej. Cambio de posición"
+          aria-required="true"
+          [(ngModel)]="nombreCuidado"
+        />
+      </div>
+
+      <div class="indicacion-campo">
+        <label class="indicacion-etiqueta" for="frecuenciaCuidado">
+          Frecuencia<span class="indicacion-obligatorio" aria-hidden="true">*</span>
+        </label>
+        <input
+          class="indicacion-input"
+          id="frecuenciaCuidado"
+          name="frecuenciaCuidado"
+          type="number"
+          min="1"
+          step="1"
+          inputmode="numeric"
+          placeholder="Ej. 8"
+          aria-required="true"
+          [(ngModel)]="frecuenciaCuidado"
+        />
+      </div>
+    </div>
+
+    <!-- Duración, tipo de duración y observaciones: misma fila del registro de medicamentos -->
+    <div class="indicacion-fila">
+      <div class="indicacion-campo">
+        <label class="indicacion-etiqueta" for="duracionCuidado">
+          Duración
+          @if (duracionTipoCuidado === 'dias') {
+            <span class="indicacion-obligatorio" aria-hidden="true">*</span>
+          }
+        </label>
+        <input
+          class="indicacion-input"
+          id="duracionCuidado"
+          name="duracionCantidadCuidado"
+          type="number"
+          min="1"
+          step="1"
+          inputmode="numeric"
+          placeholder="Ej. 7"
+          [attr.aria-required]="duracionTipoCuidado === 'dias'"
+          [(ngModel)]="duracionCantidadCuidado"
+        />
+      </div>
+
+      <div class="indicacion-campo">
+        <label class="indicacion-etiqueta" for="duracionTipoCuidado">Tipo de duración</label>
+        <select
+          class="indicacion-input"
+          id="duracionTipoCuidado"
+          name="duracionTipoCuidado"
+          [(ngModel)]="duracionTipoCuidado"
+        >
+          <option value="">Seleccionar...</option>
+          @for (opcion of tiposDuracion; track opcion.id) {
+            <option [value]="opcion.id">{{ opcion.nombre }}</option>
+          }
+        </select>
+      </div>
+
+      <div class="indicacion-campo">
+        <label class="indicacion-etiqueta" for="observacionesCuidado">Observaciones</label>
+        <textarea
+          class="indicacion-input indicacion-textarea"
+          id="observacionesCuidado"
+          name="observacionesCuidado"
+          placeholder="Indicaciones adicionales..."
+          [(ngModel)]="observacionesCuidado"
+        ></textarea>
+      </div>
+    </div>
+
+    <!-- Acciones del formulario -->
+    <div class="acciones-formulario indicacion-acciones">
+      <button type="button" class="btn _cancelar" (click)="limpiarFormularioCuidado()">
+        Cancelar
+      </button>
+      <button type="submit" class="btn _guardar" [disabled]="!puedeGuardarCuidado">Guardar</button>
+    </div>
+  </form>
+</section>
+
+<!-- Cuidados indicados en el episodio actual -->
+<section class="panel panel-indicados" aria-labelledby="tituloCuidadosIndicados">
+  <h3 class="panel-titulo indicacion-titulo" id="tituloCuidadosIndicados">Cuidados indicados</h3>
+
+  <!-- Filtros del listado: cada opción muestra los cuidados que están en un estado -->
+  <div class="indicados-filtros" role="group" aria-label="Filtrar cuidados indicados por estado">
+    @for (filtro of filtrosCuidado; track filtro.id) {
+      <button
+        type="button"
+        class="indicados-filtro"
+        [class.indicados-filtro--activo]="filtroCuidado === filtro.id"
+        [attr.aria-pressed]="filtroCuidado === filtro.id"
+        (click)="seleccionarFiltroCuidado(filtro.id)"
+      >
+        {{ filtro.etiqueta }}
+      </button>
+    }
+  </div>
+
+  <!-- Listado de cuidados: solo las tarjetas se desplazan bajo el título y los filtros fijos -->
+  <div class="indicados-lista">
+    @for (cuidado of cuidadosFiltrados; track cuidado.id) {
+      <article
+        class="indicacion-card"
+        [ngClass]="'indicacion-card--' + tonoCuidado(cuidado)"
+        [class.indicacion-card--menu-abierto]="menuIndicacionAbierta === cuidado.id"
+        [class.indicacion-card--edicion]="cuidadoEnEdicion === cuidado.id"
+        [attr.data-cuidado-id]="cuidado.id"
+      >
+        <header class="indicacion-encabezado">
+          <span class="indicacion-nombre">{{ cuidado.nombre }}</span>
+
+          <!-- Menú de opciones de la tarjeta: se despliega sobre ella sin cambiar su tamaño -->
+          <button
+            type="button"
+            class="indicacion-menu-trigger"
+            title="Más opciones"
+            aria-haspopup="menu"
+            [attr.aria-label]="'Más opciones para el cuidado ' + cuidado.nombre"
+            [attr.aria-expanded]="menuIndicacionAbierta === cuidado.id"
+            (click)="alternarMenuIndicacion(cuidado.id)"
+          >
+            <i class="bi bi-three-dots-vertical" aria-hidden="true"></i>
+          </button>
+        </header>
+
+        <ul class="indicacion-badges">
+          @if (cuidado.frecuencia !== null) {
+            <li>{{ cuidado.frecuencia }}</li>
+          }
+          @if (cuidado.duracionTipo) {
+            <li>{{ textoDuracion(cuidado) }}</li>
+          }
+        </ul>
+
+        @if (cuidado.observaciones) {
+          <p class="indicacion-observaciones">{{ cuidado.observaciones }}</p>
+        }
+
+        <footer class="indicacion-meta">
+          <span><i class="bi bi-calendar3" aria-hidden="true"></i>{{ cuidado.fecha }}</span>
+          <span><i class="bi bi-clock" aria-hidden="true"></i>{{ cuidado.hora }}</span>
+          <span><i class="bi bi-person" aria-hidden="true"></i>{{ cuidado.medico }}</span>
+        </footer>
+
+        <!-- Menú de opciones: se dibuja al final de la tarjeta y flota sobre ella -->
+        @if (menuIndicacionAbierta === cuidado.id) {
+          <div
+            class="indicacion-menu"
+            role="menu"
+            [attr.aria-label]="'Opciones para el cuidado ' + cuidado.nombre"
+          >
+            <div class="indicacion-menu-opcion">
+              <span>Editar</span>
+              <button
+                type="button"
+                class="iconEditar"
+                role="menuitem"
+                title="Editar cuidado"
+                [attr.aria-label]="'Editar el cuidado ' + cuidado.nombre"
+                (click)="editarCuidado(cuidado); cerrarMenuIndicacion()"
+              >
+                <i class="bi bi-pencil-square" aria-hidden="true"></i>
+              </button>
+            </div>
+
+            <div class="indicacion-menu-opcion">
+              <span>Eliminar</span>
+              <button
+                type="button"
+                class="iconQuitar"
+                role="menuitem"
+                title="Eliminar cuidado"
+                [attr.aria-label]="'Eliminar el cuidado ' + cuidado.nombre"
+                (click)="eliminarCuidado(cuidado)"
+              >
+                <i class="bi bi-trash3" aria-hidden="true"></i>
+              </button>
+            </div>
+          </div>
+        }
+      </article>
+    } @empty {
+      <p class="indicacion-vacio">{{ mensajeSinCuidados }}</p>
+    }
+  </div>
+</section>

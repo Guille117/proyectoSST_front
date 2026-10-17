@@ -2,11 +2,11 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of, throwError, TimeoutError } from 'rxjs';
 
 import { HistoriaClinica } from './historia-clinica';
-import { HistoriaClinicaService } from '../evaluacion/data/historia-clinica-service';
-import { EPISODIO_ID_TEMPORAL } from '../evaluacion/data/constantes-clinicas';
-import { HistoriaClinicaResponse } from '../evaluacion/data/historiaClinicaInterfaz';
-import { AuthService } from '../../Auth/data/auth-service';
-import { PopUps } from '../../../shared/popUps/popUpsService';
+import { HistoriaClinicaService } from '../data/historia-clinica-service';
+import { EPISODIO_ID_TEMPORAL } from '../data/constantes-clinicas';
+import { HistoriaClinicaResponse } from '../data/historiaClinicaInterfaz';
+import { AuthService } from '../../../Auth/data/auth-service';
+import { PopUps } from '../../../../shared/popUps/popUpsService';
 
 describe('HistoriaClinica', () => {
   let component: HistoriaClinica;

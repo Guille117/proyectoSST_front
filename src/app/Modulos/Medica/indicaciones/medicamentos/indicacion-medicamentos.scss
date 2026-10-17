@@ -1,0 +1,9 @@
+@use '../../panel-seccion';
+@use '../comun';
+@use '../medicamentos';
+
+/* La sección se integra en la rejilla de la pantalla: sus dos paneles ocupan las áreas del
+   formulario y del listado como si colgaran directamente de .indicaciones. */
+:host {
+  display: contents;
+}

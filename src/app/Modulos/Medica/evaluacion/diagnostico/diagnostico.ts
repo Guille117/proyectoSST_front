@@ -1,15 +1,15 @@
 import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { finalize, Subscription, TimeoutError } from 'rxjs';
-import { AuthService } from '../../Auth/data/auth-service';
-import { PopUps } from '../../../shared/popUps/popUpsService';
-import { EPISODIO_ID_TEMPORAL } from '../evaluacion/data/constantes-clinicas';
-import { DiagnosticoService } from '../evaluacion/data/diagnostico-service';
+import { AuthService } from '../../../Auth/data/auth-service';
+import { PopUps } from '../../../../shared/popUps/popUpsService';
+import { EPISODIO_ID_TEMPORAL } from '../data/constantes-clinicas';
+import { DiagnosticoService } from '../data/diagnostico-service';
 import {
   DiagnosticoRequest,
   DiagnosticoResponse,
   TipoDiagnostico,
-} from '../evaluacion/data/diagnosticoInterfaz';
+} from '../data/diagnosticoInterfaz';
 
 /** Opción visible del selector de tipo de diagnóstico. */
 interface TipoDiagnosticoVista {

@@ -1,0 +1,204 @@
+<!-- Exámenes indicados: registro del examen y listado con el filtro de disponibilidad -->
+<section class="panel panel-seccion" aria-labelledby="tituloExamenes">
+  <h3 class="panel-titulo indicacion-titulo" id="tituloExamenes">Exámenes</h3>
+
+  <form class="indicacion-form" (ngSubmit)="agregarExamen()">
+    <!-- Nombre del examen y su observación: solo el nombre es obligatorio -->
+    <div class="indicacion-fila indicacion-fila--dos">
+      <div class="indicacion-campo">
+        <label class="indicacion-etiqueta" for="nombreExamen">
+          Nombre de examen<span class="indicacion-obligatorio" aria-hidden="true">*</span>
+        </label>
+        <input
+          class="indicacion-input"
+          id="nombreExamen"
+          name="nombreExamen"
+          type="text"
+          placeholder="Ej. Hemograma completo"
+          aria-required="true"
+          [(ngModel)]="nombreExamen"
+        />
+      </div>
+
+      <div class="indicacion-campo">
+        <label class="indicacion-etiqueta" for="observacionExamen">Observación</label>
+        <textarea
+          class="indicacion-input indicacion-textarea"
+          id="observacionExamen"
+          name="observacionExamen"
+          placeholder="Indicaciones adicionales..."
+          [(ngModel)]="observacionExamen"
+        ></textarea>
+      </div>
+    </div>
+
+    <!-- Archivo del examen: opcional; adjunta una imagen o un PDF a la indicación -->
+    <div class="indicacion-campo indicacion-archivo">
+      <label class="indicacion-etiqueta" for="archivoExamen">Archivo o imagen</label>
+
+      <div class="carga-archivo" (dragover)="$event.preventDefault()" (drop)="soltarArchivoExamen($event)">
+        <input
+          #archivoExamenInput
+          type="file"
+          id="archivoExamen"
+          name="archivoExamen"
+          [attr.accept]="archivos.aceptados"
+          (change)="seleccionarArchivoExamen($event)"
+        />
+
+        @if (!archivoExamen) {
+          <label for="archivoExamen" class="zona-carga">
+            <i class="bi bi-cloud-arrow-up" aria-hidden="true"></i>
+            <strong>Arrastra y suelta la imagen o el PDF aquí</strong>
+            <span>o haz clic para seleccionar</span>
+            <span class="boton-archivo">Seleccionar archivo</span>
+            <span class="ayuda-archivo">
+              Imágenes JPG o PNG · PDF · máximo {{ archivos.tamanoMaximoMb }} MB
+            </span>
+          </label>
+        }
+
+        @if (archivoExamen) {
+          <div class="archivo-seleccionado">
+            <i class="bi {{ archivoExamen.icono }}" aria-hidden="true"></i>
+            <span class="archivo-nombre">{{ archivoExamen.nombre }}</span>
+            <span class="archivo-peso">{{ archivoExamen.peso }}</span>
+            <button type="button" aria-label="Quitar archivo" (click)="quitarArchivoExamen()">
+              <i class="bi bi-x-lg" aria-hidden="true"></i>
+            </button>
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- Acciones del formulario -->
+    <div class="acciones-formulario indicacion-acciones">
+      <button type="button" class="btn _cancelar" (click)="limpiarFormularioExamen()">
+        Cancelar
+      </button>
+      <button type="submit" class="btn _guardar" [disabled]="!puedeGuardarExamen">Guardar</button>
+    </div>
+  </form>
+</section>
+
+<!-- Exámenes indicados en el episodio actual -->
+<section class="panel panel-indicados" aria-labelledby="tituloExamenesIndicados">
+  <h3 class="panel-titulo indicacion-titulo" id="tituloExamenesIndicados">Exámenes indicados</h3>
+
+  <!-- Filtros del listado: cada opción muestra los exámenes de una disponibilidad o los eliminados -->
+  <div
+    class="indicados-filtros"
+    role="group"
+    aria-label="Filtrar exámenes indicados por disponibilidad o estado"
+  >
+    @for (filtro of filtrosExamen; track filtro.id) {
+      <button
+        type="button"
+        class="indicados-filtro"
+        [class.indicados-filtro--activo]="filtroExamen === filtro.id"
+        [attr.aria-pressed]="filtroExamen === filtro.id"
+        (click)="seleccionarFiltroExamen(filtro.id)"
+      >
+        {{ filtro.etiqueta }}
+      </button>
+    }
+  </div>
+
+  <!-- Listado de exámenes: solo las tarjetas se desplazan bajo el título y los filtros fijos -->
+  <div class="indicados-lista">
+    @for (examen of examenesFiltrados; track examen.id) {
+      <article
+        class="indicacion-card"
+        [class.indicacion-card--verde]="examen.disponible && examen.estado === 'activo'"
+        [class.indicacion-card--rojo]="!examen.disponible && examen.estado === 'activo'"
+        [class.indicacion-card--eliminada]="examen.estado === 'eliminado'"
+        [class.indicacion-card--menu-abierto]="menuIndicacionAbierta === examen.id"
+        [class.indicacion-card--edicion]="examenEnEdicion === examen.id"
+        [attr.data-examen-id]="examen.id"
+      >
+        <header class="indicacion-encabezado">
+          <span class="indicacion-nombre">{{ examen.nombre }}</span>
+
+          <!-- Menú de opciones de la tarjeta: mismo despliegue del listado de medicamentos -->
+          <button
+            type="button"
+            class="indicacion-menu-trigger"
+            title="Más opciones"
+            aria-haspopup="menu"
+            [attr.aria-label]="'Más opciones para el examen ' + examen.nombre"
+            [attr.aria-expanded]="menuIndicacionAbierta === examen.id"
+            (click)="alternarMenuIndicacion(examen.id)"
+          >
+            <i class="bi bi-three-dots-vertical" aria-hidden="true"></i>
+          </button>
+        </header>
+
+        @if (examen.observacion) {
+          <p class="indicacion-observaciones">{{ examen.observacion }}</p>
+        }
+
+        <!-- Adjunto del examen: solo lo muestran los exámenes que llevan una imagen o un PDF -->
+        @if (examen.archivo) {
+          <p class="examen-adjunto">
+            <i class="bi {{ examen.archivo.icono }}" aria-hidden="true"></i>
+            <span>{{ examen.archivo.nombre }}</span>
+            <small>{{ examen.archivo.peso }}</small>
+          </p>
+        }
+
+        <!-- Disponibilidad del examen: el ojo se dibuja sobre la esquina inferior derecha de la
+             tarjeta, sin ocupar alto propio, y abre el adjunto del examen -->
+        @if (examen.disponible) {
+          <button
+            type="button"
+            class="examen-ojo"
+            title="Ver el adjunto del examen"
+            [attr.aria-label]="'Ver el adjunto del examen ' + examen.nombre"
+            (click)="verAdjuntoExamen(examen)"
+          >
+            <i class="bi bi-eye" aria-hidden="true"></i>
+          </button>
+        }
+
+        <!-- Menú de opciones: se dibuja al final de la tarjeta y flota sobre ella -->
+        @if (menuIndicacionAbierta === examen.id) {
+          <div
+            class="indicacion-menu"
+            role="menu"
+            [attr.aria-label]="'Opciones para el examen ' + examen.nombre"
+          >
+            <div class="indicacion-menu-opcion">
+              <span>Editar</span>
+              <button
+                type="button"
+                class="iconEditar"
+                role="menuitem"
+                title="Editar examen"
+                [attr.aria-label]="'Editar el examen ' + examen.nombre"
+                (click)="editarExamen(examen); cerrarMenuIndicacion()"
+              >
+                <i class="bi bi-pencil-square" aria-hidden="true"></i>
+              </button>
+            </div>
+
+            <div class="indicacion-menu-opcion">
+              <span>Eliminar</span>
+              <button
+                type="button"
+                class="iconQuitar"
+                role="menuitem"
+                title="Eliminar examen"
+                [attr.aria-label]="'Eliminar el examen ' + examen.nombre"
+                (click)="eliminarExamen(examen)"
+              >
+                <i class="bi bi-trash3" aria-hidden="true"></i>
+              </button>
+            </div>
+          </div>
+        }
+      </article>
+    } @empty {
+      <p class="indicacion-vacio">{{ mensajeSinExamenes }}</p>
+    }
+  </div>
+</section>

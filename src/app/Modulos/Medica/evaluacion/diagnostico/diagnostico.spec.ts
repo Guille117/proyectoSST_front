@@ -2,10 +2,10 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of, throwError } from 'rxjs';
 
 import { Diagnostico } from './diagnostico';
-import { AuthService } from '../../Auth/data/auth-service';
-import { PopUps } from '../../../shared/popUps/popUpsService';
-import { DiagnosticoService } from '../evaluacion/data/diagnostico-service';
-import { DiagnosticoResponse } from '../evaluacion/data/diagnosticoInterfaz';
+import { AuthService } from '../../../Auth/data/auth-service';
+import { PopUps } from '../../../../shared/popUps/popUpsService';
+import { DiagnosticoService } from '../data/diagnostico-service';
+import { DiagnosticoResponse } from '../data/diagnosticoInterfaz';
 
 describe('Diagnostico', () => {
   let component: Diagnostico;

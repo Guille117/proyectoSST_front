@@ -1,6 +1,6 @@
 import { Component, EventEmitter, Output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Paginacion } from '../../../shared/paginacion/paginacion';
+import { Paginacion } from '../../../../../shared/paginacion/paginacion';
 
 /* Tipos locales de la maqueta: se sustituirán por el contrato real del backend en la fase de integración. */
 /** Tipos de duración del tratamiento; el número de días solo se usa con el tipo «días». */

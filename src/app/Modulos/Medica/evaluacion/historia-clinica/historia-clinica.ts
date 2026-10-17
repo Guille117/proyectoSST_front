@@ -1,11 +1,11 @@
 import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { finalize, Subscription, TimeoutError } from 'rxjs';
-import { AuthService } from '../../Auth/data/auth-service';
-import { PopUps } from '../../../shared/popUps/popUpsService';
-import { EPISODIO_ID_TEMPORAL } from '../evaluacion/data/constantes-clinicas';
-import { HistoriaClinicaService } from '../evaluacion/data/historia-clinica-service';
-import { HistoriaClinicaRequest } from '../evaluacion/data/historiaClinicaInterfaz';
+import { AuthService } from '../../../Auth/data/auth-service';
+import { PopUps } from '../../../../shared/popUps/popUpsService';
+import { EPISODIO_ID_TEMPORAL } from '../data/constantes-clinicas';
+import { HistoriaClinicaService } from '../data/historia-clinica-service';
+import { HistoriaClinicaRequest } from '../data/historiaClinicaInterfaz';
 
 /**
  * Historia clínica del episodio: sección de Evaluación clínica con un único cuadro de texto para

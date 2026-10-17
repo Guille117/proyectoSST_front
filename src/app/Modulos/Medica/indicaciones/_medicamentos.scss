@@ -1,0 +1,101 @@
+/* ==================== FORMULARIO DE MEDICAMENTOS ==================== */
+/* Contenedor del buscador: fija su altura; el estilo base vive en src/styles/otrosStyle.scss */
+.indicacion-buscador {
+  height: 45px;
+}
+
+.indicacion-buscador .buscador {
+  .inputB {
+    min-width: 0;
+    width: 0;
+  }
+
+  .btnLupa {
+    flex: 0 0 40px;
+    width: 40px;
+  }
+}
+
+/* Medicamento elegido: ocupa el lugar del buscador y de la tabla de resultados con su nombre, su
+   presentación y su vía de administración, y ofrece volver a la búsqueda */
+.medicamento-elegido {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 45px;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border: 1px solid #cfdcee;
+  border-radius: 12px;
+  background: #f5f9ff;
+}
+
+.medicamento-elegido-texto {
+  color: #21324d;
+  font-size: 1rem;
+  line-height: 1.4;
+}
+
+.medicamento-elegido-cambiar {
+  flex: 0 0 auto;
+  display: grid;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  place-items: center;
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  border-radius: 50%;
+  background: #fff;
+  color: var(--azulSecundario);
+  font-size: 1rem;
+  cursor: pointer;
+  transition:
+    color 0.2s ease,
+    background 0.2s ease;
+
+  &:hover {
+    color: #fff;
+    background: var(--azulSecundario);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--azulSecundario);
+    outline-offset: 2px;
+  }
+}
+
+/* ==================== RESULTADOS DE LA BÚSQUEDA DE MEDICAMENTOS ==================== */
+/* La tabla usa el estilo global de src/styles/tableStyle.scss: aquí solo se fija su separación del
+   buscador, el desplazamiento horizontal y el ancho de sus columnas */
+.indicacion-resultados {
+  margin-top: 1.25rem;
+}
+
+.indicacion-resultados .tabla-container {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.indicacion-resultados table {
+  min-width: 480px;
+}
+
+/* Columna del número de la fila: ocupa el ancho mínimo de su encabezado */
+.columna-numero {
+  width: 80px;
+}
+
+/* Las filas del listado se eligen para llevar el medicamento al campo del formulario */
+.fila-seleccionable {
+  cursor: pointer;
+
+  &:hover td {
+    background: #f5f9ff;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--azulSecundario);
+    outline-offset: -2px;
+  }
+}
