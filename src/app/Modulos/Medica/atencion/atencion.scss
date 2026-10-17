@@ -1,0 +1,511 @@
+@use '../panel-seccion';
+
+/* ==================== ATENCIÓN MÉDICA (PACIENTES EN ATENCIÓN) ==================== */
+/* Pantalla de entrada del módulo Médico: a la izquierda el listado de pacientes en atención y a la
+   derecha la información del paciente seleccionado. Las tarjetas del panel se comparten con
+   panel-seccion; aquí se añade la rejilla de la pantalla y el listado. */
+.atencion {
+  display: grid;
+  /* El listado manda en el ancho (tres tarjetas por fila) y el detalle del paciente se ajusta a lo
+     justo */
+  grid-template-columns: minmax(0, 2.2fr) minmax(300px, 1fr);
+  gap: 1.25rem;
+  box-sizing: border-box;
+  width: 100%;
+  padding: 1.5rem;
+  align-items: start;
+}
+
+/* El panel de la derecha acompaña el desplazamiento: se queda a la vista mientras se recorre la lista */
+.panel-seleccionado {
+  position: sticky;
+  top: 0;
+}
+
+/* ==================== LISTADO DE PACIENTES ==================== */
+/* Cabecera del panel: título y buscador en la misma fila */
+.panel-encabezado {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+
+  /* El buscador global toma la altura de su contenedor: aquí se le fija la de la fila y se dibuja como
+     una píldora con la lupa delante del texto */
+  .buscador {
+    flex: 1 1 240px;
+    max-width: 340px;
+    height: 44px;
+    border-radius: 999px;
+    background: #fff;
+
+    .btnLupa {
+      width: auto;
+      padding: 0 8px 0 14px;
+      border: none;
+      background: transparent;
+      color: #6b7688;
+      font-size: 17px;
+
+      &:hover {
+        color: var(--azulSecundario);
+        font-size: 17px;
+      }
+    }
+
+    .inputB {
+      background: transparent;
+    }
+  }
+}
+
+/* Filtro por tipo de atención y orden del listado en la misma fila */
+.pacientes-barra {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+/* Cada opción del filtro es un botón de la fila */
+.pacientes-filtros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+/* Botones de filtro por tipo de atención: el activo va relleno en el azul del módulo y el resto se
+   dibuja como una píldora con el borde tenue */
+.chip {
+  padding: 8px 18px;
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  background: #fff;
+  color: #334155;
+  font-size: 0.92rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    color 0.2s ease,
+    background 0.2s ease,
+    border-color 0.2s ease;
+
+  &:hover {
+    border-color: rgba(13, 110, 253, 0.4);
+    background: rgba(13, 110, 253, 0.06);
+  }
+
+  &.activo {
+    border-color: var(--azulSecundario);
+    background: var(--azulSecundario);
+    color: #fff;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--azulSecundario);
+    outline-offset: 2px;
+  }
+}
+
+/* Orden del listado: a la derecha de la fila de filtros */
+.pacientes-orden {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+
+.orden-etiqueta {
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+.orden-select {
+  padding: 6px 10px;
+  border: 1px solid var(--colorBorde);
+  border-radius: 10px;
+  background: #fff;
+  color: #1a2535;
+  font-size: 0.9rem;
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid var(--azulSecundario);
+    outline-offset: 1px;
+  }
+}
+
+/* Listado de pacientes: tres tarjetas por fila, con desplazamiento propio para que la cabecera del panel
+   y los filtros queden siempre a la vista */
+.pacientes-lista {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-content: start;
+  gap: 0.65rem;
+  max-height: calc(var(--heightNavBar) - 18rem);
+  min-height: 220px;
+  padding-right: 4px;
+  overflow-y: auto;
+}
+
+.lista-aviso {
+  /* Los avisos ocupan la matriz completa */
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 1.5rem;
+  border: 1px dashed var(--colorBorde);
+  border-radius: 14px;
+  color: #64748b;
+  text-align: center;
+
+  &--error {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    color: #b91c1c;
+  }
+}
+
+/* ==================== TARJETA DE PACIENTE ==================== */
+/* Tarjeta del listado: el acento del borde izquierdo sigue el tipo de atención y el estado. El contenido
+   se reparte en franjas: identificación, etiquetas y diagnóstico principal */
+.paciente-card {
+  /* Color del acento de la tarjeta; las variantes de atención y estado lo redefinen */
+  --acento-card: var(--azulSecundario);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  box-sizing: border-box;
+  width: 100%;
+  overflow: hidden;
+  /* El aire de la izquierda deja sitio a la barra de acento */
+  padding: 1rem 1.1rem 1.05rem 1.4rem;
+  border: 1px solid #e2e9f5;
+  border-radius: 18px;
+  background: #fff;
+  cursor: pointer;
+  transition:
+    box-shadow 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.2s ease;
+
+  /* Barra de acento: recorre el borde izquierdo de la tarjeta de extremo a extremo; las esquinas las
+     recorta el radio de la propia tarjeta */
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 6px;
+    background: var(--acento-card);
+  }
+
+  &:hover {
+    box-shadow: 0 6px 16px rgba(15, 23, 42, 0.1);
+    transform: translateY(-1px);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--azulSecundario);
+    outline-offset: 2px;
+  }
+}
+
+/* El acento de la tarjeta distingue las emergencias y las atenciones pendientes del resto */
+.paciente-card--emergencia {
+  --acento-card: #ef4444;
+}
+
+.paciente-card--pendiente {
+  --acento-card: #f59e0b;
+}
+
+/* La emergencia también se refleja en la etiqueta del tipo de atención */
+.paciente-card--emergencia .paciente-tipo {
+  background: rgba(239, 68, 68, 0.12);
+  color: #dc2626;
+}
+
+/* Tarjeta seleccionada: se distingue del resto por el borde y la sombra; el acento se conserva */
+.paciente-card--activa {
+  border-color: var(--azulSecundario);
+  box-shadow: 0 8px 20px rgba(13, 110, 253, 0.18);
+}
+
+/* Identificación del paciente: nombre y datos pegados en un mismo bloque */
+.paciente-datos {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+/* El nombre se recorta a dos líneas si es muy largo, pero manda en la jerarquía de la tarjeta */
+.paciente-nombre {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  margin: 0;
+  color: var(--azulPrincipal);
+  font-size: 1.22rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+/* Expediente, edad y sexo en una misma línea, con separadores tenues entre ellos */
+.paciente-meta {
+  margin: 0;
+  color: #334155;
+  font-size: 0.92rem;
+  line-height: 1.3;
+}
+
+.paciente-separador {
+  padding: 0 0.3rem;
+  color: #cbd5e1;
+}
+
+.paciente-etiquetas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.paciente-tipo {
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: #e4eefc;
+  color: var(--azulSecundario);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.paciente-ubicacion {
+  padding: 6px 14px;
+  border: 1px solid #dde7f5;
+  border-radius: 999px;
+  background: #fff;
+  color: #4b5563;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+/* Diagnóstico principal: cierra la tarjeta, separado del resto por una línea */
+.paciente-diagnostico {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding-top: 0.7rem;
+  border-top: 1px solid #e8eef8;
+}
+
+.diagnostico-rotulo {
+  color: #64748b;
+  font-size: 0.82rem;
+  line-height: 1.2;
+}
+
+/* El diagnóstico se recorta a dos líneas para que la tarjeta no crezca en exceso */
+.diagnostico-valor {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  color: var(--azulPrincipal);
+  font-size: 1rem;
+  font-weight: 500;
+  line-height: 1.25;
+}
+
+/* ==================== INFORMACIÓN DEL PACIENTE SELECCIONADO ==================== */
+/* El título del panel se separa del contenido con la misma línea que usa el resto del módulo */
+.panel-seleccionado .panel-titulo {
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #e6edf7;
+  font-size: 1.12rem;
+}
+
+/* Identificación del paciente: nombre, estado y expediente en un bloque destacado */
+.seleccionado-cabecera {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 1rem;
+  border-radius: 14px;
+  background: #eef5ff;
+}
+
+.seleccionado-nombre {
+  margin: 0;
+  color: var(--azulPrincipal);
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+
+.seleccionado-meta {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.88rem;
+}
+
+/* Encabezado de cada bloque del detalle del paciente, en azul y con la línea que lo cierra */
+.seleccionado-subtitulo {
+  margin: 1.1rem 0 0.5rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid #e6edf7;
+  color: var(--azulSecundario);
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+/* Datos de la atención: el rótulo sobre el valor, en tantas columnas como datos haya (la cama solo
+   aparece en hospitalización) */
+.seleccionado-datos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+  gap: 0.75rem;
+  margin: 0;
+}
+
+.dato {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.dato-rotulo {
+  color: #64748b;
+  font-size: 0.8rem;
+}
+
+.dato-valor {
+  margin: 0;
+  color: var(--azulPrincipal);
+  font-size: 0.98rem;
+  font-weight: 700;
+}
+
+/* Diagnóstico actual y alergias: bloques de color para leerlos de un vistazo */
+.seleccionado-diagnostico,
+.seleccionado-alergias {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  font-size: 0.95rem;
+}
+
+.seleccionado-diagnostico {
+  background: #eef5ff;
+  color: var(--azulPrincipal);
+}
+
+/* Sin alergias conocidas el aviso queda en verde para no alarmar al indicar tratamiento */
+.seleccionado-alergias {
+  background: rgba(34, 197, 94, 0.14);
+  color: #166534;
+  font-weight: 600;
+}
+
+/* Últimos signos vitales: los cuatro valores en un mismo recuadro, separados por columnas */
+.seleccionado-vitales {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: 0;
+  border: 1px solid #e6edf7;
+  border-radius: 12px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.vital {
+  min-width: 0;
+  padding: 10px 12px;
+  border-left: 1px solid #eef2f8;
+
+  &:first-child {
+    border-left: none;
+  }
+}
+
+.vital-rotulo {
+  color: #94a3b8;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.vital-valor {
+  margin: 2px 0 0;
+  color: var(--azulPrincipal);
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.vital-unidad {
+  display: block;
+  color: #94a3b8;
+  font-size: 0.76rem;
+  font-weight: 600;
+}
+
+/* Acciones del paciente: primero el expediente y después su episodio actual */
+.seleccionado-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  /* Se aprovecha casi todo el ancho del panel: solo se descuenta una parte del relleno lateral */
+  margin: 1.15rem -0.6rem 0;
+
+  /* Las acciones se reparten la fila por igual, con algo más de cuerpo y de tipografía */
+  .btn {
+    flex: 1 1 0;
+    height: 40px;
+    margin-bottom: 0;
+    padding: 0 1rem;
+    border-radius: 11px;
+    font-size: 0.95rem;
+    font-weight: 700;
+  }
+}
+
+.seleccionado-vacio {
+  margin: 0;
+  padding: 2rem 1rem;
+  border: 1px dashed var(--colorBorde);
+  border-radius: 14px;
+  color: #64748b;
+  text-align: center;
+}
+
+/* En pantallas medianas el detalle del paciente baja debajo de la matriz para no quedarse sin ancho */
+@media (max-width: 1280px) {
+  .atencion {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .panel-seleccionado {
+    position: static;
+  }
+}
+
+/* En pantallas estrechas las tarjetas pasan a dos columnas y, en el móvil, a una sola */
+@media (max-width: 900px) {
+  .pacientes-lista {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 620px) {
+  .pacientes-lista {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

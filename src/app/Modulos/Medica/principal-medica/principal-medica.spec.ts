@@ -1,7 +1,12 @@
+import { Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
 
 import { PrincipalMedica } from './principal-medica';
+
+/** Pantalla de relleno: sustituye a los submódulos para probar la navegación del contenedor. */
+@Component({ selector: 'app-pantalla-prueba', template: '' })
+class PantallaPrueba {}
 
 describe('PrincipalMedica', () => {
   let component: PrincipalMedica;
@@ -9,8 +14,14 @@ describe('PrincipalMedica', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [PrincipalMedica],
-      providers: [provideRouter([])],
+      imports: [PrincipalMedica, PantallaPrueba],
+      providers: [
+        provideRouter([
+          { path: 'medica/atencion', component: PantallaPrueba },
+          { path: 'medica/evaluacion', component: PantallaPrueba },
+          { path: '**', component: PantallaPrueba },
+        ]),
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(PrincipalMedica);
@@ -25,9 +36,8 @@ describe('PrincipalMedica', () => {
 
   it('ofrece el acceso a las pantallas del módulo en el submenú', () => {
     const menu: HTMLElement = fixture.nativeElement;
-    const opciones = Array.from(
-      menu.querySelectorAll('.subMenuNav .option'),
-      (opcion: Element) => opcion.textContent?.trim(),
+    const opciones = Array.from(menu.querySelectorAll('.subMenuNav .option'), (opcion: Element) =>
+      opcion.textContent?.trim(),
     );
 
     expect(opciones).toEqual([
@@ -36,5 +46,22 @@ describe('PrincipalMedica', () => {
       'Evolución médica',
       'Alta médica',
     ]);
+  });
+
+  it('oculta el submenú en la selección del paciente y lo muestra al abrir un episodio', async () => {
+    const router = TestBed.inject(Router);
+
+    await router.navigateByUrl('/medica/atencion');
+    fixture.detectChanges();
+
+    expect(component.submenuVisible()).toBe(false);
+    expect(fixture.nativeElement.querySelector('.subMenuNav')).toBeNull();
+    expect(fixture.nativeElement.textContent).not.toContain('Módulo Médico');
+
+    await router.navigateByUrl('/medica/evaluacion');
+    fixture.detectChanges();
+
+    expect(component.submenuVisible()).toBe(true);
+    expect(fixture.nativeElement.querySelector('.subMenuNav')).not.toBeNull();
   });
 });

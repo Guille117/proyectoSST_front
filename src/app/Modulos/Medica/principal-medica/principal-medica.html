@@ -1,22 +1,23 @@
 <div class="principal">
+  <!-- La selección del paciente es la pantalla de entrada del módulo: sin título ni submódulos -->
+  @if (submenuVisible()) {
     <h2>Módulo Médico</h2>
     <nav class="subMenuNav">
-        <div class="option" routerLink="evaluacion" routerLinkActive="active">
-            Evaluación clínica
-        </div>
-        <div class="option" routerLink="indicaciones" routerLinkActive="active">
-            Indicaciones médicas
-        </div>
-        <div class="option" routerLink="evolucion" routerLinkActive="active">
-            Evolución médica
-        </div>
-        <div class="option" routerLink="alta" routerLinkActive="active">
-            Alta médica
-        </div>
+      <div class="option" routerLink="evaluacion" routerLinkActive="active">Evaluación clínica</div>
+      <div class="option" routerLink="indicaciones" routerLinkActive="active">
+        Indicaciones médicas
+      </div>
+      <div class="option" routerLink="evolucion" routerLinkActive="active">Evolución médica</div>
+      <div class="option" routerLink="alta" routerLinkActive="active">Alta médica</div>
 
+      <!-- Acción del episodio en curso: lo cierra y regresa al listado de pacientes en atención -->
+      <button type="button" class="btn cerrar-episodio" (click)="cerrarEpisodio()">
+        Cerrar episodio
+      </button>
     </nav>
+  }
 
-    <div class="contenido">
-        <router-outlet></router-outlet>
-    </div>
+  <div class="contenido">
+    <router-outlet></router-outlet>
+  </div>
 </div>

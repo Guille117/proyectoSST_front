@@ -1,0 +1,34 @@
+/* ==================== MÓDULO MÉDICO (CONTENEDOR) ==================== */
+/* El submenú del módulo comparte estilo con el resto de módulos (subMenuStyle); aquí solo se añade
+   la acción que cierra el episodio en curso. */
+.subMenuNav .btn.cerrar-episodio {
+  display: inline-flex;
+  align-items: center;
+  /* Se separa de las pestañas del episodio sin alterar el alto de la fila */
+  align-self: center;
+  /* La acción nunca se encoge: si falta espacio lo ceden las pestañas del episodio */
+  flex: 0 0 auto;
+  height: 32px;
+  /* Al final de la barra; con la ficha del paciente a la vista se corre hacia su izquierda
+     (styles/medicaStyle.scss) para no quedar debajo del bloque. */
+  margin: 0 0 0 auto;
+  padding: 0 0.9rem;
+  border: 1px solid rgba(225, 12, 5, 0.35);
+  border-radius: 999px;
+  background: rgba(225, 12, 5, 0.07);
+  color: #e10c05;
+  font-size: 0.95rem;
+  font-weight: 600;
+
+  &:hover {
+    border-color: #e10c05;
+    background: #e10c05;
+    color: #fff;
+  }
+
+  &:focus-visible {
+    outline: 2px solid #e10c05;
+    outline-offset: 2px;
+  }
+}
+

@@ -1,0 +1,12 @@
+/* ==================== MÓDULO MÉDICO ==================== */
+/* La ficha con los datos del paciente es un bloque fijo pegado al borde derecho de la pantalla y las
+   pantallas del episodio le reservan su ancho; la barra de submódulos, en cambio, vive fuera de esas
+   pantallas, así que su acción de cierre se corre aquí para que no quede debajo del bloque.
+   Solo actúa con la ficha a la vista y en pantallas anchas: en las estrechas el bloque deja de estar
+   pegado al borde, fluye con el contenido y la barra no necesita reservar nada. */
+@media (min-width: 901px) {
+  app-principal-medica .principal:has(.ficha) .subMenuNav .btn.cerrar-episodio {
+    /* Se reserva el ancho de la ficha dentro de la barra: la acción queda a su izquierda */
+    margin-right: var(--ficha-ancho, 340px);
+  }
+}
