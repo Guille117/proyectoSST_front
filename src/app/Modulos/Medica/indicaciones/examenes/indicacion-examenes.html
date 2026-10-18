@@ -32,51 +32,105 @@
       </div>
     </div>
 
-    <!-- Archivo del examen: opcional; adjunta una imagen o un PDF a la indicación -->
+    <!-- Archivos del examen: opcionales; adjunta imágenes o PDF a la indicación -->
     <div class="indicacion-campo indicacion-archivo">
-      <label class="indicacion-etiqueta" for="archivoExamen">Archivo o imagen</label>
+      <label class="indicacion-etiqueta" for="archivoExamen">Archivos o imágenes</label>
 
-      <div class="carga-archivo" (dragover)="$event.preventDefault()" (drop)="soltarArchivoExamen($event)">
-        <input
-          #archivoExamenInput
-          type="file"
-          id="archivoExamen"
-          name="archivoExamen"
-          [attr.accept]="archivos.aceptados"
-          (change)="seleccionarArchivoExamen($event)"
-        />
+      <!-- Archivos ya guardados al editar: la X los marca para eliminarlos al guardar -->
+      @if (archivosExistentes.length) {
+        <div class="examen-archivos-guardados">
+          <p class="ayuda-archivo">
+            Marca con X los archivos que quieras eliminar; la eliminación se aplicará al guardar.
+          </p>
 
-        @if (!archivoExamen) {
-          <label for="archivoExamen" class="zona-carga">
-            <i class="bi bi-cloud-arrow-up" aria-hidden="true"></i>
-            <strong>Arrastra y suelta la imagen o el PDF aquí</strong>
-            <span>o haz clic para seleccionar</span>
-            <span class="boton-archivo">Seleccionar archivo</span>
-            <span class="ayuda-archivo">
-              Imágenes JPG o PNG · PDF · máximo {{ archivos.tamanoMaximoMb }} MB
-            </span>
-          </label>
-        }
-
-        @if (archivoExamen) {
-          <div class="archivo-seleccionado">
-            <i class="bi {{ archivoExamen.icono }}" aria-hidden="true"></i>
-            <span class="archivo-nombre">{{ archivoExamen.nombre }}</span>
-            <span class="archivo-peso">{{ archivoExamen.peso }}</span>
-            <button type="button" aria-label="Quitar archivo" (click)="quitarArchivoExamen()">
-              <i class="bi bi-x-lg" aria-hidden="true"></i>
-            </button>
+          <div class="archivos-seleccionados">
+            @for (archivo of archivosExistentes; track archivo.id) {
+              <div class="archivo-seleccionado">
+                <i class="bi {{ iconoArchivo(archivo) }}" aria-hidden="true"></i>
+                <span class="archivo-nombre">{{ archivo.nombreOriginal }}</span>
+                <span class="archivo-peso">{{ pesoArchivo(archivo) }}</span>
+                <button
+                  type="button"
+                  [attr.aria-label]="'Eliminar ' + archivo.nombreOriginal"
+                  [disabled]="guardando"
+                  (click)="quitarArchivoExistente(archivo)"
+                >
+                  <i class="bi bi-x-lg" aria-hidden="true"></i>
+                </button>
+              </div>
+            }
           </div>
-        }
-      </div>
+        </div>
+      }
+
+      @if (mostrarZonaCarga || archivosExamen.length) {
+        <div
+          class="carga-archivo"
+          (dragover)="$event.preventDefault()"
+          (drop)="soltarArchivosExamen($event)"
+        >
+          <input
+            #archivoExamenInput
+            type="file"
+            id="archivoExamen"
+            name="archivoExamen"
+            multiple
+            [attr.accept]="aceptadosExamen"
+            [disabled]="guardando"
+            (change)="seleccionarArchivosExamen($event)"
+          />
+
+          @if (mostrarZonaCarga) {
+            <label for="archivoExamen" class="zona-carga">
+              <i class="bi bi-cloud-arrow-up" aria-hidden="true"></i>
+              <strong>Arrastra y suelta las imágenes o los PDF aquí</strong>
+              <span>o haz clic para seleccionar</span>
+              <span class="boton-archivo">Seleccionar archivos</span>
+              <span class="ayuda-archivo">
+                Imágenes JPG o PNG · PDF · máximo {{ archivos.tamanoMaximoMb }} MB por archivo
+              </span>
+            </label>
+          } @else {
+            <div class="archivos-seleccionados">
+              @for (archivo of archivosExamen; track $index) {
+                <div class="archivo-seleccionado">
+                  <i class="bi {{ archivo.icono }}" aria-hidden="true"></i>
+                  <span class="archivo-nombre">{{ archivo.nombre }}</span>
+                  <span class="archivo-peso">{{ archivo.peso }}</span>
+                  <button
+                    type="button"
+                    [attr.aria-label]="'Quitar ' + archivo.nombre"
+                    [disabled]="guardando"
+                    (click)="quitarArchivoExamen($index)"
+                  >
+                    <i class="bi bi-x-lg" aria-hidden="true"></i>
+                  </button>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      }
     </div>
 
     <!-- Acciones del formulario -->
     <div class="acciones-formulario indicacion-acciones">
-      <button type="button" class="btn _cancelar" (click)="limpiarFormularioExamen()">
+      <button type="button" class="btn _cancelar" [disabled]="guardando" (click)="limpiarFormularioExamen()">
         Cancelar
       </button>
-      <button type="submit" class="btn _guardar" [disabled]="!puedeGuardarExamen">Guardar</button>
+      @if (archivosExamen.length) {
+        <button
+          type="button"
+          class="btn _principal"
+          [disabled]="guardando"
+          (click)="abrirGestorArchivosExamen()"
+        >
+          Agregar archivo
+        </button>
+      }
+      <button type="submit" class="btn _guardar" [disabled]="!puedeGuardarExamen">
+        {{ guardando ? 'Guardando...' : 'Guardar' }}
+      </button>
     </div>
   </form>
 </section>
@@ -106,99 +160,99 @@
 
   <!-- Listado de exámenes: solo las tarjetas se desplazan bajo el título y los filtros fijos -->
   <div class="indicados-lista">
-    @for (examen of examenesFiltrados; track examen.id) {
-      <article
-        class="indicacion-card"
-        [class.indicacion-card--verde]="examen.disponible && examen.estado === 'activo'"
-        [class.indicacion-card--rojo]="!examen.disponible && examen.estado === 'activo'"
-        [class.indicacion-card--eliminada]="examen.estado === 'eliminado'"
-        [class.indicacion-card--menu-abierto]="menuIndicacionAbierta === examen.id"
-        [class.indicacion-card--edicion]="examenEnEdicion === examen.id"
-        [attr.data-examen-id]="examen.id"
-      >
-        <header class="indicacion-encabezado">
-          <span class="indicacion-nombre">{{ examen.nombre }}</span>
+    @if (cargando) {
+      <p class="indicacion-vacio">Cargando exámenes...</p>
+    } @else if (sinEpisodioActivo) {
+      <p class="indicacion-vacio">Abra un episodio para consultar sus exámenes.</p>
+    } @else if (errorCarga) {
+      <p class="indicacion-vacio">
+        No se pudieron cargar los exámenes. Intente nuevamente.
+      </p>
+    } @else {
+      @for (examen of examenesFiltrados; track examen.id) {
+        <article
+          class="indicacion-card"
+          [class.indicacion-card--verde]="examen.disponible && examen.estado === 'activo'"
+          [class.indicacion-card--rojo]="!examen.disponible && examen.estado === 'activo'"
+          [class.indicacion-card--eliminada]="examen.estado === 'eliminado'"
+          [class.indicacion-card--menu-abierto]="menuIndicacionAbierta === examen.id"
+          [class.indicacion-card--edicion]="examenEnEdicion === examen.id"
+          [attr.data-examen-id]="examen.id"
+        >
+          <header class="indicacion-encabezado">
+            <span class="indicacion-nombre">{{ examen.nombre }}</span>
 
-          <!-- Menú de opciones de la tarjeta: mismo despliegue del listado de medicamentos -->
-          <button
-            type="button"
-            class="indicacion-menu-trigger"
-            title="Más opciones"
-            aria-haspopup="menu"
-            [attr.aria-label]="'Más opciones para el examen ' + examen.nombre"
-            [attr.aria-expanded]="menuIndicacionAbierta === examen.id"
-            (click)="alternarMenuIndicacion(examen.id)"
-          >
-            <i class="bi bi-three-dots-vertical" aria-hidden="true"></i>
-          </button>
-        </header>
+            <!-- Menú de opciones de la tarjeta: mismo despliegue del listado de medicamentos -->
+            <button
+              type="button"
+              class="indicacion-menu-trigger"
+              title="Más opciones"
+              aria-haspopup="menu"
+              [attr.aria-label]="'Más opciones para el examen ' + examen.nombre"
+              [attr.aria-expanded]="menuIndicacionAbierta === examen.id"
+              (click)="alternarMenuIndicacion(examen.id)"
+            >
+              <i class="bi bi-three-dots-vertical" aria-hidden="true"></i>
+            </button>
+          </header>
 
-        @if (examen.observacion) {
-          <p class="indicacion-observaciones">{{ examen.observacion }}</p>
-        }
+          @if (examen.observacion) {
+            <p class="indicacion-observaciones">{{ examen.observacion }}</p>
+          }
 
-        <!-- Adjunto del examen: solo lo muestran los exámenes que llevan una imagen o un PDF -->
-        @if (examen.archivo) {
-          <p class="examen-adjunto">
-            <i class="bi {{ examen.archivo.icono }}" aria-hidden="true"></i>
-            <span>{{ examen.archivo.nombre }}</span>
-            <small>{{ examen.archivo.peso }}</small>
-          </p>
-        }
+          <!-- Disponibilidad del examen: el ojo abre el visor de sus archivos -->
+          @if (examen.archivos.length && examen.estado === 'activo') {
+            <button
+              type="button"
+              class="examen-ojo"
+              title="Ver los archivos del examen"
+              [attr.aria-label]="'Ver los archivos del examen ' + examen.nombre"
+              (click)="verArchivosExamen(examen)"
+            >
+              <i class="bi bi-eye" aria-hidden="true"></i>
+            </button>
+          }
 
-        <!-- Disponibilidad del examen: el ojo se dibuja sobre la esquina inferior derecha de la
-             tarjeta, sin ocupar alto propio, y abre el adjunto del examen -->
-        @if (examen.disponible) {
-          <button
-            type="button"
-            class="examen-ojo"
-            title="Ver el adjunto del examen"
-            [attr.aria-label]="'Ver el adjunto del examen ' + examen.nombre"
-            (click)="verAdjuntoExamen(examen)"
-          >
-            <i class="bi bi-eye" aria-hidden="true"></i>
-          </button>
-        }
+          <!-- Menú de opciones: se dibuja al final de la tarjeta y flota sobre ella -->
+          @if (menuIndicacionAbierta === examen.id) {
+            <div
+              class="indicacion-menu"
+              role="menu"
+              [attr.aria-label]="'Opciones para el examen ' + examen.nombre"
+            >
+              <div class="indicacion-menu-opcion">
+                <span>Editar</span>
+                <button
+                  type="button"
+                  class="iconEditar"
+                  role="menuitem"
+                  title="Editar examen"
+                  [attr.aria-label]="'Editar el examen ' + examen.nombre"
+                  (click)="editarExamen(examen); cerrarMenuIndicacion()"
+                >
+                  <i class="bi bi-pencil-square" aria-hidden="true"></i>
+                </button>
+              </div>
 
-        <!-- Menú de opciones: se dibuja al final de la tarjeta y flota sobre ella -->
-        @if (menuIndicacionAbierta === examen.id) {
-          <div
-            class="indicacion-menu"
-            role="menu"
-            [attr.aria-label]="'Opciones para el examen ' + examen.nombre"
-          >
-            <div class="indicacion-menu-opcion">
-              <span>Editar</span>
-              <button
-                type="button"
-                class="iconEditar"
-                role="menuitem"
-                title="Editar examen"
-                [attr.aria-label]="'Editar el examen ' + examen.nombre"
-                (click)="editarExamen(examen); cerrarMenuIndicacion()"
-              >
-                <i class="bi bi-pencil-square" aria-hidden="true"></i>
-              </button>
+              <div class="indicacion-menu-opcion">
+                <span>Eliminar</span>
+                <button
+                  type="button"
+                  class="iconQuitar"
+                  role="menuitem"
+                  title="Eliminar examen"
+                  [attr.aria-label]="'Eliminar el examen ' + examen.nombre"
+                  (click)="eliminarExamen(examen)"
+                >
+                  <i class="bi bi-trash3" aria-hidden="true"></i>
+                </button>
+              </div>
             </div>
-
-            <div class="indicacion-menu-opcion">
-              <span>Eliminar</span>
-              <button
-                type="button"
-                class="iconQuitar"
-                role="menuitem"
-                title="Eliminar examen"
-                [attr.aria-label]="'Eliminar el examen ' + examen.nombre"
-                (click)="eliminarExamen(examen)"
-              >
-                <i class="bi bi-trash3" aria-hidden="true"></i>
-              </button>
-            </div>
-          </div>
-        }
-      </article>
-    } @empty {
-      <p class="indicacion-vacio">{{ mensajeSinExamenes }}</p>
+          }
+        </article>
+      } @empty {
+        <p class="indicacion-vacio">{{ mensajeSinExamenes }}</p>
+      }
     }
   </div>
 </section>

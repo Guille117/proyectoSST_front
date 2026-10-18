@@ -1,39 +1,6 @@
 /* ==================== EXÁMENES INDICADOS ==================== */
-/* Adjunto del examen: chip con el icono de su tipo, su nombre y su peso; el nombre se recorta
-   cuando es largo para que la tarjeta no cambie de ancho. */
-.examen-adjunto {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  max-width: 100%;
-  margin: 0.75rem 0 0;
-  padding: 6px 12px;
-  border: 1px solid #dfe7f3;
-  border-radius: 999px;
-  background: #f7fafd;
-  color: #33445e;
-  font-size: 0.9rem;
-
-  i {
-    color: var(--azulSecundario);
-    font-size: 1.05rem;
-  }
-
-  span {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  small {
-    color: #667085;
-    font-size: 0.8rem;
-    white-space: nowrap;
-  }
-}
-
 /* Disponibilidad del examen: el ojo se apoya sobre la esquina inferior derecha de la tarjeta —no
-   suma alto propio— y solo lo dibujan los exámenes disponibles; el borde verde lo refuerza. */
+   suma alto propio— y solo lo dibujan los exámenes con archivos; el borde verde lo refuerza. */
 .examen-ojo {
   position: absolute;
   right: 0.5rem;
@@ -73,9 +40,5 @@
 .indicacion-card:has(.examen-ojo) {
   .indicacion-observaciones {
     padding-right: 2.6rem;
-  }
-
-  .examen-adjunto {
-    max-width: calc(100% - 2.6rem);
   }
 }

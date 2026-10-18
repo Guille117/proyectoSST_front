@@ -99,3 +99,47 @@
     outline-offset: -2px;
   }
 }
+
+/* Existencia del medicamento en la tabla de resultados */
+.sin-existencia {
+  color: #b42318;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* Nombre del medicamento y su aviso de no registrado, uno al lado del otro */
+.indicacion-nombre-grupo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  min-width: 0;
+  gap: 14px;
+}
+
+/* Aviso en la tarjeta cuando la indicación usa un medicamento no registrado */
+.indicacion-badge-no-registrado {
+  display: inline-flex;
+  align-items: center;
+  color: #b42318;
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+/* Opción para indicar un medicamento que no está registrado */
+.medicamento-libre {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 10px;
+  color: #667085;
+  font-size: 0.85rem;
+
+  .btn {
+    flex: 0 1 auto;
+  }
+}

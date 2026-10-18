@@ -1,17 +1,18 @@
 import { NgClass } from '@angular/common';
 import { ChangeDetectorRef, Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { finalize, forkJoin, map, Subscription, TimeoutError } from 'rxjs';
+import { finalize, forkJoin, map, Subscription, timeout, TimeoutError } from 'rxjs';
 import { Paginacion } from '../../../../shared/paginacion/paginacion';
 import { PopUps } from '../../../../shared/popUps/popUpsService';
+import { CatalogoService } from '../../../Catalogos/data/serviceCatalogo';
 import { AuthService } from '../../../Auth/data/auth-service';
 import { EpisodioActivoService } from '../../data/episodio-activo-service';
+import { TIMEOUT_HTTP_MS } from '../../evaluacion/data/constantes-clinicas';
 import {
   DuracionVista,
   TIPOS_DURACION,
   TipoDuracion,
   faltaDuracionEnDias as calcularFaltaDuracion,
-  textoDuracion as describirDuracion,
 } from '../data/duracion';
 import {
   EstadoIndicacionMedicamento,
@@ -35,8 +36,12 @@ type FiltroIndicacion = 'todas' | 'activas' | 'finalizadas' | 'eliminadas';
 /** Indicación de medicamento lista para pintar la tarjeta del listado. */
 interface IndicacionMedicamentoVista extends DuracionVista {
   id: number;
-  medicamentoLogId: number;
+  medicamentoLogId: number | null;
   nombre: string;
+  /** Texto libre cuando el medicamento no está registrado en el catálogo. */
+  medicamentoLibre: string;
+  /** Presentación del medicamento o abreviatura de la unidad guardada con la indicación. */
+  presentacion: string;
   /** Cantidad indicada; el contrato la exige como entero mayor a 0. */
   cantidad: number;
   /** Frecuencia indicada; el contrato la exige como entero mayor a 0. */
@@ -74,19 +79,27 @@ interface FiltroIndicacionVista {
 export class IndicacionMedicamentos implements OnInit, OnDestroy {
   private readonly popUps = inject(PopUps);
   private readonly servicio = inject(MedicamentoIndicacionService);
+  private readonly catalogoService = inject(CatalogoService);
   private readonly authService = inject(AuthService);
   private readonly episodioActivo = inject(EpisodioActivoService);
   private readonly cdr = inject(ChangeDetectorRef);
 
   private peticionLista?: Subscription;
   private peticionCatalogo?: Subscription;
+  private peticionUnidades?: Subscription;
   private peticionAccion?: Subscription;
   private destruido = false;
+
+  /** Abreviatura de cada unidad de medida del catálogo, por nombre de la unidad. */
+  private readonly abreviaturasUnidad = new Map<string, string>();
 
   // ------------------- ESTADO DE LA VISTA -------------------
   /** Campos del formulario de la indicación. */
   medicamento = '';
+  /** Medicamento no registrado escrito por el usuario. */
+  medicamentoLibre = '';
   cantidad: number | null = null;
+  unidadMedida = '';
   frecuencia: number | null = null;
   duracionTipo: TipoDuracion | '' = '';
   duracionCantidad: number | null = null;
@@ -131,6 +144,12 @@ export class IndicacionMedicamentos implements OnInit, OnDestroy {
   /** Tipos de duración que ofrece el desplegable de la duración. */
   tiposDuracion = TIPOS_DURACION;
 
+  /**
+   * Unidades de medida del catálogo de farmacia; «Gotas» se agrega siempre al final para que esté
+   * disponible aunque el catálogo no la tenga registrada.
+   */
+  unidadesMedida: string[] = ['Gotas'];
+
   // ------------------- FILTROS DEL LISTADO -------------------
   /** Filtro elegido para el listado de lo indicado; abre mostrando las indicaciones vigentes. */
   filtroIndicacion: FiltroIndicacion = 'todas';
@@ -145,6 +164,7 @@ export class IndicacionMedicamentos implements OnInit, OnDestroy {
 
   // ------------------- CICLO DE VIDA -------------------
   ngOnInit(): void {
+    this.cargarUnidadesMedida();
     this.cargarIndicaciones();
   }
 
@@ -152,6 +172,7 @@ export class IndicacionMedicamentos implements OnInit, OnDestroy {
     this.destruido = true;
     this.peticionLista?.unsubscribe();
     this.peticionCatalogo?.unsubscribe();
+    this.peticionUnidades?.unsubscribe();
     this.peticionAccion?.unsubscribe();
   }
 
@@ -159,6 +180,11 @@ export class IndicacionMedicamentos implements OnInit, OnDestroy {
   /** El botón Guardar solo se habilita cuando hay un medicamento escrito. */
   get hayMedicamento(): boolean {
     return this.medicamento.trim().length > 0;
+  }
+
+  /** Hay un medicamento del catálogo o un medicamento libre listo para indicar. */
+  get hayMedicamentoSeleccionado(): boolean {
+    return this.medicamentoElegido !== null || this.medicamentoLibre.trim().length > 0;
   }
 
   /** La duración en días obliga a indicar cuántos días dura el tratamiento. */
@@ -173,7 +199,7 @@ export class IndicacionMedicamentos implements OnInit, OnDestroy {
   get puedeGuardar(): boolean {
     return (
       !this.busquedaMedicamentoRealizada &&
-      this.medicamentoElegido !== null &&
+      this.hayMedicamentoSeleccionado &&
       !this.faltaDuracionEnDias &&
       this.duracionTipo !== '' &&
       this.cantidad !== null &&
@@ -215,13 +241,22 @@ export class IndicacionMedicamentos implements OnInit, OnDestroy {
 
   /** Texto del medicamento elegido: su descripción y su vía de administración si la tiene. */
   get textoMedicamentoElegido(): string {
+    if (this.medicamentoLibre.trim()) {
+      return `${this.medicamentoLibre.trim()} · No registrado`;
+    }
+
     const elegido = this.medicamentoElegido;
     if (!elegido) return '';
 
     const descripcion = this.descripcionMedicamento(elegido);
-    return elegido.viaAdministracion
-      ? `${descripcion}, administración ${elegido.viaAdministracion.toLowerCase()}`
-      : descripcion;
+    const via = elegido.viaAdministracion
+      ? `, administración ${elegido.viaAdministracion.toLowerCase()}`
+      : '';
+    const sinExistencia =
+      elegido.disponibleConocido !== false && elegido.disponible <= 0
+        ? ' · Sin existencia'
+        : '';
+    return `${descripcion}${via}${sinExistencia}`;
   }
 
   /** Texto de la tabla de resultados cuando la búsqueda no encuentra medicamentos en el catálogo. */
@@ -233,9 +268,80 @@ export class IndicacionMedicamentos implements OnInit, OnDestroy {
       : 'El catálogo no tiene medicamentos para mostrar.';
   }
 
-  /** Texto de la duración que muestra la tarjeta. */
+  /** Texto de la cantidad con su unidad: «1 tableta», «2 tabletas», «5 ml». */
+  textoCantidad(indicacion: IndicacionMedicamentoVista): string {
+    return `${indicacion.cantidad} ${this.unidadDe(indicacion)}`;
+  }
+
+  /** Texto de la frecuencia: «cada 4 horas» o «cada 1 hora». */
+  textoFrecuencia(indicacion: IndicacionMedicamentoVista): string {
+    return `cada ${indicacion.frecuencia} ${indicacion.frecuencia === 1 ? 'hora' : 'horas'}`;
+  }
+
+  /** Texto de la duración que muestra la tarjeta: «por 1 día», «dosis única»... */
   textoDuracion(registro: DuracionVista): string {
-    return describirDuracion(registro);
+    if (registro.duracionTipo === 'dias') {
+      const dias = registro.duracionCantidad ?? 0;
+      return `por ${dias} ${dias === 1 ? 'día' : 'días'}`;
+    }
+
+    if (registro.duracionTipo === 'unica') return 'dosis única';
+    if (registro.duracionTipo === 'indefinida') return 'por tiempo indefinido';
+    return '';
+  }
+
+  // ------------------- CARGA DE LAS UNIDADES DE MEDIDA -------------------
+  /** Carga del catálogo las unidades de medida y les suma «Gotas». */
+  cargarUnidadesMedida(): void {
+    if (this.destruido) return;
+
+    this.peticionUnidades?.unsubscribe();
+    this.peticionUnidades = this.catalogoService
+      .listarUnidadMedida()
+      .pipe(
+        timeout(TIMEOUT_HTTP_MS),
+        finalize(() => {
+          if (!this.destruido) this.cdr.markForCheck();
+        }),
+      )
+      .subscribe({
+        next: (unidades) => {
+          if (this.destruido) return;
+
+          this.abreviaturasUnidad.clear();
+          for (const unidad of unidades) {
+            const nombre = unidad.nombre?.trim();
+            const abreviatura = unidad.abreviatura?.trim();
+            if (nombre && abreviatura) this.abreviaturasUnidad.set(nombre, abreviatura);
+          }
+
+          this.unidadesMedida = this.combinarUnidades(unidades.map((unidad) => unidad.nombre));
+        },
+        error: (error) => {
+          if (this.destruido) return;
+
+          this.mostrarError(error, 'No se pudieron cargar las unidades de medida.');
+        },
+      });
+  }
+
+  /** Une las unidades del catálogo con «Gotas», sin repetir nombres equivalentes. */
+  private combinarUnidades(unidades: string[]): string[] {
+    const resultado: string[] = [];
+    const vistos = new Set<string>();
+
+    for (const unidad of [...unidades, 'Gotas']) {
+      const nombre = unidad?.trim();
+      if (!nombre) continue;
+
+      const clave = this.singularizar(nombre.toLowerCase());
+      if (vistos.has(clave)) continue;
+
+      vistos.add(clave);
+      resultado.push(nombre);
+    }
+
+    return resultado;
   }
 
   // ------------------- CARGA DEL LISTADO -------------------
@@ -361,12 +467,27 @@ export class IndicacionMedicamentos implements OnInit, OnDestroy {
   seleccionarMedicamento(opcion: MedicamentoCatalogoResponse): void {
     this.cerrarResultadosMedicamento();
     this.medicamento = this.descripcionMedicamento(opcion);
+    this.medicamentoLibre = '';
     this.medicamentoElegido = opcion;
+  }
+
+  /** Indica como medicamento no registrado el texto escrito en el buscador. */
+  usarMedicamentoLibre(): void {
+    const texto = this.medicamento.trim();
+    if (!texto) {
+      this.popUps.advertencia('Escriba el medicamento o sus detalles.');
+      return;
+    }
+
+    this.medicamentoLibre = texto;
+    this.medicamentoElegido = null;
+    this.cerrarResultadosMedicamento();
   }
 
   /** Devuelve el formulario al buscador para elegir otro medicamento en lugar del elegido. */
   cambiarMedicamento(): void {
     this.medicamento = '';
+    this.medicamentoLibre = '';
     this.cerrarResultadosMedicamento();
     this.buscarMedicamento();
   }
@@ -412,9 +533,19 @@ export class IndicacionMedicamentos implements OnInit, OnDestroy {
 
     this.cerrarMenuIndicacion();
     this.indicacionEnEdicion = indicacion.id;
-    this.medicamentoElegido = this.catalogoMinimo(indicacion);
-    this.medicamento = indicacion.nombre;
+
+    if (indicacion.medicamentoLogId === null) {
+      this.medicamentoElegido = null;
+      this.medicamentoLibre = indicacion.medicamentoLibre || indicacion.nombre;
+      this.medicamento = this.medicamentoLibre;
+    } else {
+      this.medicamentoElegido = this.catalogoMinimo(indicacion);
+      this.medicamentoLibre = '';
+      this.medicamento = indicacion.nombre;
+    }
+
     this.cantidad = indicacion.cantidad;
+    this.unidadMedida = this.unidadDesdePresentacion(indicacion.presentacion);
     this.frecuencia = indicacion.frecuencia;
     this.duracionTipo = indicacion.duracionTipo;
     this.duracionCantidad = indicacion.duracionCantidad;
@@ -427,7 +558,9 @@ export class IndicacionMedicamentos implements OnInit, OnDestroy {
   /** Deja el formulario listo para capturar una indicación nueva. */
   limpiarFormulario(): void {
     this.medicamento = '';
+    this.medicamentoLibre = '';
     this.cantidad = null;
+    this.unidadMedida = '';
     this.frecuencia = null;
     this.duracionTipo = '';
     this.duracionCantidad = null;
@@ -463,12 +596,15 @@ export class IndicacionMedicamentos implements OnInit, OnDestroy {
     }
 
     const elegido = this.medicamentoElegido;
+    const libre = this.medicamentoLibre.trim();
     const idEditado = this.indicacionEnEdicion;
 
-    if (!elegido) return;
+    if (!elegido && !libre) return;
 
     const cuerpo: MedicamentoIndicacionRequest = {
-      medicamentoLogId: elegido.id,
+      medicamentoLogId: elegido?.id ?? null,
+      medicamentoLibre: elegido ? null : libre || null,
+      presentacion: this.presentacionParaEnviar(elegido),
       cantidad: this.cantidad!,
       frecuencia: this.frecuencia!,
       duracion: this.duracionTipo === 'dias' ? this.duracionCantidad : null,
@@ -556,11 +692,6 @@ export class IndicacionMedicamentos implements OnInit, OnDestroy {
       });
   }
 
-  /** Finaliza la indicación activa usando el cambio de estado del backend. */
-  finalizarIndicacion(indicacion: IndicacionMedicamentoVista): void {
-    this.cambiarEstadoIndicacion(indicacion, 'FINALIZADO');
-  }
-
   /** Reactiva una indicación finalizada o eliminada. */
   reactivarIndicacion(indicacion: IndicacionMedicamentoVista): void {
     this.cambiarEstadoIndicacion(indicacion, 'ACTIVO');
@@ -605,6 +736,76 @@ export class IndicacionMedicamentos implements OnInit, OnDestroy {
   }
 
   // ------------------- APOYO -------------------
+  /**
+   * Unidad de la cantidad: la presentación del medicamento o la abreviatura de la unidad que se
+   * guardó con la indicación; sin ninguna de las dos se usa «unidad»/«unidades».
+   */
+  private unidadDe(indicacion: IndicacionMedicamentoVista): string {
+    return this.conciliarUnidad(indicacion.presentacion, indicacion.cantidad);
+  }
+
+  /** Texto que se guarda en la presentación: la presentación del medicamento o la abreviatura elegida. */
+  private presentacionParaEnviar(elegido: MedicamentoCatalogoResponse | null): string | null {
+    const unidad = this.unidadMedida.trim();
+    if (!unidad) return elegido?.presentacion?.trim() || null;
+    if (this.esGotas(unidad)) return 'gotas';
+
+    return this.abreviaturasUnidad.get(unidad)?.trim() || unidad;
+  }
+
+  /** Nombre de la unidad del catálogo que corresponde a la presentación guardada, si la hay. */
+  private unidadDesdePresentacion(presentacion: string): string {
+    const valor = presentacion.trim().toLowerCase();
+    if (!valor) return '';
+    if (this.esGotas(valor)) return 'Gotas';
+
+    for (const [nombre, abreviatura] of this.abreviaturasUnidad) {
+      if (abreviatura.trim().toLowerCase() === valor) return nombre;
+    }
+
+    return '';
+  }
+
+  /** La unidad elegida representa gotas; es una opción del front que no está en el catálogo. */
+  private esGotas(unidad: string): boolean {
+    return this.singularizar(unidad.trim().toLowerCase()) === 'gota';
+  }
+
+  /**
+   * Ajusta la primera palabra de la presentación al número indicado y conserva el resto del texto:
+   * «1 tableta de 400 mg», «2 tabletas de 400 mg», «5 ml».
+   */
+  private conciliarUnidad(base: string, cantidad: number): string {
+    const texto = base.trim();
+    if (!texto) return cantidad === 1 ? 'unidad' : 'unidades';
+
+    const [primera, ...resto] = texto.split(/\s+/);
+    const unidad = primera.toLowerCase();
+
+    // Las medidas abreviadas (mg, ml, g...) se escriben igual en singular y en plural
+    if (unidad.length <= 2) return texto;
+
+    const singular = this.singularizar(unidad);
+    const ajustada = cantidad === 1 ? singular : this.pluralizar(singular);
+    return [ajustada, ...resto].join(' ');
+  }
+
+  /** Singular de la unidad: «tabletas» → «tableta», «unidades» → «unidad». */
+  private singularizar(unidad: string): string {
+    if (unidad.endsWith('idades')) return unidad.slice(0, -2);
+    if (unidad.endsWith('s') && !unidad.endsWith('sis')) return unidad.slice(0, -1);
+    return unidad;
+  }
+
+  /** Plural de la unidad: «tableta» → «tabletas», «solución» → «soluciones». */
+  private pluralizar(unidad: string): string {
+    if (/[aeiou]$/.test(unidad)) return `${unidad}s`;
+    if (unidad.endsWith('d')) return `${unidad}es`;
+    if (unidad.endsWith('z')) return `${unidad.slice(0, -1)}ces`;
+    if (unidad.endsWith('ón')) return `${unidad.slice(0, -2)}ones`;
+    return unidad;
+  }
+
   /** Traduce la indicación del backend a los datos que pinta la tarjeta. */
   private aVista(respuesta: MedicamentoIndicacionResponse): IndicacionMedicamentoVista {
     const fecha = new Date(respuesta.fecha);
@@ -613,6 +814,8 @@ export class IndicacionMedicamentos implements OnInit, OnDestroy {
       id: respuesta.id,
       medicamentoLogId: respuesta.medicamentoLogId,
       nombre: respuesta.medicamento,
+      medicamentoLibre: respuesta.medicamentoLibre ?? '',
+      presentacion: respuesta.presentacion ?? '',
       cantidad: respuesta.cantidad,
       frecuencia: respuesta.frecuencia,
       duracionTipo: this.aDuracionVista(respuesta.tipoDuracion),
@@ -629,14 +832,16 @@ export class IndicacionMedicamentos implements OnInit, OnDestroy {
   /** Medicamento mínimo para editar: conserva el id que exige el PUT aunque falten los detalles. */
   private catalogoMinimo(indicacion: IndicacionMedicamentoVista): MedicamentoCatalogoResponse {
     return {
-      id: indicacion.medicamentoLogId,
+      id: indicacion.medicamentoLogId ?? 0,
       nombre: indicacion.nombre,
       codigo: '',
       dosis: 0,
       marca: '',
-      presentacion: '',
+      presentacion: indicacion.presentacion,
       viaAdministracion: '',
       unidadMedida: '',
+      disponible: 0,
+      disponibleConocido: false,
       estado: true,
     };
   }
@@ -689,8 +894,10 @@ export class IndicacionMedicamentos implements OnInit, OnDestroy {
 
   /** Avisa del campo que impide guardar cuando el formulario se envía incompleto. */
   private avisarValidacion(): void {
-    if (this.medicamentoElegido === null) {
-      this.popUps.advertencia('Busque y seleccione un medicamento del catálogo.');
+    if (!this.hayMedicamentoSeleccionado) {
+      this.popUps.advertencia(
+        'Busque y seleccione un medicamento del catálogo o indique uno no registrado.',
+      );
       return;
     }
     if (this.cantidad === null || !Number.isInteger(this.cantidad) || this.cantidad <= 0) {

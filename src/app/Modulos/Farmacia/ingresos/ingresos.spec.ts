@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Observable, of } from 'rxjs';
 import { ModalService } from '../../../modal-principal/modal-service';
 import { PopUps } from '../../../shared/popUps/popUpsService';
-import { ModalDocumento } from '../modalesFarmacia/modal-documento/modal-documento';
+import { VisorArchivos } from '../../../shared/visor-archivos/visor-archivos';
 import { ServicioInsumos } from '../insumos/data/servicio-insumos';
 import { ServicioMedicamento } from '../medicamentos/data/servicio-medicamento';
 import { proveedorResponse } from '../proveedores/data/proveedorInterfaz';
@@ -276,11 +276,20 @@ describe('Ingresos', () => {
     ).find((boton) => boton.textContent?.includes('Ver Comprobante'));
     botonComprobante?.click();
 
-    expect(abrirModal).toHaveBeenCalledWith(ModalDocumento, {
-      title: 'Comprobante de compra',
-      documento: detalleCompra.comprobante,
-      nombreArchivo: `comprobante-${detalleCompra.codigo}`,
-    });
+    expect(abrirModal).toHaveBeenCalledWith(
+      VisorArchivos,
+      expect.objectContaining({
+        title: 'Comprobante de compra',
+        modalClass: 'modal-visor-documentos',
+        archivos: [
+          expect.objectContaining({
+            id: detalleCompra.comprobante,
+            nombreOriginal: `comprobante-${detalleCompra.codigo}`,
+          }),
+        ],
+        cargarArchivo: expect.any(Function),
+      }),
+    );
 
     fixtureComprobante.destroy();
   });

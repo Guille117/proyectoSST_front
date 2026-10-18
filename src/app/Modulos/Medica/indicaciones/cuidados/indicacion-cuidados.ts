@@ -1,31 +1,40 @@
 import { NgClass } from '@angular/common';
-import { Component, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { finalize, forkJoin, map, Subscription, TimeoutError } from 'rxjs';
 import { PopUps } from '../../../../shared/popUps/popUpsService';
+import { AuthService } from '../../../Auth/data/auth-service';
+import { EpisodioActivoService } from '../../data/episodio-activo-service';
 import {
   DuracionVista,
   TIPOS_DURACION,
   TipoDuracion,
   faltaDuracionEnDias as calcularFaltaDuracion,
-  textoDuracion as describirDuracion,
 } from '../data/duracion';
+import {
+  CuidadoRequest,
+  CuidadoResponse,
+  EstadoCuidadoApi,
+  TipoDuracionCuidadoApi,
+} from './data/cuidadoInterfaz';
+import { IndicacionCuidadoService } from './data/cuidado-service';
 
-/* Tipos locales de la maqueta: se sustituirán por el contrato real del backend en la fase de integración. */
+/* Tipos locales de la vista: traducen el contrato del backend al lenguaje de las tarjetas. */
 /** Colores de acento lateral de la tarjeta del cuidado; describen su estado en el listado. */
 type TonoIndicacion = 'verde' | 'rojo' | 'naranja';
 
-/** Estados en los que puede quedar un cuidado indicado. */
+/** Estados en los que puede quedar un cuidado visto en el listado. */
 type EstadoCuidado = 'enProceso' | 'completado' | 'eliminado';
 
 /** Filtros del listado de cuidados: un estado concreto o «todas» los cuidados vigentes. */
 type FiltroCuidado = 'todas' | 'completados' | 'enProceso' | 'eliminados';
 
-/** Cuidado indicado al paciente: su nombre, su frecuencia, su duración y sus observaciones. */
+/** Cuidado indicado listo para pintar la tarjeta del listado. */
 interface CuidadoVista extends DuracionVista {
   id: number;
   nombre: string;
-  /** Frecuencia indicada; el formulario solo admite números. */
-  frecuencia: number | null;
+  /** Frecuencia indicada en horas. */
+  frecuencia: number;
   observaciones: string;
   fecha: string;
   hora: string;
@@ -38,13 +47,14 @@ interface CuidadoVista extends DuracionVista {
 interface FiltroCuidadoVista {
   id: FiltroCuidado;
   etiqueta: string;
-  /** Estado que muestra la opción; null cuando muestra los cuidados vigentes. */
-  estado: EstadoCuidado | null;
+  /** Estados del backend que reúne la opción; «Todas» excluye los eliminados. */
+  estados: EstadoCuidadoApi[];
 }
 
 /**
  * Sección de cuidados de las indicaciones médicas: registro del cuidado con su frecuencia, su
- * duración y sus observaciones, y listado de los cuidados indicados en el episodio.
+ * duración y sus observaciones, y listado de los cuidados indicados en el episodio. Las operaciones
+ * se guardan contra el backend; el episodio y el usuario salen del contexto de la sesión.
  */
 @Component({
   selector: 'app-indicacion-cuidados',
@@ -55,8 +65,16 @@ interface FiltroCuidadoVista {
     '(document:click)': 'cerrarMenuAlClicFuera($event)',
   },
 })
-export class IndicacionCuidados {
+export class IndicacionCuidados implements OnInit, OnDestroy {
   private readonly popUps = inject(PopUps);
+  private readonly servicio = inject(IndicacionCuidadoService);
+  private readonly authService = inject(AuthService);
+  private readonly episodioActivo = inject(EpisodioActivoService);
+  private readonly cdr = inject(ChangeDetectorRef);
+
+  private peticionLista?: Subscription;
+  private peticionAccion?: Subscription;
+  private destruido = false;
 
   // ------------------- ESTADO DE LA VISTA -------------------
   /** Campos del formulario del cuidado: nombre, frecuencia, duración y observaciones. */
@@ -72,81 +90,18 @@ export class IndicacionCuidados {
   /** Cuidado cuyos datos están cargados en el formulario; null al capturar un cuidado nuevo. */
   cuidadoEnEdicion: number | null = null;
 
-  // ------------------- MOCK: datos temporales para diseño -------------------
   /** Tipos de duración que ofrece el desplegable de la duración. */
   tiposDuracion = TIPOS_DURACION;
 
-  /** Colores de acento de las tarjetas de cuidados: el borde describe el estado del cuidado. */
-  private readonly tonosCuidado: Record<EstadoCuidado, TonoIndicacion> = {
-    completado: 'verde',
-    enProceso: 'naranja',
-    eliminado: 'rojo',
-  };
+  /** Cuidados del episodio con el filtro elegido, ya traducidos a la vista. */
+  cuidados: CuidadoVista[] = [];
 
-  /** MOCK: cuidados indicados en el episodio actual, con los estados del filtro del listado. */
-  cuidados: CuidadoVista[] = [
-    {
-      id: 1,
-      nombre: 'Cambio de posición',
-      frecuencia: 2,
-      duracionTipo: 'dias',
-      duracionCantidad: 5,
-      observaciones: 'Alternar decúbito lateral y evitar apoyar la zona de la úlcera.',
-      fecha: '10/10/2026',
-      hora: '09:15',
-      medico: 'Dr. Gómez',
-      estado: 'enProceso',
-    },
-    {
-      id: 2,
-      nombre: 'Control de signos vitales',
-      frecuencia: 4,
-      duracionTipo: 'dias',
-      duracionCantidad: 3,
-      observaciones: 'Registrar la saturación y la temperatura en cada control.',
-      fecha: '10/10/2026',
-      hora: '09:20',
-      medico: 'Dr. Gómez',
-      estado: 'enProceso',
-    },
-    {
-      id: 3,
-      nombre: 'Balance hídrico estricto',
-      frecuencia: 24,
-      duracionTipo: 'dias',
-      duracionCantidad: 2,
-      observaciones: 'Medir la diuresis y anotar los ingresos de cada turno.',
-      fecha: '10/10/2026',
-      hora: '09:24',
-      medico: 'Dr. Gómez',
-      estado: 'enProceso',
-    },
-    {
-      id: 4,
-      nombre: 'Curación de herida',
-      frecuencia: 12,
-      duracionTipo: 'dias',
-      duracionCantidad: 5,
-      observaciones: 'Lavar con solución fisiológica y cubrir con gasa estéril.',
-      fecha: '10/10/2026',
-      hora: '09:28',
-      medico: 'Dr. Gómez',
-      estado: 'completado',
-    },
-    {
-      id: 5,
-      nombre: 'Vigilancia de diuresis',
-      frecuencia: 8,
-      duracionTipo: 'indefinida',
-      duracionCantidad: null,
-      observaciones: 'Cuidado duplicado en la orden.',
-      fecha: '09/10/2026',
-      hora: '16:40',
-      medico: 'Dra. Herrera',
-      estado: 'eliminado',
-    },
-  ];
-  // ------------------- FIN MOCK -------------------
+  /** Estados de las peticiones: bloquean acciones incompatibles y muestran la carga. */
+  cargando = false;
+  guardando = false;
+  eliminando = false;
+  errorCarga = false;
+  sinEpisodioActivo = false;
 
   // ------------------- FILTROS DEL LISTADO -------------------
   /** Filtro elegido para el listado de cuidados; abre mostrando los cuidados vigentes. */
@@ -154,25 +109,21 @@ export class IndicacionCuidados {
 
   /** Opciones del filtro de cuidados: sus estados y «Todas», que deja fuera los eliminados. */
   readonly filtrosCuidado: FiltroCuidadoVista[] = [
-    { id: 'todas', etiqueta: 'Todas', estado: null },
-    { id: 'completados', etiqueta: 'Completadas', estado: 'completado' },
-    { id: 'enProceso', etiqueta: 'En proceso', estado: 'enProceso' },
-    { id: 'eliminados', etiqueta: 'Eliminadas', estado: 'eliminado' },
+    { id: 'todas', etiqueta: 'Todas', estados: ['EN_PROCESO', 'COMPLETADO'] },
+    { id: 'completados', etiqueta: 'Completadas', estados: ['COMPLETADO'] },
+    { id: 'enProceso', etiqueta: 'En proceso', estados: ['EN_PROCESO'] },
+    { id: 'eliminados', etiqueta: 'Eliminadas', estados: ['ELIMINADO'] },
   ];
 
-  /** Muestra los cuidados del estado elegido y suelta lo que dependía del listado anterior. */
-  seleccionarFiltroCuidado(filtro: FiltroCuidado): void {
-    this.filtroCuidado = filtro;
-    this.cerrarMenuIndicacion();
+  // ------------------- CICLO DE VIDA -------------------
+  ngOnInit(): void {
+    this.cargarCuidados();
+  }
 
-    const sigueEnElListado = this.cuidadosFiltrados.some(
-      (cuidado) => cuidado.id === this.cuidadoEnEdicion,
-    );
-
-    // El cuidado en edición no puede quedar fuera del listado visible
-    if (this.cuidadoEnEdicion !== null && !sigueEnElListado) {
-      this.limpiarFormularioCuidado();
-    }
+  ngOnDestroy(): void {
+    this.destruido = true;
+    this.peticionLista?.unsubscribe();
+    this.peticionAccion?.unsubscribe();
   }
 
   // ------------------- CONSULTAS PARA LA VISTA -------------------
@@ -186,44 +137,133 @@ export class IndicacionCuidados {
     return calcularFaltaDuracion(this.duracionTipoCuidado, this.duracionCantidadCuidado);
   }
 
-  /** El botón Guardar se habilita con el nombre del cuidado y la duración en días resuelta. */
+  /**
+   * El botón Guardar se habilita con el nombre, la frecuencia y el tipo de duración que exige el
+   * backend, con los días resueltos y las observaciones dentro del límite.
+   */
   get puedeGuardarCuidado(): boolean {
-    return this.hayCuidado && !this.faltaDuracionEnDiasCuidado;
-  }
-
-  /** Cuidados que muestra el listado con el filtro elegido; «Todas» deja fuera los eliminados. */
-  get cuidadosFiltrados(): CuidadoVista[] {
-    const estado = this.filtroActualCuidado.estado;
-
-    return this.cuidados.filter((cuidado) =>
-      estado === null ? cuidado.estado !== 'eliminado' : cuidado.estado === estado,
+    return (
+      this.hayCuidado &&
+      !this.faltaDuracionEnDiasCuidado &&
+      this.duracionTipoCuidado !== '' &&
+      this.frecuenciaCuidado !== null &&
+      Number.isInteger(this.frecuenciaCuidado) &&
+      this.frecuenciaCuidado > 0 &&
+      this.observacionesCuidado.length <= 2000 &&
+      !this.guardando
     );
   }
 
-  /**
-   * Texto del listado cuando el filtro elegido no tiene cuidados. No se concuerda con la etiqueta
-   * del filtro porque «cuidado» es masculino y las etiquetas del listado son «Completadas» y
-   * «Eliminadas», tomadas del listado de indicaciones.
-   */
+  /** Cuidados que muestra el listado; el backend ya aplica el filtro elegido. */
+  get cuidadosFiltrados(): CuidadoVista[] {
+    return this.cuidados;
+  }
+
+  /** Texto del listado cuando el filtro elegido no tiene cuidados. */
   get mensajeSinCuidados(): string {
     const filtro = this.filtroActualCuidado;
 
-    return filtro.estado === null
+    return filtro.id === 'todas'
       ? 'Aún no hay cuidados indicados para el paciente.'
       : `No hay cuidados con el filtro «${filtro.etiqueta}».`;
   }
 
-  /** Texto de la duración que muestra la tarjeta. */
-  textoDuracion(registro: DuracionVista): string {
-    return describirDuracion(registro);
+  /** Texto de la tarjeta: cada cuántas horas se realiza y durante cuánto tiempo. */
+  textoRealizacion(cuidado: CuidadoVista): string {
+    if (cuidado.duracionTipo === 'unica') {
+      return 'Realizar una vez';
+    }
+
+    const frecuencia = cuidado.frecuencia;
+    const cada = `Realizar cada ${frecuencia} ${frecuencia === 1 ? 'hora' : 'horas'}`;
+
+    if (cuidado.duracionTipo === 'dias') {
+      const dias = cuidado.duracionCantidad ?? 0;
+      return `${cada} por ${dias} ${dias === 1 ? 'día' : 'días'}`;
+    }
+
+    if (cuidado.duracionTipo === 'indefinida') {
+      return `${cada} por tiempo indefinido`;
+    }
+
+    return cada;
   }
 
   /** Color del borde lateral de la tarjeta del cuidado: describe su estado en el listado. */
   tonoCuidado(cuidado: CuidadoVista): TonoIndicacion {
-    return this.tonosCuidado[cuidado.estado];
+    return this.tonoDe(cuidado.estado);
   }
 
-  // ------------------- ACCIONES DE LA VISTA -------------------
+  // ------------------- CARGA DEL LISTADO -------------------
+  /** Carga los cuidados del episodio activo con el filtro elegido. */
+  cargarCuidados(): void {
+    if (this.destruido) return;
+
+    const episodioId = this.episodioActivo.obtener();
+    this.sinEpisodioActivo = episodioId === null;
+
+    if (episodioId === null) {
+      this.cuidados = [];
+      this.errorCarga = false;
+      this.cargando = false;
+      this.cdr.markForCheck();
+      return;
+    }
+
+    this.cargando = true;
+    this.errorCarga = false;
+    this.cdr.markForCheck();
+    this.peticionLista?.unsubscribe();
+
+    const consultas = this.filtroActualCuidado.estados.map((estado) =>
+      this.servicio.buscarPorEpisodio(episodioId, estado),
+    );
+    const peticion =
+      consultas.length === 1 ? consultas[0].pipe(map((lista) => [lista])) : forkJoin(consultas);
+
+    this.peticionLista = peticion
+      .pipe(
+        finalize(() => {
+          this.cargando = false;
+          if (!this.destruido) this.cdr.markForCheck();
+        }),
+      )
+      .subscribe({
+        next: (grupos) => {
+          if (this.destruido) return;
+
+          const respuestas = grupos
+            .flat()
+            .sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
+
+          this.cuidados = respuestas.map((respuesta) => this.aVista(respuesta));
+
+          // El cuidado en edición no puede quedar fuera del listado visible
+          if (
+            this.cuidadoEnEdicion !== null &&
+            !this.cuidados.some((cuidado) => cuidado.id === this.cuidadoEnEdicion)
+          ) {
+            this.limpiarFormularioCuidado();
+          }
+        },
+        error: (error) => {
+          if (this.destruido) return;
+
+          this.cuidados = [];
+          this.errorCarga = true;
+          this.mostrarError(error, 'No se pudieron cargar los cuidados. Intente nuevamente.');
+        },
+      });
+  }
+
+  /** Muestra los cuidados del filtro elegido y recarga el listado. */
+  seleccionarFiltroCuidado(filtro: FiltroCuidado): void {
+    this.filtroCuidado = filtro;
+    this.cerrarMenuIndicacion();
+    this.cargarCuidados();
+  }
+
+  // ------------------- MENÚ DE LA TARJETA -------------------
   /** Muestra u oculta el menú de opciones de la tarjeta pulsada. */
   alternarMenuIndicacion(id: number): void {
     this.menuIndicacionAbierta = this.menuIndicacionAbierta === id ? null : id;
@@ -249,8 +289,12 @@ export class IndicacionCuidados {
     }
   }
 
+  // ------------------- CAPTURA Y EDICIÓN -------------------
   /** Carga en el formulario el cuidado elegido para corregirlo. */
   editarCuidado(cuidado: CuidadoVista): void {
+    if (this.guardando || this.eliminando) return;
+
+    this.cerrarMenuIndicacion();
     this.cuidadoEnEdicion = cuidado.id;
     this.nombreCuidado = cuidado.nombre;
     this.frecuenciaCuidado = cuidado.frecuencia;
@@ -270,77 +314,208 @@ export class IndicacionCuidados {
   }
 
   /**
-   * MOCK: registra el cuidado escrito. Si hay una tarjeta en edición se reemplazan sus datos
-   * conservando la fecha, la hora, el médico y el estado originales; si no, se agrega al final del
-   * listado y queda en proceso. En ambos casos el formulario queda limpio para la siguiente captura.
-   * La fecha, la hora y el médico reales los aportará el backend en la integración.
+   * Crea el cuidado o actualiza el que está en edición. El cuerpo lleva el episodio activo, el
+   * usuario de la sesión y los valores que exige el contrato del backend.
    */
   agregarCuidado(): void {
-    const nombre = this.nombreCuidado.trim();
+    if (this.destruido || this.guardando) return;
 
-    if (!nombre || this.faltaDuracionEnDiasCuidado) {
+    if (!this.puedeGuardarCuidado) {
+      this.avisarValidacion();
       return;
     }
 
-    const datos = {
-      nombre,
-      frecuencia: this.frecuenciaCuidado,
-      duracionTipo: this.duracionTipoCuidado,
-      // El número de días solo se guarda con el tipo «días»
-      duracionCantidad: this.duracionTipoCuidado === 'dias' ? this.duracionCantidadCuidado : null,
-      observaciones: this.observacionesCuidado.trim(),
-    };
-
-    if (this.cuidadoEnEdicion !== null) {
-      const idEditado = this.cuidadoEnEdicion;
-
-      this.cuidados = this.cuidados.map((registrado) =>
-        registrado.id === idEditado ? { ...registrado, ...datos } : registrado,
-      );
-    } else {
-      const ultimoId = this.cuidados.reduce(
-        (mayor, registrado) => Math.max(mayor, registrado.id),
-        0,
-      );
-
-      this.cuidados = [
-        ...this.cuidados,
-        {
-          id: ultimoId + 1,
-          ...datos,
-          estado: 'enProceso',
-          fecha: '10/10/2026',
-          hora: '09:30',
-          medico: 'Dr. Gómez',
-        },
-      ];
+    const episodioId = this.episodioActivo.obtener();
+    if (episodioId === null) {
+      this.popUps.advertencia('No hay un episodio activo. Abra el episodio del paciente.');
+      return;
     }
 
-    this.limpiarFormularioCuidado();
+    const usuarioId = this.authService.currentUser()?.id;
+    if (!usuarioId) {
+      this.popUps.error(
+        'No se pudo identificar al usuario de la sesión. Inicie sesión nuevamente.',
+      );
+      return;
+    }
+
+    const idEditado = this.cuidadoEnEdicion;
+    const cuerpo: CuidadoRequest = {
+      nombreCuidado: this.nombreCuidado.trim(),
+      frecuencia: this.frecuenciaCuidado!,
+      // El número de días solo se guarda con el tipo «días»
+      duracion: this.duracionTipoCuidado === 'dias' ? this.duracionCantidadCuidado : null,
+      tipoDuracion: this.aDuracionApi(this.duracionTipoCuidado as TipoDuracion),
+      observacion: this.observacionesCuidado.trim() || null,
+      episodioId,
+      usuarioId,
+    };
+
+    this.guardando = true;
+    this.cdr.markForCheck();
+    this.peticionAccion?.unsubscribe();
+    this.peticionAccion = (
+      idEditado === null
+        ? this.servicio.crearCuidado(cuerpo)
+        : this.servicio.actualizarCuidado(idEditado, cuerpo)
+    )
+      .pipe(
+        finalize(() => {
+          this.guardando = false;
+          if (!this.destruido) this.cdr.markForCheck();
+        }),
+      )
+      .subscribe({
+        next: () => {
+          if (this.destruido) return;
+
+          this.limpiarFormularioCuidado();
+          this.popUps.exito(
+            idEditado === null
+              ? 'Cuidado guardado exitosamente.'
+              : 'Cuidado actualizado exitosamente.',
+          );
+          this.cargarCuidados();
+        },
+        error: (error) => {
+          if (this.destruido) return;
+
+          this.mostrarError(error, 'No se pudo guardar el cuidado. Intente nuevamente.');
+        },
+      });
   }
 
-  /**
-   * MOCK: la eliminación del cuidado se confirma con el popup global y el registro pasa al estado
-   * eliminado, de modo que sale del listado vigente y queda disponible en el filtro «Eliminadas».
-   */
+  /** Confirma y pasa el cuidado al estado eliminado; el listado se recarga. */
   async eliminarCuidado(cuidado: CuidadoVista): Promise<void> {
+    if (this.destruido || this.eliminando || this.guardando) return;
+
     this.cerrarMenuIndicacion();
 
     const confirmado = await this.popUps
       .confirmarToast(`¿Está seguro de eliminar el cuidado "${cuidado.nombre}"?`)
       .catch(() => false);
 
-    if (!confirmado) {
+    if (!confirmado || this.destruido) return;
+
+    this.eliminando = true;
+    this.cdr.markForCheck();
+    this.peticionAccion?.unsubscribe();
+    this.peticionAccion = this.servicio
+      .eliminarCuidado(cuidado.id)
+      .pipe(
+        finalize(() => {
+          this.eliminando = false;
+          if (!this.destruido) this.cdr.markForCheck();
+        }),
+      )
+      .subscribe({
+        next: () => {
+          if (this.destruido) return;
+
+          if (this.cuidadoEnEdicion === cuidado.id) {
+            this.limpiarFormularioCuidado();
+          }
+          this.popUps.exito('Cuidado eliminado exitosamente.');
+          this.cargarCuidados();
+        },
+        error: (error) => {
+          if (this.destruido) return;
+
+          this.mostrarError(error, 'No se pudo eliminar el cuidado. Intente nuevamente.');
+        },
+      });
+  }
+
+  // ------------------- APOYO -------------------
+  /** Traduce el cuidado del backend a los datos que pinta la tarjeta. */
+  private aVista(respuesta: CuidadoResponse): CuidadoVista {
+    const fecha = new Date(respuesta.fecha);
+
+    return {
+      id: respuesta.id,
+      nombre: respuesta.nombreCuidado,
+      frecuencia: respuesta.frecuencia,
+      duracionTipo: this.aDuracionVista(respuesta.tipoDuracion),
+      duracionCantidad: respuesta.duracion,
+      observaciones: respuesta.observacion ?? '',
+      fecha: this.formatearFecha(fecha),
+      hora: this.formatearHora(fecha),
+      medico: respuesta.usuarioNombre,
+      estado: this.aEstadoVista(respuesta.estado),
+    };
+  }
+
+  /** Convierte el tipo de duración del backend al valor del formulario. */
+  private aDuracionVista(tipo: TipoDuracionCuidadoApi): TipoDuracion {
+    if (tipo === 'DOSIS_UNICA') return 'unica';
+    if (tipo === 'TIEMPO_INDEFINIDO') return 'indefinida';
+    return 'dias';
+  }
+
+  /** Convierte el tipo de duración del formulario al enum del backend. */
+  private aDuracionApi(tipo: TipoDuracion): TipoDuracionCuidadoApi {
+    if (tipo === 'unica') return 'DOSIS_UNICA';
+    if (tipo === 'indefinida') return 'TIEMPO_INDEFINIDO';
+    return 'DIAS';
+  }
+
+  /** Convierte el estado del backend al estado de la vista. */
+  private aEstadoVista(estado: EstadoCuidadoApi): EstadoCuidado {
+    if (estado === 'COMPLETADO') return 'completado';
+    if (estado === 'EN_PROCESO') return 'enProceso';
+    return 'eliminado';
+  }
+
+  /** Color del borde lateral de la tarjeta según el estado del cuidado. */
+  private tonoDe(estado: EstadoCuidado): TonoIndicacion {
+    if (estado === 'completado') return 'verde';
+    if (estado === 'enProceso') return 'naranja';
+    return 'rojo';
+  }
+
+  /** Fecha del cuidado en el formato corto de la tarjeta (dd/MM/yyyy). */
+  private formatearFecha(fecha: Date): string {
+    if (Number.isNaN(fecha.getTime())) return '';
+
+    const dia = `${fecha.getDate()}`.padStart(2, '0');
+    const mes = `${fecha.getMonth() + 1}`.padStart(2, '0');
+    return `${dia}/${mes}/${fecha.getFullYear()}`;
+  }
+
+  /** Hora del cuidado en el formato de la tarjeta (HH:mm). */
+  private formatearHora(fecha: Date): string {
+    if (Number.isNaN(fecha.getTime())) return '';
+
+    const horas = `${fecha.getHours()}`.padStart(2, '0');
+    const minutos = `${fecha.getMinutes()}`.padStart(2, '0');
+    return `${horas}:${minutos}`;
+  }
+
+  /** Avisa del campo que impide guardar cuando el formulario se envía incompleto. */
+  private avisarValidacion(): void {
+    if (!this.hayCuidado) {
+      this.popUps.advertencia('El nombre del cuidado es obligatorio.');
       return;
     }
-
-    if (this.cuidadoEnEdicion === cuidado.id) {
-      this.limpiarFormularioCuidado();
+    if (
+      this.frecuenciaCuidado === null ||
+      !Number.isInteger(this.frecuenciaCuidado) ||
+      this.frecuenciaCuidado <= 0
+    ) {
+      this.popUps.advertencia('La frecuencia debe ser un número entero mayor a 0.');
+      return;
     }
-
-    this.cuidados = this.cuidados.map<CuidadoVista>((registrado) =>
-      registrado.id === cuidado.id ? { ...registrado, estado: 'eliminado' } : registrado,
-    );
+    if (this.duracionTipoCuidado === '') {
+      this.popUps.advertencia('Seleccione el tipo de duración.');
+      return;
+    }
+    if (this.faltaDuracionEnDiasCuidado) {
+      this.popUps.advertencia('Indique cuántos días dura el cuidado.');
+      return;
+    }
+    if (this.observacionesCuidado.length > 2000) {
+      this.popUps.advertencia('Las observaciones no pueden superar los 2000 caracteres.');
+    }
   }
 
   /** Opción del filtro de cuidados elegida en el listado. */
@@ -349,5 +524,17 @@ export class IndicacionCuidados {
       this.filtrosCuidado.find((filtro) => filtro.id === this.filtroCuidado) ??
       this.filtrosCuidado[0]
     );
+  }
+
+  /** Distingue el timeout de comunicación del resto de errores del backend. */
+  private mostrarError(error: unknown, mensajeDefault: string): void {
+    if (error instanceof TimeoutError) {
+      this.popUps.error(
+        'Error de comunicación. El servidor no respondió dentro del tiempo esperado.',
+      );
+      return;
+    }
+
+    this.popUps.errorDesdeBackend(error, mensajeDefault);
   }
 }

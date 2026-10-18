@@ -1,0 +1,214 @@
+<div class="visor">
+  <!-- Barra superior fija: archivo, zoom y acciones -->
+  <header class="barra">
+    <div class="barra-izquierda">
+      <i class="bi {{ iconoFormato }} icono-archivo" aria-hidden="true"></i>
+
+      <div class="archivo-datos">
+        <span class="archivo-nombre" [title]="archivoActual?.nombreOriginal ?? ''">
+          {{ archivoActual?.nombreOriginal ?? 'Sin archivo' }}
+        </span>
+
+        <span class="archivo-meta">
+          <span class="formato">{{ etiquetaFormato }}</span>
+          @if (archivos.length > 1) {
+            <span class="contador">{{ indice() + 1 }} de {{ archivos.length }}</span>
+          }
+        </span>
+      </div>
+    </div>
+
+    <div class="barra-centro">
+      @if (esImagen && cargado()) {
+        <button
+          type="button"
+          class="barra-boton"
+          title="Reducir zoom"
+          aria-label="Reducir zoom"
+          [disabled]="!puedeAlejar"
+          (click)="alejar()"
+        >
+          <i class="bi bi-zoom-out" aria-hidden="true"></i>
+        </button>
+
+        <span class="zoom-valor" aria-live="polite">{{ porcentajeZoom }}%</span>
+
+        <button
+          type="button"
+          class="barra-boton"
+          title="Aumentar zoom"
+          aria-label="Aumentar zoom"
+          [disabled]="!puedeAcercar"
+          (click)="acercar()"
+        >
+          <i class="bi bi-zoom-in" aria-hidden="true"></i>
+        </button>
+
+        <button
+          type="button"
+          class="barra-boton"
+          title="Ajustar a pantalla"
+          aria-label="Ajustar a pantalla"
+          (click)="ajustarPagina()"
+        >
+          <i class="bi bi-arrows-angle-contract" aria-hidden="true"></i>
+        </button>
+
+        <button
+          type="button"
+          class="barra-boton barra-boton--texto"
+          title="Tamaño original (100%)"
+          aria-label="Tamaño original al 100%"
+          (click)="tamanoOriginal()"
+        >
+          1:1
+        </button>
+      }
+    </div>
+
+    <div class="barra-derecha">
+      @if (!esPdf) {
+        <button
+          type="button"
+          class="barra-boton"
+          title="Imprimir"
+          aria-label="Imprimir archivo"
+          [disabled]="!puedeImprimir"
+          (click)="imprimir()"
+        >
+          <i class="bi bi-printer" aria-hidden="true"></i>
+        </button>
+
+        <button
+          type="button"
+          class="barra-boton"
+          title="Descargar"
+          aria-label="Descargar archivo"
+          [disabled]="!cargado()"
+          (click)="descargar()"
+        >
+          <i class="bi bi-download" aria-hidden="true"></i>
+        </button>
+      }
+
+      <button
+        type="button"
+        class="barra-boton"
+        title="Abrir en una pestaña"
+        aria-label="Abrir archivo en una pestaña nueva"
+        [disabled]="!puedeAbrir"
+        (click)="abrir()"
+      >
+        <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i>
+      </button>
+
+      @if (onEliminar) {
+        <button
+          type="button"
+          class="barra-boton barra-boton--peligro"
+          title="Eliminar archivo"
+          aria-label="Eliminar el archivo actual"
+          [disabled]="eliminando() || cargando() || !archivoActual"
+          (click)="eliminar()"
+        >
+          <i class="bi bi-trash3" aria-hidden="true"></i>
+        </button>
+      }
+
+      <span class="separador" aria-hidden="true"></span>
+
+      <button
+        type="button"
+        class="barra-boton"
+        title="Cerrar visor"
+        aria-label="Cerrar visor"
+        (click)="cerrar()"
+      >
+        <i class="bi bi-x-lg" aria-hidden="true"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- Contenido: una sola zona de desplazamiento y controles de navegación superpuestos -->
+  <div class="area-contenido">
+    @if (cargando()) {
+      <div class="estado" role="status">Cargando archivo...</div>
+    } @else if (error()) {
+      <div class="estado estado--error" role="alert">
+        <p>{{ error() }}</p>
+        <button type="button" class="btn-reintentar" (click)="cargarActual()">Reintentar</button>
+      </div>
+    } @else if (archivoActual; as archivo) {
+      <div
+        #contenido
+        class="contenido"
+        [class.contenido--documento]="esPdf || esTexto"
+        [class.contenido--imagen]="esImagen"
+      >
+        @if (esPdf || esTexto) {
+          @if (urlIframe(); as url) {
+            <iframe [src]="url" [title]="archivo.nombreOriginal"></iframe>
+          }
+        } @else if (esImagen) {
+          @if (urlImagen(); as url) {
+            <div class="lienzo-imagen">
+              <img
+                [src]="url"
+                [alt]="archivo.nombreOriginal"
+                [class.imagen--zoom]="dimensiones()"
+                [style.width.px]="anchoImagen"
+                (load)="onImagenCargada($event)"
+              />
+            </div>
+          }
+        } @else {
+          <div class="sin-vista">
+            <i class="bi {{ iconoFormato }}" aria-hidden="true"></i>
+            <h3>Vista previa no disponible</h3>
+            <p>
+              @if (tipo() === 'word') {
+                Este documento Word no se puede visualizar en el navegador. Descárgalo y ábrelo
+                con Word o una aplicación compatible.
+              } @else {
+                Este formato no se puede visualizar en el navegador. Descarga el archivo para
+                abrirlo con una aplicación compatible.
+              }
+            </p>
+            <button
+              type="button"
+              class="btn _principal"
+              [disabled]="!cargado()"
+              (click)="descargar()"
+            >
+              Descargar archivo
+            </button>
+          </div>
+        }
+      </div>
+
+      @if (archivos.length > 1) {
+        <button
+          type="button"
+          class="flecha flecha--izquierda"
+          title="Archivo anterior"
+          aria-label="Archivo anterior"
+          [disabled]="!puedeAnterior"
+          (click)="anterior()"
+        >
+          <i class="bi bi-chevron-left" aria-hidden="true"></i>
+        </button>
+
+        <button
+          type="button"
+          class="flecha flecha--derecha"
+          title="Archivo siguiente"
+          aria-label="Archivo siguiente"
+          [disabled]="!puedeSiguiente"
+          (click)="siguiente()"
+        >
+          <i class="bi bi-chevron-right" aria-hidden="true"></i>
+        </button>
+      }
+    }
+  </div>
+</div>

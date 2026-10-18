@@ -64,49 +64,71 @@
     }
   }
 
-  /* Adjunto elegido: mismo contorno y radio de los campos del formulario */
-  .archivo-seleccionado {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 8px 10px;
-    border: 1px solid #cfdcee;
-    border-radius: 12px;
-    background: #fff;
-    color: #344054;
-    font-size: 13px;
+}
 
-    > i {
-      color: var(--azulSecundario);
-      font-size: 22px;
-    }
+/* Archivos ya guardados del examen: se muestran al editar y se administran desde el visor */
+.examen-archivos-guardados {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
 
-    .archivo-nombre {
-      flex: 1;
-      min-width: 0;
-      overflow: hidden;
-      font-weight: 600;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
+  .ayuda-archivo {
+    margin: 0;
+    color: #667085;
+    font-size: 12px;
+  }
+}
 
-    .archivo-peso {
-      color: #667085;
-      white-space: nowrap;
-    }
+/* Adjuntos elegidos o guardados: uno debajo del otro para que no se solapen sus nombres */
+.archivos-seleccionados {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
 
-    button {
-      padding: 4px;
-      border: 0;
-      background: transparent;
-      color: #667085;
-      font-size: 14px;
-      cursor: pointer;
-      transition: color 0.2s ease;
+/* Adjunto elegido o guardado: mismo contorno y radio de los campos del formulario */
+.archivo-seleccionado {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid #cfdcee;
+  border-radius: 12px;
+  background: #fff;
+  color: #344054;
+  font-size: 13px;
 
-      &:hover {
-        color: #ed1a0f;
-      }
+  > i {
+    color: var(--azulSecundario);
+    font-size: 22px;
+  }
+
+  .archivo-nombre {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .archivo-peso {
+    color: #667085;
+    white-space: nowrap;
+  }
+
+  button {
+    padding: 4px;
+    border: 0;
+    background: transparent;
+    color: #667085;
+    font-size: 14px;
+    cursor: pointer;
+    transition: color 0.2s ease;
+
+    &:hover {
+      color: #ed1a0f;
     }
   }
 }

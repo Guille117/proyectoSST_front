@@ -7,3 +7,9 @@
 :host {
   display: contents;
 }
+
+/* La etiqueta de la unidad de medida no lleva asterisco: se le fija la misma altura de línea que a
+   las que sí lo llevan para que los tres campos de la fila queden alineados */
+.indicacion-fila--cantidad .indicacion-etiqueta {
+  line-height: 1.6rem;
+}

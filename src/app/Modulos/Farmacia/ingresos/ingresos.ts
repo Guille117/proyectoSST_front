@@ -12,7 +12,8 @@ import { FormsModule } from '@angular/forms';
 import { TimeoutError, finalize } from 'rxjs';
 import { ModalService } from '../../../modal-principal/modal-service';
 import { PopUps } from '../../../shared/popUps/popUpsService';
-import { ModalDocumento } from '../modalesFarmacia/modal-documento/modal-documento';
+import { VisorArchivos } from '../../../shared/visor-archivos/visor-archivos';
+import { ArchivoVisor } from '../../../shared/visor-archivos/visor-archivos.interfaz';
 import { ModalMasDetalle } from '../modalesFarmacia/modal-mas-detalle/modal-mas-detalle';
 import { proveedorResponse } from '../proveedores/data/proveedorInterfaz';
 import { ProveedorService } from '../proveedores/data/proveedor-service';
@@ -243,10 +244,19 @@ export class Ingresos implements OnInit {
     const detalle = this.detalleCompra;
     if (!detalle?.comprobante) return;
 
-    this.modalService.open(ModalDocumento, {
+    const comprobante = detalle.comprobante;
+    const extension = comprobante.match(/\.([a-z0-9]{2,5})(?:[?#].*)?$/i)?.[1] ?? '';
+    const archivo: ArchivoVisor = {
+      id: comprobante,
+      nombreOriginal: `comprobante-${detalle.codigo}${extension ? `.${extension}` : ''}`,
+    };
+
+    this.modalService.open(VisorArchivos, {
       title: 'Comprobante de compra',
-      documento: detalle.comprobante,
-      nombreArchivo: `comprobante-${detalle.codigo}`,
+      modalClass: 'modal-visor-documentos',
+      archivos: [archivo],
+      indiceInicial: 0,
+      cargarArchivo: () => this.servicioCompra.obtenerComprobante(comprobante),
     });
   }
 

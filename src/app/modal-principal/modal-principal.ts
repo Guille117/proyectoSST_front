@@ -1,3 +1,4 @@
+import { DOCUMENT } from '@angular/common';
 import { Component, ElementRef, Type, ViewChild, ViewContainerRef, effect, inject, output, signal } from '@angular/core';
 import { ModalContent, ModalService } from './modal-service';
 
@@ -13,6 +14,7 @@ export class ModalPrincipal {
   private renderedComponent: Type<unknown> | null = null;
   private renderedData: unknown = null;
   title = signal('');
+  modalClass = signal('');
   
   // Referencia al elemento <dialog> del HTML
   @ViewChild('dialogElement') private dialog! : ElementRef<HTMLDialogElement>;
@@ -22,6 +24,7 @@ export class ModalPrincipal {
   
   // se inyecta el servicio global
   private modalService = inject(ModalService);
+  private readonly document = inject(DOCUMENT);
 
   // Evento que se dispara cuando el modal se cierra (por botón o tecla ESC)
   onClose = output<void>();
@@ -35,6 +38,7 @@ export class ModalPrincipal {
       const datos = this.modalService.datosInput();
 
       this.title.set(datos?.title ?? '');
+      this.modalClass.set(datos?.modalClass ?? '');
 
       // Si hay un componente, lo renderiza dinámicamente
       const debeCrearComponente = componente && this.componentContainer && (
@@ -103,6 +107,7 @@ export class ModalPrincipal {
       return;
     }
 
+    this.desbloquearScrollVisor();
     this.isClosing = true;
     dialog.classList.remove('open');
     dialog.classList.add('closing');
@@ -117,8 +122,16 @@ export class ModalPrincipal {
 
   // Se ejecuta automáticamente cuando el <dialog> emite su evento 'close' nativo (ESC, etc)
   handleNativeClose(): void {
+    this.desbloquearScrollVisor();
     this.modalService.close();
     this.onClose.emit();
+  }
+
+  /** Libera el bloqueo de scroll que aplica el visor de archivos a pantalla completa. */
+  private desbloquearScrollVisor(): void {
+    if (this.modalClass() === 'modal-visor-documentos') {
+      this.document.documentElement.classList.remove('visor-abierto');
+    }
   }
 
 }

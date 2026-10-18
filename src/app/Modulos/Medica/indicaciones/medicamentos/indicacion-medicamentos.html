@@ -4,7 +4,7 @@
 
   <form class="indicacion-form" (ngSubmit)="agregarIndicacion()">
     <!-- Medicamento elegido: ocupa el lugar del buscador y de la tabla de resultados -->
-    @if (medicamentoElegido) {
+    @if (hayMedicamentoSeleccionado) {
       <div class="indicacion-campo">
         <span class="indicacion-etiqueta" id="etiquetaMedicamento">
           Medicamento<span class="indicacion-obligatorio" aria-hidden="true">*</span>
@@ -27,7 +27,7 @@
     }
 
     <!-- Medicamento: búsqueda en el catálogo mientras no se haya elegido ninguno -->
-    @if (!medicamentoElegido) {
+    @if (!hayMedicamentoSeleccionado) {
       <div class="indicacion-campo">
         <label class="indicacion-etiqueta" for="medicamentoIndicado">
           Medicamento<span class="indicacion-obligatorio" aria-hidden="true">*</span>
@@ -41,6 +41,7 @@
               name="medicamento"
               type="text"
               placeholder="Buscar medicamento..."
+              maxlength="1000"
               aria-required="true"
               [(ngModel)]="medicamento"
               (keydown.enter)="$event.preventDefault(); buscarMedicamento()"
@@ -73,6 +74,7 @@
                   <tr>
                     <th class="columna-numero" scope="col">No.</th>
                     <th scope="col">Descripción</th>
+                    <th scope="col">Existencia</th>
                     <th scope="col">Administración</th>
                   </tr>
                 </thead>
@@ -92,6 +94,12 @@
                     >
                       <td class="celda_centrada">{{ numeroInicialDeLaPagina + indice }}</td>
                       <td class="celda_izquierda">{{ descripcionMedicamento(opcion) }}</td>
+                      <td
+                        class="celda_centrada"
+                        [class.sin-existencia]="opcion.disponible <= 0"
+                      >
+                        {{ opcion.disponible > 0 ? opcion.disponible : 'Sin existencia' }}
+                      </td>
                       <td class="celda_izquierda">{{ opcion.viaAdministracion }}</td>
                     </tr>
                   }
@@ -101,7 +109,7 @@
                      recuento de la paginación alterna con la ayuda para elegir -->
                 <tfoot>
                   <tr>
-                    <td colspan="3">
+                    <td colspan="4">
                       <app-paginacion
                         [paginaActual]="paginaMedicamentos"
                         [totalregistros]="medicamentosEncontrados.length"
@@ -119,13 +127,28 @@
           }
         </div>
       }
+
+      <!-- Medicamento no registrado: solo aparece después de realizar una búsqueda -->
+      @if (busquedaMedicamentoRealizada) {
+        <div class="medicamento-libre">
+          <span>¿No está registrado?</span>
+          <button
+            type="button"
+            class="btn _principal"
+            [disabled]="!hayMedicamento"
+            (click)="usarMedicamentoLibre()"
+          >
+            Indicar como no registrado
+          </button>
+        </div>
+      }
     }
 
     <!-- Resto de la captura: espera al medicamento elegido, porque con la tabla de resultados
          desplegada el formulario solo muestra el buscador y sus resultados -->
     @if (!busquedaMedicamentoRealizada) {
-      <!-- Cantidad y frecuencia: la frecuencia solo admite números -->
-      <div class="indicacion-fila indicacion-fila--dos">
+      <!-- Cantidad, unidad de medida y frecuencia: la frecuencia solo admite números -->
+      <div class="indicacion-fila indicacion-fila--cantidad">
         <div class="indicacion-campo">
           <label class="indicacion-etiqueta" for="cantidadIndicada">
             Cantidad<span class="indicacion-obligatorio" aria-hidden="true">*</span>
@@ -145,8 +168,23 @@
         </div>
 
         <div class="indicacion-campo">
+          <label class="indicacion-etiqueta" for="unidadMedidaIndicada">Unidad de medida</label>
+          <select
+            class="indicacion-input"
+            id="unidadMedidaIndicada"
+            name="unidadMedida"
+            [(ngModel)]="unidadMedida"
+          >
+            <option value="">Seleccionar...</option>
+            @for (unidad of unidadesMedida; track unidad) {
+              <option [value]="unidad">{{ unidad }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="indicacion-campo">
           <label class="indicacion-etiqueta" for="frecuenciaIndicada">
-            Frecuencia<span class="indicacion-obligatorio" aria-hidden="true">*</span>
+            Frecuencia (horas)<span class="indicacion-obligatorio" aria-hidden="true">*</span>
           </label>
           <input
             class="indicacion-input"
@@ -269,7 +307,12 @@
         [class.indicacion-card--edicion]="indicacionEnEdicion === indicacion.id"
       >
         <header class="indicacion-encabezado">
-          <span class="indicacion-nombre">{{ indicacion.nombre }}</span>
+          <div class="indicacion-nombre-grupo">
+            <span class="indicacion-nombre">{{ indicacion.nombre }}</span>
+            @if (indicacion.medicamentoLibre) {
+              <span class="indicacion-badge-no-registrado">Medicamento no registrado</span>
+            }
+          </div>
 
           <!-- Menú de opciones de la tarjeta: se despliega sobre ella sin cambiar su tamaño -->
           <button
@@ -286,10 +329,8 @@
         </header>
 
         <ul class="indicacion-badges">
-          <li>{{ indicacion.cantidad }}</li>
-          @if (indicacion.frecuencia !== null) {
-            <li>{{ indicacion.frecuencia }}</li>
-          }
+          <li>{{ textoCantidad(indicacion) }}</li>
+          <li>{{ textoFrecuencia(indicacion) }}</li>
           @if (indicacion.duracionTipo) {
             <li>{{ textoDuracion(indicacion) }}</li>
           }
@@ -312,21 +353,7 @@
             role="menu"
             [attr.aria-label]="'Opciones para ' + indicacion.nombre"
           >
-            @if (indicacion.estado === 'activa') {
-              <div class="indicacion-menu-opcion">
-                <span>Finalizar</span>
-                <button
-                  type="button"
-                  class="iconEstado"
-                  role="menuitem"
-                  title="Finalizar indicación"
-                  [attr.aria-label]="'Finalizar la indicación ' + indicacion.nombre"
-                  (click)="finalizarIndicacion(indicacion)"
-                >
-                  <i class="bi bi-check2-circle" aria-hidden="true"></i>
-                </button>
-              </div>
-            } @else {
+            @if (indicacion.estado !== 'activa') {
               <div class="indicacion-menu-opcion">
                 <span>Reactivar</span>
                 <button

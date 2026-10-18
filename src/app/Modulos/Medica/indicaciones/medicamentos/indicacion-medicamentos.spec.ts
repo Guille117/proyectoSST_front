@@ -9,6 +9,7 @@ import {
 } from './data/medicamentoInterfaz';
 import { EpisodioActivoService } from '../../data/episodio-activo-service';
 import { AuthService } from '../../../Auth/data/auth-service';
+import { CatalogoService } from '../../../Catalogos/data/serviceCatalogo';
 import { PopUps } from '../../../../shared/popUps/popUpsService';
 
 describe('IndicacionMedicamentos', () => {
@@ -25,6 +26,7 @@ describe('IndicacionMedicamentos', () => {
       presentacion: 'tabletas de 400 mg',
       viaAdministracion: 'Oral',
       unidadMedida: 'mg',
+      disponible: 10,
       estado: true,
     },
   ];
@@ -35,6 +37,8 @@ describe('IndicacionMedicamentos', () => {
     id: 30,
     medicamentoLogId: 9,
     medicamento: 'Ibuprofeno',
+    medicamentoLibre: null,
+    presentacion: 'tabletas de 400 mg',
     cantidad: 2,
     frecuencia: 8,
     duracion: 7,
@@ -69,6 +73,9 @@ describe('IndicacionMedicamentos', () => {
     advertencia: vi.fn(),
     confirmarToast: vi.fn(),
   };
+  const catalogoService = {
+    listarUnidadMedida: vi.fn(),
+  };
 
   beforeEach(async () => {
     vi.resetAllMocks();
@@ -78,6 +85,7 @@ describe('IndicacionMedicamentos', () => {
     servicio.putIndicacion.mockReturnValue(of(indicacion()));
     servicio.cambiarEstado.mockReturnValue(of(indicacion({ estado: 'FINALIZADO' })));
     servicio.eliminarIndicacion.mockReturnValue(of(void 0));
+    catalogoService.listarUnidadMedida.mockReturnValue(of([]));
     popUps.confirmarToast.mockResolvedValue(true);
     episodio.obtener.mockReturnValue(1);
 
@@ -85,6 +93,7 @@ describe('IndicacionMedicamentos', () => {
       imports: [IndicacionMedicamentos],
       providers: [
         { provide: MedicamentoIndicacionService, useValue: servicio },
+        { provide: CatalogoService, useValue: catalogoService },
         { provide: AuthService, useValue: auth },
         { provide: EpisodioActivoService, useValue: episodio },
         { provide: PopUps, useValue: popUps },
@@ -169,6 +178,10 @@ describe('IndicacionMedicamentos', () => {
     expect(servicio.getIndicacionesPorEpisodio).toHaveBeenCalledWith(1, 'ELIMINADO');
   });
 
+  it('no muestra la opción de medicamento no registrado antes de buscar', () => {
+    expect(elemento('.medicamento-libre')).toBeNull();
+  });
+
   it('busca el medicamento en el catálogo y muestra sus datos', async () => {
     await buscarMedicamento('ibuprofeno');
 
@@ -189,6 +202,8 @@ describe('IndicacionMedicamentos', () => {
 
     expect(servicio.postIndicacion).toHaveBeenCalledWith({
       medicamentoLogId: 9,
+      medicamentoLibre: null,
+      presentacion: 'tabletas de 400 mg',
       cantidad: 2,
       frecuencia: 8,
       duracion: 7,
@@ -201,12 +216,219 @@ describe('IndicacionMedicamentos', () => {
     expect(servicio.getIndicacionesPorEpisodio).toHaveBeenCalled();
   });
 
-  it('no guarda sin un medicamento del catálogo elegido', () => {
+  it('envía la abreviatura de la unidad de medida elegida', async () => {
+    catalogoService.listarUnidadMedida.mockReturnValue(
+      of([{ id: 1, nombre: 'Miligramos', abreviatura: 'mg' }]),
+    );
+    component.cargarUnidadesMedida();
+    await fixture.whenStable();
+
+    await completarFormulario();
+    await elegir('#unidadMedidaIndicada', 'Miligramos');
+    fixture.detectChanges();
+
+    botonGuardar().click();
+    await fixture.whenStable();
+
+    expect(servicio.postIndicacion).toHaveBeenCalledWith(
+      expect.objectContaining({ presentacion: 'mg' }),
+    );
+  });
+
+  it('envía gotas cuando se elige esa unidad', async () => {
+    await completarFormulario();
+    await elegir('#unidadMedidaIndicada', 'Gotas');
+    fixture.detectChanges();
+
+    botonGuardar().click();
+    await fixture.whenStable();
+
+    expect(servicio.postIndicacion).toHaveBeenCalledWith(
+      expect.objectContaining({ presentacion: 'gotas' }),
+    );
+  });
+
+  it('usa la presentación guardada para la unidad de la cantidad', async () => {
+    await cargarListado([indicacion()]);
+
+    expect(elemento<HTMLElement>('.indicacion-card')?.textContent).toContain('2 tabletas');
+  });
+
+  it('avisa en la tarjeta cuando el medicamento no está registrado', async () => {
+    await cargarListado([
+      indicacion({
+        medicamentoLogId: null,
+        medicamento: 'Aspirina 500 mg',
+        medicamentoLibre: 'Aspirina 500 mg',
+        presentacion: null,
+      }),
+    ]);
+
+    const encabezado = elemento<HTMLElement>('.indicacion-card .indicacion-encabezado');
+
+    expect(encabezado?.textContent).toContain('Aspirina 500 mg');
+    expect(encabezado?.textContent).toContain('Medicamento no registrado');
+  });
+
+  it('ajusta solo la primera palabra de la presentación guardada', async () => {
+    await cargarListado([
+      indicacion({ presentacion: 'Tabletas de 400 mg', cantidad: 1 }),
+    ]);
+
+    expect(elemento<HTMLElement>('.indicacion-card')?.textContent).toContain(
+      '1 tableta de 400 mg',
+    );
+  });
+
+  it('muestra la abreviatura guardada en el card', async () => {
+    await cargarListado([indicacion({ presentacion: 'mg', cantidad: 10 })]);
+
+    expect(elemento<HTMLElement>('.indicacion-card')?.textContent).toContain('10 mg');
+  });
+
+  it('muestra gotas en el card cuando se guardaron gotas', async () => {
+    await cargarListado([indicacion({ presentacion: 'gotas', cantidad: 10 })]);
+
+    expect(elemento<HTMLElement>('.indicacion-card')?.textContent).toContain('10 gotas');
+  });
+
+  it('muestra unidad cuando no hay presentación guardada', async () => {
+    await cargarListado([indicacion({ presentacion: null, cantidad: 1 })]);
+
+    expect(elemento<HTMLElement>('.indicacion-card')?.textContent).toContain('1 unidad');
+  });
+
+  it('muestra la abreviatura de la unidad en el card después de guardar', async () => {
+    catalogoService.listarUnidadMedida.mockReturnValue(
+      of([{ id: 1, nombre: 'Miligramos', abreviatura: 'mg' }]),
+    );
+    component.cargarUnidadesMedida();
+    await fixture.whenStable();
+
+    servicio.postIndicacion.mockReturnValue(of(indicacion({ presentacion: 'mg' })));
+    servicio.getIndicacionesPorEpisodio.mockImplementation((_, estado) =>
+      of(estado === 'ACTIVO' ? [indicacion({ presentacion: 'mg' })] : []),
+    );
+
+    await completarFormulario();
+    await elegir('#unidadMedidaIndicada', 'Miligramos');
+    fixture.detectChanges();
+    botonGuardar().click();
+    await fixture.whenStable();
+
+    expect(elemento<HTMLElement>('.indicacion-card')?.textContent).toContain('2 mg');
+  });
+
+  it('carga las unidades de medida del catálogo y agrega Gotas', async () => {
+    catalogoService.listarUnidadMedida.mockReturnValue(
+      of([
+        { id: 1, nombre: 'Miligramos', abreviatura: 'mg' },
+        { id: 2, nombre: 'Mililitros', abreviatura: 'ml' },
+      ]),
+    );
+
+    component.cargarUnidadesMedida();
+    await fixture.whenStable();
+
+    expect(component.unidadesMedida).toEqual(['Miligramos', 'Mililitros', 'Gotas']);
+  });
+
+  it('no guarda sin un medicamento del catálogo elegido ni texto libre', () => {
     component.agregarIndicacion();
 
     expect(servicio.postIndicacion).not.toHaveBeenCalled();
     expect(popUps.advertencia).toHaveBeenCalledWith(
-      'Busque y seleccione un medicamento del catálogo.',
+      'Busque y seleccione un medicamento del catálogo o indique uno no registrado.',
+    );
+  });
+
+  it('muestra la existencia y permite seleccionar un medicamento sin stock', async () => {
+    servicio.buscarCatalogo.mockReturnValue(of([{ ...catalogo[0], disponible: 0 }]));
+
+    await buscarMedicamento('ibuprofeno');
+
+    expect(elemento<HTMLElement>('.fila-seleccionable').textContent).toContain(
+      'Sin existencia',
+    );
+
+    await elegirMedicamento();
+
+    expect(component.medicamentoElegido?.disponible).toBe(0);
+    expect(component.textoMedicamentoElegido).toContain('Sin existencia');
+
+    await escribir('#cantidadIndicada', '2');
+    await escribir('#frecuenciaIndicada', '8');
+    await elegir('#duracionTipoIndicada', 'dias');
+    await escribir('#duracionCantidadIndicada', '7');
+    botonGuardar().click();
+    await fixture.whenStable();
+
+    expect(servicio.postIndicacion).toHaveBeenCalledWith(
+      expect.objectContaining({ medicamentoLogId: 9, medicamentoLibre: null }),
+    );
+  });
+
+  it('permite indicar un medicamento no registrado con texto libre', async () => {
+    servicio.buscarCatalogo.mockReturnValue(of([]));
+
+    await buscarMedicamento('Aspirina 500 mg cada 8 horas');
+    elemento<HTMLButtonElement>('.medicamento-libre button').click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(component.medicamentoElegido).toBeNull();
+    expect(component.medicamentoLibre).toBe('Aspirina 500 mg cada 8 horas');
+    expect(component.textoMedicamentoElegido).toContain('No registrado');
+
+    await escribir('#cantidadIndicada', '1');
+    await escribir('#frecuenciaIndicada', '8');
+    await elegir('#duracionTipoIndicada', 'dias');
+    await escribir('#duracionCantidadIndicada', '7');
+    botonGuardar().click();
+    await fixture.whenStable();
+
+    expect(servicio.postIndicacion).toHaveBeenCalledWith({
+      medicamentoLogId: null,
+      medicamentoLibre: 'Aspirina 500 mg cada 8 horas',
+      presentacion: null,
+      cantidad: 1,
+      frecuencia: 8,
+      duracion: 7,
+      tipoDuracion: 'DIAS',
+      observaciones: null,
+      episodioId: 1,
+      usuarioId: 2,
+    });
+  });
+
+  it('edita una indicación no registrada manteniendo el texto libre', async () => {
+    const libre = indicacion({
+      id: 31,
+      medicamentoLogId: null,
+      medicamento: 'Aspirina 500 mg',
+      medicamentoLibre: 'Aspirina 500 mg',
+      presentacion: null,
+    });
+    await cargarListado([libre]);
+
+    elemento<HTMLButtonElement>('.indicacion-menu-trigger').click();
+    fixture.detectChanges();
+    elemento<HTMLButtonElement>('.indicacion-menu .iconEditar').click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(component.medicamentoElegido).toBeNull();
+    expect(component.medicamentoLibre).toBe('Aspirina 500 mg');
+
+    botonGuardar().click();
+    await fixture.whenStable();
+
+    expect(servicio.putIndicacion).toHaveBeenCalledWith(
+      31,
+      expect.objectContaining({
+        medicamentoLogId: null,
+        medicamentoLibre: 'Aspirina 500 mg',
+      }),
     );
   });
 
@@ -240,6 +462,8 @@ describe('IndicacionMedicamentos', () => {
 
     expect(servicio.putIndicacion).toHaveBeenCalledWith(30, {
       medicamentoLogId: 9,
+      medicamentoLibre: null,
+      presentacion: 'tabletas de 400 mg',
       cantidad: 2,
       frecuencia: 8,
       duracion: 7,
@@ -251,16 +475,36 @@ describe('IndicacionMedicamentos', () => {
     expect(popUps.exito).toHaveBeenCalledWith('Indicación actualizada exitosamente.');
   });
 
-  it('finaliza la indicación activa con PATCH', async () => {
+  it('preselecciona la unidad de medida al editar una indicación con abreviatura', async () => {
+    catalogoService.listarUnidadMedida.mockReturnValue(
+      of([{ id: 1, nombre: 'Miligramos', abreviatura: 'mg' }]),
+    );
+    component.cargarUnidadesMedida();
+    await fixture.whenStable();
+
+    await cargarListado([indicacion({ presentacion: 'mg' })]);
+
+    elemento<HTMLButtonElement>('.indicacion-menu-trigger').click();
+    fixture.detectChanges();
+    elemento<HTMLButtonElement>('.indicacion-menu .iconEditar').click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(component.unidadMedida).toBe('Miligramos');
+  });
+
+  it('no ofrece finalizar la indicación activa', async () => {
     await cargarListado([indicacion()]);
 
     elemento<HTMLButtonElement>('.indicacion-menu-trigger').click();
     fixture.detectChanges();
-    elemento<HTMLButtonElement>('.indicacion-menu .iconEstado').click();
-    await fixture.whenStable();
 
-    expect(servicio.cambiarEstado).toHaveBeenCalledWith(30, 'FINALIZADO');
-    expect(popUps.exito).toHaveBeenCalledWith('Indicación finalizada exitosamente.');
+    const opciones = [...elementos<HTMLElement>('.indicacion-menu-opcion span')].map(
+      (opcion) => opcion.textContent?.trim(),
+    );
+
+    expect(opciones).toEqual(['Editar', 'Eliminar']);
+    expect(elemento('.indicacion-menu .iconEstado')).toBeNull();
   });
 
   it('reactiva una indicación finalizada con PATCH', async () => {

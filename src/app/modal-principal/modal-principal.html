@@ -1,4 +1,8 @@
-<dialog #dialogElement (close)="handleNativeClose()">
+<dialog
+  #dialogElement
+  [class.modal-visor-documentos]="modalClass() === 'modal-visor-documentos'"
+  (close)="handleNativeClose()"
+>
   <div class="modal-wrapper">
     <div class="modal-popup-host"></div>
     

@@ -80,6 +80,107 @@ dialog.closing::backdrop {
   to { opacity: 0; }
 }
 
+/* Visor de archivos reutilizable: ocupa toda la pantalla y usa su propia barra superior. */
+dialog.modal-visor-documentos {
+  top: 0;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  width: 100vw;
+  height: 100vh;
+  min-width: 0;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: 0;
+  background: #eef1f6;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  transform: none;
+}
+
+dialog.modal-visor-documentos::backdrop {
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+dialog.modal-visor-documentos.open,
+dialog.modal-visor-documentos[open] {
+  animation: visorIn 0.3s ease forwards;
+}
+
+dialog.modal-visor-documentos.closing {
+  animation: visorOut 0.3s ease forwards;
+}
+
+@keyframes visorIn {
+  from {
+    opacity: 0;
+    visibility: hidden;
+  }
+  to {
+    opacity: 1;
+    visibility: visible;
+  }
+}
+
+@keyframes visorOut {
+  from {
+    opacity: 1;
+    visibility: visible;
+  }
+  to {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+
+dialog.modal-visor-documentos .modal-wrapper {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  height: auto;
+  background: #eef1f6;
+  border-radius: 0;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+
+  .modal-header,
+  .modal-footer {
+    display: none;
+  }
+
+  .modal-body {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+    padding: 0;
+    overflow: hidden;
+  }
+
+  /* El contenedor del componente dinámico queda como ancla sin ocupar altura. */
+  .modal-body > div:first-child {
+    flex: 0 0 auto;
+    width: 100%;
+    height: 0;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  /* El componente creado dinámicamente es hermano del contenedor y ocupa todo el cuerpo. */
+  .modal-body > app-visor-archivos {
+    flex: 1;
+    width: 100%;
+    min-height: 0;
+  }
+}
+
 .modal-wrapper {
   position: relative;
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.72) 0%, rgba(245, 247, 255, 0.66) 58%, rgba(234, 232, 255, 0.58) 100%);

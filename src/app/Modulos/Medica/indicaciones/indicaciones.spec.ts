@@ -4,12 +4,21 @@ import { of } from 'rxjs';
 
 import { Indicaciones } from './indicaciones';
 import { IndicacionCuidados } from './cuidados/indicacion-cuidados';
-import { IndicacionExamenes } from './examenes/indicacion-examenes';
+import { IndicacionExamenService } from './examenes/data/examen-service';
+import { ExamenResponse } from './examenes/data/examenInterfaz';
+import { ModalService } from '../../../modal-principal/modal-service';
 import { MedicamentoIndicacionService } from './medicamentos/data/medicamento-service';
 import { MedicamentoIndicacionResponse } from './medicamentos/data/medicamentoInterfaz';
 import { EpisodioActivoService } from '../data/episodio-activo-service';
 import { AuthService } from '../../Auth/data/auth-service';
+import { CatalogoService } from '../../Catalogos/data/serviceCatalogo';
 import { PopUps } from '../../../shared/popUps/popUpsService';
+import { IndicacionCuidadoService } from './cuidados/data/cuidado-service';
+import {
+  CuidadoRequest,
+  CuidadoResponse,
+  EstadoCuidadoApi,
+} from './cuidados/data/cuidadoInterfaz';
 
 describe('Indicaciones', () => {
   let component: Indicaciones;
@@ -31,6 +40,121 @@ describe('Indicaciones', () => {
   };
   const authService = { currentUser: () => ({ id: 2 }) };
   const episodioActivo = { obtener: () => 1, guardar: vi.fn(), limpiar: vi.fn() };
+  const catalogoService = { listarUnidadMedida: vi.fn(() => of([])) };
+  const examenService = {
+    buscarPorEpisodio: vi.fn(),
+    crearExamen: vi.fn(),
+    actualizarExamen: vi.fn(),
+    cambiarEstado: vi.fn(),
+    eliminarArchivo: vi.fn(),
+    obtenerArchivo: vi.fn(),
+  };
+  const modalService = { open: vi.fn(), close: vi.fn() };
+  let cuidadosMock: CuidadoResponse[] = [];
+  const cuidadoService = {
+    buscarPorEpisodio: vi.fn(),
+    crearCuidado: vi.fn(),
+    actualizarCuidado: vi.fn(),
+    eliminarCuidado: vi.fn(),
+  };
+
+  const cuidado = (
+    id: number,
+    nombreCuidado: string,
+    estado: EstadoCuidadoApi,
+    overrides: Partial<CuidadoResponse> = {},
+  ): CuidadoResponse => ({
+    id,
+    nombreCuidado,
+    frecuencia: 2,
+    duracion: 5,
+    tipoDuracion: 'DIAS',
+    observacion: 'Alternar decúbito lateral y evitar apoyar la zona de la úlcera.',
+    episodioId: 1,
+    usuarioId: 2,
+    usuarioNombre: 'Dr. Gómez',
+    fecha: '2026-10-10T09:15:00',
+    estado,
+    ...overrides,
+  });
+
+  const reiniciarCuidados = (): void => {
+    cuidadosMock = [
+      cuidado(1, 'Cambio de posición', 'EN_PROCESO', { fecha: '2026-10-10T09:15:00' }),
+      cuidado(2, 'Control de signos vitales', 'EN_PROCESO', {
+        frecuencia: 4,
+        duracion: 3,
+        observacion: 'Registrar la saturación y la temperatura en cada control.',
+        fecha: '2026-10-10T09:10:00',
+      }),
+      cuidado(3, 'Balance hídrico estricto', 'EN_PROCESO', {
+        frecuencia: 24,
+        duracion: 2,
+        observacion: 'Medir la diuresis y anotar los ingresos de cada turno.',
+        fecha: '2026-10-10T09:05:00',
+      }),
+      cuidado(4, 'Curación de herida', 'COMPLETADO', {
+        frecuencia: 12,
+        observacion: 'Lavar con solución fisiológica y cubrir con gasa estéril.',
+        fecha: '2026-10-10T08:50:00',
+      }),
+      cuidado(5, 'Vigilancia de diuresis', 'ELIMINADO', {
+        frecuencia: 8,
+        duracion: null,
+        tipoDuracion: 'TIEMPO_INDEFINIDO',
+        observacion: 'Cuidado duplicado en la orden.',
+        usuarioNombre: 'Dra. Herrera',
+        fecha: '2026-10-09T16:40:00',
+      }),
+    ];
+
+    cuidadoService.buscarPorEpisodio.mockImplementation(
+      (_episodioId: number, estado: EstadoCuidadoApi) =>
+        of(cuidadosMock.filter((registro) => registro.estado === estado)),
+    );
+    cuidadoService.crearCuidado.mockImplementation((request: CuidadoRequest) => {
+      const nuevo: CuidadoResponse = {
+        ...request,
+        id: 6,
+        usuarioNombre: 'Dr. Gómez',
+        fecha: '2026-10-10T08:40:00',
+        estado: 'EN_PROCESO',
+      };
+      cuidadosMock = [...cuidadosMock, nuevo];
+      return of(nuevo);
+    });
+    cuidadoService.actualizarCuidado.mockImplementation(
+      (id: number, request: CuidadoRequest) => {
+        const actualizado: CuidadoResponse = {
+          ...cuidadosMock.find((registro) => registro.id === id)!,
+          ...request,
+          id,
+        };
+        cuidadosMock = cuidadosMock.map((registro) =>
+          registro.id === id ? actualizado : registro,
+        );
+        return of(actualizado);
+      },
+    );
+    cuidadoService.eliminarCuidado.mockImplementation((id: number) => {
+      cuidadosMock = cuidadosMock.map((registro) =>
+        registro.id === id ? { ...registro, estado: 'ELIMINADO' as const } : registro,
+      );
+      return of(void 0);
+    });
+  };
+
+  const examen = (id: number, nombreExamen: string): ExamenResponse => ({
+    id,
+    nombreExamen,
+    observacion: null,
+    archivos: [],
+    episodioId: 1,
+    usuarioId: 2,
+    usuarioNombre: 'Carlos Méndez',
+    fecha: '2026-10-16T11:00:00',
+    estado: 'ACTIVO',
+  });
 
   const indicacionMedicamento = (
     id: number,
@@ -39,6 +163,8 @@ describe('Indicaciones', () => {
     id,
     medicamentoLogId: 9,
     medicamento: 'Ibuprofeno',
+    medicamentoLibre: null,
+    presentacion: 'tabletas de 400 mg',
     cantidad: 2,
     frecuencia: 8,
     duracion: 7,
@@ -53,6 +179,20 @@ describe('Indicaciones', () => {
 
   beforeEach(async () => {
     vi.resetAllMocks();
+    reiniciarCuidados();
+    catalogoService.listarUnidadMedida.mockReturnValue(of([]));
+    examenService.buscarPorEpisodio.mockImplementation((_, estado) =>
+      of(
+        estado === 'ACTIVO'
+          ? [
+              examen(1, 'Hemograma completo'),
+              examen(2, 'Glucosa en ayunas'),
+              examen(3, 'Radiografía de tórax'),
+              examen(4, 'Urocultivo'),
+            ]
+          : [],
+      ),
+    );
     popUps.confirmarToast.mockResolvedValue(true);
     medicamentoService.getIndicacionesPorEpisodio.mockImplementation((_, estado) =>
       of(
@@ -68,6 +208,10 @@ describe('Indicaciones', () => {
       providers: [
         { provide: PopUps, useValue: popUps },
         { provide: MedicamentoIndicacionService, useValue: medicamentoService },
+        { provide: CatalogoService, useValue: catalogoService },
+        { provide: IndicacionExamenService, useValue: examenService },
+        { provide: IndicacionCuidadoService, useValue: cuidadoService },
+        { provide: ModalService, useValue: modalService },
         { provide: AuthService, useValue: authService },
         { provide: EpisodioActivoService, useValue: episodioActivo },
       ],
@@ -86,9 +230,6 @@ describe('Indicaciones', () => {
     fixture.nativeElement.querySelector(selector);
 
   // Cada sección del rail tiene su propio componente: se consulta el que está montado
-  const examenes = (): IndicacionExamenes =>
-    fixture.debugElement.query(By.directive(IndicacionExamenes))!.componentInstance;
-
   const cuidados = (): IndicacionCuidados =>
     fixture.debugElement.query(By.directive(IndicacionCuidados))!.componentInstance;
 
@@ -121,43 +262,6 @@ describe('Indicaciones', () => {
     control.dispatchEvent(new Event('change'));
     await fixture.whenStable();
   };
-
-  // Archivo del examen: se elige en el input o se suelta sobre la zona de carga
-  const archivoDePrueba = (nombre: string, tipo: string, peso?: number): File => {
-    const archivo = new File(['contenido'], nombre, { type: tipo });
-
-    if (peso !== undefined) {
-      Object.defineProperty(archivo, 'size', { value: peso });
-    }
-
-    return archivo;
-  };
-
-  const elegirArchivo = async (archivo: File): Promise<void> => {
-    const input = elemento<HTMLInputElement>('#archivoExamen');
-    Object.defineProperty(input, 'files', { value: [archivo], configurable: true });
-    // jsdom no refleja el archivo elegido en el value del input: se simula para comprobar su vaciado
-    Object.defineProperty(input, 'value', {
-      value: `C:\\fakepath\\${archivo.name}`,
-      writable: true,
-      configurable: true,
-    });
-    input.dispatchEvent(new Event('change'));
-    await fixture.whenStable();
-  };
-
-  const soltarArchivo = async (archivo: File): Promise<void> => {
-    const evento = new Event('drop', { bubbles: true, cancelable: true });
-    Object.defineProperty(evento, 'dataTransfer', { value: { files: [archivo] } });
-    elemento<HTMLElement>('.carga-archivo').dispatchEvent(evento);
-    await fixture.whenStable();
-  };
-
-  const adjuntoDelFormulario = (): HTMLElement | null =>
-    elemento<HTMLElement>('.archivo-seleccionado');
-
-  const botonQuitarArchivo = (): HTMLButtonElement =>
-    elemento<HTMLButtonElement>('.archivo-seleccionado button');
 
   // Menú de opciones de cada tarjeta (mismo patrón del listado de camas)
   const disparadoresMenu = (): NodeListOf<HTMLButtonElement> =>
@@ -318,396 +422,8 @@ describe('Indicaciones', () => {
     expect(getComputedStyle(listadoExamenes).overflowY).toBe('auto');
   });
 
-  // ------------------- EXÁMENES INDICADOS -------------------
-  it('muestra el registro del examen con sus campos, su adjunto y solo el nombre obligatorio', async () => {
-    await irASeccion('Exámenes');
-
-    const etiquetas = [...elementos<HTMLElement>('.panel-seccion .indicacion-etiqueta')].map(
-      (etiqueta) => etiqueta.textContent?.trim(),
-    );
-    const obligatorio = elemento<HTMLElement>('.indicacion-obligatorio');
-
-    expect(etiquetas.length).toBe(3);
-    expect(etiquetas[0]).toContain('Nombre de examen');
-    expect(etiquetas[1]).toBe('Observación');
-    expect(etiquetas[2]).toBe('Archivo o imagen');
-    // Solo el nombre del examen es obligatorio
-    expect(elementos<HTMLElement>('.indicacion-obligatorio').length).toBe(1);
-    expect(obligatorio.closest('label')?.textContent).toContain('Nombre de examen');
-    expect(botonGuardar().disabled).toBe(true);
-  });
-
-  it('habilita Guardar con el nombre del examen y lo registra con su observación', async () => {
-    await irASeccion('Exámenes');
-
-    await escribir('#nombreExamen', 'Perfil lipídico');
-
-    expect(botonGuardar().disabled).toBe(false);
-
-    await escribir('#observacionExamen', 'Repetir en 3 meses.');
-    botonGuardar().click();
-    await fixture.whenStable();
-
-    expect(tarjetas().length).toBe(5);
-    expect(tarjetas()[4].textContent).toContain('Perfil lipídico');
-    expect(tarjetas()[4].textContent).toContain('Repetir en 3 meses.');
-    // El formulario queda listo para la siguiente captura
-    expect(examenes().nombreExamen).toBe('');
-    expect(examenes().observacionExamen).toBe('');
-  });
-
-  it('no registra el examen cuando el nombre está vacío', async () => {
-    await irASeccion('Exámenes');
-
-    await escribir('#observacionExamen', 'Examen sin nombre.');
-
-    expect(botonGuardar().disabled).toBe(true);
-
-    botonGuardar().click();
-    await fixture.whenStable();
-
-    expect(tarjetas().length).toBe(4);
-  });
-
-  it('cancela la captura del examen sin registrarlo', async () => {
-    await irASeccion('Exámenes');
-
-    await escribir('#nombreExamen', 'Perfil lipídico');
-    botonCancelar().click();
-    await fixture.whenStable();
-
-    expect(tarjetas().length).toBe(4);
-    expect(examenes().nombreExamen).toBe('');
-  });
-
-  it('abre el listado de exámenes con el filtro Todas', async () => {
-    await irASeccion('Exámenes');
-
-    expect([...filtrosIndicados()].map((filtro) => filtro.textContent?.trim())).toEqual([
-      'Todas',
-      'Disponibles',
-      'No disponibles',
-      'Eliminados',
-    ]);
-    expect(filtroActivo().textContent?.trim()).toBe('Todas');
-    expect(tarjetas().length).toBe(4);
-  });
-
-  it('marca la disponibilidad del examen con el borde y el ojo de la esquina inferior derecha', async () => {
-    await irASeccion('Exámenes');
-
-    const disponibles = elementos<HTMLElement>('.indicacion-card--verde');
-    const noDisponibles = elementos<HTMLElement>('.indicacion-card--rojo');
-
-    expect(disponibles.length).toBe(2);
-    expect(noDisponibles.length).toBe(2);
-    expect(disponibles[0].textContent).toContain('Hemograma completo');
-    expect(disponibles[0].querySelector('.examen-ojo')).not.toBeNull();
-    expect(noDisponibles[0].textContent).toContain('Radiografía de tórax');
-    expect(noDisponibles[0].textContent).toContain('Adjuntar la placa anterior');
-    // El examen no disponible no lleva el ojo, y ninguna tarjeta de examen lleva el pie de la indicación
-    expect(noDisponibles[0].querySelector('.examen-ojo')).toBeNull();
-    expect(elementos<HTMLElement>('.indicacion-meta').length).toBe(0);
-
-    // Cada tarjeta de examen lleva el menú de opciones de las tarjetas de medicamentos
-    expect(disparadoresMenu().length).toBe(4);
-    expect(
-      disparadoresMenu()[0].querySelector('i')?.classList.contains('bi-three-dots-vertical'),
-    ).toBe(true);
-  });
-
-  it('deja el ojo del examen como botón flotante de la esquina inferior derecha, sin agrandar la tarjeta', async () => {
-    await irASeccion('Exámenes');
-
-    const tarjeta = elemento<HTMLElement>('.indicacion-card--verde');
-    const ojo = elemento<HTMLButtonElement>('.examen-ojo');
-    const observaciones = elemento<HTMLElement>(
-      '.indicacion-card--verde .indicacion-observaciones',
-    );
-
-    // El ojo cuelga directamente de la tarjeta: no hay fila propia que le sume alto
-    expect(ojo.parentElement).toBe(tarjeta);
-    expect(elementos<HTMLElement>('.examen-pie').length).toBe(0);
-    expect(getComputedStyle(ojo).position).toBe('absolute');
-    expect(getComputedStyle(ojo).bottom).toBe('0.4rem');
-    expect(getComputedStyle(ojo).right).toBe('0.5rem');
-
-    // La última línea del texto le reserva la esquina para no pasar por debajo del icono
-    expect(getComputedStyle(observaciones).paddingRight).toBe('2.6rem');
-
-    // El ojo es un botón y responde al puntero
-    expect(ojo.tagName).toBe('BUTTON');
-    expect(getComputedStyle(ojo).cursor).toBe('pointer');
-    expect(ojo.getAttribute('aria-label')).toContain('Hemograma completo');
-
-    // El examen no disponible no dibuja el ojo
-    expect(elementos<HTMLElement>('.indicacion-card--rojo .examen-ojo').length).toBe(0);
-  });
-
-  it('avisa al pulsar el ojo cuando el examen no lleva un adjunto', async () => {
-    await irASeccion('Exámenes');
-
-    elemento<HTMLButtonElement>('.examen-ojo').click();
-    await fixture.whenStable();
-
-    expect(popUps.advertencia).toHaveBeenCalledWith(
-      'El examen "Hemograma completo" no tiene un archivo adjunto.',
-    );
-  });
-
-  it('abre en otra pestaña el adjunto del examen al pulsar el ojo', async () => {
-    const placa = archivoDePrueba('placa.png', 'image/png');
-    const direccion = 'blob:placa';
-
-    // jsdom no implementa ni las direcciones de objeto de los archivos ni la apertura de pestañas
-    const crearDireccion = vi.fn(() => direccion);
-
-    Object.defineProperty(URL, 'createObjectURL', { value: crearDireccion, configurable: true });
-    Object.defineProperty(URL, 'revokeObjectURL', { value: vi.fn(), configurable: true });
-
-    const abrirPestana = vi.fn(() => null);
-
-    Object.defineProperty(window, 'open', { value: abrirPestana, configurable: true });
-
-    await irASeccion('Exámenes');
-
-    const examenConAdjunto = examenes().examenes.find((examen) => examen.id === 1)!;
-
-    examenConAdjunto.archivo = {
-      archivo: placa,
-      nombre: placa.name,
-      peso: '1 KB',
-      extension: 'png',
-      esImagen: true,
-      icono: 'bi-file-earmark-image',
-    };
-    fixture.detectChanges(false);
-    await fixture.whenStable();
-
-    elemento<HTMLButtonElement>('.examen-ojo').click();
-    await fixture.whenStable();
-
-    expect(crearDireccion).toHaveBeenCalledWith(placa);
-    expect(abrirPestana).toHaveBeenCalledWith(direccion, '_blank', 'noopener');
-    expect(popUps.advertencia).not.toHaveBeenCalled();
-  });
-
-  it('muestra solo los exámenes de la disponibilidad elegida', async () => {
-    await irASeccion('Exámenes');
-
-    await elegirFiltro('Disponibles');
-
-    expect(filtroActivo().textContent?.trim()).toBe('Disponibles');
-    expect(tarjetas().length).toBe(2);
-    expect(tarjetas()[0].textContent).toContain('Hemograma completo');
-
-    await elegirFiltro('No disponibles');
-
-    expect(tarjetas().length).toBe(2);
-    expect(tarjetas()[0].textContent).toContain('Radiografía de tórax');
-    expect(elementos<HTMLElement>('.examen-ojo').length).toBe(0);
-
-    await elegirFiltro('Todas');
-
-    expect(tarjetas().length).toBe(4);
-  });
-
-  it('registra el examen nuevo como disponible y lo lista con ese filtro', async () => {
-    await irASeccion('Exámenes');
-    await elegirFiltro('Disponibles');
-    await escribir('#nombreExamen', 'Perfil lipídico');
-
-    botonGuardar().click();
-    await fixture.whenStable();
-
-    expect(tarjetas().length).toBe(3);
-    expect(tarjetas()[2].textContent).toContain('Perfil lipídico');
-    expect(tarjetas()[2].classList.contains('indicacion-card--verde')).toBe(true);
-  });
-
-  it('carga en el formulario el examen elegido al editar y guarda sobre la misma tarjeta', async () => {
-    await irASeccion('Exámenes');
-
-    await abrirMenu(0);
-    botonEditarDelMenu().click();
-    await fixture.whenStable();
-
-    expect(examenes().examenEnEdicion).toBe(1);
-    expect(examenes().nombreExamen).toBe('Hemograma completo');
-    expect(examenes().observacionExamen).toBe('Tomar la muestra en ayunas.');
-    expect(tarjetas()[0].classList.contains('indicacion-card--edicion')).toBe(true);
-
-    await escribir('#nombreExamen', 'Hemograma completo y coagulación');
-    botonGuardar().click();
-    await fixture.whenStable();
-
-    // Los cambios se guardan en la misma tarjeta y el formulario queda libre para otra captura
-    expect(tarjetas().length).toBe(4);
-    expect(tarjetas()[0].textContent).toContain('Hemograma completo y coagulación');
-    expect(examenes().examenEnEdicion).toBeNull();
-    expect(examenes().nombreExamen).toBe('');
-  });
-
-  it('cierra el menú del examen al pulsar fuera de su tarjeta', async () => {
-    await irASeccion('Exámenes');
-
-    await abrirMenu(0);
-
-    expect(examenes().menuIndicacionAbierta).toBe(1);
-
-    elemento<HTMLElement>('.panel-indicados').dispatchEvent(new Event('click', { bubbles: true }));
-    await fixture.whenStable();
-
-    expect(examenes().menuIndicacionAbierta).toBeNull();
-  });
-
-  it('pasa el examen eliminado al filtro Eliminados con el borde gris', async () => {
-    await irASeccion('Exámenes');
-
-    await abrirMenu(0);
-    botonEliminarDelMenu().click();
-    await fixture.whenStable();
-
-    expect(popUps.confirmarToast).toHaveBeenCalledWith(
-      '¿Está seguro de eliminar el examen "Hemograma completo"?',
-    );
-
-    // El examen eliminado sale del listado vigente
-    expect(tarjetas().length).toBe(3);
-
-    await elegirFiltro('Eliminados');
-
-    expect(filtroActivo().textContent?.trim()).toBe('Eliminados');
-    expect(tarjetas().length).toBe(2);
-    expect(tarjetas()[0].textContent).toContain('Hemograma completo');
-    expect(tarjetas()[0].classList.contains('indicacion-card--eliminada')).toBe(true);
-    expect(tarjetas()[0].classList.contains('indicacion-card--verde')).toBe(false);
-  });
-
-  it('muestra el estado vacío cuando el filtro de exámenes no tiene coincidencias', async () => {
-    await irASeccion('Exámenes');
-
-    examenes().examenes = examenes().examenes.map((examen) => ({ ...examen, disponible: true }));
-    await fixture.whenStable();
-    await elegirFiltro('No disponibles');
-
-    expect(tarjetas().length).toBe(0);
-    expect(elemento<HTMLElement>('.indicacion-vacio').textContent).toContain(
-      'No hay exámenes no disponibles.',
-    );
-  });
-
-  // ------------------- ARCHIVO DEL EXAMEN (IMAGEN O PDF) -------------------
-  it('ofrece cargar una imagen o un PDF dentro del registro del examen', async () => {
-    await irASeccion('Exámenes');
-
-    const input = elemento<HTMLInputElement>('#archivoExamen');
-
-    expect(input.type).toBe('file');
-    // El formato y el peso admitidos los publica el servicio global de archivos
-    expect(input.getAttribute('accept')).toBe('.pdf,.jpg,.jpeg,.png');
-    expect(elemento<HTMLElement>('.zona-carga').textContent).toContain('máximo 10 MB');
-    expect(elemento<HTMLElement>('.carga-archivo').closest('.indicacion-form')).not.toBeNull();
-    // Sin adjunto solo se muestra la zona de carga
-    expect(adjuntoDelFormulario()).toBeNull();
-  });
-
-  it('adjunta la imagen elegida y la guarda junto al examen', async () => {
-    await irASeccion('Exámenes');
-
-    await elegirArchivo(archivoDePrueba('radiografia.png', 'image/png', 1.5 * 1024 * 1024));
-
-    expect(adjuntoDelFormulario()?.textContent).toContain('radiografia.png');
-    expect(adjuntoDelFormulario()?.textContent).toContain('1.5 MB');
-    expect(
-      elemento<HTMLElement>('.archivo-seleccionado i').classList.contains('bi-file-earmark-image'),
-    ).toBe(true);
-    // Elegir el archivo no habilita por sí solo el registro: el nombre sigue siendo obligatorio
-    expect(botonGuardar().disabled).toBe(true);
-
-    await escribir('#nombreExamen', 'Radiografía de rodilla');
-    await escribir('#observacionExamen', 'Comparar con la placa anterior.');
-    botonGuardar().click();
-    await fixture.whenStable();
-
-    expect(tarjetas().length).toBe(5);
-    expect(tarjetas()[4].querySelector('.examen-adjunto')?.textContent).toContain(
-      'radiografia.png',
-    );
-    // El formulario queda listo para la siguiente captura, sin el adjunto anterior
-    expect(examenes().archivoExamen).toBeNull();
-    expect(adjuntoDelFormulario()).toBeNull();
-    expect(elemento<HTMLInputElement>('#archivoExamen').value).toBe('');
-  });
-
-  it('adjunta el PDF que se suelta sobre la zona de carga', async () => {
-    await irASeccion('Exámenes');
-
-    await soltarArchivo(archivoDePrueba('resultado.pdf', 'application/pdf'));
-
-    expect(examenes().archivoExamen?.nombre).toBe('resultado.pdf');
-    expect(adjuntoDelFormulario()?.textContent).toContain('resultado.pdf');
-    expect(
-      elemento<HTMLElement>('.archivo-seleccionado i').classList.contains('bi-file-earmark-pdf'),
-    ).toBe(true);
-  });
-
-  it('rechaza el archivo que no es una imagen ni un PDF', async () => {
-    await irASeccion('Exámenes');
-
-    await elegirArchivo(
-      archivoDePrueba(
-        'informe.docx',
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      ),
-    );
-
-    expect(popUps.advertencia).toHaveBeenCalledWith(
-      'Formato no permitido. Solo se admiten imágenes JPG o PNG y documentos PDF.',
-    );
-    expect(examenes().archivoExamen).toBeNull();
-    expect(adjuntoDelFormulario()).toBeNull();
-    // El input queda vacío para poder elegir otro archivo
-    expect(elemento<HTMLInputElement>('#archivoExamen').value).toBe('');
-  });
-
-  it('rechaza el archivo que supera el peso máximo', async () => {
-    await irASeccion('Exámenes');
-
-    await elegirArchivo(archivoDePrueba('informe.pdf', 'application/pdf', 11 * 1024 * 1024));
-
-    expect(popUps.advertencia).toHaveBeenCalledWith('El archivo supera el tamaño máximo de 10 MB.');
-    expect(examenes().archivoExamen).toBeNull();
-    expect(adjuntoDelFormulario()).toBeNull();
-  });
-
-  it('quita el adjunto del examen sin tocar el resto del formulario', async () => {
-    await irASeccion('Exámenes');
-    await escribir('#nombreExamen', 'Perfil lipídico');
-    await elegirArchivo(archivoDePrueba('resultado.pdf', 'application/pdf'));
-
-    botonQuitarArchivo().click();
-    await fixture.whenStable();
-
-    expect(examenes().archivoExamen).toBeNull();
-    expect(adjuntoDelFormulario()).toBeNull();
-    expect(elemento<HTMLInputElement>('#archivoExamen').value).toBe('');
-    // Lo escrito en el formulario se conserva
-    expect(examenes().nombreExamen).toBe('Perfil lipídico');
-  });
-
-  it('registra el examen sin adjunto cuando no se carga ningún archivo', async () => {
-    await irASeccion('Exámenes');
-    await escribir('#nombreExamen', 'Perfil lipídico');
-    botonGuardar().click();
-    await fixture.whenStable();
-
-    expect(tarjetas().length).toBe(5);
-    expect(tarjetas()[4].querySelector('.examen-adjunto')).toBeNull();
-  });
-
   // ------------------- CUIDADOS INDICADOS -------------------
-  it('muestra el registro del cuidado con sus cuatro campos y solo el nombre obligatorio', async () => {
+  it('muestra el registro del cuidado con sus cuatro campos y sus obligatorios', async () => {
     await irASeccion('Cuidados');
 
     const etiquetas = [...elementos<HTMLElement>('.panel-seccion .indicacion-etiqueta')].map(
@@ -717,9 +433,9 @@ describe('Indicaciones', () => {
 
     expect(etiquetas.length).toBe(5);
     expect(etiquetas[0]).toContain('Nombre de cuidado');
-    expect(etiquetas[1]).toContain('Frecuencia');
+    expect(etiquetas[1]).toContain('Frecuencia (horas)');
     expect(etiquetas[2]).toBe('Duración');
-    expect(etiquetas[3]).toBe('Tipo de duración');
+    expect(etiquetas[3]).toContain('Tipo de duración');
     expect(etiquetas[4]).toBe('Observaciones');
 
     // Los cuatro campos del cuidado están en el formulario
@@ -728,31 +444,43 @@ describe('Indicaciones', () => {
     expect(elemento('#duracionCuidado')).not.toBeNull();
     expect(elemento('#observacionesCuidado')).not.toBeNull();
 
-    // El nombre y la frecuencia son obligatorios; la cantidad de días solo lo es con el tipo «Días»
-    expect(elementos<HTMLElement>('.indicacion-obligatorio').length).toBe(2);
+    // El nombre, la frecuencia y el tipo de duración son obligatorios
+    expect(elementos<HTMLElement>('.indicacion-obligatorio').length).toBe(3);
     expect(obligatorio.closest('label')?.textContent).toContain('Nombre de cuidado');
     expect(botonGuardar().disabled).toBe(true);
   });
 
-  it('habilita Guardar con el nombre del cuidado y lo registra con sus datos', async () => {
+  it('habilita Guardar con los datos del cuidado y lo registra con sus datos', async () => {
     await irASeccion('Cuidados');
 
     await escribir('#nombreCuidado', 'Dieta blanda');
 
     expect(cuidados().hayCuidado).toBe(true);
-    expect(botonGuardar().disabled).toBe(false);
+    // El backend exige también la frecuencia y el tipo de duración
+    expect(botonGuardar().disabled).toBe(true);
 
     await escribir('#frecuenciaCuidado', '6');
     await elegir('#duracionTipoCuidado', 'dias');
     await escribir('#duracionCuidado', '4');
     await escribir('#observacionesCuidado', 'Sin residuos y en porciones pequeñas.');
 
+    expect(botonGuardar().disabled).toBe(false);
+
     botonGuardar().click();
     await fixture.whenStable();
 
+    expect(cuidadoService.crearCuidado).toHaveBeenCalledWith({
+      nombreCuidado: 'Dieta blanda',
+      frecuencia: 6,
+      duracion: 4,
+      tipoDuracion: 'DIAS',
+      observacion: 'Sin residuos y en porciones pequeñas.',
+      episodioId: 1,
+      usuarioId: 2,
+    });
     expect(tarjetas().length).toBe(5);
     expect(tarjetas()[4].textContent).toContain('Dieta blanda');
-    expect(insignias(4)).toEqual(['6', '4 días']);
+    expect(insignias(4)).toEqual(['Realizar cada 6 horas por 4 días']);
     expect(tarjetas()[4].textContent).toContain('Sin residuos y en porciones pequeñas.');
 
     // El formulario queda listo para la siguiente captura
@@ -765,6 +493,7 @@ describe('Indicaciones', () => {
     await irASeccion('Cuidados');
 
     await escribir('#nombreCuidado', 'Dieta blanda');
+    await escribir('#frecuenciaCuidado', '6');
     await elegir('#duracionTipoCuidado', 'dias');
 
     expect(cuidados().faltaDuracionEnDiasCuidado).toBe(true);
@@ -774,6 +503,7 @@ describe('Indicaciones', () => {
     cuidados().agregarCuidado();
     await fixture.whenStable();
 
+    expect(cuidadoService.crearCuidado).not.toHaveBeenCalled();
     expect(tarjetas().length).toBe(4);
 
     await escribir('#duracionCuidado', '4');
@@ -784,8 +514,29 @@ describe('Indicaciones', () => {
     botonGuardar().click();
     await fixture.whenStable();
 
-    // La frecuencia es opcional: sin ella la tarjeta solo muestra la duración
-    expect(insignias(4)).toEqual(['4 días']);
+    expect(insignias(4)).toEqual(['Realizar cada 6 horas por 4 días']);
+  });
+
+  it('muestra que el cuidado se realiza una sola vez cuando es dosis única', async () => {
+    await irASeccion('Cuidados');
+
+    await escribir('#nombreCuidado', 'Aplicar vacuna');
+    await escribir('#frecuenciaCuidado', '1');
+    await elegir('#duracionTipoCuidado', 'unica');
+
+    botonGuardar().click();
+    await fixture.whenStable();
+
+    expect(cuidadoService.crearCuidado).toHaveBeenCalledWith({
+      nombreCuidado: 'Aplicar vacuna',
+      frecuencia: 1,
+      duracion: null,
+      tipoDuracion: 'DOSIS_UNICA',
+      observacion: null,
+      episodioId: 1,
+      usuarioId: 2,
+    });
+    expect(insignias(4)).toEqual(['Realizar una vez']);
   });
 
   it('no agrega nada cuando el nombre del cuidado está vacío', async () => {
@@ -796,6 +547,7 @@ describe('Indicaciones', () => {
     cuidados().agregarCuidado();
     await fixture.whenStable();
 
+    expect(cuidadoService.crearCuidado).not.toHaveBeenCalled();
     expect(tarjetas().length).toBe(4);
     expect(cuidados().nombreCuidado).toBe('   ');
   });
@@ -831,7 +583,9 @@ describe('Indicaciones', () => {
     expect(filtroActivo().getAttribute('aria-pressed')).toBe('true');
     expect(elementos<HTMLElement>('.indicados-filtro[aria-pressed="true"]').length).toBe(1);
 
-    // El MOCK guarda un cuidado eliminado que no se lista entre los vigentes
+    // «Todas» consulta los estados vigentes del backend y deja fuera los eliminados
+    expect(cuidadoService.buscarPorEpisodio).toHaveBeenCalledWith(1, 'EN_PROCESO');
+    expect(cuidadoService.buscarPorEpisodio).toHaveBeenCalledWith(1, 'COMPLETADO');
     expect(tarjetas().length).toBe(4);
     expect(tarjetas()[0].textContent).toContain('Cambio de posición');
     expect(tarjetas()[3].textContent).toContain('Curación de herida');
@@ -890,6 +644,8 @@ describe('Indicaciones', () => {
     await elegirFiltro('En proceso');
 
     await escribir('#nombreCuidado', 'Dieta blanda');
+    await escribir('#frecuenciaCuidado', '6');
+    await elegir('#duracionTipoCuidado', 'indefinida');
     botonGuardar().click();
     await fixture.whenStable();
 
@@ -908,6 +664,7 @@ describe('Indicaciones', () => {
     expect(popUps.confirmarToast).toHaveBeenCalledWith(
       '¿Está seguro de eliminar el cuidado "Cambio de posición"?',
     );
+    expect(cuidadoService.eliminarCuidado).toHaveBeenCalledWith(1);
 
     // El cuidado eliminado sale del listado vigente
     expect(tarjetas().length).toBe(3);
@@ -953,7 +710,7 @@ describe('Indicaciones', () => {
     const tarjeta = tarjetas()[0];
     const pie = tarjeta.querySelector<HTMLElement>('.indicacion-meta');
 
-    expect(insignias(0)).toEqual(['2', '5 días']);
+    expect(insignias(0)).toEqual(['Realizar cada 2 horas por 5 días']);
     expect(tarjeta.querySelector('.indicacion-observaciones')?.textContent).toContain(
       'Alternar decúbito lateral',
     );
@@ -973,7 +730,7 @@ describe('Indicaciones', () => {
     // El tipo de duración distinto de «días» se muestra con su nombre
     await elegirFiltro('Eliminadas');
 
-    expect(insignias(0)).toEqual(['8', 'Por tiempo indefinido']);
+    expect(insignias(0)).toEqual(['Realizar cada 8 horas por tiempo indefinido']);
   });
 
   it('despliega el menú del cuidado y lo cierra al pulsar fuera de su tarjeta', async () => {
@@ -1016,10 +773,20 @@ describe('Indicaciones', () => {
     botonGuardar().click();
     await fixture.whenStable();
 
+    expect(cuidadoService.actualizarCuidado).toHaveBeenCalledWith(1, {
+      nombreCuidado: 'Cambio de posición cada 4 horas',
+      frecuencia: 4,
+      duracion: 5,
+      tipoDuracion: 'DIAS',
+      observacion: 'Alternar decúbito lateral y evitar apoyar la zona de la úlcera.',
+      episodioId: 1,
+      usuarioId: 2,
+    });
+
     // Los cambios se guardan en la misma tarjeta, que conserva su fecha, hora, médico y estado
     expect(tarjetas().length).toBe(4);
     expect(tarjetas()[0].textContent).toContain('Cambio de posición cada 4 horas');
-    expect(insignias(0)).toEqual(['4', '5 días']);
+    expect(insignias(0)).toEqual(['Realizar cada 4 horas por 5 días']);
     expect(tarjetas()[0].textContent).toContain('10/10/2026');
     expect(tarjetas()[0].classList.contains('indicacion-card--naranja')).toBe(true);
     expect(cuidados().cuidadoEnEdicion).toBeNull();

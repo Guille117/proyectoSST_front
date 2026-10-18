@@ -11,6 +11,7 @@ import { AuthService } from '../../Auth/data/auth-service';
 import { LoginResponse } from '../../Auth/data/authInterfaz';
 import { ModalService } from '../../../modal-principal/modal-service';
 import { ArchivoService } from '../../../shared/archivos/archivoService';
+import { VisorArchivos } from '../../../shared/visor-archivos/visor-archivos';
 import { ArchivoSeleccionado, ResultadoArchivo } from '../../../shared/archivos/archivoInterfaz';
 import { PopUps } from '../../../shared/popUps/popUpsService';
 
@@ -176,6 +177,26 @@ describe('Paciente', () => {
     );
 
     expect(botonesVer.length).toBe(1);
+  });
+
+  it('abre el visor reutilizable con los documentos del tipo', async () => {
+    await render();
+
+    const botonVer = fixture.nativeElement.querySelector(
+      '.documento-acciones button[title="Ver"]',
+    ) as HTMLButtonElement;
+    botonVer.click();
+
+    expect(modalService.open).toHaveBeenCalledWith(
+      VisorArchivos,
+      expect.objectContaining({
+        modalClass: 'modal-visor-documentos',
+        archivos: [{ id: 10, nombreOriginal: 'autorizacion.pdf' }],
+        cargarArchivo: expect.any(Function),
+        onEliminar: expect.any(Function),
+        onCambio: expect.any(Function),
+      }),
+    );
   });
 
   it('abre el modal de edición con los datos del detalle', async () => {

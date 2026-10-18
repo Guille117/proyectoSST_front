@@ -14,6 +14,8 @@ describe('MedicamentoIndicacionService', () => {
 
   const cuerpo: MedicamentoIndicacionRequest = {
     medicamentoLogId: 9,
+    medicamentoLibre: null,
+    presentacion: 'tabletas de 400 mg',
     cantidad: 2,
     frecuencia: 8,
     duracion: 7,

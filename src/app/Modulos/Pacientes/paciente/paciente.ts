@@ -9,7 +9,8 @@ import { PopUps } from '../../../shared/popUps/popUpsService';
 import { AuthService } from '../../Auth/data/auth-service';
 import { Sexo } from '../../Usuarios/usu/data/usuarioInterfaz';
 import { ModalAgregarPaciente } from './modal-agregar-paciente/modal-agregar-paciente';
-import { ModalDocumentosPaciente } from './modal-documentos-paciente/modal-documentos-paciente';
+import { VisorArchivos } from '../../../shared/visor-archivos/visor-archivos';
+import { ArchivoVisor } from '../../../shared/visor-archivos/visor-archivos.interfaz';
 import { DocumentoEpisodioService } from './data/documento-episodio-service';
 import { DocumentoEpisodio, TipoDocumentoEpisodio } from './data/documentoInterfaz';
 import { PacienteDetalle, PacienteResumido, TipoAtencion } from './data/pacienteInterfaz';
@@ -230,9 +231,20 @@ export class Paciente implements OnInit {
     const documentos = this.documentosPorTipo(tipo);
     if (!documentos.length) return;
 
-    this.modalService.open(ModalDocumentosPaciente, {
+    const archivos: ArchivoVisor[] = documentos.map((documento) => ({
+      id: documento.id,
+      nombreOriginal: documento.nombreOriginal,
+    }));
+
+    this.modalService.open(VisorArchivos, {
       title: etiqueta,
-      documentos,
+      modalClass: 'modal-visor-documentos',
+      archivos,
+      indiceInicial: 0,
+      cargarArchivo: (archivo: ArchivoVisor) =>
+        this.servicioDocumento.obtenerArchivo(Number(archivo.id)),
+      onEliminar: (archivo: ArchivoVisor) =>
+        this.servicioDocumento.eliminarDocumento(Number(archivo.id)),
       onCambio: () => this.cargarDocumentos(this.pacienteSeleccionado),
     });
   }

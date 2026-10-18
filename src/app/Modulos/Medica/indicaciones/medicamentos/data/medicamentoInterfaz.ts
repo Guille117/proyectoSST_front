@@ -6,7 +6,9 @@ export type TipoDuracionApi = 'DIAS' | 'DOSIS_UNICA' | 'TIEMPO_INDEFINIDO';
 
 /** Cuerpo con el que se crea o actualiza una indicación de medicamento. */
 export interface MedicamentoIndicacionRequest {
-  medicamentoLogId: number;
+  medicamentoLogId: number | null;
+  medicamentoLibre: string | null;
+  presentacion: string | null;
   cantidad: number;
   frecuencia: number;
   duracion: number | null;
@@ -19,8 +21,10 @@ export interface MedicamentoIndicacionRequest {
 /** Indicación de medicamento tal como la devuelve el backend. */
 export interface MedicamentoIndicacionResponse {
   id: number;
-  medicamentoLogId: number;
+  medicamentoLogId: number | null;
   medicamento: string;
+  medicamentoLibre: string | null;
+  presentacion: string | null;
   cantidad: number;
   frecuencia: number;
   duracion: number | null;
@@ -43,5 +47,8 @@ export interface MedicamentoCatalogoResponse {
   presentacion: string;
   viaAdministracion: string;
   unidadMedida: string;
+  disponible: number;
+  /** Falso solo en el catálogo mínimo de edición, donde no se conoce la existencia actual. */
+  disponibleConocido?: boolean;
   estado: boolean;
 }

@@ -76,3 +76,9 @@ body {
   background: #d1d5db;
   transform: translateY(-1px);
 }
+
+/* El visor a pantalla completa bloquea el desplazamiento de la página de fondo. */
+html.visor-abierto,
+html.visor-abierto body {
+  overflow: hidden;
+}

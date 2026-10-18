@@ -6,3 +6,28 @@
 :host {
   display: contents;
 }
+
+/* Cada fila comparte dos filas de rejilla (etiqueta e input): los inputs de la misma fila quedan
+   alineados aunque una etiqueta ocupe dos líneas. */
+.indicacion-form .indicacion-fila {
+  grid-template-rows: auto auto;
+  row-gap: 10px;
+}
+
+.indicacion-form .indicacion-campo {
+  display: grid;
+  grid-row: span 2;
+  grid-template-rows: subgrid;
+}
+
+/* El nombre ocupa dos columnas y la frecuencia comparte la tercera con los campos de la fila
+   siguiente, de modo que la rejilla del formulario queda alineada de arriba abajo. */
+.indicacion-campo--ancho {
+  grid-column: span 2;
+}
+
+@media (max-width: 900px) {
+  .indicacion-campo--ancho {
+    grid-column: auto;
+  }
+}
