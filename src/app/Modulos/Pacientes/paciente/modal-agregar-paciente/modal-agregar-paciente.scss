@@ -430,3 +430,105 @@ mat-select {
 		}
 	}
 }
+
+/* ==================== B�SQUEDA DE PACIENTE ==================== */
+.resultados-paciente {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+
+.resultados-titulo {
+	margin: 0;
+	color: var(--azulPrincipal);
+	font-size: 1rem;
+	font-weight: 700;
+}
+
+.aviso {
+	margin: 0;
+	padding: 12px 14px;
+	border: 1px dashed #dbe4f0;
+	border-radius: 10px;
+	color: #64748b;
+	font-size: 0.9rem;
+	text-align: center;
+}
+
+.aviso--error {
+	border-color: #f5c2c7;
+	background: #fff5f5;
+	color: #b42318;
+}
+
+.lista-resultados {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	max-height: 320px;
+	overflow-y: auto;
+	padding-right: 4px;
+}
+
+.resultado-paciente {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 2px;
+	width: 100%;
+	padding: 10px 12px;
+	border: 1px solid #e2e8f0;
+	border-radius: 10px;
+	background: #fff;
+	font-family: inherit;
+	text-align: left;
+	cursor: pointer;
+	transition:
+		border-color 0.2s ease,
+		background-color 0.2s ease;
+
+	&:hover:not(:disabled) {
+		border-color: var(--azulSecundario);
+		background: #f2f7ff;
+	}
+
+	&:focus-visible {
+		outline: 2px solid var(--azulSecundario);
+		outline-offset: 2px;
+	}
+}
+
+.resultado-nombre {
+	color: var(--azulPrincipal);
+	font-size: 0.95rem;
+	font-weight: 700;
+	overflow-wrap: anywhere;
+}
+
+.resultado-meta,
+.resultado-estado {
+	color: #64748b;
+	font-size: 0.82rem;
+	overflow-wrap: anywhere;
+}
+
+.volver-formulario {
+	align-self: flex-start;
+	padding: 4px 0;
+	border: 0;
+	background: transparent;
+	color: var(--azulSecundario);
+	font-family: inherit;
+	font-size: 0.9rem;
+	font-weight: 600;
+	cursor: pointer;
+
+	&:hover {
+		text-decoration: underline;
+	}
+
+	&:focus-visible {
+		outline: 2px solid var(--azulSecundario);
+		outline-offset: 2px;
+	}
+}

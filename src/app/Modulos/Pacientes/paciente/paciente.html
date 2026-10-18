@@ -1,3 +1,4 @@
+<!-- Listado de pacientes a la izquierda y detalle del paciente seleccionado a la derecha. -->
 <div class="contenedorPrincipal trabajoArea">
     <div class="izquierda">
         <div class="seccionSuperior">
@@ -28,84 +29,177 @@
                 </tr>
             </thead>
             <tbody>
-                <!-- Quitar esto -->
-                @for(paciente of pacientes; track $index){
+                @for (paciente of pacientes; track paciente.pacienteId) {
                     <tr
                         [class.selected-row]="esSeleccionado(paciente)"
                         tabindex="0"
                         (click)="seleccionarPaciente(paciente)"
                         (keydown.enter)="seleccionarPaciente(paciente)"
                     >
-                        <td class="celda_centrada">{{$index +1}}</td>
-                        <td class="celda_centrada">{{paciente.codigoExpediente}}</td>
-                        <td class="celda_izquierda">{{paciente.nombreCompleto}}</td>
-                        <td class="celda_centrada">{{paciente.telefono}}</td>
-                        <td class="celda_centrada">{{paciente.tipoTratamiento}}</td>
+                        <td class="celda_centrada">{{ $index + 1 }}</td>
+                        <td class="celda_centrada">{{ paciente.codigoExpediente }}</td>
+                        <td class="celda_izquierda">{{ paciente.nombreCompleto }}</td>
+                        <td class="celda_centrada">{{ paciente.telefono }}</td>
+                        <td class="celda_centrada">{{ paciente.tipoTratamiento }}</td>
                     </tr>
-                    }
-                <!-- Quitar esto -->
+                }
             </tbody>
         </table>
     </div>
 
     <div class="derecha">
-        <div class="titulo">
-            <h3>Detalle de paciente</h3>
-        </div>
-
         @if (pacienteSeleccionado; as paciente) {
-            <div class="cabecera">
-                <h2>{{ paciente.nombreCompleto }}</h2>
-                <p>{{ paciente.codigoExpediente }} | {{ paciente.edad }} años | {{ paciente.sexo }}</p>
+            <div class="paciente">
+                <div class="paciente-identidad">
+                    <h2>{{ paciente.nombreCompleto }}</h2>
+
+                    <p class="paciente-meta">
+                        <span>{{ paciente.codigoExpediente }}</span>
+                        @if (detalle; as datos) {
+                            <span class="separador" aria-hidden="true">|</span>
+                            <span>{{ datos.edad ?? '—' }} años</span>
+                            <span class="separador" aria-hidden="true">|</span>
+                            <span>{{ sexoLegible(datos.sexo) }}</span>
+                        }
+                    </p>
+                </div>
+
+                <span class="estado" [class.estado--inactivo]="!paciente.estado">
+                    {{ paciente.estado ? 'Activo' : 'Inactivo' }}
+                </span>
             </div>
 
-            <div class="seccion">
-                <h4>Información de la atención</h4>
+            @if (cargandoDetalle) {
+                <p class="aviso">Cargando detalle del paciente...</p>
+            } @else if (errorDetalle) {
+                <div class="aviso-error" role="alert">
+                    <p>{{ errorDetalle }}</p>
+                    <button type="button" class="btns" (click)="recargarDetalle()">
+                        Reintentar
+                    </button>
+                </div>
+            } @else if (detalle; as datos) {
+                <div class="bloques-paralelos">
+                    <section class="bloque">
+                        <h4>Información del ingreso</h4>
 
-                <div class="datos">
-                    <div class="data">
-                        <span class="rotulo">Tipo de atención</span>
-                        <span class="valor">{{ etiquetasTipo[paciente.tipoTratamiento] }}</span>
-                    </div>
+                        <div class="ingreso-datos">
+                            <div class="dato">
+                                <span class="dato-rotulo">Médico asignado</span>
+                                <span class="dato-valor">{{ datos.medicoNombre || '—' }}</span>
+                            </div>
 
-                    <div class="data">
-                        <span class="rotulo">Fecha de ingreso</span>
-                        <span class="valor">{{ paciente.fechaIngreso }}</span>
-                    </div>
+                            <div class="dato">
+                                <span class="dato-rotulo">Fecha y hora de ingreso</span>
+                                <span class="dato-valor">
+                                    {{ fechaHoraLegible(datos.fechaHoraIngreso) }}
+                                </span>
+                            </div>
 
-                    @if (esHospitalizacion(paciente)) {
-                        <div class="data">
-                            <span class="rotulo">Cama</span>
-                            <span class="valor">{{ paciente.ubicacion }}</span>
+                            <div class="dato">
+                                <span class="dato-rotulo">Tipo de atención</span>
+                                <span class="dato-valor">{{ tipoAtencionLegible() }}</span>
+                            </div>
+
+                            @if (esHospitalizacion() && datos.camaCodigo) {
+                                <div class="dato">
+                                    <span class="dato-rotulo">Cama</span>
+                                    <span class="dato-valor">{{ datos.camaCodigo }}</span>
+                                </div>
+                            }
+                        </div>
+                    </section>
+
+                    <section class="bloque bloque--responsable">
+                        <h4>Persona responsable</h4>
+
+                        <div class="ingreso-datos ingreso-datos--una-columna">
+                            <div class="dato">
+                                <span class="dato-rotulo">Nombre</span>
+                                <span class="dato-valor">{{ responsableNombre() }}</span>
+                            </div>
+
+                            <div class="dato">
+                                <span class="dato-rotulo">Teléfono</span>
+                                <span class="dato-valor">{{ responsableTelefono() }}</span>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+
+                <section class="bloque motivo-visita">
+                    <h4>Motivo de la visita</h4>
+                    <p>{{ datos.descripcion || 'No registrado' }}</p>
+                </section>
+
+                <section class="bloque">
+                    <h4>Documentos</h4>
+
+                    <input
+                        #archivoDocumento
+                        type="file"
+                        class="archivo-oculto"
+                        [accept]="archivosAceptados"
+                        (change)="subirDocumento($event)"
+                    >
+
+                    @if (!paciente.episodioId) {
+                        <p class="aviso">El paciente no tiene un episodio activo.</p>
+                    } @else {
+                        @if (cargandoDocumentos) {
+                            <p class="aviso">Cargando documentos...</p>
+                        }
+
+                        @if (errorDocumentos) {
+                            <div class="aviso-error" role="alert">
+                                <p>{{ errorDocumentos }}</p>
+                                <button type="button" class="btns" (click)="recargarDocumentos()">
+                                    Reintentar
+                                </button>
+                            </div>
+                        }
+
+                        <div class="documentos">
+                            @for (tipo of tiposDocumento; track tipo.tipo) {
+                                <div class="documento">
+                                    <strong class="documento-nombre">{{ tipo.etiqueta }}</strong>
+
+                                    <div class="documento-acciones">
+                                        @if (documentosPorTipo(tipo.tipo).length > 0) {
+                                            <button
+                                                type="button"
+                                                class="iconEditar"
+                                                [attr.aria-label]="'Ver ' + tipo.etiqueta"
+                                                title="Ver"
+                                                (click)="abrirModalDocumentos(tipo.tipo, tipo.etiqueta)"
+                                            >
+                                                <i class="bi bi-eye" aria-hidden="true"></i>
+                                            </button>
+                                        }
+
+                                        <button
+                                            type="button"
+                                            class="iconEditar iconVerde"
+                                            [disabled]="subiendoTipo !== null"
+                                            [attr.aria-label]="'Cargar ' + tipo.etiqueta"
+                                            title="Cargar"
+                                            (click)="seleccionarArchivo(tipo.tipo, archivoDocumento)"
+                                        >
+                                            <i class="bi bi-upload" aria-hidden="true"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            }
                         </div>
                     }
+                </section>
+
+                <div class="acciones">
+                    <button type="button" class="btn _editar" (click)="abrirModalEditar()">
+                        Editar paciente
+                    </button>
                 </div>
-            </div>
-
-            <div class="seccion">
-                <h4>Diagnóstico actual</h4>
-                <p class="diagnostico">{{ paciente.diagnostico }}</p>
-            </div>
-
-            <div class="seccion">
-                <h4>Alergias</h4>
-                <p class="alergias">{{ paciente.alergias }}</p>
-            </div>
-
-            <div class="seccion">
-                <h4>Últimos signos vitales</h4>
-
-                <div class="vitales">
-                    @for (signo of paciente.signosVitales; track signo.etiqueta) {
-                        <div class="vital">
-                            <span class="vital-rotulo">{{ signo.etiqueta }}</span>
-                            <span class="vital-valor">
-                                {{ signo.valor }}<span class="vital-unidad">{{ signo.unidad }}</span>
-                            </span>
-                        </div>
-                    }
-                </div>
-            </div>
+            }
         } @else {
             <p class="sin-seleccion">Seleccione un paciente de la lista para ver su detalle.</p>
         }

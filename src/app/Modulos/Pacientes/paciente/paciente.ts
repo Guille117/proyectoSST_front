@@ -1,80 +1,25 @@
-import { Component, inject } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
+import { ChangeDetectorRef, Component, DestroyRef, OnInit, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { TimeoutError } from 'rxjs';
 import { TabSwitch } from '../../../shared/tab-switch/tab-switch';
-import { ChangeDetectorRef } from '@angular/core';
 import { ModalService } from '../../../modal-principal/modal-service';
+import { ArchivoService } from '../../../shared/archivos/archivoService';
+import { PopUps } from '../../../shared/popUps/popUpsService';
+import { AuthService } from '../../Auth/data/auth-service';
+import { Sexo } from '../../Usuarios/usu/data/usuarioInterfaz';
 import { ModalAgregarPaciente } from './modal-agregar-paciente/modal-agregar-paciente';
+import { ModalDocumentosPaciente } from './modal-documentos-paciente/modal-documentos-paciente';
+import { DocumentoEpisodioService } from './data/documento-episodio-service';
+import { DocumentoEpisodio, TipoDocumentoEpisodio } from './data/documentoInterfaz';
+import { PacienteDetalle, PacienteResumido, TipoAtencion } from './data/pacienteInterfaz';
 import { PacienteService } from './data/paciente-service';
-import { PacienteResumido, TipoAtencion } from './data/pacienteInterfaz';
 
-/** Signo vital que se muestra en el detalle del paciente. */
-interface SignoVitalVista {
+/** Tipo de documento que se muestra en el panel del paciente. */
+interface TipoDocumentoVista {
+  tipo: TipoDocumentoEpisodio;
   etiqueta: string;
-  valor: string;
-  unidad: string;
 }
-
-/** Paciente del listado con el detalle que se muestra en el panel de la derecha. */
-interface PacienteVista extends PacienteResumido {
-  edad: number;
-  sexo: string;
-  fechaIngreso: string;
-  /** Código de la cama o del box según el tipo de atención, sin la etiqueta. */
-  ubicacion: string;
-  diagnostico: string;
-  alergias: string;
-  signosVitales: SignoVitalVista[];
-}
-
-// MOCK: detalle temporal de diseño. Se sustituirá por el detalle real del paciente (edad, sexo,
-// ingreso, cama, diagnóstico, alergias y signos vitales) en la fase de integración.
-/** Signos vitales de la maqueta que comparten los pacientes. */
-const SIGNOS_VITALES_MOCK: SignoVitalVista[] = [
-  { etiqueta: 'PA', valor: '120/80', unidad: 'mmHg' },
-  { etiqueta: 'FC', valor: '82', unidad: 'lpm' },
-  { etiqueta: 'Temp', valor: '37.2', unidad: '°C' },
-  { etiqueta: 'SpO2', valor: '97', unidad: '%' },
-];
-
-/** Detalle de la maqueta: se reparte por posición entre los pacientes que devuelve el backend. */
-const DETALLES_MOCK: Omit<PacienteVista, keyof PacienteResumido>[] = [
-  {
-    edad: 45,
-    sexo: 'Masculino',
-    ubicacion: 'A-105',
-    diagnostico: 'Gastroenteritis aguda',
-    fechaIngreso: '10-10-2026',
-    alergias: 'Ninguna conocida',
-    signosVitales: SIGNOS_VITALES_MOCK,
-  },
-  {
-    edad: 32,
-    sexo: 'Femenino',
-    ubicacion: '2',
-    diagnostico: 'Cólico renal',
-    fechaIngreso: '10-10-2026',
-    alergias: 'Ninguna conocida',
-    signosVitales: SIGNOS_VITALES_MOCK,
-  },
-  {
-    edad: 58,
-    sexo: 'Masculino',
-    ubicacion: 'A-106',
-    diagnostico: 'Neumonía adquirida en la comunidad',
-    fechaIngreso: '10-10-2026',
-    alergias: 'Penicilina',
-    signosVitales: SIGNOS_VITALES_MOCK,
-  },
-  {
-    edad: 27,
-    sexo: 'Femenino',
-    ubicacion: 'B-201',
-    diagnostico: 'Postoperatorio de apendicectomía',
-    fechaIngreso: '09-10-2026',
-    alergias: 'Ninguna conocida',
-    signosVitales: SIGNOS_VITALES_MOCK,
-  },
-];
-// ------------------- FIN MOCK -------------------
 
 @Component({
   selector: 'app-paciente',
@@ -82,22 +27,30 @@ const DETALLES_MOCK: Omit<PacienteVista, keyof PacienteResumido>[] = [
   templateUrl: './paciente.html',
   styleUrl: './paciente.scss',
 })
-export class Paciente {
-
-  // dependencias inyectadas
-  private modalService = inject(ModalService);
-  private servicioPaciente = inject(PacienteService);
+export class Paciente implements OnInit {
+  private readonly modalService = inject(ModalService);
+  private readonly servicioPaciente = inject(PacienteService);
+  private readonly servicioDocumento = inject(DocumentoEpisodioService);
+  private readonly authService = inject(AuthService);
+  private readonly archivoService = inject(ArchivoService);
+  private readonly popUps = inject(PopUps);
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly destroyRef = inject(DestroyRef);
 
-  //--------------------------------------
-    ngOnInit(){
-      this.listarPacientes();
-    }
+  // ------------------- LISTADO Y SELECCIÓN -------------------
+  pacientes: PacienteResumido[] = [];
+  pacienteSeleccionado: PacienteResumido | null = null;
 
+  detalle: PacienteDetalle | null = null;
+  cargandoDetalle = false;
+  errorDetalle = '';
 
-  // ------------------- LISTAR PACIENTES -------------------
-  pacientes: PacienteVista[] = [];
-  pacienteSeleccionado: PacienteVista | null = null;
+  documentos: DocumentoEpisodio[] = [];
+  cargandoDocumentos = false;
+  errorDocumentos = '';
+  subiendoTipo: TipoDocumentoEpisodio | null = null;
+
+  private tipoSubida: TipoDocumentoEpisodio | null = null;
 
   /** Etiquetas del tipo de atención del paciente. */
   protected readonly etiquetasTipo: Record<TipoAtencion, string> = {
@@ -105,36 +58,239 @@ export class Paciente {
     EMERGENCIA: 'Emergencia',
   };
 
-  listarPacientes(){
-    this.servicioPaciente.listarPacientes().subscribe({
-      next: (pacientes) => {
-        this.pacientes = pacientes.map((paciente, posicion) => this.aVista(paciente, posicion));
-        // El detalle arranca con el primer paciente del listado
-        this.pacienteSeleccionado = this.pacientes[0] ?? null;
-        this.cdr.detectChanges();
-      },
-      error: (err) => {
-        console.error('Error al listar pacientes', err);
-      }
-    });
+  /** Etiquetas del sexo del paciente. */
+  protected readonly etiquetasSexo: Record<Sexo, string> = {
+    MASCULINO: 'Masculino',
+    FEMENINO: 'Femenino',
+  };
+
+  /**
+   * Tipos de documento visibles. RESPONSABILIDAD se mantiene en los tipos y en el servicio, pero no
+   * se muestra todavía porque el flujo actual solo maneja autorización y referencia.
+   */
+  protected readonly tiposDocumento: TipoDocumentoVista[] = [
+    { tipo: 'AUTORIZACION_PROCEDIMIENTO', etiqueta: 'Autorización de atención' },
+    { tipo: 'REFERENCIA', etiqueta: 'Hoja de referencia' },
+  ];
+
+  protected get archivosAceptados(): string {
+    return this.archivoService.aceptados;
+  }
+
+  ngOnInit(): void {
+    this.listarPacientes();
+  }
+
+  // ------------------- LISTAR PACIENTES -------------------
+  listarPacientes(pacienteIdSeleccionado?: number): void {
+    this.servicioPaciente
+      .listarPacientes()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (pacientes) => {
+          this.pacientes = pacientes;
+          const seleccionado =
+            pacientes.find((paciente) => paciente.pacienteId === pacienteIdSeleccionado) ??
+            pacientes[0] ??
+            null;
+          this.seleccionarPaciente(seleccionado, true);
+          this.cdr.detectChanges();
+        },
+        error: (error) => {
+          this.popUps.errorDesdeBackend(error, 'No se pudieron cargar los pacientes.');
+          this.cdr.detectChanges();
+        },
+      });
   }
 
   // ------------------- SELECCIÓN DEL PACIENTE -------------------
-  seleccionarPaciente(paciente: PacienteVista): void {
+  seleccionarPaciente(paciente: PacienteResumido | null, forzar = false): void {
+    if (!paciente) {
+      this.pacienteSeleccionado = null;
+      this.detalle = null;
+      this.documentos = [];
+      return;
+    }
+    if (!forzar && this.pacienteSeleccionado?.pacienteId === paciente.pacienteId) return;
+
     this.pacienteSeleccionado = paciente;
+    this.detalle = null;
+    this.documentos = [];
+    this.cargarDetalle(paciente);
+    this.cargarDocumentos(paciente);
   }
 
-  esSeleccionado(paciente: PacienteVista): boolean {
-    return this.pacienteSeleccionado === paciente;
+  esSeleccionado(paciente: PacienteResumido): boolean {
+    return this.pacienteSeleccionado?.pacienteId === paciente.pacienteId;
   }
 
-  /** Solo las atenciones con hospitalización tienen cama; la emergencia no muestra destino. */
-  protected esHospitalizacion(paciente: PacienteVista): boolean {
-    return paciente.tipoTratamiento === 'HOSPITALIZACION';
+  // ------------------- DETALLE -------------------
+  recargarDetalle(): void {
+    if (this.pacienteSeleccionado) this.cargarDetalle(this.pacienteSeleccionado);
   }
 
+  private cargarDetalle(paciente: PacienteResumido): void {
+    this.cargandoDetalle = true;
+    this.errorDetalle = '';
 
-// ------------------- ACCIONES DE MODAL -------------------
+    this.servicioPaciente
+      .obtenerPaciente(paciente.pacienteId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (detalle) => {
+          if (this.pacienteSeleccionado?.pacienteId !== paciente.pacienteId) return;
+          this.detalle = detalle;
+          this.cargandoDetalle = false;
+          this.cdr.detectChanges();
+        },
+        error: (error) => {
+          if (this.pacienteSeleccionado?.pacienteId !== paciente.pacienteId) return;
+          this.cargandoDetalle = false;
+          this.errorDetalle = this.mensajeError(
+            error,
+            'No se pudo cargar el detalle del paciente.',
+          );
+          this.cdr.detectChanges();
+        },
+      });
+  }
+
+  protected esHospitalizacion(): boolean {
+    const tipo = this.detalle?.tipoAtencion ?? this.pacienteSeleccionado?.tipoTratamiento ?? null;
+    return tipo === 'HOSPITALIZACION';
+  }
+
+  protected tipoAtencionLegible(): string {
+    const tipo = this.detalle?.tipoAtencion ?? this.pacienteSeleccionado?.tipoTratamiento ?? null;
+    return tipo ? this.etiquetasTipo[tipo] : '—';
+  }
+
+  protected sexoLegible(sexo: Sexo | null): string {
+    return sexo ? this.etiquetasSexo[sexo] : '—';
+  }
+
+  protected fechaHoraLegible(valor: string | null): string {
+    if (!valor) return '—';
+    const [fecha, hora = ''] = valor.split('T');
+    const [anio, mes, dia] = fecha.split('-');
+    if (!anio || !mes || !dia) return valor;
+    return `${dia}-${mes}-${anio}${hora ? ` • ${hora.slice(0, 5)}` : ''}`;
+  }
+
+  protected responsableNombre(): string {
+    const responsable = this.detalle?.responsable;
+    if (!responsable) return 'No registrado';
+    const nombre = `${responsable.nombres} ${responsable.apellidos}`.trim();
+    return nombre || 'No registrado';
+  }
+
+  protected responsableTelefono(): string {
+    return this.detalle?.responsable?.telefono?.trim() || 'No registrado';
+  }
+
+  // ------------------- DOCUMENTOS -------------------
+  documentosPorTipo(tipo: TipoDocumentoEpisodio): DocumentoEpisodio[] {
+    return this.documentos.filter((documento) => documento.tipo === tipo);
+  }
+
+  recargarDocumentos(): void {
+    this.cargarDocumentos(this.pacienteSeleccionado);
+  }
+
+  private cargarDocumentos(paciente: PacienteResumido | null): void {
+    this.errorDocumentos = '';
+
+    if (!paciente?.episodioId) {
+      this.documentos = [];
+      this.cargandoDocumentos = false;
+      return;
+    }
+
+    this.cargandoDocumentos = true;
+    this.servicioDocumento
+      .listarDocumentos(paciente.episodioId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (documentos) => {
+          if (this.pacienteSeleccionado?.pacienteId !== paciente.pacienteId) return;
+          this.documentos = documentos;
+          this.cargandoDocumentos = false;
+          this.cdr.detectChanges();
+        },
+        error: (error) => {
+          if (this.pacienteSeleccionado?.pacienteId !== paciente.pacienteId) return;
+          this.cargandoDocumentos = false;
+          this.errorDocumentos = this.mensajeError(error, 'No se pudieron cargar los documentos.');
+          this.cdr.detectChanges();
+        },
+      });
+  }
+
+  abrirModalDocumentos(tipo: TipoDocumentoEpisodio, etiqueta: string): void {
+    const documentos = this.documentosPorTipo(tipo);
+    if (!documentos.length) return;
+
+    this.modalService.open(ModalDocumentosPaciente, {
+      title: etiqueta,
+      documentos,
+      onCambio: () => this.cargarDocumentos(this.pacienteSeleccionado),
+    });
+  }
+
+  seleccionarArchivo(tipo: TipoDocumentoEpisodio, input: HTMLInputElement): void {
+    if (!this.pacienteSeleccionado?.episodioId || this.subiendoTipo) return;
+    this.tipoSubida = tipo;
+    input.value = '';
+    input.click();
+  }
+
+  subirDocumento(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const tipo = this.tipoSubida;
+    const episodioId = this.pacienteSeleccionado?.episodioId;
+    const usuarioId = this.authService.currentUser()?.id;
+    this.tipoSubida = null;
+
+    if (!tipo || !episodioId) return;
+    if (!usuarioId) {
+      this.popUps.advertencia('No se pudo identificar al usuario para cargar el documento.');
+      input.value = '';
+      return;
+    }
+
+    const resultado = this.archivoService.procesar(event);
+    if (resultado.mensaje) {
+      this.popUps.advertencia(resultado.mensaje);
+      input.value = '';
+      return;
+    }
+    if (!resultado.seleccionado) {
+      input.value = '';
+      return;
+    }
+
+    this.subiendoTipo = tipo;
+    this.servicioDocumento
+      .subirDocumento(episodioId, tipo, usuarioId, resultado.seleccionado.archivo)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.subiendoTipo = null;
+          input.value = '';
+          this.popUps.exito('Documento cargado correctamente.');
+          this.cargarDocumentos(this.pacienteSeleccionado);
+          this.cdr.detectChanges();
+        },
+        error: (error) => {
+          this.subiendoTipo = null;
+          input.value = '';
+          this.popUps.error(this.mensajeError(error, 'No se pudo cargar el documento.'));
+          this.cdr.detectChanges();
+        },
+      });
+  }
+
+  // ------------------- ACCIONES DE MODAL -------------------
   abrirModalAgregar(): void {
     this.modalService.open(ModalAgregarPaciente, {
       title: 'Agregar paciente',
@@ -143,10 +299,42 @@ export class Paciente {
     });
   }
 
+  abrirModalEditar(): void {
+    if (!this.pacienteSeleccionado || !this.detalle) return;
+
+    const pacienteId = this.pacienteSeleccionado.pacienteId;
+    this.modalService.open(ModalAgregarPaciente, {
+      title: 'Editar paciente',
+      isEditing: true,
+      pacienteId,
+      datosEdicion: this.detalle,
+      onSuccess: () => this.listarPacientes(pacienteId),
+    });
+  }
+
   // ------------------- AUXILIARES -------------------
-  /** Combina los datos reales del resumen con el detalle temporal de la maqueta. */
-  private aVista(paciente: PacienteResumido, posicion: number): PacienteVista {
-    const detalle = DETALLES_MOCK[posicion % DETALLES_MOCK.length];
-    return { ...paciente, ...detalle };
+  private mensajeError(error: unknown, porDefecto: string): string {
+    if (error instanceof TimeoutError) {
+      return 'Error de comunicación. El servidor no respondió dentro del tiempo esperado.';
+    }
+
+    if (error instanceof HttpErrorResponse) {
+      const cuerpo = error.error;
+
+      if (cuerpo && typeof cuerpo === 'object' && 'message' in cuerpo) {
+        const mensaje = String((cuerpo as { message?: unknown }).message ?? '').trim();
+        if (mensaje) return mensaje;
+      }
+
+      if (typeof cuerpo === 'string' && cuerpo.trim()) return cuerpo.trim();
+      if (error.status === 0) return 'No se pudo conectar con el servidor.';
+    }
+
+    if (error && typeof error === 'object' && 'message' in error) {
+      const mensaje = String((error as { message?: unknown }).message ?? '').trim();
+      if (mensaje) return mensaje;
+    }
+
+    return porDefecto;
   }
 }

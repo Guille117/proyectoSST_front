@@ -14,7 +14,7 @@
 		</div>
 	</div>
 
-	@if (contador === 0) {
+	@if (!isEditing && contador === 0) {
 		<div class="buscador-container">
 			<div class="buscador">
 				<input
@@ -23,8 +23,9 @@
 					name="busquedaPaciente"
 					placeholder="Buscar paciente"
 					[(ngModel)]="busquedaPaciente"
+					(keyup.enter)="buscarPaciente()"
 				>
-				<button class="btnLupa" type="button" aria-label="Buscar paciente">
+				<button class="btnLupa" type="button" aria-label="Buscar paciente" (click)="buscarPaciente()">
 					<i class="bi bi-search fs-5"></i>
 				</button>
 			</div>
@@ -33,7 +34,51 @@
 </div>
 
 @if (contador === 0) {
-	<div class="formularioPacientePaso1">
+	@if (modoBusqueda) {
+		<div class="resultados-paciente">
+			<p class="resultados-titulo">Resultados de la búsqueda</p>
+
+			@if (buscandoPacientes) {
+				<p class="aviso">Buscando...</p>
+			} @else if (errorBusqueda) {
+				<p class="aviso aviso--error">{{ errorBusqueda }}</p>
+			} @else if (resultadosBusqueda.length === 0) {
+				<p class="aviso">Paciente no encontrado</p>
+			} @else {
+				<div class="lista-resultados">
+					@for (paciente of resultadosBusqueda; track paciente.pacienteId) {
+						<button
+							type="button"
+							class="resultado-paciente"
+							title="Seleccionar paciente"
+							(click)="seleccionarPacienteBusqueda(paciente)"
+						>
+							<span class="resultado-nombre">{{ paciente.nombreCompleto }}</span>
+							<span class="resultado-meta">
+								{{ paciente.codigoExpediente }}
+								@if (paciente.cui) {
+									· CUI {{ paciente.cui }}
+								} @else {
+									· Sin CUI
+								}
+								· {{ sexoLegible(paciente.sexo) }}
+							</span>
+							@if (paciente.episodioId != null) {
+								<span class="resultado-estado">Episodio activo</span>
+							}
+						</button>
+					}
+				</div>
+			}
+
+			<button type="button" class="volver-formulario" (click)="cancelarBusqueda()">
+				Volver al formulario
+			</button>
+		</div>
+	} @else if (cargandoPrecarga) {
+		<p class="aviso">Cargando datos del paciente...</p>
+	} @else {
+		<div class="formularioPacientePaso1">
 		<div class="fila">
 						<app-campo-validado [label]="'Nombres'" [fieldId]="'nombresPaciente'" [required]="true" [showError]="!!(nombresPacienteControl.touched && nombresPacienteControl.invalid)" [errorMessage]="'Debe ingresar los nombres'">
 							<input type="text" id="nombresPaciente" name="nombresPaciente" placeholder="Nombres" required pattern="^[A-Za-zÁÉÍÓÚáéíóúÑñ ]+$" [(ngModel)]="pacienteForm.persona.nombres" #nombresPacienteControl="ngModel" [class.input-invalid]="nombresPacienteControl.touched && nombresPacienteControl.invalid">
@@ -86,6 +131,7 @@
 						</app-campo-validado>
 					</div>
 	</div>
+	}
 }
 
 @if (contador === 1) {
@@ -96,7 +142,8 @@
 				<app-tab-switch
 					[op1]="'Emergencia'"
 					[op2]="'Hospitalización'"
-					(opcionCambiada)="tipoAtencion = $event ? 'emergencia' : 'hospitalizacion'"
+					[mostrarActivos]="tipoAtencion === 'emergencia'"
+					(opcionCambiada)="cambiarTipoAtencion($event)"
 				></app-tab-switch>
 			</div>
 
@@ -360,7 +407,7 @@
 					type="file"
 					id="documentoReferencia"
 					name="documentoReferencia"
-					accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+					[accept]="archivosAceptados"
 					[disabled]="!institucionSeleccionada || guardando"
 					(change)="seleccionarArchivo($event)"
 				>
@@ -397,19 +444,21 @@
 		</button>
 	}
 
-	@if (contador < 3) {
-		<button
-			type="button"
-			class="btn _principal"
-			[disabled]="contador === 0 ? !puedeAvanzarPaso1 : contador === 1 ? !puedeAvanzarPaso2 : !puedeAvanzarPaso3"
-			(click)="contador += 1"
-		>
-			Siguiente
-			<i class="bi bi-arrow-right"></i>
-		</button>
-	} @else {
-		<button type="button" class="btn _guardar" [disabled]="guardando" (click)="guardarPaciente()">
-			{{ guardando ? 'Guardando...' : 'Guardar' }}
-		</button>
+	@if (!modoBusqueda) {
+		@if (contador < pasos.length - 1) {
+			<button
+				type="button"
+				class="btn _principal"
+				[disabled]="contador === 0 ? !puedeAvanzarPaso1 : contador === 1 ? !puedeAvanzarPaso2 : !puedeAvanzarPaso3"
+				(click)="contador += 1"
+			>
+				Siguiente
+				<i class="bi bi-arrow-right"></i>
+			</button>
+		} @else {
+			<button type="button" class="btn _guardar" [disabled]="guardando" (click)="guardarPaciente()">
+				{{ guardando ? 'Guardando...' : isEditing ? 'Guardar cambios' : 'Guardar' }}
+			</button>
+		}
 	}
 </div>
