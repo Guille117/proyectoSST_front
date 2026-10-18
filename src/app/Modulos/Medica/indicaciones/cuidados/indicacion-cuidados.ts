@@ -100,6 +100,7 @@ export class IndicacionCuidados implements OnInit, OnDestroy {
   cargando = false;
   guardando = false;
   eliminando = false;
+  confirmando = false;
   errorCarga = false;
   sinEpisodioActivo = false;
 
@@ -150,7 +151,8 @@ export class IndicacionCuidados implements OnInit, OnDestroy {
       Number.isInteger(this.frecuenciaCuidado) &&
       this.frecuenciaCuidado > 0 &&
       this.observacionesCuidado.length <= 2000 &&
-      !this.guardando
+      !this.guardando &&
+      !this.confirmando
     );
   }
 
@@ -317,8 +319,8 @@ export class IndicacionCuidados implements OnInit, OnDestroy {
    * Crea el cuidado o actualiza el que está en edición. El cuerpo lleva el episodio activo, el
    * usuario de la sesión y los valores que exige el contrato del backend.
    */
-  agregarCuidado(): void {
-    if (this.destruido || this.guardando) return;
+  async agregarCuidado(): Promise<void> {
+    if (this.destruido || this.guardando || this.confirmando) return;
 
     if (!this.puedeGuardarCuidado) {
       this.avisarValidacion();
@@ -340,6 +342,21 @@ export class IndicacionCuidados implements OnInit, OnDestroy {
     }
 
     const idEditado = this.cuidadoEnEdicion;
+
+    if (idEditado !== null) {
+      this.confirmando = true;
+      this.cdr.markForCheck();
+      const confirmado = await this.popUps
+        .confirmarToast(
+          `¿Está seguro de guardar los cambios del cuidado "${this.nombreCuidado.trim()}"?`,
+        )
+        .catch(() => false);
+      this.confirmando = false;
+      this.cdr.markForCheck();
+
+      if (!confirmado || this.destruido) return;
+    }
+
     const cuerpo: CuidadoRequest = {
       nombreCuidado: this.nombreCuidado.trim(),
       frecuencia: this.frecuenciaCuidado!,
@@ -387,13 +404,17 @@ export class IndicacionCuidados implements OnInit, OnDestroy {
 
   /** Confirma y pasa el cuidado al estado eliminado; el listado se recarga. */
   async eliminarCuidado(cuidado: CuidadoVista): Promise<void> {
-    if (this.destruido || this.eliminando || this.guardando) return;
+    if (this.destruido || this.eliminando || this.guardando || this.confirmando) return;
 
     this.cerrarMenuIndicacion();
 
+    this.confirmando = true;
+    this.cdr.markForCheck();
     const confirmado = await this.popUps
       .confirmarToast(`¿Está seguro de eliminar el cuidado "${cuidado.nombre}"?`)
       .catch(() => false);
+    this.confirmando = false;
+    this.cdr.markForCheck();
 
     if (!confirmado || this.destruido) return;
 

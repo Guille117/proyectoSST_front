@@ -138,6 +138,7 @@ export class IndicacionMedicamentos implements OnInit, OnDestroy {
   guardando = false;
   eliminando = false;
   cambiandoEstado = false;
+  confirmando = false;
   errorCarga = false;
   sinEpisodioActivo = false;
 
@@ -209,7 +210,8 @@ export class IndicacionMedicamentos implements OnInit, OnDestroy {
       Number.isInteger(this.frecuencia) &&
       this.frecuencia > 0 &&
       this.observaciones.length <= 2000 &&
-      !this.guardando
+      !this.guardando &&
+      !this.confirmando
     );
   }
 
@@ -573,8 +575,8 @@ export class IndicacionMedicamentos implements OnInit, OnDestroy {
    * Crea la indicación o actualiza la que está en edición. El cuerpo lleva el episodio activo, el
    * usuario de la sesión y los valores ya validados por el contrato del backend.
    */
-  agregarIndicacion(): void {
-    if (this.destruido || this.guardando) return;
+  async agregarIndicacion(): Promise<void> {
+    if (this.destruido || this.guardando || this.confirmando) return;
 
     if (!this.puedeGuardar) {
       this.avisarValidacion();
@@ -600,6 +602,20 @@ export class IndicacionMedicamentos implements OnInit, OnDestroy {
     const idEditado = this.indicacionEnEdicion;
 
     if (!elegido && !libre) return;
+
+    if (idEditado !== null) {
+      this.confirmando = true;
+      this.cdr.markForCheck();
+      const confirmado = await this.popUps
+        .confirmarToast(
+          `¿Está seguro de guardar los cambios de la indicación "${this.medicamento.trim()}"?`,
+        )
+        .catch(() => false);
+      this.confirmando = false;
+      this.cdr.markForCheck();
+
+      if (!confirmado || this.destruido) return;
+    }
 
     const cuerpo: MedicamentoIndicacionRequest = {
       medicamentoLogId: elegido?.id ?? null,
@@ -653,13 +669,25 @@ export class IndicacionMedicamentos implements OnInit, OnDestroy {
    * listado se recarga para reflejar el estado ELIMINADO.
    */
   async eliminarIndicacion(indicacion: IndicacionMedicamentoVista): Promise<void> {
-    if (this.destruido || this.eliminando || this.guardando || this.cambiandoEstado) return;
+    if (
+      this.destruido ||
+      this.eliminando ||
+      this.guardando ||
+      this.cambiandoEstado ||
+      this.confirmando
+    ) {
+      return;
+    }
 
     this.cerrarMenuIndicacion();
 
+    this.confirmando = true;
+    this.cdr.markForCheck();
     const confirmado = await this.popUps
       .confirmarToast(`¿Está seguro de eliminar la indicación "${indicacion.nombre}"?`)
       .catch(() => false);
+    this.confirmando = false;
+    this.cdr.markForCheck();
 
     if (!confirmado || this.destruido) return;
 
@@ -693,18 +721,41 @@ export class IndicacionMedicamentos implements OnInit, OnDestroy {
   }
 
   /** Reactiva una indicación finalizada o eliminada. */
-  reactivarIndicacion(indicacion: IndicacionMedicamentoVista): void {
-    this.cambiarEstadoIndicacion(indicacion, 'ACTIVO');
+  async reactivarIndicacion(indicacion: IndicacionMedicamentoVista): Promise<void> {
+    await this.cambiarEstadoIndicacion(indicacion, 'ACTIVO');
   }
 
   /** Cambia el estado de la indicación y recarga el listado del filtro vigente. */
-  private cambiarEstadoIndicacion(
+  private async cambiarEstadoIndicacion(
     indicacion: IndicacionMedicamentoVista,
     estado: EstadoIndicacionMedicamento,
-  ): void {
-    if (this.destruido || this.cambiandoEstado || this.guardando || this.eliminando) return;
+  ): Promise<void> {
+    if (
+      this.destruido ||
+      this.cambiandoEstado ||
+      this.guardando ||
+      this.eliminando ||
+      this.confirmando
+    ) {
+      return;
+    }
 
     this.cerrarMenuIndicacion();
+
+    this.confirmando = true;
+    this.cdr.markForCheck();
+    const confirmado = await this.popUps
+      .confirmarToast(
+        estado === 'ACTIVO'
+          ? `¿Está seguro de reactivar la indicación "${indicacion.nombre}"?`
+          : `¿Está seguro de finalizar la indicación "${indicacion.nombre}"?`,
+      )
+      .catch(() => false);
+    this.confirmando = false;
+    this.cdr.markForCheck();
+
+    if (!confirmado || this.destruido) return;
+
     this.cambiandoEstado = true;
     this.cdr.markForCheck();
     this.peticionAccion?.unsubscribe();

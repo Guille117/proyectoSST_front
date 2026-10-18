@@ -423,6 +423,9 @@ describe('IndicacionMedicamentos', () => {
     botonGuardar().click();
     await fixture.whenStable();
 
+    expect(popUps.confirmarToast).toHaveBeenCalledWith(
+      '¿Está seguro de guardar los cambios de la indicación "Aspirina 500 mg"?',
+    );
     expect(servicio.putIndicacion).toHaveBeenCalledWith(
       31,
       expect.objectContaining({
@@ -460,6 +463,9 @@ describe('IndicacionMedicamentos', () => {
     botonGuardar().click();
     await fixture.whenStable();
 
+    expect(popUps.confirmarToast).toHaveBeenCalledWith(
+      '¿Está seguro de guardar los cambios de la indicación "Ibuprofeno"?',
+    );
     expect(servicio.putIndicacion).toHaveBeenCalledWith(30, {
       medicamentoLogId: 9,
       medicamentoLibre: null,
@@ -515,8 +521,39 @@ describe('IndicacionMedicamentos', () => {
     elemento<HTMLButtonElement>('.indicacion-menu .iconEstado').click();
     await fixture.whenStable();
 
+    expect(popUps.confirmarToast).toHaveBeenCalledWith(
+      '¿Está seguro de reactivar la indicación "Ibuprofeno"?',
+    );
     expect(servicio.cambiarEstado).toHaveBeenCalledWith(30, 'ACTIVO');
     expect(popUps.exito).toHaveBeenCalledWith('Indicación reactivada exitosamente.');
+  });
+
+  it('no actualiza la indicación si la confirmación se cancela', async () => {
+    popUps.confirmarToast.mockResolvedValue(false);
+    await cargarListado([indicacion()]);
+
+    elemento<HTMLButtonElement>('.indicacion-menu-trigger').click();
+    fixture.detectChanges();
+    elemento<HTMLButtonElement>('.indicacion-menu .iconEditar').click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    botonGuardar().click();
+    await fixture.whenStable();
+
+    expect(servicio.putIndicacion).not.toHaveBeenCalled();
+  });
+
+  it('no reactiva la indicación si la confirmación se cancela', async () => {
+    popUps.confirmarToast.mockResolvedValue(false);
+    await cargarListado([indicacion({ estado: 'FINALIZADO' })]);
+
+    elemento<HTMLButtonElement>('.indicacion-menu-trigger').click();
+    fixture.detectChanges();
+    elemento<HTMLButtonElement>('.indicacion-menu .iconEstado').click();
+    await fixture.whenStable();
+
+    expect(servicio.cambiarEstado).not.toHaveBeenCalled();
   });
 
   it('elimina la indicación después de confirmarlo', async () => {

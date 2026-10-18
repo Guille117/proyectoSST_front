@@ -773,6 +773,9 @@ describe('Indicaciones', () => {
     botonGuardar().click();
     await fixture.whenStable();
 
+    expect(popUps.confirmarToast).toHaveBeenCalledWith(
+      '¿Está seguro de guardar los cambios del cuidado "Cambio de posición cada 4 horas"?',
+    );
     expect(cuidadoService.actualizarCuidado).toHaveBeenCalledWith(1, {
       nombreCuidado: 'Cambio de posición cada 4 horas',
       frecuencia: 4,
@@ -791,6 +794,22 @@ describe('Indicaciones', () => {
     expect(tarjetas()[0].classList.contains('indicacion-card--naranja')).toBe(true);
     expect(cuidados().cuidadoEnEdicion).toBeNull();
     expect(cuidados().nombreCuidado).toBe('');
+  });
+
+  it('conserva el cuidado sin actualizar si la confirmación de los cambios se cancela', async () => {
+    await irASeccion('Cuidados');
+
+    await abrirMenu(0);
+    botonEditarDelMenu().click();
+    await fixture.whenStable();
+
+    popUps.confirmarToast.mockResolvedValue(false);
+    await escribir('#nombreCuidado', 'Cambio de posición cada 6 horas');
+    botonGuardar().click();
+    await fixture.whenStable();
+
+    expect(cuidadoService.actualizarCuidado).not.toHaveBeenCalled();
+    expect(tarjetas()[0].textContent).toContain('Cambio de posición');
   });
 
   it('libera el formulario cuando se elimina el cuidado en edición', async () => {
