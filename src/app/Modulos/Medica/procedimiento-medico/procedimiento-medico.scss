@@ -1,3 +1,339 @@
+@use '../panel-seccion';
+@use '../indicaciones/comun';
+@use '../indicaciones/medicamentos';
+
 :host {
   display: block;
+}
+
+/* ==================== CONTENEDOR (OPCIONES / CONTENIDO / RECURSOS) ==================== */
+/* Misma rejilla de las indicaciones médicas: rail de opciones, contenido y panel derecho. */
+.procedimiento-medico {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-areas: 'secciones contenido recursos';
+  gap: 1.25rem;
+  box-sizing: border-box;
+  width: 100%;
+  padding: 0.75rem 1.5rem 1.5rem;
+}
+
+/* El rail de opciones es solo el contenedor de las tarjetas, sin fondo ni borde propios */
+.panel-secciones {
+  grid-area: secciones;
+  align-self: start;
+  padding-top: 1rem;
+  padding-left: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.panel-secciones .tarjeta_titulo {
+  margin-bottom: 0;
+}
+
+.contenido-procedimiento {
+  grid-area: contenido;
+  align-self: start;
+  display: flex;
+  flex-direction: column;
+  max-height: calc(var(--heightNavBar) - 16rem);
+  padding-top: 1rem;
+  overflow: hidden;
+}
+
+/* El formulario no lleva margen superior: el panel ya separa su contenido del borde */
+.contenido-procedimiento .indicacion-form {
+  margin-top: 0;
+}
+
+/* Separación entre campos apilados del formulario: la etiqueta no queda pegada al input anterior */
+.contenido-procedimiento .indicacion-form > .indicacion-campo + .indicacion-campo {
+  margin-top: 1.25rem;
+}
+
+/* Solo el formulario o los cards se desplazan; el título y los filtros quedan fijos */
+.contenido-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding-right: 0.4rem;
+  overflow-y: auto;
+}
+
+.contenido-procedimiento > .panel-titulo,
+.contenido-procedimiento > .indicados-filtros {
+  flex: 0 0 auto;
+}
+
+.panel-recursos {
+  grid-area: recursos;
+  align-self: start;
+  padding-top: 1rem;
+}
+
+/* ==================== TARJETAS DE PROCEDIMIENTOS ==================== */
+.procedimientos-lista {
+  display: flex;
+  flex-direction: column;
+}
+
+.procedimiento-card {
+  cursor: pointer;
+
+  &:hover {
+    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--azulSecundario);
+    outline-offset: 2px;
+  }
+}
+
+.procedimiento-card--activo {
+  background: #f7fbff;
+  outline: 2px solid rgba(13, 110, 253, 0.25);
+  outline-offset: -2px;
+}
+
+/* ==================== RECURSOS DEL PROCEDIMIENTO ==================== */
+.recursos-cabecera {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.recursos-cabecera .panel-titulo {
+  margin: 0;
+}
+
+.recursos-cabecera app-tab-switch {
+  flex: 0 0 auto;
+  width: max-content;
+  max-width: 100%;
+}
+
+.recursos-buscador {
+  margin-top: 1.25rem;
+}
+
+.recursos-resultados {
+  margin-top: 1rem;
+}
+
+.recursos-resultados .tabla-container {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.recursos-resultados table {
+  min-width: 340px;
+}
+
+.recursos-ayuda {
+  color: #5b6b85;
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.recurso-seleccionado {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+  padding: 1rem;
+  border: 1px solid #cfdcee;
+  border-radius: 14px;
+  background: #f7fafd;
+}
+
+.recurso-seleccionado_tipo,
+.recurso-item_tipo {
+  align-self: flex-start;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #e8f1ff;
+  color: var(--azulSecundario);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.recurso-item_tipo {
+  margin-right: 0.35rem;
+}
+
+.recurso-seleccionado_nombre {
+  margin: 0;
+  color: var(--azulPrincipal);
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.recurso-seleccionado_disponible {
+  margin: 0;
+  color: #5b6b85;
+  font-size: 0.9rem;
+}
+
+.recurso-seleccionado_ayuda {
+  color: #5b6b85;
+  font-size: 0.85rem;
+}
+
+.recurso-acciones {
+  gap: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+.recursos-lista {
+  margin-top: 1.25rem;
+}
+
+.recursos-subtitulo {
+  margin: 0 0 0.75rem;
+  color: var(--azulSecundario);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.recursos-items,
+.procedimiento-recursos {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.recurso-item,
+.procedimiento-recurso {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid #dfe7f3;
+  border-radius: 12px;
+  background: #f7fafd;
+}
+
+.procedimiento-recurso {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+}
+
+.recurso-item_nombre {
+  min-width: 0;
+  color: #101828;
+  font-size: 0.92rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.recurso-item_cantidad {
+  color: var(--azulPrincipal);
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.recurso-quitar {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  place-items: center;
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  border-radius: 50%;
+  background: #fff;
+  color: #ed1a0f;
+  font-size: 13px;
+  cursor: pointer;
+  transition:
+    color 0.2s ease,
+    background-color 0.2s ease;
+
+  &:hover {
+    color: #fff;
+    background: #ed1a0f;
+  }
+
+  &:focus-visible {
+    outline: 2px solid #ed1a0f;
+    outline-offset: 2px;
+  }
+}
+
+/* ==================== DETALLE DEL PROCEDIMIENTO ==================== */
+.procedimiento-detalle {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.procedimiento-detalle_meta {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin: 0;
+  color: #5b6b85;
+  font-size: 0.92rem;
+
+  i {
+    color: var(--azulSecundario);
+  }
+
+  span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+}
+
+.procedimiento-detalle_descripcion,
+.procedimiento-detalle_texto {
+  margin: 0;
+  color: #1f2f45;
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+.procedimiento-detalle_subtitulo {
+  margin: 0.75rem 0 0;
+  color: var(--azulSecundario);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+/* ==================== RESPONSIVIDAD ==================== */
+@media (max-width: 1280px) {
+  .procedimiento-medico {
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas:
+      'secciones contenido'
+      'recursos recursos';
+  }
+}
+
+@media (max-width: 900px) {
+  .procedimiento-medico {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      'secciones'
+      'contenido'
+      'recursos';
+    padding: 1rem;
+  }
+
+  .contenido-procedimiento {
+    max-height: none;
+  }
+
+  .contenido-scroll {
+    max-height: 60vh;
+  }
 }

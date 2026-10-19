@@ -1,2 +1,436 @@
-<!-- Procedimiento médico: pantalla pendiente de contenido -->
-<div class="procedimiento-medico"></div>
+<!-- Procedimiento médico: rail de opciones, registro o listado en el centro y recursos o detalle a la derecha -->
+<div class="procedimiento-medico">
+  <!-- Opciones del procedimiento: registrar o consultar los realizados -->
+  <section class="panel panel-secciones" aria-labelledby="tituloProcedimientoMedico">
+    <h3 class="panel-titulo" id="tituloProcedimientoMedico">Procedimiento médico</h3>
+
+    @for (seccion of secciones; track seccion.id) {
+      <button
+        type="button"
+        class="tarjeta"
+        [class.tarjeta--activa]="seccionActiva === seccion.id"
+        [attr.aria-pressed]="seccionActiva === seccion.id"
+        (click)="seleccionarSeccion(seccion.id)"
+      >
+        <span class="tarjeta_icono"><i class="bi {{ seccion.icono }}" aria-hidden="true"></i></span>
+        <span class="tarjeta_texto">
+          <span class="tarjeta_titulo">{{ seccion.titulo }}</span>
+        </span>
+      </button>
+    }
+  </section>
+
+  <!-- Contenido central: formulario de registro o tarjetas de procedimientos -->
+  <section class="panel contenido-procedimiento">
+    @if (esRegistrar) {
+      <div class="contenido-scroll">
+        <form class="indicacion-form" (ngSubmit)="registrarProcedimiento()">
+        <div class="indicacion-campo">
+          <label class="indicacion-etiqueta" for="tipoProcedimientoMedico">
+            Tipo de procedimiento<span class="indicacion-obligatorio" aria-hidden="true">*</span>
+          </label>
+
+          <select
+            class="indicacion-input"
+            id="tipoProcedimientoMedico"
+            name="tipoProcedimiento"
+            aria-required="true"
+            [(ngModel)]="tipoProcedimiento"
+          >
+            <option [ngValue]="null" disabled>Seleccionar...</option>
+            @for (tipo of tiposProcedimiento; track tipo.id) {
+              <option [ngValue]="tipo.id">{{ tipo.nombre }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="indicacion-campo">
+          <label class="indicacion-etiqueta" for="descripcionProcedimiento">
+            Descripción<span class="indicacion-obligatorio" aria-hidden="true">*</span>
+          </label>
+
+          <textarea
+            class="indicacion-input indicacion-textarea"
+            id="descripcionProcedimiento"
+            name="descripcionProcedimiento"
+            placeholder="Descripción del procedimiento realizado..."
+            aria-required="true"
+            [(ngModel)]="descripcion"
+          ></textarea>
+        </div>
+
+        <div class="indicacion-campo">
+          <label class="indicacion-etiqueta" for="resultadoProcedimiento">Resultado</label>
+
+          <textarea
+            class="indicacion-input indicacion-textarea"
+            id="resultadoProcedimiento"
+            name="resultadoProcedimiento"
+            placeholder="Resultado y observaciones del procedimiento..."
+            [(ngModel)]="resultado"
+          ></textarea>
+        </div>
+
+        <div class="indicacion-fila indicacion-fila--dos">
+          <div class="indicacion-campo">
+            <label class="indicacion-etiqueta" for="inicioProcedimiento">
+              Fecha y hora de inicio<span class="indicacion-obligatorio" aria-hidden="true">*</span>
+            </label>
+
+            <input
+              class="indicacion-input"
+              id="inicioProcedimiento"
+              name="inicioProcedimiento"
+              type="datetime-local"
+              aria-required="true"
+              [(ngModel)]="inicio"
+            />
+          </div>
+
+          <div class="indicacion-campo">
+            <label class="indicacion-etiqueta" for="finProcedimiento">Fecha y hora de fin</label>
+
+            <input
+              class="indicacion-input"
+              id="finProcedimiento"
+              name="finProcedimiento"
+              type="datetime-local"
+              [(ngModel)]="fin"
+            />
+          </div>
+        </div>
+
+        <div class="acciones-formulario indicacion-acciones">
+          <button type="button" class="btn _cancelar" (click)="cancelarRegistro()">Cancelar</button>
+
+          <button type="submit" class="btn _guardar" [disabled]="!puedeRegistrarProcedimiento">
+            {{ textoBotonRegistro }}
+          </button>
+        </div>
+      </form>
+      </div>
+    } @else {
+      <h3 class="panel-titulo" id="tituloProcedimientosRealizados">Procedimientos realizados</h3>
+
+      <div
+        class="indicados-filtros"
+        role="group"
+        aria-label="Filtrar procedimientos por estado"
+      >
+        @for (filtro of filtrosProcedimiento; track filtro.id) {
+          <button
+            type="button"
+            class="indicados-filtro"
+            [class.indicados-filtro--activo]="filtroProcedimiento === filtro.id"
+            [attr.aria-pressed]="filtroProcedimiento === filtro.id"
+            (click)="seleccionarFiltroProcedimiento(filtro.id)"
+          >
+            {{ filtro.etiqueta }}
+          </button>
+        }
+      </div>
+
+      <div class="contenido-scroll">
+        <div class="procedimientos-lista">
+        @for (procedimiento of procedimientosFiltrados; track procedimiento.id) {
+          <article
+            class="indicacion-card procedimiento-card"
+            [class.procedimiento-card--activo]="procedimientoSeleccionado === procedimiento.id"
+            [class.indicacion-card--verde]="procedimiento.estado === 'realizado'"
+            [class.indicacion-card--naranja]="procedimiento.estado === 'pendiente'"
+            [class.indicacion-card--rojo]="procedimiento.estado === 'eliminado'"
+            [class.indicacion-card--menu-abierto]="menuProcedimientoAbierto === procedimiento.id"
+            [attr.data-procedimiento-id]="procedimiento.id"
+            role="button"
+            tabindex="0"
+            (click)="seleccionarProcedimiento(procedimiento.id)"
+            (keyup.enter)="seleccionarProcedimiento(procedimiento.id)"
+          >
+            <header class="indicacion-encabezado">
+              <span class="indicacion-nombre">{{ procedimiento.tipo }}</span>
+
+              <button
+                type="button"
+                class="indicacion-menu-trigger"
+                title="Más opciones"
+                aria-haspopup="menu"
+                [attr.aria-label]="'Más opciones para ' + procedimiento.tipo"
+                [attr.aria-expanded]="menuProcedimientoAbierto === procedimiento.id"
+                (click)="$event.stopPropagation(); alternarMenuProcedimiento(procedimiento.id)"
+              >
+                <i class="bi bi-three-dots-vertical" aria-hidden="true"></i>
+              </button>
+            </header>
+
+            <footer class="indicacion-meta">
+              <span>
+                <i class="bi bi-calendar3" aria-hidden="true"></i>
+                {{ formatearRango(procedimiento.inicio, procedimiento.fin) }}
+              </span>
+              <span>
+                <i class="bi bi-person" aria-hidden="true"></i>
+                {{ procedimiento.profesional }}
+              </span>
+            </footer>
+
+            <p class="indicacion-observaciones">{{ procedimiento.descripcion }}</p>
+
+            @if (menuProcedimientoAbierto === procedimiento.id) {
+              <div
+                class="indicacion-menu"
+                role="menu"
+                [attr.aria-label]="'Opciones para ' + procedimiento.tipo"
+                (click)="$event.stopPropagation()"
+              >
+                <div class="indicacion-menu-opcion">
+                  <span>Editar</span>
+                  <button
+                    type="button"
+                    class="iconEditar"
+                    role="menuitem"
+                    title="Editar procedimiento"
+                    [attr.aria-label]="'Editar ' + procedimiento.tipo"
+                    (click)="editarProcedimiento(procedimiento)"
+                  >
+                    <i class="bi bi-pencil-square" aria-hidden="true"></i>
+                  </button>
+                </div>
+
+                <div class="indicacion-menu-opcion">
+                  <span>Eliminar</span>
+                  <button
+                    type="button"
+                    class="iconQuitar"
+                    role="menuitem"
+                    title="Eliminar procedimiento"
+                    [attr.aria-label]="'Eliminar ' + procedimiento.tipo"
+                    (click)="eliminarProcedimiento(procedimiento)"
+                  >
+                    <i class="bi bi-trash3" aria-hidden="true"></i>
+                  </button>
+                </div>
+              </div>
+            }
+          </article>
+        } @empty {
+          <p class="indicacion-vacio">No hay procedimientos para mostrar.</p>
+        }
+        </div>
+      </div>
+    }
+  </section>
+
+  <!-- Panel derecho: recursos del procedimiento o detalle del procedimiento elegido -->
+  <aside class="panel panel-recursos">
+    @if (esRegistrar) {
+      <div class="recursos-cabecera">
+        <h3 class="panel-titulo" id="tituloRecursos">Recursos</h3>
+
+        <app-tab-switch
+          op1="Medicamento"
+          op2="Insumo"
+          [mostrarActivos]="tipoRecurso === 'medicamento'"
+          (opcionCambiada)="cambiarTipoRecurso($event)"
+        ></app-tab-switch>
+      </div>
+
+      @if (recursoSeleccionado; as recurso) {
+        <div class="recurso-seleccionado">
+          <span class="recurso-seleccionado_tipo">
+            {{ tipoRecurso === 'medicamento' ? 'MED' : 'INSU' }}
+          </span>
+
+          <p class="recurso-seleccionado_nombre">{{ recurso.nombre }}</p>
+          <p class="recurso-seleccionado_disponible">Disponible: {{ recurso.disponible }}</p>
+
+          <div class="indicacion-campo">
+            <label class="indicacion-etiqueta" for="cantidadRecurso">Cantidad</label>
+            <input
+              class="indicacion-input"
+              id="cantidadRecurso"
+              name="cantidadRecurso"
+              type="number"
+              min="1"
+              step="1"
+              inputmode="numeric"
+              [max]="cantidadMaximaRecurso"
+              [(ngModel)]="cantidadRecurso"
+            />
+            <span class="recurso-seleccionado_ayuda">Máximo {{ cantidadMaximaRecurso }}</span>
+          </div>
+
+          <div class="acciones-formulario recurso-acciones">
+            <button type="button" class="btn _cancelar" (click)="cancelarSeleccionRecurso()">
+              Cancelar
+            </button>
+            <button
+              type="button"
+              class="btn _guardar"
+              [disabled]="!puedeAgregarRecurso"
+              (click)="agregarRecurso()"
+            >
+              Agregar
+            </button>
+          </div>
+        </div>
+      } @else {
+        <div class="indicacion-buscador recursos-buscador">
+          <div class="buscador">
+            <input
+              class="inputB"
+              type="text"
+              [placeholder]="'Buscar ' + etiquetaRecurso + '...'"
+              [attr.aria-label]="'Buscar ' + etiquetaRecurso"
+              [(ngModel)]="textoBusquedaRecurso"
+              (keydown.enter)="$event.preventDefault(); buscarRecursos()"
+            />
+
+            <button
+              class="btnLupa"
+              type="button"
+              [title]="'Buscar ' + etiquetaRecurso"
+              [attr.aria-label]="'Buscar ' + etiquetaRecurso"
+              (click)="buscarRecursos()"
+            >
+              <i class="bi bi-search fs-5" aria-hidden="true"></i>
+            </button>
+          </div>
+        </div>
+
+        @if (busquedaRecursoRealizada) {
+          <div class="recursos-resultados">
+            @if (recursosEncontrados.length) {
+              <div class="tabla-container">
+                <table [attr.aria-label]="'Recursos disponibles: ' + etiquetaRecurso">
+                  <thead>
+                    <tr>
+                      <th class="columna-numero celda_centrada" scope="col">No.</th>
+                      <th scope="col">Nombre</th>
+                      <th class="celda_centrada" scope="col">Cantidad</th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    @for (
+                      recurso of recursosEncontrados;
+                      track recurso.id;
+                      let indice = $index
+                    ) {
+                      <tr
+                        class="fila-seleccionable"
+                        tabindex="0"
+                        [title]="'Seleccionar ' + recurso.nombre"
+                        (click)="seleccionarRecurso(recurso)"
+                        (keyup.enter)="seleccionarRecurso(recurso)"
+                      >
+                        <td class="celda_centrada">{{ indice + 1 }}</td>
+                        <td class="celda_izquierda">{{ recurso.nombre }}</td>
+                        <td class="celda_centrada">{{ recurso.disponible }}</td>
+                      </tr>
+                    }
+                  </tbody>
+
+                  <tfoot>
+                    <tr>
+                      <td colspan="3" class="recursos-ayuda">Seleccione un {{ etiquetaRecurso }}</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            } @else {
+              <p class="indicacion-vacio">
+                No se encontraron {{ etiquetaRecurso }}s que coincidan con la búsqueda.
+              </p>
+            }
+          </div>
+        } @else {
+          <div class="recursos-lista">
+            @if (recursosAgregados.length) {
+              <h4 class="recursos-subtitulo">
+                Recursos agregados ({{ recursosAgregados.length }})
+              </h4>
+
+              <ul class="recursos-items">
+                @for (recurso of recursosAgregados; track $index) {
+                  <li class="recurso-item">
+                    <span class="recurso-item_tipo">
+                      {{ recurso.tipo === 'medicamento' ? 'MED' : 'INSU' }}
+                    </span>
+                    <span class="recurso-item_nombre">{{ recurso.nombre }}</span>
+                    <span class="recurso-item_cantidad">{{ recurso.cantidad }}</span>
+
+                    <button
+                      type="button"
+                      class="recurso-quitar"
+                      [attr.aria-label]="'Quitar ' + recurso.nombre"
+                      (click)="quitarRecurso($index)"
+                    >
+                      <i class="bi bi-trash3" aria-hidden="true"></i>
+                    </button>
+                  </li>
+                }
+              </ul>
+            } @else {
+              <p class="indicacion-vacio">
+                Busque un {{ etiquetaRecurso }} para agregarlo a los recursos del procedimiento.
+              </p>
+            }
+          </div>
+        }
+      }
+    } @else {
+      @if (procedimientoActivo; as procedimiento) {
+        <h3 class="panel-titulo" id="tituloDetalleProcedimiento">
+          Detalle de {{ procedimiento.tipo }}
+        </h3>
+
+        <div class="procedimiento-detalle">
+          <p class="procedimiento-detalle_meta">
+            <span>
+              <i class="bi bi-calendar3" aria-hidden="true"></i>
+              Inicio: {{ formatearFechaHora(procedimiento.inicio) }}
+            </span>
+            <span>
+              <i class="bi bi-calendar-check" aria-hidden="true"></i>
+              Fin: {{ procedimiento.fin ? formatearFechaHora(procedimiento.fin) : 'Sin finalizar' }}
+            </span>
+          </p>
+          <p class="procedimiento-detalle_meta">
+            <i class="bi bi-person" aria-hidden="true"></i>
+            {{ procedimiento.profesional }}
+          </p>
+
+          <p class="procedimiento-detalle_descripcion">{{ procedimiento.descripcion }}</p>
+
+          <h5 class="procedimiento-detalle_subtitulo">Resultado</h5>
+          <p class="procedimiento-detalle_texto">
+            {{ procedimiento.resultado || 'Sin resultado registrado.' }}
+          </p>
+
+          <h5 class="procedimiento-detalle_subtitulo">Recursos utilizados</h5>
+
+          @if (procedimiento.recursos.length) {
+            <ul class="procedimiento-recursos">
+              @for (recurso of procedimiento.recursos; track $index) {
+                <li class="procedimiento-recurso">
+                  <span class="recurso-item_tipo">
+                    {{ recurso.tipo === 'medicamento' ? 'MED' : 'INSU' }}
+                  </span>
+                  <span class="recurso-item_nombre">{{ recurso.nombre }}</span>
+                  <span class="recurso-item_cantidad">{{ recurso.cantidad }}</span>
+                </li>
+              }
+            </ul>
+          } @else {
+            <p class="indicacion-vacio">
+              No se registraron recursos para este procedimiento.
+            </p>
+          }
+        </div>
+      } @else {
+        <h3 class="panel-titulo" id="tituloDetalleProcedimiento">Detalle del procedimiento</h3>
+        <p class="indicacion-vacio">Seleccione un procedimiento para ver su detalle.</p>
+      }
+    }
+  </aside>
+</div>
