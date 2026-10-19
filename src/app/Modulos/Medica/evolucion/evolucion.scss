@@ -7,6 +7,11 @@
   /* Ancho del bloque de datos del paciente: lo comparten el propio bloque y su pestaña */
   --ficha-ancho: 340px;
 
+  /* Alto del marco de la pantalla fuera del historial: relleno del área de trabajo, relleno de la
+     rejilla y margen para la barra de desplazamiento. Se descuenta del alto bajo la barra superior
+     para que el historial no pase del borde inferior de la ventana. */
+  --alto-fuera-de-historial: 10rem;
+
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(300px, 1fr);
   grid-template-areas: 'registro historial';
@@ -33,6 +38,10 @@
 .panel-historial {
   grid-area: historial;
   align-self: start;
+  display: flex;
+  flex-direction: column;
+  max-height: calc(var(--heightNavBar) - var(--alto-fuera-de-historial));
+  overflow: hidden;
 }
 
 /* ==================== REGISTRO DE LA EVOLUCIÓN ==================== */
@@ -133,9 +142,14 @@
   font-weight: 600;
 }
 
+/* Solo las tarjetas se desplazan: el título y los filtros quedan fijos sobre la pista */
 .historial-lista {
+  flex: 1 1 auto;
+  min-height: 0;
   display: flex;
   flex-direction: column;
+  padding-right: 0.4rem;
+  overflow-y: auto;
 }
 
 /* Tarjeta de una evolución: misma tarjeta del listado de indicaciones (borde, radio y sombra), con
@@ -383,5 +397,16 @@
 
   .evolucion--ficha-abierta {
     padding-right: 1rem;
+  }
+
+  /* En una sola columna la página fluye: el historial no se limita ni desplaza por separado */
+  .panel-historial {
+    max-height: none;
+    overflow: visible;
+  }
+
+  .historial-lista {
+    overflow: visible;
+    padding-right: 0;
   }
 }

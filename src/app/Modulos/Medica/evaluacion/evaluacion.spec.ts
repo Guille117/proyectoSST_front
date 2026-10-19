@@ -43,6 +43,7 @@ describe('Evaluacion', () => {
     obtener: vi.fn(() => EPISODIO_ID),
     guardar: vi.fn(),
     limpiar: vi.fn(),
+    esSoloLectura: () => false,
   };
 
   const partesCuerpo: ParteCuerpoResponse[] = [
@@ -868,5 +869,14 @@ describe('Evaluacion', () => {
       false,
     );
     expect(elemento<HTMLElement>('.ficha-plegar').getAttribute('aria-expanded')).toBe('true');
+  });
+
+  it('oculta el registro de hallazgos cuando el episodio es solo lectura', async () => {
+    episodioActivo.esSoloLectura = () => true;
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(elemento('.hallazgo-form')).toBeNull();
+    expect(elemento('.hallazgo-menu-trigger')).toBeNull();
   });
 });

@@ -26,6 +26,11 @@ export class HistoriaClinica implements OnInit, OnDestroy {
     return this.episodioActivo.obtener();
   }
 
+  /** El episodio es un historial cerrado: se consulta, pero no se registran cambios. */
+  get soloLectura(): boolean {
+    return this.episodioActivo.esSoloLectura();
+  }
+
   constructor(
     private historiaClinicaService: HistoriaClinicaService,
     private authService: AuthService,

@@ -1,9 +1,18 @@
-import { Component, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { finalize, Subscription, TimeoutError } from 'rxjs';
 import { PopUps } from '../../../shared/popUps/popUpsService';
+import { AuthService } from '../../Auth/data/auth-service';
+import { EpisodioActivoService } from '../data/episodio-activo-service';
 import { DatosPaciente } from '../datos-paciente/datos-paciente';
+import {
+  EvolucionRequest,
+  EvolucionResponse,
+  EstadoEvolucionApi,
+} from './data/evolucionInterfaz';
+import { EvolucionService } from './data/evolucion-service';
 
-/* Tipos locales de la maqueta: se sustituirán por el contrato real del backend en la fase de integración. */
+/* Tipos locales de la vista: traducen el contrato del backend al lenguaje de las tarjetas. */
 /** Colores del acento de las tarjetas del historial de evoluciones. */
 type TonoEvolucion = 'verde' | 'azul' | 'naranja' | 'morado';
 
@@ -27,20 +36,18 @@ interface EvolucionVista {
   estado: EstadoEvolucion;
 }
 
-/** Opción del filtro del historial: la etiqueta que se pulsa y el estado que lista. */
+/** Opción del filtro del historial: la etiqueta que se pulsa y el estado del backend que lista. */
 interface FiltroEvolucionVista {
   id: FiltroEvolucion;
   etiqueta: string;
-  /** Estado de las evoluciones que muestra la opción. */
-  estado: EstadoEvolucion;
+  estado: EstadoEvolucionApi;
 }
 
 /**
  * Evolución médica del episodio: pantalla del módulo Médico con el registro de la evolución
  * (evolución clínica y plan médico) y el historial de las evoluciones registradas, que se listan
- * como las tarjetas del módulo: cada tarjeta muestra la evolución clínica y su plan médico, lleva
- * su menú de opciones para editarla o eliminarla y el historial se puede filtrar entre las
- * evoluciones activas y las eliminadas.
+ * como las tarjetas del módulo. Las operaciones se guardan contra el backend; el episodio y el
+ * usuario salen del contexto de la sesión.
  */
 @Component({
   selector: 'app-evolucion',
@@ -51,10 +58,23 @@ interface FiltroEvolucionVista {
     '(document:click)': 'cerrarMenuAlClicFuera($event)',
   },
 })
-export class Evolucion {
+export class Evolucion implements OnInit, OnDestroy {
   private readonly popUps = inject(PopUps);
+  private readonly servicio = inject(EvolucionService);
+  private readonly authService = inject(AuthService);
+  private readonly episodioActivo = inject(EpisodioActivoService);
+  private readonly cdr = inject(ChangeDetectorRef);
+
+  private peticionLista?: Subscription;
+  private peticionAccion?: Subscription;
+  private destruido = false;
 
   // ------------------- ESTADO DE LA VISTA -------------------
+  /** El episodio es un historial cerrado: se consulta, pero no se registran cambios. */
+  get soloLectura(): boolean {
+    return this.episodioActivo.esSoloLectura();
+  }
+
   /** Longitud máxima de cada cuadro del registro de la evolución. */
   readonly maxCaracteres = 1000;
 
@@ -74,51 +94,19 @@ export class Evolucion {
   /** Evolución cuyos datos están cargados en el registro para corregirla; null al capturar una nueva. */
   evolucionEnEdicion: number | null = null;
 
-  /** Colores con que se reparten los acentos de las tarjetas al registrar evoluciones. */
-  private readonly tonos: TonoEvolucion[] = ['verde', 'azul', 'naranja', 'morado'];
+  /** Evoluciones del episodio con el filtro elegido, ya traducidas a la vista. */
+  evoluciones: EvolucionVista[] = [];
 
-  // ------------------- MOCK: datos temporales para diseño -------------------
-  /** MOCK: historial de evoluciones del episodio, de la más reciente a la más antigua. */
-  evoluciones: EvolucionVista[] = [
-    {
-      id: 1,
-      medico: 'Dr. Juan Pérez',
-      fecha: '12/10/2026',
-      hora: '10:30',
-      evolucionClinica:
-        'Paciente con disminución del dolor abdominal, sin nuevos episodios de vómitos. ' +
-        'Presenta mejoría clínica.',
-      planMedico:
-        'Continuar con el esquema indicado, mantener la hidratación y vigilar la respuesta al ' +
-        'tratamiento.',
-      tono: 'morado',
-      estado: 'activa',
-    },
-    {
-      id: 2,
-      medico: 'Dra. Ana López',
-      fecha: '11/10/2026',
-      hora: '09:15',
-      evolucionClinica:
-        'Paciente persiste con molestias abdominales. Se realiza valoración de seguimiento y ' +
-        'respuesta al tratamiento.',
-      planMedico: 'Mantener analgesia, control de signos vitales y valorar nuevos estudios.',
-      tono: 'azul',
-      estado: 'activa',
-    },
-    {
-      id: 3,
-      medico: 'Dr. Juan Pérez',
-      fecha: '10/10/2026',
-      hora: '08:00',
-      evolucionClinica:
-        'Paciente ingresa con dolor abdominal y vómitos. Se inicia hidratación y analgesia.',
-      planMedico: 'Solicitar hemograma, control de signos vitales y reevaluar en cuatro horas.',
-      tono: 'naranja',
-      estado: 'eliminada',
-    },
-  ];
-  // ------------------- FIN MOCK -------------------
+  /** Estados de las peticiones: bloquean acciones incompatibles y muestran la carga. */
+  cargando = false;
+  guardando = false;
+  eliminando = false;
+  confirmando = false;
+  errorCarga = false;
+  sinEpisodioActivo = false;
+
+  /** Colores con que se reparten los acentos de las tarjetas. */
+  private readonly tonos: TonoEvolucion[] = ['verde', 'azul', 'naranja', 'morado'];
 
   // ------------------- FILTROS DEL HISTORIAL -------------------
   /** Filtro elegido en el historial; abre mostrando las evoluciones vigentes. */
@@ -126,53 +114,113 @@ export class Evolucion {
 
   /** Opciones del filtro del historial: las evoluciones vigentes y las eliminadas. */
   readonly filtrosEvolucion: FiltroEvolucionVista[] = [
-    { id: 'activas', etiqueta: 'Activas', estado: 'activa' },
-    { id: 'eliminadas', etiqueta: 'Eliminadas', estado: 'eliminada' },
+    { id: 'activas', etiqueta: 'Activas', estado: 'ACTIVA' },
+    { id: 'eliminadas', etiqueta: 'Eliminadas', estado: 'ELIMINADA' },
   ];
 
-  /** Muestra las evoluciones del estado elegido y suelta lo que dependía del listado anterior. */
-  seleccionarFiltroEvolucion(filtro: FiltroEvolucion): void {
-    this.filtroEvolucion = filtro;
-    this.cerrarMenuEvolucion();
+  // ------------------- CICLO DE VIDA -------------------
+  ngOnInit(): void {
+    this.cargarEvoluciones();
+  }
 
-    const sigueEnElHistorial = this.evolucionesFiltradas.some(
-      (evolucion) => evolucion.id === this.evolucionEnEdicion,
-    );
-
-    // La evolución en edición no puede quedar fuera del listado visible
-    if (this.evolucionEnEdicion !== null && !sigueEnElHistorial) {
-      this.cancelarCaptura();
-    }
+  ngOnDestroy(): void {
+    this.destruido = true;
+    this.peticionLista?.unsubscribe();
+    this.peticionAccion?.unsubscribe();
   }
 
   // ------------------- CONSULTAS PARA LA VISTA -------------------
-  /** Evoluciones que muestra el historial con el filtro elegido. */
+  /** Evoluciones que muestra el historial; el backend ya aplica el filtro elegido. */
   get evolucionesFiltradas(): EvolucionVista[] {
-    const estado = this.filtroActualEvolucion.estado;
-
-    return this.evoluciones.filter((evolucion) => evolucion.estado === estado);
+    return this.evoluciones;
   }
 
   /** Texto del listado cuando el filtro elegido no tiene evoluciones. */
   get mensajeSinEvoluciones(): string {
-    const filtro = this.filtroActualEvolucion;
-
-    return filtro.estado === 'eliminada'
+    return this.filtroActualEvolucion.id === 'eliminadas'
       ? 'No hay evoluciones eliminadas en el episodio.'
       : 'Aún no hay evoluciones registradas para el paciente.';
   }
 
   /** Solo se puede guardar cuando la evolución clínica y el plan médico tienen contenido. */
   get puedeGuardar(): boolean {
-    return this.evolucionClinica.trim().length > 0 && this.planMedico.trim().length > 0;
+    return (
+      this.evolucionClinica.trim().length > 0 &&
+      this.planMedico.trim().length > 0 &&
+      this.evolucionClinica.length <= this.maxCaracteres &&
+      this.planMedico.length <= this.maxCaracteres &&
+      !this.guardando &&
+      !this.confirmando
+    );
   }
 
-  // ------------------- ACCIONES DE LA VISTA -------------------
+  // ------------------- CARGA DEL HISTORIAL -------------------
+  /** Carga las evoluciones del episodio activo con el filtro elegido. */
+  cargarEvoluciones(): void {
+    if (this.destruido) return;
+
+    const episodioId = this.episodioActivo.obtener();
+    this.sinEpisodioActivo = episodioId === null;
+
+    if (episodioId === null) {
+      this.evoluciones = [];
+      this.errorCarga = false;
+      this.cargando = false;
+      this.cdr.markForCheck();
+      return;
+    }
+
+    this.cargando = true;
+    this.errorCarga = false;
+    this.cdr.markForCheck();
+    this.peticionLista?.unsubscribe();
+
+    this.peticionLista = this.servicio
+      .buscarPorEpisodio(episodioId, this.filtroActualEvolucion.estado)
+      .pipe(
+        finalize(() => {
+          this.cargando = false;
+          if (!this.destruido) this.cdr.markForCheck();
+        }),
+      )
+      .subscribe({
+        next: (respuestas) => {
+          if (this.destruido) return;
+
+          this.evoluciones = respuestas.map((respuesta) => this.aVista(respuesta));
+
+          // La evolución en edición no puede quedar fuera del historial visible
+          if (
+            this.evolucionEnEdicion !== null &&
+            !this.evoluciones.some((evolucion) => evolucion.id === this.evolucionEnEdicion)
+          ) {
+            this.cancelarCaptura();
+          }
+        },
+        error: (error) => {
+          if (this.destruido) return;
+
+          this.evoluciones = [];
+          this.errorCarga = true;
+          this.mostrarError(
+            error,
+            'No se pudieron cargar las evoluciones. Intente nuevamente.',
+          );
+        },
+      });
+  }
+
+  /** Muestra las evoluciones del estado elegido y recarga el historial. */
+  seleccionarFiltroEvolucion(filtro: FiltroEvolucion): void {
+    this.filtroEvolucion = filtro;
+    this.cerrarMenuEvolucion();
+    this.cargarEvoluciones();
+  }
+
+  // ------------------- FICHA DEL PACIENTE -------------------
   /**
    * Abre o cierra la ficha con los datos del paciente desde la pestaña lateral del bloque
-   * compartido, igual que en evaluación clínica y en indicaciones médicas. Al abrirla se muestran
-   * los datos completos para que el usuario vea la información de contexto aunque la hubiera
-   * plegado antes.
+   * compartido, igual que en evaluación clínica y en indicaciones médicas.
    */
   cambiarFichaPaciente(abierto: boolean): void {
     this.pacienteAbierto = abierto;
@@ -182,67 +230,7 @@ export class Evolucion {
     }
   }
 
-  /** Deja el formulario vacío para capturar una evolución nueva. */
-  limpiarFormulario(): void {
-    this.evolucionClinica = '';
-    this.planMedico = '';
-  }
-
-  /**
-   * MOCK: registra la evolución escrita. Si hay una evolución cargada para corregir se reemplazan
-   * sus datos en su lugar, conservando fecha, hora, médico y color; si no, se agrega al inicio del
-   * historial, de modo que la más reciente queda a la vista. La fecha, la hora y el médico reales
-   * los aportará el backend en la fase de integración.
-   */
-  guardarEvolucion(): void {
-    if (!this.puedeGuardar) {
-      return;
-    }
-
-    const evolucionClinica = this.evolucionClinica.trim();
-    const planMedico = this.planMedico.trim();
-
-    if (this.evolucionEnEdicion !== null) {
-      const idEditado = this.evolucionEnEdicion;
-
-      this.evoluciones = this.evoluciones.map((evolucion) =>
-        evolucion.id === idEditado ? { ...evolucion, evolucionClinica, planMedico } : evolucion,
-      );
-      this.cancelarCaptura();
-      return;
-    }
-
-    const ultimoId = this.evoluciones.reduce(
-      (mayor, evolucion) => Math.max(mayor, evolucion.id),
-      0,
-    );
-    const tono = this.tonos[this.evoluciones.length % this.tonos.length];
-
-    this.evoluciones = [
-      {
-        id: ultimoId + 1,
-        medico: 'Dr. Juan Pérez',
-        fecha: '12/10/2026',
-        hora: '10:30',
-        evolucionClinica,
-        planMedico,
-        tono,
-        estado: 'activa',
-      },
-      ...this.evoluciones,
-    ];
-
-    // La evolución registrada es vigente: el historial vuelve a las activas para dejarla a la vista
-    this.seleccionarFiltroEvolucion('activas');
-    this.limpiarFormulario();
-  }
-
-  /** Descarta lo capturado y deja el registro listo para escribir una evolución nueva. */
-  cancelarCaptura(): void {
-    this.evolucionEnEdicion = null;
-    this.limpiarFormulario();
-  }
-
+  // ------------------- MENÚ DE LA TARJETA -------------------
   /** Muestra u oculta el menú de opciones de la tarjeta pulsada. */
   alternarMenuEvolucion(id: number): void {
     this.menuEvolucionAbierta = this.menuEvolucionAbierta === id ? null : id;
@@ -253,7 +241,7 @@ export class Evolucion {
     this.menuEvolucionAbierta = null;
   }
 
-  /** Cierra el menú al pulsar fuera de la tarjeta que lo tiene abierto, como en el listado de indicaciones. */
+  /** Cierra el menú al pulsar fuera de la tarjeta que lo tiene abierto. */
   cerrarMenuAlClicFuera(evento: Event): void {
     if (this.menuEvolucionAbierta === null || !(evento.target instanceof Element)) {
       return;
@@ -266,44 +254,245 @@ export class Evolucion {
     }
   }
 
+  // ------------------- CAPTURA Y EDICIÓN -------------------
   /** Carga en el registro la evolución elegida para corregirla. */
   editarEvolucion(evolucion: EvolucionVista): void {
+    if (this.guardando || this.eliminando || this.confirmando) return;
+
+    this.cerrarMenuEvolucion();
     this.evolucionEnEdicion = evolucion.id;
     this.evolucionClinica = evolucion.evolucionClinica;
     this.planMedico = evolucion.planMedico;
   }
 
+  /** Deja el formulario vacío para capturar una evolución nueva. */
+  limpiarFormulario(): void {
+    this.evolucionClinica = '';
+    this.planMedico = '';
+  }
+
+  /** Descarta lo capturado y deja el registro listo para escribir una evolución nueva. */
+  cancelarCaptura(): void {
+    this.evolucionEnEdicion = null;
+    this.limpiarFormulario();
+  }
+
   /**
-   * MOCK: da de baja la evolución confirmada desde el popup global. La maqueta la marca como
-   * eliminada y no la borra, de modo que sigue consultable con el filtro de eliminadas; la baja
-   * real la hará el servicio de evoluciones en la fase de integración.
+   * Crea la evolución o actualiza la que está en edición. El cuerpo lleva el episodio activo, el
+   * usuario de la sesión y los valores que exige el contrato del backend.
    */
-  async eliminarEvolucion(evolucion: EvolucionVista): Promise<void> {
-    this.cerrarMenuEvolucion();
+  async guardarEvolucion(): Promise<void> {
+    if (this.destruido || this.guardando || this.confirmando) return;
 
-    const confirmado = await this.popUps
-      .confirmarToast(`¿Está seguro de eliminar la evolución del ${evolucion.fecha}?`)
-      .catch(() => false);
-
-    if (!confirmado) {
+    if (!this.puedeGuardar) {
+      this.avisarValidacion();
       return;
     }
 
-    this.evoluciones = this.evoluciones.map((registrada) =>
-      registrada.id === evolucion.id ? { ...registrada, estado: 'eliminada' } : registrada,
-    );
+    const episodioId = this.episodioActivo.obtener();
+    if (episodioId === null) {
+      this.popUps.advertencia('No hay un episodio activo. Abra el episodio del paciente.');
+      return;
+    }
 
-    if (this.evolucionEnEdicion === evolucion.id) {
-      this.cancelarCaptura();
+    const usuarioId = this.authService.currentUser()?.id;
+    if (!usuarioId) {
+      this.popUps.error(
+        'No se pudo identificar al usuario de la sesión. Inicie sesión nuevamente.',
+      );
+      return;
+    }
+
+    const idEditado = this.evolucionEnEdicion;
+
+    if (idEditado !== null) {
+      const referencia = this.evoluciones.find((evolucion) => evolucion.id === idEditado)?.fecha;
+      const mensaje = referencia
+        ? `¿Está seguro de guardar los cambios de la evolución del ${referencia}?`
+        : '¿Está seguro de guardar los cambios de la evolución?';
+
+      this.confirmando = true;
+      this.cdr.markForCheck();
+      const confirmado = await this.popUps.confirmarToast(mensaje).catch(() => false);
+      this.confirmando = false;
+      this.cdr.markForCheck();
+
+      if (!confirmado || this.destruido) return;
+    }
+
+    const cuerpo: EvolucionRequest = {
+      evolucionClinica: this.evolucionClinica.trim(),
+      planMedico: this.planMedico.trim(),
+      episodioId,
+      usuarioId,
+    };
+
+    this.guardando = true;
+    this.cdr.markForCheck();
+    this.peticionAccion?.unsubscribe();
+    this.peticionAccion = (
+      idEditado === null
+        ? this.servicio.crear(cuerpo)
+        : this.servicio.actualizar(idEditado, cuerpo)
+    )
+      .pipe(
+        finalize(() => {
+          this.guardando = false;
+          if (!this.destruido) this.cdr.markForCheck();
+        }),
+      )
+      .subscribe({
+        next: () => {
+          if (this.destruido) return;
+
+          // La evolución registrada es vigente: el historial vuelve a las activas para dejarla a la vista
+          if (idEditado === null) {
+            this.filtroEvolucion = 'activas';
+          }
+          this.cancelarCaptura();
+          this.popUps.exito(
+            idEditado === null
+              ? 'Evolución guardada exitosamente.'
+              : 'Evolución actualizada exitosamente.',
+          );
+          this.cargarEvoluciones();
+        },
+        error: (error) => {
+          if (this.destruido) return;
+
+          this.mostrarError(
+            error,
+            'No se pudo guardar la evolución. Intente nuevamente.',
+          );
+        },
+      });
+  }
+
+  /** Confirma y pasa la evolución al estado eliminado; el historial se recarga. */
+  async eliminarEvolucion(evolucion: EvolucionVista): Promise<void> {
+    if (this.destruido || this.eliminando || this.guardando || this.confirmando) return;
+
+    this.cerrarMenuEvolucion();
+
+    this.confirmando = true;
+    this.cdr.markForCheck();
+    const confirmado = await this.popUps
+      .confirmarToast(`¿Está seguro de eliminar la evolución del ${evolucion.fecha}?`)
+      .catch(() => false);
+    this.confirmando = false;
+    this.cdr.markForCheck();
+
+    if (!confirmado || this.destruido) return;
+
+    this.eliminando = true;
+    this.cdr.markForCheck();
+    this.peticionAccion?.unsubscribe();
+    this.peticionAccion = this.servicio
+      .eliminar(evolucion.id)
+      .pipe(
+        finalize(() => {
+          this.eliminando = false;
+          if (!this.destruido) this.cdr.markForCheck();
+        }),
+      )
+      .subscribe({
+        next: () => {
+          if (this.destruido) return;
+
+          if (this.evolucionEnEdicion === evolucion.id) {
+            this.cancelarCaptura();
+          }
+          this.popUps.exito('Evolución eliminada exitosamente.');
+          this.cargarEvoluciones();
+        },
+        error: (error) => {
+          if (this.destruido) return;
+
+          this.mostrarError(
+            error,
+            'No se pudo eliminar la evolución. Intente nuevamente.',
+          );
+        },
+      });
+  }
+
+  // ------------------- APOYO -------------------
+  /** Traduce la evolución del backend a los datos que pinta la tarjeta. */
+  private aVista(respuesta: EvolucionResponse): EvolucionVista {
+    const fecha = new Date(respuesta.fecha);
+
+    return {
+      id: respuesta.id,
+      medico: respuesta.usuarioNombre,
+      fecha: this.formatearFecha(fecha),
+      hora: this.formatearHora(fecha),
+      evolucionClinica: respuesta.evolucionClinica,
+      planMedico: respuesta.planMedico,
+      tono: this.tonoDe(respuesta.id),
+      estado: respuesta.estado === 'ELIMINADA' ? 'eliminada' : 'activa',
+    };
+  }
+
+  /** Color estable del acento de la tarjeta según el identificador de la evolución. */
+  private tonoDe(id: number): TonoEvolucion {
+    return this.tonos[Math.abs(id) % this.tonos.length];
+  }
+
+  /** Fecha de la evolución en el formato corto de la tarjeta (dd/MM/yyyy). */
+  private formatearFecha(fecha: Date): string {
+    if (Number.isNaN(fecha.getTime())) return '';
+
+    const dia = `${fecha.getDate()}`.padStart(2, '0');
+    const mes = `${fecha.getMonth() + 1}`.padStart(2, '0');
+    return `${dia}/${mes}/${fecha.getFullYear()}`;
+  }
+
+  /** Hora de la evolución en el formato de la tarjeta (HH:mm). */
+  private formatearHora(fecha: Date): string {
+    if (Number.isNaN(fecha.getTime())) return '';
+
+    const horas = `${fecha.getHours()}`.padStart(2, '0');
+    const minutos = `${fecha.getMinutes()}`.padStart(2, '0');
+    return `${horas}:${minutos}`;
+  }
+
+  /** Avisa del campo que impide guardar cuando el formulario se envía incompleto. */
+  private avisarValidacion(): void {
+    if (!this.evolucionClinica.trim()) {
+      this.popUps.advertencia('La evolución clínica es obligatoria.');
+      return;
+    }
+    if (!this.planMedico.trim()) {
+      this.popUps.advertencia('El plan médico es obligatorio.');
+      return;
+    }
+    if (
+      this.evolucionClinica.length > this.maxCaracteres ||
+      this.planMedico.length > this.maxCaracteres
+    ) {
+      this.popUps.advertencia(
+        `Los textos no pueden superar los ${this.maxCaracteres} caracteres.`,
+      );
     }
   }
 
-  // ------------------- AUXILIARES INTERNOS -------------------
   /** Opción del filtro del historial elegida en el listado. */
   private get filtroActualEvolucion(): FiltroEvolucionVista {
     return (
       this.filtrosEvolucion.find((filtro) => filtro.id === this.filtroEvolucion) ??
       this.filtrosEvolucion[0]
     );
+  }
+
+  /** Distingue el timeout de comunicación del resto de errores del backend. */
+  private mostrarError(error: unknown, mensajeDefault: string): void {
+    if (error instanceof TimeoutError) {
+      this.popUps.error(
+        'Error de comunicación. El servidor no respondió dentro del tiempo esperado.',
+      );
+      return;
+    }
+
+    this.popUps.errorDesdeBackend(error, mensajeDefault);
   }
 }

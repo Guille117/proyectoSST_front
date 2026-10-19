@@ -99,10 +99,15 @@
 						</div>
 						</div>
 						<dl>
-							<div><dt>Área</dt><dd>{{cama.nombreArea}}</dd></div>
 							<div><dt>Habitación</dt><dd>{{cama.nombreHabitacion}}</dd></div>
 							<div><dt>Tipo cama</dt><dd>{{cama.nombreTipoCama}}</dd></div>
 						</dl>
+						@if (cama.estado === EstadoCama.OCUPADA && nombrePacienteCama(cama)) {
+							<p class="cama-paciente">
+								<i class="bi bi-person" aria-hidden="true"></i>
+								{{ nombrePacienteCama(cama) }}
+							</p>
+						}
 					</div>
 					@if(!isEditing) {
 						@if (menuCamaAbierto === cama.idCama) {
@@ -192,16 +197,6 @@
 						<option [ngValue]="0" disabled>Selecciona una habitación</option>
 						@for (habitacion of habitaciones; track habitacion.id) {
 							<option [ngValue]="habitacion.id">{{ habitacion.nombre }}</option>
-						}
-					</select>
-				</div>
-				
-				<div class="subFormulario">
-					<label for="area">Área</label>
-					<select id="area" name="area" [(ngModel)]="camaRequest.areaId" required>
-						<option [ngValue]="0" disabled>Selecciona un área</option>
-						@for (area of areas; track area.id) {
-							<option [ngValue]="area.id">{{ area.nombre }}</option>
 						}
 					</select>
 				</div>

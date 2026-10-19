@@ -2,7 +2,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../../../../environments/environment';
-import { camaRequest, camaResponseSimple, EstadoCama } from './interfazCama';
+import { camaOcupadaResponse, camaRequest, camaResponseSimple, EstadoCama } from './interfazCama';
 
 @Injectable({
   providedIn: 'root',
@@ -28,6 +28,10 @@ export class ServicioCama {
   buscarCamas(texto: string, activos: boolean): Observable<camaResponseSimple[]> {
     const params = new HttpParams().set('texto', texto).set('activos', activos);
     return this.http.get<camaResponseSimple[]>(`${this.apiUrl}/buscar`, { params });
+  }
+
+  listarCamasOcupadas(): Observable<camaOcupadaResponse[]> {
+    return this.http.get<camaOcupadaResponse[]>(`${this.apiUrl}/ocupadas`);
   }
 
   // trae las llaves foráneas para actualizar

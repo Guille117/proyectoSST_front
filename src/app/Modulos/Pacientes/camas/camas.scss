@@ -253,6 +253,22 @@
 	dd { margin: 0; color: #101828; font-weight: 600; }
 }
 
+/* Paciente que ocupa la cama: nombre corto bajo los datos de la cama */
+.cama-paciente {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	margin: 12px 0 0;
+	color: #101828;
+	font-size: 15px;
+	font-weight: 700;
+
+	i {
+		color: var(--card-color, var(--azulSecundario));
+		font-size: 16px;
+	}
+}
+
 .cama-card-actions {
 	position: absolute;
 	z-index: 3;

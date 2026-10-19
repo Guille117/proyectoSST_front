@@ -16,6 +16,16 @@ export interface camaResponseSimple {
   activo: boolean;
 }
 
+/** Cama ocupada con el nombre del paciente que la ocupa. */
+export interface camaOcupadaResponse {
+  idCama: number;
+  codigo: string;
+  nombrePaciente: string;
+  nombreHabitacion: string;
+  nombreArea: string;
+  nombreTipoCama: string;
+}
+
 export enum EstadoCama {
   DISPONIBLE = 'DISPONIBLE',
   OCUPADA = 'OCUPADA',

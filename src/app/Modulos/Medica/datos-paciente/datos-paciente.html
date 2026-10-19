@@ -1,6 +1,6 @@
 <!-- Datos del paciente: bloque pegado al borde derecho de la pantalla. En su forma plegable lo abre
      y lo cierra la pestaña lateral y su encabezado pliega el cuerpo con el chevron. -->
-@if (plegable) {
+@if (plegable && (permitirAlternar || !abierto)) {
   <!-- Pestaña lateral: abre y cierra la ficha del paciente -->
   <button
     type="button"
@@ -9,6 +9,7 @@
     [attr.aria-expanded]="abierto"
     [attr.aria-controls]="abierto ? 'fichaPaciente' : null"
     [attr.title]="abierto ? 'Ocultar datos del paciente' : 'Ver datos del paciente'"
+    [disabled]="!permitirAlternar"
     (click)="alternarFicha()"
   >
     <i
@@ -35,7 +36,7 @@
       <h3 class="ficha-titulo" id="tituloFichaPaciente">Información del paciente</h3>
 
       <!-- El chevron solo existe en la forma plegable: pliega el cuerpo sin ocultar el título -->
-      @if (plegable) {
+      @if (plegable && permitirAlternar) {
         <button
           type="button"
           class="ficha-plegar"

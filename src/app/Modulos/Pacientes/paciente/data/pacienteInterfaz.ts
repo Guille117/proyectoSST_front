@@ -115,6 +115,7 @@ export interface PacienteResumido {
   pacienteId: number;
   codigoExpediente: string;
   episodioId: number | null;
+  ultimoEpisodioId: number | null;
   fechaHoraIngreso: string | null;
   nombreCompleto: string;
   cui: string | null;

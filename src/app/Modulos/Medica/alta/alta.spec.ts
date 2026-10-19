@@ -1,14 +1,119 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { of, throwError, TimeoutError } from 'rxjs';
 
+import { PopUps } from '../../../shared/popUps/popUpsService';
+import { AuthService } from '../../Auth/data/auth-service';
+import { CatalogoService } from '../../Catalogos/data/serviceCatalogo';
+import { EpisodioActivoService } from '../data/episodio-activo-service';
 import { Alta } from './alta';
+import { AltaResponse } from './data/altaInterfaz';
+import { AltaService } from './data/alta-service';
 
 describe('Alta', () => {
   let component: Alta;
   let fixture: ComponentFixture<Alta>;
 
+  const condiciones = [{ id: 2, nombre: 'Estable', estado: true }];
+  const instituciones = [
+    { id: 1, nombre: 'IGGS - Sololá', telefono: '', direccion: 'Barrio el carmen' },
+  ];
+
+  const altaVigente: AltaResponse = {
+    id: 30,
+    tipoAlta: 'INDICACION_MEDICA',
+    diagnosticoEgreso: 'Diagnóstico guardado',
+    condicionEgresoId: 2,
+    condicionEgresoNombre: 'Estable',
+    observacionEgreso: 'Observación guardada',
+    fechaHoraEgreso: '2026-10-16T09:30:00',
+    episodioId: 1,
+    usuarioId: 2,
+    usuarioNombre: 'Carlos Méndez',
+    estado: 'VIGENTE',
+    responsableRetiro: null,
+    motivoRetiro: null,
+    riesgosRetiro: [],
+    institucionId: null,
+    institucionNombre: null,
+    motivoReferencia: null,
+    indicacionesTraslado: null,
+    tratamientos: [
+      {
+        tipo: 'MEDICAMENTO',
+        nombre: 'Ibuprofeno',
+        medicamentoLogId: 1,
+        medicamentoLibre: null,
+        cantidad: 2,
+        unidadMedida: 'tabletas',
+        frecuencia: 8,
+        duracionTipo: 'DIAS',
+        duracion: 7,
+        observaciones: 'Con alimentos',
+      },
+      {
+        tipo: 'CUIDADO',
+        nombre: 'Cambio de posición',
+        medicamentoLogId: null,
+        medicamentoLibre: null,
+        cantidad: null,
+        unidadMedida: null,
+        frecuencia: 4,
+        duracionTipo: 'TIEMPO_INDEFINIDO',
+        duracion: null,
+        observaciones: null,
+      },
+    ],
+  };
+
+  const altaService = {
+    buscarPorEpisodio: vi.fn(),
+    crear: vi.fn(),
+    actualizar: vi.fn(),
+    anular: vi.fn(),
+  };
+  const catalogoService = {
+    listar: vi.fn(),
+    listarUnidadMedida: vi.fn(() => of([])),
+  };
+  const episodioActivo = {
+    obtener: vi.fn<() => number | null>(() => 1),
+    guardar: vi.fn(),
+    limpiar: vi.fn(),
+    esSoloLectura: () => false,
+  };
+  const auth = { currentUser: () => ({ id: 2 }) };
+  const popUps = {
+    confirmarToast: vi.fn(),
+    exito: vi.fn(),
+    error: vi.fn(),
+    errorDesdeBackend: vi.fn(),
+    advertencia: vi.fn(),
+  };
+
   beforeEach(async () => {
+    vi.resetAllMocks();
+    catalogoService.listar.mockImplementation((recurso: string) => {
+      if (recurso === 'condicionesEgreso') return of(condiciones);
+      if (recurso === 'instituciones') return of(instituciones);
+      return of([]);
+    });
+    catalogoService.listarUnidadMedida.mockReturnValue(of([]));
+    altaService.buscarPorEpisodio.mockReturnValue(of([]));
+    altaService.crear.mockReturnValue(of(altaVigente));
+    altaService.actualizar.mockReturnValue(of(altaVigente));
+    altaService.anular.mockReturnValue(of(void 0));
+    episodioActivo.obtener.mockReturnValue(1);
+    popUps.confirmarToast.mockResolvedValue(true);
+
     await TestBed.configureTestingModule({
       imports: [Alta],
+      providers: [
+        { provide: AltaService, useValue: altaService },
+        { provide: CatalogoService, useValue: catalogoService },
+        { provide: EpisodioActivoService, useValue: episodioActivo },
+        { provide: AuthService, useValue: auth },
+        { provide: PopUps, useValue: popUps },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(Alta);
@@ -22,10 +127,6 @@ describe('Alta', () => {
 
   const elemento = <T extends Element>(selector: string): T =>
     fixture.nativeElement.querySelector(selector);
-
-  // Registro del egreso: el botón que abre el tratamiento y el propio panel del registro
-  const botonAgregarTratamiento = (): HTMLButtonElement =>
-    elemento<HTMLButtonElement>('.egreso-acciones button._principal');
 
   const escribir = async (selector: string, valor: string): Promise<void> => {
     const control = elemento<HTMLInputElement>(selector);
@@ -41,21 +142,26 @@ describe('Alta', () => {
     await fixture.whenStable();
   };
 
-  /** Abre la tarjeta de medicamentos con el botón Agregar tratamiento del registro del egreso. */
-  const abrirTratamiento = async (): Promise<void> => {
-    botonAgregarTratamiento().click();
+  const botonGuardar = (): HTMLButtonElement =>
+    elemento<HTMLButtonElement>('.egreso-acciones button[type="submit"]');
+
+  const botonAnular = (): HTMLButtonElement =>
+    elemento<HTMLButtonElement>('.egreso-acciones button._eliminar');
+
+  const irASeccion = async (titulo: string): Promise<void> => {
+    const boton = [...elementos<HTMLButtonElement>('.panel-secciones .tarjeta')].find((tarjeta) =>
+      tarjeta.textContent?.includes(titulo),
+    );
+
+    expect(boton).toBeDefined();
+    boton?.click();
     await fixture.whenStable();
   };
 
-  /** Busca en el catálogo de la tarjeta y elige la fila indicada de los resultados. */
-  const elegirMedicamento = async (texto: string, fila: number): Promise<void> => {
-    await escribir('#medicamentoTratamiento', texto);
-    elemento<HTMLButtonElement>('.medicamento-buscador .btnLupa').click();
-    await fixture.whenStable();
-
-    elementos<HTMLTableRowElement>('.medicamento-resultados tbody tr.fila-seleccionable')[
-      fila
-    ].click();
+  const cargarAltaVigente = async (): Promise<void> => {
+    altaService.buscarPorEpisodio.mockReturnValue(of([altaVigente]));
+    component.cargarAlta();
+    fixture.detectChanges();
     await fixture.whenStable();
   };
 
@@ -63,69 +169,293 @@ describe('Alta', () => {
     expect(component).toBeTruthy();
   });
 
-  it('oculta el registro del egreso y muestra la tarjeta de medicamentos al agregar el tratamiento', async () => {
-    expect(elemento('.panel-registro')).not.toBeNull();
+  it('carga las condiciones e instituciones desde el catálogo', () => {
+    expect(catalogoService.listar).toHaveBeenCalledWith('condicionesEgreso', true);
+    expect(catalogoService.listar).toHaveBeenCalledWith('instituciones', true);
 
-    await abrirTratamiento();
-
-    // El registro del egreso deja su sitio a la tarjeta de medicamentos
-    expect(elemento('.panel-registro')).toBeNull();
-    expect(elemento('.panel-tratamiento .panel-titulo').textContent?.trim()).toBe('Medicamentos');
-    expect(elemento('#medicamentoTratamiento')).not.toBeNull();
-    expect(elemento('#cantidadTratamiento')).not.toBeNull();
-    expect(component.mostrandoMedicamentos).toBe(true);
-  });
-
-  it('devuelve el registro del egreso al cancelar la captura del tratamiento', async () => {
-    await abrirTratamiento();
-
-    elemento<HTMLButtonElement>('.medicamento-acciones button._cancelar').click();
-    await fixture.whenStable();
-
-    // Sin medicamentos agregados el tratamiento sigue vacío y vuelve el registro del egreso
-    expect(component.tratamiento.length).toBe(0);
-    expect(component.mostrandoMedicamentos).toBe(false);
-    expect(elemento('.panel-registro')).not.toBeNull();
-    expect(elemento('.panel-tratamiento')).toBeNull();
-  });
-
-  it('suma al tratamiento el medicamento capturado en la tarjeta y vuelve al registro', async () => {
-    await abrirTratamiento();
-    await elegirMedicamento('amoxicilina', 0);
-    await escribir('#cantidadTratamiento', '500 mg');
-    await escribir('#frecuenciaTratamiento', '8');
-    await elegir('#duracionTipoTratamiento', 'dias');
-    await escribir('#duracionCantidadTratamiento', '7');
-
-    elemento<HTMLButtonElement>('.medicamento-acciones button._guardar').click();
-    await fixture.whenStable();
-
-    expect(component.tratamiento.length).toBe(1);
-    expect(elemento('.panel-registro')).not.toBeNull();
-    expect(elemento<HTMLElement>('.tratamiento-titulo').textContent?.trim()).toBe(
-      'Tratamiento indicado (1)',
+    const opciones = [...elementos<HTMLOptionElement>('#condicionEgreso option')].map(
+      (opcion) => opcion.textContent?.trim(),
     );
-    expect(elemento<HTMLElement>('.tratamiento-nombre').textContent?.trim()).toBe(
-      'Amoxicilina Bayer tabletas de 500 mg',
-    );
-    const detalle = elemento<HTMLElement>('.tratamiento-detalle').textContent ?? '';
-    expect(detalle).toContain('500 mg');
-    expect(detalle).toContain('Cada 8 horas');
-    expect(detalle).toContain('7 días');
+
+    expect(opciones).toEqual(['Seleccione la condición de egreso', 'Estable']);
   });
 
-  it('quita del tratamiento el medicamento pulsado', async () => {
-    await abrirTratamiento();
-    await elegirMedicamento('ibuprofeno', 0);
-    elemento<HTMLButtonElement>('.medicamento-acciones button._guardar').click();
+  it('muestra los campos propios de cada sección', async () => {
+    await irASeccion('Retiro voluntario');
+
+    expect(elemento('#responsableRetiro')).not.toBeNull();
+    expect(elemento('#motivoRetiro')).not.toBeNull();
+    expect(elemento('#institucionReferencia')).toBeNull();
+
+    await irASeccion('Referencia / traslado');
+
+    expect(elemento('#institucionReferencia')).not.toBeNull();
+    expect(elemento('#motivoReferencia')).not.toBeNull();
+    expect(elemento('#responsableRetiro')).toBeNull();
+  });
+
+  it('carga el alta vigente del episodio y rellena el registro', async () => {
+    await cargarAltaVigente();
+
+    expect(component.altaExistente?.id).toBe(30);
+    expect(component.seccionActiva).toBe('indicacion-medica');
+    expect(component.diagnosticoEgreso).toBe('Diagnóstico guardado');
+    expect(component.condicionEgreso).toBe('2');
+    expect(component.tratamientoMedicamentos.length).toBe(1);
+    expect(component.tratamientoCuidados.length).toBe(1);
+    expect(elemento<HTMLInputElement>('#diagnosticoEgreso').value).toBe('Diagnóstico guardado');
+    expect(botonAnular()).not.toBeNull();
+    expect(botonAnular().textContent?.trim()).toBe('Anular alta');
+  });
+
+  it('registra un alta nueva sin pedir confirmación', async () => {
+    await escribir('#diagnosticoEgreso', 'Nuevo diagnóstico');
+    await elegir('#condicionEgreso', '2');
+
+    component.registrarMedicamento({
+      nombre: 'Ibuprofeno',
+      medicamentoLogId: 9,
+      medicamentoLibre: '',
+      cantidad: 2,
+      unidadMedida: 'tabletas',
+      frecuencia: 8,
+      duracionTipo: 'dias',
+      duracionCantidad: 7,
+      observaciones: 'Con alimentos',
+    });
+
+    botonGuardar().click();
     await fixture.whenStable();
 
-    expect(component.tratamiento.length).toBe(1);
+    expect(popUps.confirmarToast).not.toHaveBeenCalled();
+    expect(altaService.crear).toHaveBeenCalledWith({
+      tipoAlta: 'INDICACION_MEDICA',
+      diagnosticoEgreso: 'Nuevo diagnóstico',
+      condicionEgresoId: 2,
+      observacionEgreso: null,
+      episodioId: 1,
+      usuarioId: 2,
+      responsableRetiro: null,
+      motivoRetiro: null,
+      riesgosRetiro: [],
+      institucionId: null,
+      motivoReferencia: null,
+      indicacionesTraslado: null,
+      tratamientos: [
+        {
+          tipo: 'MEDICAMENTO',
+          nombre: 'Ibuprofeno',
+          medicamentoLogId: 9,
+          medicamentoLibre: null,
+          cantidad: 2,
+          unidadMedida: 'tabletas',
+          frecuencia: 8,
+          duracionTipo: 'DIAS',
+          duracion: 7,
+          observaciones: 'Con alimentos',
+        },
+      ],
+    });
+    expect(episodioActivo.limpiar).toHaveBeenCalled();
+    expect(popUps.exito).toHaveBeenCalledWith('Alta registrada exitosamente.');
+  });
 
-    elemento<HTMLButtonElement>('.tratamiento-quitar').click();
+  it('guarda un medicamento no registrado en el tratamiento', async () => {
+    await escribir('#diagnosticoEgreso', 'Diagnóstico');
+
+    component.registrarMedicamento({
+      nombre: 'Aspirina',
+      medicamentoLogId: null,
+      medicamentoLibre: 'Aspirina',
+      cantidad: 1,
+      unidadMedida: '',
+      frecuencia: 8,
+      duracionTipo: 'indefinida',
+      duracionCantidad: null,
+      observaciones: '',
+    });
+
+    botonGuardar().click();
     await fixture.whenStable();
 
-    expect(component.tratamiento.length).toBe(0);
-    expect(elemento('.tratamiento-lista')).toBeNull();
+    expect(altaService.crear).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tratamientos: [
+          expect.objectContaining({
+            tipo: 'MEDICAMENTO',
+            medicamentoLogId: null,
+            medicamentoLibre: 'Aspirina',
+          }),
+        ],
+      }),
+    );
+  });
+
+  it('actualiza el alta vigente después de confirmarlo', async () => {
+    await cargarAltaVigente();
+    await escribir('#diagnosticoEgreso', 'Diagnóstico actualizado');
+
+    botonGuardar().click();
+    await fixture.whenStable();
+
+    expect(popUps.confirmarToast).toHaveBeenCalledWith(
+      '¿Está seguro de guardar los cambios del alta del 16/10/2026?',
+    );
+    expect(altaService.actualizar).toHaveBeenCalledWith(
+      30,
+      expect.objectContaining({
+        diagnosticoEgreso: 'Diagnóstico actualizado',
+        episodioId: 1,
+        usuarioId: 2,
+      }),
+    );
+    expect(episodioActivo.limpiar).toHaveBeenCalled();
+    expect(popUps.exito).toHaveBeenCalledWith('Alta actualizada exitosamente.');
+  });
+
+  it('no actualiza el alta si la confirmación se cancela', async () => {
+    await cargarAltaVigente();
+    popUps.confirmarToast.mockResolvedValue(false);
+    await escribir('#diagnosticoEgreso', 'Diagnóstico actualizado');
+
+    botonGuardar().click();
+    await fixture.whenStable();
+
+    expect(altaService.actualizar).not.toHaveBeenCalled();
+  });
+
+  it('anula el alta después de confirmarlo y reabre el episodio', async () => {
+    await cargarAltaVigente();
+
+    botonAnular().click();
+    await fixture.whenStable();
+
+    expect(popUps.confirmarToast).toHaveBeenCalledWith(
+      '¿Está seguro de anular el alta del 16/10/2026?',
+    );
+    expect(altaService.anular).toHaveBeenCalledWith(30);
+    expect(episodioActivo.guardar).toHaveBeenCalledWith(1);
+    expect(component.altaExistente).toBeNull();
+    expect(component.diagnosticoEgreso).toBe('');
+    expect(popUps.exito).toHaveBeenCalledWith('Alta anulada exitosamente.');
+  });
+
+  it('no anula el alta si la confirmación se cancela', async () => {
+    await cargarAltaVigente();
+    popUps.confirmarToast.mockResolvedValue(false);
+
+    botonAnular().click();
+    await fixture.whenStable();
+
+    expect(altaService.anular).not.toHaveBeenCalled();
+    expect(component.altaExistente?.id).toBe(30);
+  });
+
+  it('no registra el alta cuando falta el diagnóstico', async () => {
+    await component.guardarEgreso();
+    await fixture.whenStable();
+
+    expect(altaService.crear).not.toHaveBeenCalled();
+    expect(popUps.advertencia).toHaveBeenCalledWith(
+      'El diagnóstico de egreso es obligatorio.',
+    );
+  });
+
+  it('exige el solicitante y el motivo en el retiro voluntario', async () => {
+    await irASeccion('Retiro voluntario');
+    await escribir('#diagnosticoEgreso', 'Diagnóstico de retiro');
+
+    await component.guardarEgreso();
+    await fixture.whenStable();
+
+    expect(altaService.crear).not.toHaveBeenCalled();
+    expect(popUps.advertencia).toHaveBeenCalledWith(
+      'Seleccione el solicitante del retiro.',
+    );
+
+    await elegir('#responsableRetiro', 'paciente');
+    await component.guardarEgreso();
+    await fixture.whenStable();
+
+    expect(popUps.advertencia).toHaveBeenCalledWith(
+      'El motivo del retiro es obligatorio.',
+    );
+
+    await escribir('#motivoRetiro', 'Decisión de la familia');
+    await component.guardarEgreso();
+    await fixture.whenStable();
+
+    expect(altaService.crear).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tipoAlta: 'RETIRO_VOLUNTARIO',
+        responsableRetiro: 'PACIENTE',
+        motivoRetiro: 'Decisión de la familia',
+      }),
+    );
+  });
+
+  it('exige la institución y el motivo en la referencia o traslado', async () => {
+    await irASeccion('Referencia / traslado');
+    await escribir('#diagnosticoEgreso', 'Diagnóstico de traslado');
+
+    await component.guardarEgreso();
+    await fixture.whenStable();
+
+    expect(altaService.crear).not.toHaveBeenCalled();
+    expect(popUps.advertencia).toHaveBeenCalledWith(
+      'Seleccione la institución de referencia.',
+    );
+
+    await elegir('#institucionReferencia', '1');
+    await component.guardarEgreso();
+    await fixture.whenStable();
+
+    expect(popUps.advertencia).toHaveBeenCalledWith(
+      'El motivo de referencia es obligatorio.',
+    );
+
+    await escribir('#motivoReferencia', 'Requiere valoración por especialidad');
+    await component.guardarEgreso();
+    await fixture.whenStable();
+
+    expect(altaService.crear).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tipoAlta: 'REFERENCIA_TRASLADO',
+        institucionId: 1,
+        motivoReferencia: 'Requiere valoración por especialidad',
+      }),
+    );
+  });
+
+  it('avisa cuando no hay un episodio activo', async () => {
+    episodioActivo.obtener.mockReturnValue(null);
+
+    component.cargarAlta();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(component.sinEpisodioActivo).toBe(true);
+    expect(elemento<HTMLElement>('.egreso-aviso').textContent).toContain(
+      'Abra un episodio para registrar el alta.',
+    );
+  });
+
+  it('avisa cuando el servidor no responde al cargar el alta', async () => {
+    altaService.buscarPorEpisodio.mockReturnValue(throwError(() => new TimeoutError()));
+
+    component.cargarAlta();
+    await fixture.whenStable();
+
+    expect(popUps.error).toHaveBeenCalledWith(
+      'Error de comunicación. El servidor no respondió dentro del tiempo esperado.',
+    );
+  });
+
+  it('oculta las acciones y deshabilita el registro cuando el episodio es solo lectura', async () => {
+    episodioActivo.esSoloLectura = () => true;
+    await cargarAltaVigente();
+
+    expect(botonAnular()).toBeNull();
+    expect(elemento<HTMLInputElement>('#diagnosticoEgreso').disabled).toBe(true);
   });
 });

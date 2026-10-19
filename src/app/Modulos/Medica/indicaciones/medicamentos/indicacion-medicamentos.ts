@@ -94,6 +94,11 @@ export class IndicacionMedicamentos implements OnInit, OnDestroy {
   private readonly abreviaturasUnidad = new Map<string, string>();
 
   // ------------------- ESTADO DE LA VISTA -------------------
+  /** El episodio es un historial cerrado: se consulta, pero no se registran cambios. */
+  get soloLectura(): boolean {
+    return this.episodioActivo.esSoloLectura();
+  }
+
   /** Campos del formulario de la indicación. */
   medicamento = '';
   /** Medicamento no registrado escrito por el usuario. */

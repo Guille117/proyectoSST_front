@@ -57,6 +57,7 @@ describe('Diagnostico', () => {
     obtener: vi.fn(() => 1),
     guardar: vi.fn(),
     limpiar: vi.fn(),
+    esSoloLectura: () => false,
   };
 
   beforeEach(async () => {
@@ -228,5 +229,13 @@ describe('Diagnostico', () => {
 
     expect(servicio.postDiagnostico).not.toHaveBeenCalled();
     expect(popUps.error).toHaveBeenCalled();
+  });
+
+  it('oculta el registro y las acciones cuando el episodio es solo lectura', async () => {
+    episodioActivo.esSoloLectura = () => true;
+    await inicializar();
+
+    expect(elemento('.diagnostico-acciones')).toBeNull();
+    expect(elemento('.iconEditar')).toBeNull();
   });
 });

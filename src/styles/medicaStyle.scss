@@ -5,8 +5,10 @@
    Solo actúa con la ficha a la vista y en pantallas anchas: en las estrechas el bloque deja de estar
    pegado al borde, fluye con el contenido y la barra no necesita reservar nada. */
 @media (min-width: 901px) {
-  app-principal-medica .principal:has(.ficha) .subMenuNav .btn.cerrar-episodio {
-    /* Se reserva el ancho de la ficha dentro de la barra: la acción queda a su izquierda */
+  app-principal-medica .principal:has(.ficha) .subMenuNav .btn.cerrar-episodio,
+  app-principal-medica .principal:has(.tratamiento-panel) .subMenuNav .btn.cerrar-episodio {
+    /* Se reserva el ancho de la ficha o del panel de tratamiento dentro de la barra: la acción
+       queda a su izquierda */
     margin-right: var(--ficha-ancho, 340px);
   }
 }

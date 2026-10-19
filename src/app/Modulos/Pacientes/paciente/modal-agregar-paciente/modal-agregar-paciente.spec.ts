@@ -83,6 +83,7 @@ describe('ModalAgregarPaciente', () => {
     pacienteId: 20,
     codigoExpediente: 'EXP-020',
     episodioId: null,
+    ultimoEpisodioId: 42,
     fechaHoraIngreso: null,
     nombreCompleto: 'Ana María López Ruiz',
     cui: '1234567890123',
@@ -97,6 +98,7 @@ describe('ModalAgregarPaciente', () => {
     pacienteId: 21,
     codigoExpediente: 'EXP-021',
     episodioId: 43,
+    ultimoEpisodioId: 43,
     estado: true,
   };
 

@@ -1,10 +1,11 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
-import { Subject } from 'rxjs';
+import { of, Subject, throwError } from 'rxjs';
 
 import { Atencion } from './atencion';
 import { PacienteService } from '../../Pacientes/paciente/data/paciente-service';
 import { PacienteResumido } from '../../Pacientes/paciente/data/pacienteInterfaz';
+import { AltaService } from '../alta/data/alta-service';
 import { EpisodioActivoService } from '../data/episodio-activo-service';
 import { PopUps } from '../../../shared/popUps/popUpsService';
 
@@ -18,6 +19,7 @@ describe('Atencion', () => {
       pacienteId: 1,
       codigoExpediente: 'EXP-001',
       episodioId: 101,
+      ultimoEpisodioId: 101,
       fechaHoraIngreso: '2026-10-10T08:30:00',
       nombreCompleto: 'Juan Pérez',
       cui: '1234567890123',
@@ -30,6 +32,7 @@ describe('Atencion', () => {
       pacienteId: 2,
       codigoExpediente: 'EXP-002',
       episodioId: 102,
+      ultimoEpisodioId: 102,
       fechaHoraIngreso: '2026-10-10T09:00:00',
       nombreCompleto: 'María López',
       cui: null,
@@ -42,6 +45,7 @@ describe('Atencion', () => {
       pacienteId: 3,
       codigoExpediente: 'EXP-003',
       episodioId: 103,
+      ultimoEpisodioId: 103,
       fechaHoraIngreso: '2026-10-10T10:00:00',
       nombreCompleto: 'Carlos Méndez',
       cui: '9876543210123',
@@ -54,6 +58,7 @@ describe('Atencion', () => {
       pacienteId: 4,
       codigoExpediente: 'EXP-004',
       episodioId: 104,
+      ultimoEpisodioId: 104,
       fechaHoraIngreso: '2026-10-10T11:00:00',
       nombreCompleto: 'Ana Rodríguez',
       cui: null,
@@ -64,8 +69,52 @@ describe('Atencion', () => {
     },
   ];
 
+  const pacienteEgresado: PacienteResumido = {
+    pacienteId: 5,
+    codigoExpediente: 'EXP-005',
+    episodioId: null,
+    ultimoEpisodioId: 201,
+    fechaHoraIngreso: null,
+    nombreCompleto: 'Luis Ramírez',
+    cui: null,
+    sexo: 'MASCULINO',
+    telefono: '70000005',
+    tipoTratamiento: 'HOSPITALIZACION',
+    estado: true,
+  };
+
+  const altaReciente = {
+    altaId: 1,
+    tipoAlta: 'INDICACION_MEDICA',
+    fechaHoraEgreso: '2026-10-18T09:30:00',
+    diagnosticoEgreso: 'Neumonía resuelta',
+    condicionEgresoNombre: 'Mejorado',
+    observacionEgreso: 'Control en 7 días',
+    responsableRetiro: null,
+    motivoRetiro: null,
+    riesgosRetiro: [],
+    institucionNombre: null,
+    motivoReferencia: null,
+    indicacionesTraslado: null,
+    episodioId: 201,
+    pacienteId: 5,
+    codigoExpediente: 'EXP-005',
+    nombreCompleto: 'Luis Ramírez',
+    cui: null,
+    sexo: 'MASCULINO',
+    telefono: '70000005',
+    tipoAtencion: 'HOSPITALIZACION',
+    edad: 61,
+  };
+
   const servicio = { listarPacientes: vi.fn() };
-  const episodioActivo = { guardar: vi.fn(), limpiar: vi.fn(), obtener: vi.fn() };
+  const servicioAltas = { recientes: vi.fn(() => of([altaReciente])) };
+  const episodioActivo = {
+    guardar: vi.fn(),
+    limpiar: vi.fn(),
+    obtener: vi.fn(),
+    esSoloLectura: () => false,
+  };
   const popUps = {
     advertencia: vi.fn(),
     error: vi.fn(),
@@ -78,11 +127,13 @@ describe('Atencion', () => {
     vi.resetAllMocks();
     respuesta = new Subject<PacienteResumido[]>();
     servicio.listarPacientes.mockReturnValue(respuesta.asObservable());
+    servicioAltas.recientes.mockReturnValue(of([altaReciente]));
 
     await TestBed.configureTestingModule({
       imports: [Atencion],
       providers: [
         { provide: PacienteService, useValue: servicio },
+        { provide: AltaService, useValue: servicioAltas },
         { provide: EpisodioActivoService, useValue: episodioActivo },
         { provide: PopUps, useValue: popUps },
         provideRouter([]),
@@ -94,9 +145,11 @@ describe('Atencion', () => {
   });
 
   /** Carga el listado con la respuesta del backend y espera a que la pantalla quede estable. */
-  const render = async (): Promise<void> => {
+  const render = async (): Promise<void> => renderCon(pacientes);
+
+  const renderCon = async (lista: PacienteResumido[]): Promise<void> => {
     fixture.detectChanges();
-    respuesta.next(pacientes);
+    respuesta.next(lista);
     respuesta.complete();
     fixture.detectChanges();
     await fixture.whenStable();
@@ -110,6 +163,14 @@ describe('Atencion', () => {
 
   const elementos = <T extends Element>(selector: string): NodeListOf<T> =>
     fixture.nativeElement.querySelectorAll(selector);
+
+  const pulsarFiltro = (etiqueta: string): void => {
+    const chip = Array.from(elementos<HTMLElement>('.chip')).find(
+      (boton) => (boton.textContent ?? '').trim() === etiqueta,
+    );
+    chip?.click();
+    fixture.detectChanges();
+  };
 
   /** Hojas de estilo del componente tal como se inyectan en el documento durante las pruebas. */
   const estilos = (): string =>
@@ -159,7 +220,60 @@ describe('Atencion', () => {
     const etiquetas = Array.from(elementos<HTMLElement>('.chip')).map((chip) =>
       (chip.textContent ?? '').trim(),
     );
-    expect(etiquetas).toEqual(['Todos', 'Emergencia', 'Hospitalización']);
+    expect(etiquetas).toEqual(['Todos', 'Emergencia', 'Hospitalización', 'Altas recientes']);
+  });
+
+  it('consulta y muestra las altas de las últimas 48 horas', async () => {
+    await render();
+
+    pulsarFiltro('Altas recientes');
+    await fixture.whenStable();
+
+    expect(servicioAltas.recientes).toHaveBeenCalledWith(48);
+    expect(component.filtroActivo).toBe('altasRecientes');
+    expect(tarjetas().length).toBe(1);
+    expect(fixture.nativeElement.textContent).toContain('Luis Ramírez');
+    expect(fixture.nativeElement.textContent).toContain('Neumonía resuelta');
+    expect(elementos<HTMLElement>('.paciente-ubicacion').length).toBe(0);
+  });
+
+  it('avisa si fallan las altas recientes y ofrece reintentar', async () => {
+    const registrado = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    servicioAltas.recientes.mockReturnValue(throwError(() => new Error('fallo del servidor')));
+    await render();
+
+    pulsarFiltro('Altas recientes');
+    await fixture.whenStable();
+
+    expect(component.errorAltas).toBe(true);
+    expect(fixture.nativeElement.textContent).toContain(
+      'No se pudieron cargar las altas recientes.',
+    );
+    expect(elemento('.lista-aviso--error .btn')).not.toBeNull();
+    expect(registrado).toHaveBeenCalled();
+  });
+
+  it('muestra los datos del egreso y abre su último episodio en solo lectura', async () => {
+    await render();
+    pulsarFiltro('Altas recientes');
+    await fixture.whenStable();
+    tarjetas()[0].click();
+    fixture.detectChanges();
+
+    const pantalla: string = fixture.nativeElement.textContent;
+    expect(pantalla).toContain('Información del egreso');
+    expect(pantalla).toContain('Alta médica');
+    expect(pantalla).toContain('Mejorado');
+    expect(pantalla).toContain('Control en 7 días');
+    expect(elemento<HTMLElement>('.seleccionado-acciones ._guardar')?.textContent).toContain(
+      'Abrir último episodio',
+    );
+
+    const navegar = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    component.abrirUltimoEpisodio();
+
+    expect(episodioActivo.guardar).toHaveBeenCalledWith(201, true);
+    expect(navegar).toHaveBeenCalledWith(['/medica', 'evaluacion']);
   });
 
   it('filtra los pacientes por tipo de atención', async () => {
@@ -173,6 +287,35 @@ describe('Atencion', () => {
     expect(tarjetas().length).toBe(2);
     expect(fixture.nativeElement.textContent).toContain('María López');
     expect(fixture.nativeElement.textContent).not.toContain('Juan Pérez');
+  });
+
+  it('oculta a los egresados en los filtros de atención', async () => {
+    await renderCon([...pacientes, pacienteEgresado]);
+
+    expect(tarjetas().length).toBe(4);
+    expect(fixture.nativeElement.textContent).not.toContain('Luis Ramírez');
+  });
+
+  it('busca egresados y ofrece abrir su último episodio', async () => {
+    await renderCon([...pacientes, pacienteEgresado]);
+
+    const buscador = fixture.nativeElement.querySelector('.inputB') as HTMLInputElement;
+    buscador.value = 'luis';
+    buscador.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+
+    expect(tarjetas().length).toBe(1);
+    expect(fixture.nativeElement.textContent).toContain('EXP-005');
+    expect(elemento<HTMLElement>('.seleccionado-acciones')?.textContent).toContain(
+      'Abrir último episodio',
+    );
+
+    const navegar = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    elemento<HTMLButtonElement>('.seleccionado-acciones ._guardar').click();
+    await fixture.whenStable();
+
+    expect(episodioActivo.guardar).toHaveBeenCalledWith(201, true);
+    expect(navegar).toHaveBeenCalledWith(['/medica', 'evaluacion']);
   });
 
   it('cambia el paciente del panel al elegir otra tarjeta', async () => {

@@ -202,6 +202,29 @@ select.medicamento-input {
   border-top: 1px solid #e4ebf5;
 }
 
+/* Existencia del medicamento en la tabla de resultados */
+.sin-existencia {
+  color: #b42318;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* Opción para indicar un medicamento que no está registrado */
+.medicamento-libre {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 10px;
+  color: #667085;
+  font-size: 0.85rem;
+
+  .btn {
+    flex: 0 1 auto;
+  }
+}
+
 /* Texto de la tabla cuando la búsqueda no encuentra medicamentos */
 .medicamento-vacio {
   margin: 0;

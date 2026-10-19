@@ -99,6 +99,11 @@ export class IndicacionExamenes implements OnInit, OnDestroy {
   @ViewChild('archivoExamenInput') private inputArchivoExamen?: ElementRef<HTMLInputElement>;
 
   // ------------------- ESTADO DE LA VISTA -------------------
+  /** El episodio es un historial cerrado: se consulta, pero no se registran cambios. */
+  get soloLectura(): boolean {
+    return this.episodioActivo.esSoloLectura();
+  }
+
   /** Campos del formulario del examen: solo su nombre es obligatorio. */
   nombreExamen = '';
   observacionExamen = '';

@@ -28,6 +28,7 @@ describe('HistoriaClinica', () => {
     obtener: vi.fn(() => EPISODIO_ID),
     guardar: vi.fn(),
     limpiar: vi.fn(),
+    esSoloLectura: () => false,
   };
 
   const historia = (id: number, descripcion: string): HistoriaClinicaResponse => ({
@@ -279,5 +280,13 @@ describe('HistoriaClinica', () => {
       'Error de comunicación. El servidor no respondió dentro del tiempo esperado.',
     );
     expect(popUps.errorDesdeBackend).not.toHaveBeenCalled();
+  });
+
+  it('oculta las acciones de edición cuando el episodio es solo lectura', async () => {
+    episodioActivo.esSoloLectura = () => true;
+    await render();
+
+    expect(elemento('.historia-acciones')).toBeNull();
+    expect(elemento<HTMLTextAreaElement>('#historiaClinica').readOnly).toBe(true);
   });
 });

@@ -1,6 +1,23 @@
-import { Component, EventEmitter, Output } from '@angular/core';
+import {
+  ChangeDetectorRef,
+  Component,
+  EventEmitter,
+  Input,
+  OnChanges,
+  OnDestroy,
+  OnInit,
+  Output,
+  SimpleChanges,
+  inject,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { finalize, Subscription, timeout, TimeoutError } from 'rxjs';
 import { Paginacion } from '../../../../../shared/paginacion/paginacion';
+import { PopUps } from '../../../../../shared/popUps/popUpsService';
+import { CatalogoService } from '../../../../Catalogos/data/serviceCatalogo';
+import { TIMEOUT_HTTP_MS } from '../../../evaluacion/data/constantes-clinicas';
+import { MedicamentoCatalogoResponse } from '../data/medicamentoInterfaz';
+import { MedicamentoIndicacionService } from '../data/medicamento-service';
 
 /* Tipos locales de la maqueta: se sustituirán por el contrato real del backend en la fase de integración. */
 /** Tipos de duración del tratamiento; el número de días solo se usa con el tipo «días». */
@@ -12,12 +29,18 @@ export interface MedicamentoCatalogoVista {
   nombre: string;
   presentacion: string;
   administracion: string;
+  disponible: number;
 }
 
 /** Medicamento indicado al paciente: lo que captura el formulario de la tarjeta. */
 export interface MedicamentoTratamiento {
   nombre: string;
-  cantidad: string;
+  /** ID del medicamento del catálogo; null cuando el medicamento no está registrado. */
+  medicamentoLogId?: number | null;
+  /** Texto libre del medicamento no registrado. */
+  medicamentoLibre?: string;
+  cantidad: number | null;
+  unidadMedida: string;
   frecuencia: number | null;
   duracionTipo: TipoDuracion | '';
   duracionCantidad: number | null;
@@ -58,15 +81,28 @@ export function textoDuracion(medicamento: MedicamentoTratamiento): string {
   templateUrl: './medicamento-indicacion.html',
   styleUrl: './medicamento-indicacion.scss',
 })
-export class MedicamentoIndicacion {
+export class MedicamentoIndicacion implements OnInit, OnChanges, OnDestroy {
+  private readonly catalogoService = inject(CatalogoService);
+  private readonly medicamentoService = inject(MedicamentoIndicacionService);
+  private readonly popUps = inject(PopUps);
+  private readonly cdr = inject(ChangeDetectorRef);
+  private peticionUnidades?: Subscription;
+  private peticionCatalogo?: Subscription;
+
   // ------------------- ESTADO DE LA VISTA -------------------
   /** Campos del formulario del medicamento. */
   medicamento = '';
-  cantidad = '';
+  /** Texto libre cuando el medicamento no está registrado en el catálogo. */
+  medicamentoLibre = '';
+  cantidad: number | null = null;
+  unidadMedida = '';
   frecuencia: number | null = null;
   duracionTipo: TipoDuracion | '' = '';
   duracionCantidad: number | null = null;
   observaciones = '';
+
+  /** Unidades de medida del catálogo; «Gotas» se agrega siempre al final. */
+  unidadesMedida: string[] = ['Gotas'];
 
   /** Medicamentos que devolvió la última búsqueda: alimentan la tabla de resultados del formulario. */
   medicamentosEncontrados: MedicamentoCatalogoVista[] = [];
@@ -77,6 +113,9 @@ export class MedicamentoIndicacion {
    */
   busquedaMedicamentoRealizada = false;
 
+  /** La búsqueda está esperando la respuesta del catálogo. */
+  cargandoCatalogo = false;
+
   /** Página de la tabla de resultados que se está viendo. */
   paginaMedicamentos = 1;
 
@@ -86,78 +125,89 @@ export class MedicamentoIndicacion {
   /** Medicamento del catálogo elegido para el tratamiento; null mientras no se elija ninguno. */
   medicamentoElegido: MedicamentoCatalogoVista | null = null;
 
-  // ------------------- SALIDAS -------------------
+  // ------------------- ENTRADAS Y SALIDAS -------------------
+  /** El título de la tarjeta se oculta cuando la pantalla ya lo muestra en sus pestañas. */
+  @Input() mostrarTitulo = true;
+
+  /** Medicamento que se carga en el formulario para corregirlo; null al capturar uno nuevo. */
+  @Input() medicamentoInicial: MedicamentoTratamiento | null = null;
+
   /** Medicamento capturado, con sus datos, para la pantalla que abrió la tarjeta. */
   @Output() medicamentoAgregado = new EventEmitter<MedicamentoTratamiento>();
 
   /** La captura se descartó: la pantalla que abrió la tarjeta vuelve a su formulario. */
   @Output() cancelado = new EventEmitter<void>();
 
-  // ------------------- MOCK: datos temporales para diseño -------------------
+  // ------------------- CICLO DE VIDA -------------------
+  ngOnInit(): void {
+    this.cargarUnidadesMedida();
+  }
+
+  ngOnDestroy(): void {
+    this.peticionUnidades?.unsubscribe();
+    this.peticionCatalogo?.unsubscribe();
+  }
+
+  ngOnChanges(cambios: SimpleChanges): void {
+    if (cambios['medicamentoInicial']) {
+      this.cargarInicial(this.medicamentoInicial);
+    }
+  }
+
+  /** Carga del catálogo las unidades de medida y les suma «Gotas». */
+  private cargarUnidadesMedida(): void {
+    this.peticionUnidades = this.catalogoService
+      .listarUnidadMedida()
+      .pipe(timeout(TIMEOUT_HTTP_MS))
+      .subscribe({
+        next: (unidades) => {
+          this.unidadesMedida = this.combinarUnidades(unidades.map((unidad) => unidad.nombre));
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          // Si falla el catálogo, queda disponible al menos «Gotas».
+        },
+      });
+  }
+
+  /** Une las unidades del catálogo con «Gotas», sin repetir nombres equivalentes. */
+  private combinarUnidades(unidades: string[]): string[] {
+    const resultado: string[] = [];
+    const vistos = new Set<string>();
+
+    for (const unidad of [...unidades, 'Gotas']) {
+      const nombre = unidad?.trim();
+      if (!nombre) continue;
+
+      const clave = this.singularizar(nombre.toLowerCase());
+      if (vistos.has(clave)) continue;
+
+      vistos.add(clave);
+      resultado.push(nombre);
+    }
+
+    return resultado;
+  }
+
+  /** Singular de la unidad: «tabletas» → «tableta», «unidades» → «unidad». */
+  private singularizar(unidad: string): string {
+    if (unidad.endsWith('idades')) return unidad.slice(0, -2);
+    if (unidad.endsWith('s') && !unidad.endsWith('sis')) return unidad.slice(0, -1);
+    return unidad;
+  }
+
   /** Tipos de duración que ofrece el desplegable de la duración. */
   tiposDuracion: OpcionVista[] = TIPOS_DURACION;
 
-  /**
-   * MOCK: catálogo de medicamentos que devolverá la búsqueda en la fase de integración. Cada
-   * presentación del medicamento lleva su nombre, su presentación y la vía por la que se administra,
-   * que son las columnas de la tabla de resultados del formulario.
-   */
-  catalogoMedicamentos: MedicamentoCatalogoVista[] = [
-    {
-      id: 1,
-      nombre: 'Amoxicilina Bayer',
-      presentacion: 'tabletas de 500 mg',
-      administracion: 'Oral',
-    },
-    {
-      id: 2,
-      nombre: 'Amoxicilina Bayer',
-      presentacion: 'suspensión inyectable de 500 mg',
-      administracion: 'Intravenosa',
-    },
-    {
-      id: 3,
-      nombre: 'Paracetamol Genfar',
-      presentacion: 'tabletas de 500 mg',
-      administracion: 'Oral',
-    },
-    {
-      id: 4,
-      nombre: 'Ibuprofeno MK',
-      presentacion: 'tabletas de 400 mg',
-      administracion: 'Oral',
-    },
-    {
-      id: 5,
-      nombre: 'Omeprazol La Santé',
-      presentacion: 'cápsulas de 20 mg',
-      administracion: 'Oral',
-    },
-    {
-      id: 6,
-      nombre: 'Metoclopramida Genfar',
-      presentacion: 'solución inyectable de 10 mg',
-      administracion: 'Intravenosa',
-    },
-    {
-      id: 7,
-      nombre: 'Ketorolaco Eurofarma',
-      presentacion: 'solución inyectable de 30 mg',
-      administracion: 'Intramuscular',
-    },
-    {
-      id: 8,
-      nombre: 'Diclofenaco MK',
-      presentacion: 'gel tópico al 1 %',
-      administracion: 'Tópica',
-    },
-  ];
-  // ------------------- FIN MOCK -------------------
-
   // ------------------- CONSULTAS PARA LA VISTA -------------------
-  /** La tarjeta tiene un medicamento escrito. */
+  /** Hay un medicamento escrito en el buscador. */
   get hayMedicamento(): boolean {
     return this.medicamento.trim().length > 0;
+  }
+
+  /** Hay un medicamento del catálogo o un medicamento libre listo para indicar. */
+  get hayMedicamentoSeleccionado(): boolean {
+    return this.medicamentoElegido !== null || this.medicamentoLibre.trim().length > 0;
   }
 
   /** La duración en días obliga a indicar cuántos días dura el tratamiento. */
@@ -166,11 +216,23 @@ export class MedicamentoIndicacion {
   }
 
   /**
-   * El botón Guardar se habilita con el medicamento escrito y la duración en días resuelta. Con la
-   * tabla de resultados desplegada se espera a que se elija un medicamento.
+   * El botón Guardar se habilita con un medicamento del catálogo o uno libre, la cantidad y la
+   * frecuencia enteras, la duración resuelta y las observaciones dentro del límite del backend.
    */
   get puedeGuardar(): boolean {
-    return !this.busquedaMedicamentoRealizada && this.hayMedicamento && !this.faltaDuracionEnDias;
+    return (
+      !this.busquedaMedicamentoRealizada &&
+      this.hayMedicamentoSeleccionado &&
+      !this.faltaDuracionEnDias &&
+      this.duracionTipo !== '' &&
+      this.cantidad !== null &&
+      Number.isInteger(this.cantidad) &&
+      this.cantidad > 0 &&
+      this.frecuencia !== null &&
+      Number.isInteger(this.frecuencia) &&
+      this.frecuencia > 0 &&
+      this.observaciones.length <= 2000
+    );
   }
 
   /** Filas de la página actual de la tabla de resultados. */
@@ -185,13 +247,22 @@ export class MedicamentoIndicacion {
     return (this.paginaMedicamentos - 1) * this.medicamentosPorPagina + 1;
   }
 
-  /** Texto del medicamento elegido: su nombre, su presentación y su vía de administración. */
+  /** Texto del medicamento elegido: su descripción o el texto libre no registrado. */
   get textoMedicamentoElegido(): string {
-    const elegido = this.medicamentoElegido;
+    if (this.medicamentoLibre.trim()) {
+      return `${this.medicamentoLibre.trim()} · No registrado`;
+    }
 
-    return elegido
-      ? `${elegido.nombre}, ${elegido.presentacion}, administración ${elegido.administracion.toLowerCase()}`
-      : '';
+    const elegido = this.medicamentoElegido;
+    if (!elegido) return '';
+
+    const partes = [elegido.nombre];
+    if (elegido.presentacion) partes.push(elegido.presentacion);
+    if (elegido.administracion) {
+      partes.push(`administración ${elegido.administracion.toLowerCase()}`);
+    }
+
+    return partes.join(', ');
   }
 
   /** Texto de la tabla de resultados cuando la búsqueda no encuentra medicamentos en el catálogo. */
@@ -209,22 +280,59 @@ export class MedicamentoIndicacion {
     return `${opcion.nombre} ${opcion.presentacion}`;
   }
 
-  /**
-   * MOCK: busca el medicamento escrito en el catálogo y muestra las coincidencias en la tabla de
-   * resultados del formulario. La búsqueda sin texto lista el catálogo completo y la comparación
-   * ignora mayúsculas y acentos. La consulta al backend llega en la fase de integración.
-   */
+  /** Busca el medicamento escrito en el catálogo real y muestra las coincidencias en la tabla. */
   buscarMedicamento(): void {
-    const termino = this.normalizarTexto(this.medicamento);
+    if (this.cargandoCatalogo) return;
 
     this.busquedaMedicamentoRealizada = true;
     this.paginaMedicamentos = 1;
+    this.cargandoCatalogo = true;
+    this.peticionCatalogo?.unsubscribe();
 
-    this.medicamentosEncontrados = termino
-      ? this.catalogoMedicamentos.filter((opcion) =>
-          this.normalizarTexto(this.descripcionMedicamento(opcion)).includes(termino),
-        )
-      : [...this.catalogoMedicamentos];
+    this.peticionCatalogo = this.medicamentoService
+      .buscarCatalogo(this.medicamento)
+      .pipe(
+        finalize(() => {
+          this.cargandoCatalogo = false;
+          this.cdr.markForCheck();
+        }),
+      )
+      .subscribe({
+        next: (catalogo) => {
+          this.medicamentosEncontrados = catalogo.map((opcion) => this.aVista(opcion));
+          this.cdr.markForCheck();
+        },
+        error: (error) => {
+          this.medicamentosEncontrados = [];
+          this.cdr.markForCheck();
+          if (error instanceof TimeoutError) {
+            this.popUps.error(
+              'Error de comunicación. El servidor no respondió dentro del tiempo esperado.',
+            );
+            return;
+          }
+          this.popUps.errorDesdeBackend(
+            error,
+            'No se pudo buscar en el catálogo de medicamentos.',
+          );
+        },
+      });
+  }
+
+  /** Traduce el medicamento del catálogo al modelo de la tabla de resultados. */
+  private aVista(opcion: MedicamentoCatalogoResponse): MedicamentoCatalogoVista {
+    const nombre = [opcion.nombre, opcion.marca]
+      .filter((parte) => parte?.trim())
+      .join(' ')
+      .trim();
+
+    return {
+      id: opcion.id,
+      nombre,
+      presentacion: opcion.presentacion ?? '',
+      administracion: opcion.viaAdministracion ?? '',
+      disponible: opcion.disponible,
+    };
   }
 
   /** Muestra otra página de la tabla de resultados. */
@@ -239,12 +347,27 @@ export class MedicamentoIndicacion {
   seleccionarMedicamento(opcion: MedicamentoCatalogoVista): void {
     this.cerrarResultadosMedicamento();
     this.medicamento = this.descripcionMedicamento(opcion);
+    this.medicamentoLibre = '';
     this.medicamentoElegido = opcion;
+  }
+
+  /** Indica como medicamento no registrado el texto escrito en el buscador. */
+  usarMedicamentoLibre(): void {
+    const texto = this.medicamento.trim();
+    if (!texto) {
+      this.popUps.advertencia('Escriba el medicamento o sus detalles.');
+      return;
+    }
+
+    this.medicamentoLibre = texto;
+    this.medicamentoElegido = null;
+    this.cerrarResultadosMedicamento();
   }
 
   /** Devuelve el formulario al buscador para elegir otro medicamento en lugar del elegido. */
   cambiarMedicamento(): void {
     this.medicamento = '';
+    this.medicamentoLibre = '';
     this.cerrarResultadosMedicamento();
     this.buscarMedicamento();
   }
@@ -257,10 +380,7 @@ export class MedicamentoIndicacion {
     this.medicamentoElegido = null;
   }
 
-  /**
-   * MOCK: entrega a la pantalla que abrió la tarjeta el medicamento capturado y deja el formulario
-   * listo para el siguiente. El registro real del tratamiento lo hará el backend en la integración.
-   */
+  /** Entrega a la pantalla que abrió la tarjeta el medicamento capturado. */
   agregarMedicamento(): void {
     if (!this.puedeGuardar) {
       return;
@@ -268,7 +388,10 @@ export class MedicamentoIndicacion {
 
     this.medicamentoAgregado.emit({
       nombre: this.medicamento.trim(),
-      cantidad: this.cantidad.trim(),
+      medicamentoLogId: this.medicamentoElegido?.id ?? null,
+      medicamentoLibre: this.medicamentoElegido ? '' : this.medicamentoLibre.trim(),
+      cantidad: this.cantidad,
+      unidadMedida: this.unidadMedida,
       frecuencia: this.frecuencia,
       duracionTipo: this.duracionTipo,
       // El número de días solo se guarda con el tipo «días»
@@ -288,7 +411,9 @@ export class MedicamentoIndicacion {
   /** Deja el formulario listo para capturar un medicamento nuevo. */
   limpiarFormulario(): void {
     this.medicamento = '';
-    this.cantidad = '';
+    this.medicamentoLibre = '';
+    this.cantidad = null;
+    this.unidadMedida = '';
     this.frecuencia = null;
     this.duracionTipo = '';
     this.duracionCantidad = null;
@@ -297,17 +422,37 @@ export class MedicamentoIndicacion {
   }
 
   // ------------------- APOYO -------------------
+  /** Carga el medicamento que se va a editar o limpia el formulario al empezar una captura nueva. */
+  private cargarInicial(medicamento: MedicamentoTratamiento | null): void {
+    if (!medicamento) {
+      this.limpiarFormulario();
+      return;
+    }
+
+    this.medicamento = medicamento.nombre;
+    this.medicamentoLibre = medicamento.medicamentoLibre ?? '';
+    this.medicamentoElegido = this.medicamentoLibre
+      ? null
+      : {
+          id: medicamento.medicamentoLogId ?? 0,
+          nombre: medicamento.nombre,
+          presentacion: '',
+          administracion: '',
+          disponible: 0,
+        };
+    this.cantidad = medicamento.cantidad;
+    this.unidadMedida = medicamento.unidadMedida;
+    this.frecuencia = medicamento.frecuencia;
+    this.duracionTipo = medicamento.duracionTipo;
+    this.duracionCantidad = medicamento.duracionCantidad;
+    this.observaciones = medicamento.observaciones;
+    this.busquedaMedicamentoRealizada = false;
+    this.medicamentosEncontrados = [];
+    this.paginaMedicamentos = 1;
+  }
+
   /** La duración en días solo está resuelta cuando se han escrito los días del tratamiento. */
   private faltaDuracionEnDiasDe(tipo: TipoDuracion | '', cantidad: number | null): boolean {
     return tipo === 'dias' && (cantidad ?? 0) <= 0;
-  }
-
-  /** Texto sin mayúsculas ni acentos, para comparar la búsqueda con el catálogo. */
-  private normalizarTexto(texto: string): string {
-    return texto
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .toLowerCase()
-      .trim();
   }
 }

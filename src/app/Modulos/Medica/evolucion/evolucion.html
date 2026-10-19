@@ -2,6 +2,7 @@
      filtrar entre las evoluciones activas y las eliminadas -->
 <div class="evolucion" [class.evolucion--ficha-abierta]="pacienteAbierto">
   <!-- Registro de la evolución: evolución clínica y plan médico del episodio -->
+  @if (!soloLectura) {
   <section class="panel panel-registro" aria-labelledby="tituloRegistrarEvolucion">
     <h3 class="panel-titulo" id="tituloRegistrarEvolucion">Registrar evolución</h3>
 
@@ -28,13 +29,21 @@
 
       <!-- Acciones del registro: descartar lo capturado o guardar la evolución -->
       <div class="acciones-formulario evolucion-acciones">
-        <button type="button" class="btn _cancelar" (click)="cancelarCaptura()">Cancelar</button>
+        <button
+          type="button"
+          class="btn _cancelar"
+          [disabled]="guardando"
+          (click)="cancelarCaptura()"
+        >
+          Cancelar
+        </button>
         <button type="submit" class="btn _guardar" [disabled]="!puedeGuardar">
           Guardar evolución
         </button>
       </div>
     </form>
   </section>
+  }
 
   <!-- Historial de las evoluciones: una tarjeta por evolución, con sus filtros y su menú de opciones -->
   <section class="panel panel-historial" aria-labelledby="tituloHistorialEvoluciones">
@@ -60,91 +69,105 @@
     </div>
 
     <div class="historial-lista">
-      @for (evolucion of evolucionesFiltradas; track evolucion.id) {
-        <article
-          class="evolucion-card"
-          [class.evolucion-card--verde]="evolucion.tono === 'verde'"
-          [class.evolucion-card--azul]="evolucion.tono === 'azul'"
-          [class.evolucion-card--naranja]="evolucion.tono === 'naranja'"
-          [class.evolucion-card--morado]="evolucion.tono === 'morado'"
-          [class.evolucion-card--eliminada]="evolucion.estado === 'eliminada'"
-          [class.evolucion-card--menu-abierto]="menuEvolucionAbierta === evolucion.id"
-          [class.evolucion-card--edicion]="evolucionEnEdicion === evolucion.id"
-          [attr.data-evolucion-id]="evolucion.id"
-        >
-          <header class="evolucion-encabezado">
-            <!-- Rótulo de la tarjeta: el registro clínico del episodio, a la izquierda del menú -->
-            <span class="evolucion-titulo">Evolución clínica</span>
+      @if (cargando) {
+        <p class="historial-vacio">Cargando evoluciones...</p>
+      } @else if (sinEpisodioActivo) {
+        <p class="historial-vacio">Abra un episodio para consultar sus evoluciones.</p>
+      } @else if (errorCarga) {
+        <p class="historial-vacio">
+          No se pudieron cargar las evoluciones. Intente nuevamente.
+        </p>
+      } @else {
+        @for (evolucion of evolucionesFiltradas; track evolucion.id) {
+          <article
+            class="evolucion-card"
+            [class.evolucion-card--verde]="evolucion.tono === 'verde'"
+            [class.evolucion-card--azul]="evolucion.tono === 'azul'"
+            [class.evolucion-card--naranja]="evolucion.tono === 'naranja'"
+            [class.evolucion-card--morado]="evolucion.tono === 'morado'"
+            [class.evolucion-card--eliminada]="evolucion.estado === 'eliminada'"
+            [class.evolucion-card--menu-abierto]="menuEvolucionAbierta === evolucion.id"
+            [class.evolucion-card--edicion]="evolucionEnEdicion === evolucion.id"
+            [attr.data-evolucion-id]="evolucion.id"
+          >
+            <header class="evolucion-encabezado">
+              <!-- Rótulo de la tarjeta: el registro clínico del episodio, a la izquierda del menú -->
+              <span class="evolucion-titulo">Evolución clínica</span>
 
-            <!-- Menú de opciones de la tarjeta: mismo despliegue del listado de indicaciones -->
-            <button
-              type="button"
-              class="evolucion-menu-trigger"
-              title="Más opciones"
-              aria-haspopup="menu"
-              [attr.aria-label]="'Más opciones para la evolución del ' + evolucion.fecha"
-              [attr.aria-expanded]="menuEvolucionAbierta === evolucion.id"
-              (click)="alternarMenuEvolucion(evolucion.id)"
-            >
-              <i class="bi bi-three-dots-vertical" aria-hidden="true"></i>
-            </button>
-          </header>
+              <!-- Menú de opciones de la tarjeta: mismo despliegue del listado de indicaciones -->
+              @if (!soloLectura) {
+              <button
+                type="button"
+                class="evolucion-menu-trigger"
+                title="Más opciones"
+                aria-haspopup="menu"
+                [attr.aria-label]="'Más opciones para la evolución del ' + evolucion.fecha"
+                [attr.aria-expanded]="menuEvolucionAbierta === evolucion.id"
+                (click)="alternarMenuEvolucion(evolucion.id)"
+              >
+                <i class="bi bi-three-dots-vertical" aria-hidden="true"></i>
+              </button>
+              }
+            </header>
 
-          <!-- Contenido clínico de la evolución: la evolución clínica y el plan médico del registro -->
-          <p class="evolucion-clinica">{{ evolucion.evolucionClinica }}</p>
+            <!-- Contenido clínico de la evolución: la evolución clínica y el plan médico del registro -->
+            <p class="evolucion-clinica">{{ evolucion.evolucionClinica }}</p>
 
-          <dl class="evolucion-detalle">
-            <dt class="evolucion-detalle-etiqueta">Plan médico</dt>
-            <dd class="evolucion-plan">{{ evolucion.planMedico }}</dd>
-          </dl>
+            <dl class="evolucion-detalle">
+              <dt class="evolucion-detalle-etiqueta">Plan médico</dt>
+              <dd class="evolucion-plan">{{ evolucion.planMedico }}</dd>
+            </dl>
 
-          <!-- Pie de la tarjeta: la fecha, la hora y el médico del registro, como en las tarjetas del
-               listado de indicaciones -->
-          <footer class="evolucion-meta">
-            <span><i class="bi bi-calendar3" aria-hidden="true"></i>{{ evolucion.fecha }}</span>
-            <span><i class="bi bi-clock" aria-hidden="true"></i>{{ evolucion.hora }}</span>
-            <span><i class="bi bi-person" aria-hidden="true"></i>{{ evolucion.medico }}</span>
-          </footer>
+            <!-- Pie de la tarjeta: la fecha, la hora y el médico del registro, como en las tarjetas del
+                 listado de indicaciones -->
+            <footer class="evolucion-meta">
+              <span><i class="bi bi-calendar3" aria-hidden="true"></i>{{ evolucion.fecha }}</span>
+              <span><i class="bi bi-clock" aria-hidden="true"></i>{{ evolucion.hora }}</span>
+              <span><i class="bi bi-person" aria-hidden="true"></i>{{ evolucion.medico }}</span>
+            </footer>
 
-          <!-- Menú de opciones: se dibuja al final de la tarjeta y flota sobre ella -->
-          @if (menuEvolucionAbierta === evolucion.id) {
-            <div
-              class="evolucion-menu"
-              role="menu"
-              [attr.aria-label]="'Opciones para la evolución del ' + evolucion.fecha"
-            >
-              <div class="evolucion-menu-opcion">
-                <span>Editar</span>
-                <button
-                  type="button"
-                  class="iconEditar"
-                  role="menuitem"
-                  title="Editar evolución"
-                  [attr.aria-label]="'Editar la evolución del ' + evolucion.fecha"
-                  (click)="editarEvolucion(evolucion); cerrarMenuEvolucion()"
-                >
-                  <i class="bi bi-pencil-square" aria-hidden="true"></i>
-                </button>
+            <!-- Menú de opciones: se dibuja al final de la tarjeta y flota sobre ella -->
+            @if (menuEvolucionAbierta === evolucion.id && !soloLectura) {
+              <div
+                class="evolucion-menu"
+                role="menu"
+                [attr.aria-label]="'Opciones para la evolución del ' + evolucion.fecha"
+              >
+                <div class="evolucion-menu-opcion">
+                  <span>Editar</span>
+                  <button
+                    type="button"
+                    class="iconEditar"
+                    role="menuitem"
+                    title="Editar evolución"
+                    [attr.aria-label]="'Editar la evolución del ' + evolucion.fecha"
+                    [disabled]="guardando || eliminando"
+                    (click)="editarEvolucion(evolucion); cerrarMenuEvolucion()"
+                  >
+                    <i class="bi bi-pencil-square" aria-hidden="true"></i>
+                  </button>
+                </div>
+
+                <div class="evolucion-menu-opcion">
+                  <span>Eliminar</span>
+                  <button
+                    type="button"
+                    class="iconQuitar"
+                    role="menuitem"
+                    title="Eliminar evolución"
+                    [attr.aria-label]="'Eliminar la evolución del ' + evolucion.fecha"
+                    [disabled]="guardando || eliminando"
+                    (click)="eliminarEvolucion(evolucion)"
+                  >
+                    <i class="bi bi-trash3" aria-hidden="true"></i>
+                  </button>
+                </div>
               </div>
-
-              <div class="evolucion-menu-opcion">
-                <span>Eliminar</span>
-                <button
-                  type="button"
-                  class="iconQuitar"
-                  role="menuitem"
-                  title="Eliminar evolución"
-                  [attr.aria-label]="'Eliminar la evolución del ' + evolucion.fecha"
-                  (click)="eliminarEvolucion(evolucion)"
-                >
-                  <i class="bi bi-trash3" aria-hidden="true"></i>
-                </button>
-              </div>
-            </div>
-          }
-        </article>
-      } @empty {
-        <p class="historial-vacio">{{ mensajeSinEvoluciones }}</p>
+            }
+          </article>
+        } @empty {
+          <p class="historial-vacio">{{ mensajeSinEvoluciones }}</p>
+        }
       }
     </div>
   </section>

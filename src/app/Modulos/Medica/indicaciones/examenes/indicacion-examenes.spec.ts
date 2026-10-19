@@ -55,6 +55,7 @@ describe('IndicacionExamenes', () => {
     obtener: vi.fn<() => number | null>(() => 1),
     guardar: vi.fn(),
     limpiar: vi.fn(),
+    esSoloLectura: () => false,
   };
 
   beforeEach(async () => {

@@ -65,6 +65,7 @@ describe('IndicacionMedicamentos', () => {
     obtener: vi.fn<() => number | null>(() => 1),
     guardar: vi.fn(),
     limpiar: vi.fn(),
+    esSoloLectura: () => false,
   };
   const popUps = {
     exito: vi.fn(),

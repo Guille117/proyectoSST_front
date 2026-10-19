@@ -23,6 +23,7 @@ describe('Paciente', () => {
     pacienteId: 1,
     codigoExpediente: 'EXP-001',
     episodioId: 101,
+    ultimoEpisodioId: 101,
     fechaHoraIngreso: '2026-10-10T08:30:00',
     nombreCompleto: 'Ana López',
     cui: '1234567890123',

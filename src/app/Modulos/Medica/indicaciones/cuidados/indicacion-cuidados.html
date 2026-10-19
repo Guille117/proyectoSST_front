@@ -2,6 +2,7 @@
 <section class="panel panel-seccion" aria-labelledby="tituloCuidados">
   <h3 class="panel-titulo indicacion-titulo" id="tituloCuidados">Cuidados</h3>
 
+  @if (!soloLectura) {
   <form class="indicacion-form" (ngSubmit)="agregarCuidado()">
     <!-- Nombre del cuidado y su frecuencia: la frecuencia solo admite números -->
     <div class="indicacion-fila">
@@ -106,6 +107,7 @@
       <button type="submit" class="btn _guardar" [disabled]="!puedeGuardarCuidado">Guardar</button>
     </div>
   </form>
+  }
 </section>
 
 <!-- Cuidados indicados en el episodio actual -->
@@ -148,6 +150,7 @@
             <span class="indicacion-nombre">{{ cuidado.nombre }}</span>
 
             <!-- Menú de opciones de la tarjeta: se despliega sobre ella sin cambiar su tamaño -->
+            @if (!soloLectura) {
             <button
               type="button"
               class="indicacion-menu-trigger"
@@ -159,6 +162,7 @@
             >
               <i class="bi bi-three-dots-vertical" aria-hidden="true"></i>
             </button>
+            }
           </header>
 
           <ul class="indicacion-badges">
@@ -176,7 +180,7 @@
           </footer>
 
           <!-- Menú de opciones: se dibuja al final de la tarjeta y flota sobre ella -->
-          @if (menuIndicacionAbierta === cuidado.id) {
+          @if (menuIndicacionAbierta === cuidado.id && !soloLectura) {
             <div
               class="indicacion-menu"
               role="menu"

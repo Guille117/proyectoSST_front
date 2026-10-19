@@ -8,6 +8,7 @@
 
   <form class="diagnostico-form" (ngSubmit)="guardarDiagnostico()">
     <!-- Campos del diagnóstico -->
+    @if (!soloLectura) {
     <div class="diagnostico-campos">
       <div class="diagnostico-campo">
         <label class="diagnostico-etiqueta" for="diagnostico">
@@ -51,6 +52,7 @@
         </div>
       </div>
     </div>
+    }
 
     <!-- Diagnósticos registrados en el episodio -->
     <div class="adicionales-encabezado">
@@ -79,6 +81,7 @@
                 <td class="celda_izquierda">{{ adicional.descripcion }}</td>
                 <td class="celda_centrada">
                   <div class="acciones-fila">
+                    @if (!soloLectura) {
                     <button
                       type="button"
                       class="iconEditar"
@@ -100,6 +103,7 @@
                     >
                       <i class="bi bi-trash3" aria-hidden="true"></i>
                     </button>
+                    }
                   </div>
                 </td>
               </tr>
@@ -116,6 +120,7 @@
     </div>
 
     <!-- Acciones del formulario -->
+    @if (!soloLectura) {
     <div class="acciones-formulario diagnostico-acciones">
       <button
         type="button"
@@ -133,5 +138,6 @@
         Guardar
       </button>
     </div>
+    }
   </form>
 </section>

@@ -12,7 +12,12 @@ class PantallaPrueba {}
 describe('PrincipalMedica', () => {
   let component: PrincipalMedica;
   let fixture: ComponentFixture<PrincipalMedica>;
-  const episodioActivo = { limpiar: vi.fn(), guardar: vi.fn(), obtener: vi.fn() };
+  const episodioActivo = {
+    limpiar: vi.fn(),
+    guardar: vi.fn(),
+    obtener: vi.fn(),
+    esSoloLectura: () => false,
+  };
 
   beforeEach(async () => {
     vi.resetAllMocks();
@@ -47,6 +52,7 @@ describe('PrincipalMedica', () => {
 
     expect(opciones).toEqual([
       'Evaluación clínica',
+      'Procedimiento médico',
       'Indicaciones médicas',
       'Evolución médica',
       'Alta médica',

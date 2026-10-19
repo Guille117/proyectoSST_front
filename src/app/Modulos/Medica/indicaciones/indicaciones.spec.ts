@@ -39,7 +39,12 @@ describe('Indicaciones', () => {
     eliminarIndicacion: vi.fn(),
   };
   const authService = { currentUser: () => ({ id: 2 }) };
-  const episodioActivo = { obtener: () => 1, guardar: vi.fn(), limpiar: vi.fn() };
+  const episodioActivo = {
+    obtener: () => 1,
+    guardar: vi.fn(),
+    limpiar: vi.fn(),
+    esSoloLectura: () => false,
+  };
   const catalogoService = { listarUnidadMedida: vi.fn(() => of([])) };
   const examenService = {
     buscarPorEpisodio: vi.fn(),
@@ -960,6 +965,15 @@ describe('Indicaciones', () => {
       'Cuidados',
     ]);
     expect(elementos<HTMLElement>('.panel-secciones .tarjeta_icono i').length).toBe(3);
+  });
+
+  it('oculta los formularios de indicaciones cuando el episodio es solo lectura', async () => {
+    episodioActivo.esSoloLectura = () => true;
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(elemento('.indicacion-form')).toBeNull();
+    expect(elemento('.indicacion-menu-trigger')).toBeNull();
   });
 });
 

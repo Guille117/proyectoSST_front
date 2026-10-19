@@ -77,6 +77,11 @@ export class IndicacionCuidados implements OnInit, OnDestroy {
   private destruido = false;
 
   // ------------------- ESTADO DE LA VISTA -------------------
+  /** El episodio es un historial cerrado: se consulta, pero no se registran cambios. */
+  get soloLectura(): boolean {
+    return this.episodioActivo.esSoloLectura();
+  }
+
   /** Campos del formulario del cuidado: nombre, frecuencia, duración y observaciones. */
   nombreCuidado = '';
   frecuenciaCuidado: number | null = null;

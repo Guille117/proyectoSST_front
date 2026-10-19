@@ -1,14 +1,120 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { of, throwError, TimeoutError } from 'rxjs';
 
+import { PopUps } from '../../../../../shared/popUps/popUpsService';
+import { CatalogoService } from '../../../../Catalogos/data/serviceCatalogo';
+import { MedicamentoCatalogoResponse } from '../data/medicamentoInterfaz';
+import { MedicamentoIndicacionService } from '../data/medicamento-service';
 import { MedicamentoIndicacion, MedicamentoTratamiento } from './medicamento-indicacion';
 
 describe('MedicamentoIndicacion', () => {
   let component: MedicamentoIndicacion;
   let fixture: ComponentFixture<MedicamentoIndicacion>;
 
+  const catalogo: MedicamentoCatalogoResponse[] = [
+    {
+      id: 1,
+      nombre: 'Amoxicilina',
+      codigo: 'MED-1',
+      dosis: 500,
+      marca: 'Bayer',
+      presentacion: 'tabletas de 500 mg',
+      viaAdministracion: 'Oral',
+      unidadMedida: 'mg',
+      disponible: 10,
+      estado: true,
+    },
+    {
+      id: 2,
+      nombre: 'Amoxicilina',
+      codigo: 'MED-2',
+      dosis: 500,
+      marca: 'Bayer',
+      presentacion: 'suspensión inyectable de 500 mg',
+      viaAdministracion: 'Intravenosa',
+      unidadMedida: 'mg',
+      disponible: 5,
+      estado: true,
+    },
+    {
+      id: 3,
+      nombre: 'Paracetamol',
+      codigo: 'MED-3',
+      dosis: 500,
+      marca: 'Genfar',
+      presentacion: 'tabletas de 500 mg',
+      viaAdministracion: 'Oral',
+      unidadMedida: 'mg',
+      disponible: 20,
+      estado: true,
+    },
+    {
+      id: 4,
+      nombre: 'Ibuprofeno',
+      codigo: 'MED-4',
+      dosis: 400,
+      marca: 'MK',
+      presentacion: 'tabletas de 400 mg',
+      viaAdministracion: 'Oral',
+      unidadMedida: 'mg',
+      disponible: 8,
+      estado: true,
+    },
+    {
+      id: 5,
+      nombre: 'Omeprazol',
+      codigo: 'MED-5',
+      dosis: 20,
+      marca: 'La Santé',
+      presentacion: 'cápsulas de 20 mg',
+      viaAdministracion: 'Oral',
+      unidadMedida: 'mg',
+      disponible: 15,
+      estado: true,
+    },
+    {
+      id: 6,
+      nombre: 'Metoclopramida',
+      codigo: 'MED-6',
+      dosis: 10,
+      marca: 'Genfar',
+      presentacion: 'solución inyectable de 10 mg',
+      viaAdministracion: 'Intravenosa',
+      unidadMedida: 'mg',
+      disponible: 3,
+      estado: true,
+    },
+  ];
+
+  const medicamentoService = { buscarCatalogo: vi.fn() };
+  const catalogoService = { listarUnidadMedida: vi.fn() };
+  const popUps = { error: vi.fn(), errorDesdeBackend: vi.fn() };
+
   beforeEach(async () => {
+    vi.resetAllMocks();
+    medicamentoService.buscarCatalogo.mockImplementation((nombre: string) => {
+      const termino = nombre.trim().toLowerCase();
+      return of(
+        termino
+          ? catalogo.filter((medicamento) =>
+              `${medicamento.nombre} ${medicamento.marca} ${medicamento.presentacion}`
+                .toLowerCase()
+                .includes(termino),
+            )
+          : catalogo,
+      );
+    });
+    catalogoService.listarUnidadMedida.mockReturnValue(
+      of([{ id: 1, nombre: 'Tabletas', abreviatura: 'tab' }]),
+    );
+
     await TestBed.configureTestingModule({
       imports: [MedicamentoIndicacion],
+      providers: [
+        { provide: MedicamentoIndicacionService, useValue: medicamentoService },
+        { provide: CatalogoService, useValue: catalogoService },
+        { provide: PopUps, useValue: popUps },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(MedicamentoIndicacion);
@@ -30,7 +136,8 @@ describe('MedicamentoIndicacion', () => {
   const filasResultados = (): NodeListOf<HTMLTableRowElement> =>
     elementos<HTMLTableRowElement>('.medicamento-resultados tbody tr.fila-seleccionable');
 
-  const pieDeResultados = (): HTMLElement => elemento<HTMLElement>('.medicamento-resultados tfoot');
+  const pieDeResultados = (): HTMLElement =>
+    elemento<HTMLElement>('.medicamento-resultados tfoot');
 
   const botonGuardar = (): HTMLButtonElement =>
     elemento<HTMLButtonElement>('.medicamento-acciones button[type="submit"]');
@@ -87,43 +194,42 @@ describe('MedicamentoIndicacion', () => {
     expect(botonGuardar().disabled).toBe(true);
   });
 
-  it('muestra la tabla de resultados con No., Descripción y Administración al buscar', async () => {
+  it('busca en el catálogo real y muestra la tabla con No., Descripción y Administración', async () => {
     expect(elemento('.medicamento-resultados')).toBeNull();
 
     await buscar('amoxicilina');
+
+    expect(medicamentoService.buscarCatalogo).toHaveBeenCalledWith('amoxicilina');
 
     const encabezados = [
       ...elementos<HTMLTableCellElement>('.medicamento-resultados thead th'),
     ].map((encabezado) => encabezado.textContent?.trim());
 
-    expect(encabezados).toEqual(['No.', 'Descripción', 'Administración']);
+    expect(encabezados).toEqual(['No.', 'Descripción', 'Existencia', 'Administración']);
     expect(filasResultados().length).toBe(2);
     expect(filasResultados()[0].textContent).toContain('1');
     expect(filasResultados()[0].textContent).toContain('Amoxicilina Bayer tabletas de 500 mg');
     expect(filasResultados()[0].textContent).toContain('Oral');
     expect(filasResultados()[1].textContent).toContain('Intravenosa');
-    // Cada fila se elige con el ratón o con el teclado
     expect(filasResultados()[1].tabIndex).toBe(0);
   });
 
   it('reparte los resultados en páginas de cinco medicamentos desde el pie de la tabla', async () => {
-    // La búsqueda sin texto lista el catálogo completo, de cinco en cinco
     await buscar('');
 
-    expect(component.medicamentosEncontrados.length).toBe(8);
+    expect(medicamentoService.buscarCatalogo).toHaveBeenCalledWith('');
+    expect(component.medicamentosEncontrados.length).toBe(6);
     expect(filasResultados().length).toBe(5);
     expect(filasResultados()[0].textContent).toContain('1');
     expect(filasResultados()[4].textContent).toContain('Omeprazol La Santé');
-    expect(pieDeResultados().textContent).toContain('Mostrando 5 de 8 resultados');
-    expect(pieDeResultados().textContent).toContain('Seleccione un medicamento');
+    expect(pieDeResultados().textContent).toContain('Mostrando 5 de 6 resultados');
 
     await paginaSiguiente();
 
-    // La página siguiente continúa la numeración y solo muestra los tres que quedan
-    expect(filasResultados().length).toBe(3);
+    expect(filasResultados().length).toBe(1);
     expect(filasResultados()[0].textContent).toContain('6');
     expect(filasResultados()[0].textContent).toContain('Metoclopramida Genfar');
-    expect(pieDeResultados().textContent).toContain('Mostrando 3 de 8 resultados');
+    expect(pieDeResultados().textContent).toContain('Mostrando 1 de 6 resultados');
   });
 
   it('avisa cuando la búsqueda no encuentra medicamentos en el catálogo', async () => {
@@ -135,10 +241,39 @@ describe('MedicamentoIndicacion', () => {
     );
   });
 
+  it('permite indicar un medicamento no registrado con el texto del buscador', async () => {
+    await buscar('medicamento no registrado');
+
+    expect(component.hayMedicamentoSeleccionado).toBe(false);
+
+    elemento<HTMLButtonElement>('.medicamento-libre button').click();
+    await fixture.whenStable();
+
+    expect(component.medicamentoLibre).toBe('medicamento no registrado');
+    expect(component.textoMedicamentoElegido).toContain('No registrado');
+
+    await escribir('#cantidadTratamiento', '1');
+    await escribir('#frecuenciaTratamiento', '8');
+    await elegir('#duracionTipoTratamiento', 'indefinida');
+
+    let agregado: MedicamentoTratamiento | undefined;
+    component.medicamentoAgregado.subscribe((medicamento) => (agregado = medicamento));
+
+    botonGuardar().click();
+    await fixture.whenStable();
+
+    expect(agregado).toEqual(
+      expect.objectContaining({
+        nombre: 'medicamento no registrado',
+        medicamentoLogId: null,
+        medicamentoLibre: 'medicamento no registrado',
+      }),
+    );
+  });
+
   it('deja el medicamento elegido en el lugar del buscador y de la tabla', async () => {
     await elegirMedicamento('amoxicilina', 1);
 
-    // La tabla con su buscador desaparecen y en su sitio queda el medicamento elegido
     expect(elemento('.medicamento-resultados')).toBeNull();
     expect(elemento('#medicamentoTratamiento')).toBeNull();
     expect(component.medicamento).toBe('Amoxicilina Bayer suspensión inyectable de 500 mg');
@@ -146,6 +281,11 @@ describe('MedicamentoIndicacion', () => {
     expect(elemento<HTMLElement>('.medicamento-elegido-texto').textContent?.trim()).toBe(
       'Amoxicilina Bayer, suspensión inyectable de 500 mg, administración intravenosa',
     );
+
+    await escribir('#cantidadTratamiento', '2');
+    await escribir('#frecuenciaTratamiento', '8');
+    await elegir('#duracionTipoTratamiento', 'indefinida');
+
     expect(botonGuardar().disabled).toBe(false);
   });
 
@@ -154,7 +294,6 @@ describe('MedicamentoIndicacion', () => {
 
     await buscar('amoxicilina');
 
-    // Solo quedan el buscador y su tabla: la captura espera al medicamento elegido
     expect(elemento<HTMLInputElement>('#medicamentoTratamiento').value).toBe('amoxicilina');
     expect(elemento('.medicamento-resultados')).not.toBeNull();
     expect(elemento('#cantidadTratamiento')).toBeNull();
@@ -180,18 +319,19 @@ describe('MedicamentoIndicacion', () => {
     elemento<HTMLButtonElement>('.medicamento-elegido-cambiar').click();
     await fixture.whenStable();
 
-    // El medicamento elegido suelta su sitio y la búsqueda vuelve con el catálogo completo
     expect(elemento('.medicamento-elegido')).toBeNull();
     expect(elemento<HTMLInputElement>('#medicamentoTratamiento').value).toBe('');
     expect(component.medicamento).toBe('');
+    expect(medicamentoService.buscarCatalogo).toHaveBeenLastCalledWith('');
     expect(filasResultados().length).toBe(5);
   });
 
   it('exige los días del tratamiento cuando el tipo de duración es Días', async () => {
     await elegirMedicamento('omeprazol', 0);
+    await escribir('#cantidadTratamiento', '1');
+    await escribir('#frecuenciaTratamiento', '8');
     await elegir('#duracionTipoTratamiento', 'dias');
 
-    // Con la duración en días sin resolver el medicamento todavía no se puede guardar
     expect(botonGuardar().disabled).toBe(true);
 
     await escribir('#duracionCantidadTratamiento', '5');
@@ -206,7 +346,6 @@ describe('MedicamentoIndicacion', () => {
     await buscar('omeprazol');
     component.agregarMedicamento();
 
-    // Aunque se envíe el formulario, el texto escrito es solo la búsqueda
     expect(agregado).toBeUndefined();
     expect(component.medicamentoElegido).toBeNull();
   });
@@ -216,7 +355,8 @@ describe('MedicamentoIndicacion', () => {
     component.medicamentoAgregado.subscribe((medicamento) => (agregado = medicamento));
 
     await elegirMedicamento('amoxicilina', 0);
-    await escribir('#cantidadTratamiento', '500 mg');
+    await escribir('#cantidadTratamiento', '2');
+    await elegir('#unidadMedidaTratamiento', 'Tabletas');
     await escribir('#frecuenciaTratamiento', '8');
     await elegir('#duracionTipoTratamiento', 'dias');
     await escribir('#duracionCantidadTratamiento', '7');
@@ -227,15 +367,17 @@ describe('MedicamentoIndicacion', () => {
 
     expect(agregado).toEqual({
       nombre: 'Amoxicilina Bayer tabletas de 500 mg',
-      cantidad: '500 mg',
+      medicamentoLogId: 1,
+      medicamentoLibre: '',
+      cantidad: 2,
+      unidadMedida: 'Tabletas',
       frecuencia: 8,
       duracionTipo: 'dias',
       duracionCantidad: 7,
       observaciones: 'Con el desayuno.',
     });
-    // El formulario vuelve al buscador para capturar el siguiente medicamento
     expect(component.medicamento).toBe('');
-    expect(component.cantidad).toBe('');
+    expect(component.cantidad).toBeNull();
     expect(component.frecuencia).toBeNull();
     expect(component.duracionTipo).toBe('');
     expect(component.duracionCantidad).toBeNull();
@@ -249,7 +391,7 @@ describe('MedicamentoIndicacion', () => {
     component.cancelado.subscribe(() => (cancelado = true));
 
     await elegirMedicamento('ibuprofeno', 0);
-    await escribir('#cantidadTratamiento', '400 mg');
+    await escribir('#cantidadTratamiento', '2');
 
     botonCancelar().click();
     await fixture.whenStable();
@@ -257,6 +399,16 @@ describe('MedicamentoIndicacion', () => {
     expect(cancelado).toBe(true);
     expect(component.medicamentoElegido).toBeNull();
     expect(component.medicamento).toBe('');
-    expect(component.cantidad).toBe('');
+    expect(component.cantidad).toBeNull();
+  });
+
+  it('avisa cuando el servidor no responde al buscar en el catálogo', async () => {
+    medicamentoService.buscarCatalogo.mockReturnValue(throwError(() => new TimeoutError()));
+
+    await buscar('ibuprofeno');
+
+    expect(popUps.error).toHaveBeenCalledWith(
+      'Error de comunicación. El servidor no respondió dentro del tiempo esperado.',
+    );
   });
 });

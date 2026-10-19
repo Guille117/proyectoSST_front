@@ -30,6 +30,9 @@ export class DatosPaciente {
   /** El bloque se abre y se cierra desde su pestaña lateral en lugar de mostrarse siempre. */
   @Input() plegable = false;
 
+  /** Permite que el usuario pliegue el bloque; con falso, solo la pantalla controla su estado. */
+  @Input() permitirAlternar = true;
+
   /** El bloque está desplegado: solo se dibuja cuando es verdadero. */
   @Input() abierto = true;
 
@@ -69,11 +72,13 @@ export class DatosPaciente {
   // ------------------- ACCIONES DE LA VISTA -------------------
   /** Abre o cierra el bloque desde su pestaña lateral. */
   alternarFicha(): void {
+    if (!this.permitirAlternar) return;
     this.abiertoCambia.emit(!this.abierto);
   }
 
   /** Pliega o despliega el cuerpo del bloque desde el chevron de su encabezado. */
   alternarCuerpo(): void {
+    if (!this.permitirAlternar) return;
     this.cuerpoVisibleCambia.emit(!this.cuerpoVisible);
   }
 }

@@ -62,6 +62,7 @@
           }
         </p>
 
+        @if (!soloLectura) {
         <!-- Parte del cuerpo evaluada: una sola lista desplegable con las regiones del catálogo -->
         <div class="parte-cuerpo-campo">
           <label class="parte-cuerpo-label" for="parteCuerpoExamen">Parte del cuerpo</label>
@@ -113,6 +114,7 @@
             <button type="submit" class="btn _guardar" [disabled]="!puedeGuardar">Guardar</button>
           </div>
         </form>
+        }
       </section>
     }
   }
@@ -139,6 +141,7 @@
             <span class="hallazgo-nombre">{{ hallazgo.parteCuerpo }}</span>
 
             <!-- Menú de opciones de la tarjeta: editar o eliminar el hallazgo -->
+            @if (!soloLectura) {
             <button
               type="button"
               class="hallazgo-menu-trigger"
@@ -150,6 +153,7 @@
             >
               <i class="bi bi-three-dots-vertical" aria-hidden="true"></i>
             </button>
+            }
           </header>
 
           <p class="hallazgo-descripcion">{{ hallazgo.descripcion }}</p>
@@ -161,7 +165,7 @@
           </footer>
 
           <!-- Menú de opciones: se dibuja al final de la tarjeta y flota sobre ella -->
-          @if (menuHallazgoAbierto === hallazgo.id) {
+          @if (menuHallazgoAbierto === hallazgo.id && !soloLectura) {
             <div
               class="hallazgo-menu"
               role="menu"

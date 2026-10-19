@@ -1,12 +1,20 @@
 <!-- Tarjeta del bloque de medicamentos del tratamiento: el buscador con su tabla de resultados y, una
      vez elegido el medicamento, sus campos. La usan las pantallas que indican medicamentos al
      paciente; ellas deciden cuándo se muestra y qué hacen con el medicamento capturado -->
-<section class="panel" aria-labelledby="tituloMedicamentoTratamiento">
-  <h3 class="panel-titulo medicamento-titulo" id="tituloMedicamentoTratamiento">Medicamentos</h3>
+<section
+  class="panel"
+  [attr.aria-labelledby]="mostrarTitulo ? 'tituloMedicamentoTratamiento' : null"
+>
+  @if (mostrarTitulo) {
+    <h3 class="panel-titulo medicamento-titulo" id="tituloMedicamentoTratamiento">Medicamentos</h3>
+  }
+
+  <!-- Cabecera de la pantalla que contiene la tarjeta: pestañas y acciones de la sección -->
+  <ng-content select=".slot-cabecera"></ng-content>
 
   <form class="medicamento-form" (ngSubmit)="agregarMedicamento()">
     <!-- Medicamento elegido: ocupa el lugar del buscador y de la tabla de resultados -->
-    @if (medicamentoElegido) {
+    @if (hayMedicamentoSeleccionado) {
       <div class="medicamento-campo">
         <span class="medicamento-etiqueta" id="etiquetaMedicamentoTratamiento">
           Medicamento<span class="medicamento-obligatorio" aria-hidden="true">*</span>
@@ -33,7 +41,7 @@
     }
 
     <!-- Medicamento: búsqueda en el catálogo mientras no se haya elegido ninguno -->
-    @if (!medicamentoElegido) {
+    @if (!hayMedicamentoSeleccionado) {
       <div class="medicamento-campo">
         <label class="medicamento-etiqueta" for="medicamentoTratamiento">
           Medicamento<span class="medicamento-obligatorio" aria-hidden="true">*</span>
@@ -47,6 +55,7 @@
               name="medicamento"
               type="text"
               placeholder="Buscar medicamento..."
+              maxlength="500"
               aria-required="true"
               [(ngModel)]="medicamento"
               (keyup.enter)="buscarMedicamento()"
@@ -57,6 +66,7 @@
               type="button"
               title="Buscar en el catálogo de medicamentos"
               aria-label="Buscar en el catálogo de medicamentos"
+              [disabled]="cargandoCatalogo"
               (click)="buscarMedicamento()"
             >
               <i class="bi bi-search fs-5" aria-hidden="true"></i>
@@ -69,13 +79,16 @@
            su vía de administración; cada fila elige el medicamento -->
       @if (busquedaMedicamentoRealizada) {
         <div class="medicamento-resultados" aria-live="polite">
-          @if (medicamentosEncontrados.length) {
+          @if (cargandoCatalogo) {
+            <p class="medicamento-vacio">Buscando medicamentos en el catálogo...</p>
+          } @else if (medicamentosEncontrados.length) {
             <div class="tabla-container">
               <table aria-label="Medicamentos encontrados en el catálogo">
                 <thead>
                   <tr>
                     <th class="columna-numero" scope="col">No.</th>
                     <th scope="col">Descripción</th>
+                    <th scope="col">Existencia</th>
                     <th scope="col">Administración</th>
                   </tr>
                 </thead>
@@ -91,6 +104,12 @@
                     >
                       <td class="celda_centrada">{{ numeroInicialDeLaPagina + indice }}</td>
                       <td class="celda_izquierda">{{ descripcionMedicamento(opcion) }}</td>
+                      <td
+                        class="celda_centrada"
+                        [class.sin-existencia]="opcion.disponible <= 0"
+                      >
+                        {{ opcion.disponible > 0 ? opcion.disponible : 'Sin existencia' }}
+                      </td>
                       <td class="celda_izquierda">{{ opcion.administracion }}</td>
                     </tr>
                   }
@@ -100,7 +119,7 @@
                      la paginación alterna con la ayuda para elegir -->
                 <tfoot>
                   <tr>
-                    <td colspan="3">
+                    <td colspan="4">
                       <app-paginacion
                         [paginaActual]="paginaMedicamentos"
                         [totalregistros]="medicamentosEncontrados.length"
@@ -118,13 +137,28 @@
           }
         </div>
       }
+
+      <!-- Medicamento no registrado: solo aparece después de realizar una búsqueda -->
+      @if (busquedaMedicamentoRealizada) {
+        <div class="medicamento-libre">
+          <span>¿No está registrado?</span>
+          <button
+            type="button"
+            class="btn _principal"
+            [disabled]="!hayMedicamento"
+            (click)="usarMedicamentoLibre()"
+          >
+            Indicar como no registrado
+          </button>
+        </div>
+      }
     }
 
     <!-- Resto de la captura: espera al medicamento elegido, porque con la tabla de resultados
          desplegada la tarjeta solo muestra el buscador y sus coincidencias -->
     @if (!busquedaMedicamentoRealizada) {
-      <!-- Cantidad y frecuencia: la frecuencia solo admite números -->
-      <div class="medicamento-fila medicamento-fila--dos">
+      <!-- Cantidad, unidad de medida y frecuencia: la frecuencia solo admite números -->
+      <div class="medicamento-fila">
         <div class="medicamento-campo">
           <label class="medicamento-etiqueta" for="cantidadTratamiento">
             Cantidad<span class="medicamento-obligatorio" aria-hidden="true">*</span>
@@ -133,11 +167,31 @@
             class="medicamento-input"
             id="cantidadTratamiento"
             name="cantidad"
-            type="text"
-            placeholder="Ej. 500 mg"
+            type="number"
+            min="1"
+            step="1"
+            inputmode="numeric"
+            placeholder="Ej. 2"
             aria-required="true"
             [(ngModel)]="cantidad"
           />
+        </div>
+
+        <div class="medicamento-campo">
+          <label class="medicamento-etiqueta" for="unidadMedidaTratamiento">
+            Unidad de medida
+          </label>
+          <select
+            class="medicamento-input"
+            id="unidadMedidaTratamiento"
+            name="unidadMedida"
+            [(ngModel)]="unidadMedida"
+          >
+            <option value="">Seleccionar...</option>
+            @for (unidad of unidadesMedida; track unidad) {
+              <option [value]="unidad">{{ unidad }}</option>
+            }
+          </select>
         </div>
 
         <div class="medicamento-campo">
@@ -204,6 +258,7 @@
             id="observacionesTratamiento"
             name="observaciones"
             placeholder="Indicaciones adicionales..."
+            maxlength="2000"
             [(ngModel)]="observaciones"
           ></textarea>
         </div>
@@ -213,6 +268,7 @@
     <!-- Acciones de la tarjeta: cancelar descarta la captura y guardar la entrega a la pantalla -->
     <div class="acciones-formulario medicamento-acciones">
       <button type="button" class="btn _cancelar" (click)="cancelarCaptura()">Cancelar</button>
+      <ng-content select=".slot-accion"></ng-content>
       <button type="submit" class="btn _guardar" [disabled]="!puedeGuardar">Guardar</button>
     </div>
   </form>

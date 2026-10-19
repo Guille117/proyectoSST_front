@@ -36,6 +36,9 @@ EstadoCama = EstadoCama;
   textoBusqueda = '';
   menuCamaAbierto: number | null = null;
 
+  /** Nombre corto del paciente que ocupa cada cama, indexado por el id de la cama. */
+  nombresPacientesPorCama = new Map<number, string>();
+
 
   ngOnInit(): void {
     this.cargarCatalogos();
@@ -45,6 +48,11 @@ EstadoCama = EstadoCama;
   private cargarCatalogos(): void {
     this.catalogoService.listar2('areas', true).subscribe((data) => {
       this.areas = data;
+
+      if (!this.camaRequest.areaId && data.length) {
+        this.camaRequest.areaId = data[0].id ?? 0;
+      }
+
       this.cdr.detectChanges();
     });
 
@@ -69,9 +77,13 @@ EstadoCama = EstadoCama;
     private camaRequestInicial: camaRequest | null = null;
 
   validarCama(): boolean {
-    if (!this.camaRequest.habitacionId || !this.camaRequest.tipoId || !this.camaRequest.areaId) {
-      this.popUp.formIncompleto('Debe seleccionar tipo de cama, habitación y área.');
+    if (!this.camaRequest.habitacionId || !this.camaRequest.tipoId) {
+      this.popUp.formIncompleto('Debe seleccionar tipo de cama y habitación.');
       return false;
+    }
+
+    if (!this.camaRequest.areaId && this.areas.length) {
+      this.camaRequest.areaId = this.areas[0].id ?? 0;
     }
 
     return true;
@@ -131,12 +143,44 @@ EstadoCama = EstadoCama;
       next: (data) => {
         this.camas = data;
         this.paginaCamas = 1;
+        this.cargarPacientesOcupados();
         this.cdr.detectChanges();
       },
       error: () => {
         this.popUp.errorDesdeBackend('Error al listar las camas');
       }
     })
+  }
+
+  /** Carga el nombre corto de los pacientes que ocupan camas y lo indexa por cama. */
+  private cargarPacientesOcupados(): void {
+    this.servicioCama.listarCamasOcupadas().subscribe({
+      next: (camas) => {
+        this.nombresPacientesPorCama = new Map(
+          camas.map((cama) => [cama.idCama, this.formatearNombrePaciente(cama.nombrePaciente)]),
+        );
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.nombresPacientesPorCama = new Map();
+      },
+    });
+  }
+
+  /** Nombre corto de la cama ocupada: primer nombre y primer apellido. */
+  nombrePacienteCama(cama: camaResponseSimple): string {
+    return this.nombresPacientesPorCama.get(cama.idCama) ?? '';
+  }
+
+  /** Reduce el nombre completo al primer nombre y al primer apellido. */
+  private formatearNombrePaciente(nombreCompleto: string): string {
+    const partes = nombreCompleto.trim().split(/\s+/).filter(Boolean);
+
+    if (partes.length <= 2) {
+      return partes.join(' ');
+    }
+
+    return `${partes[0]} ${partes[partes.length - 2]}`;
   }
    //---------------------------------------
 
@@ -261,16 +305,14 @@ EstadoCama = EstadoCama;
     this.camaRequest = {
       habitacionId: 0,
       tipoId: 0,
-      areaId: 0,
+      areaId: this.areas[0]?.id ?? 0,
     };
     this.camaRequestInicial = null;
     this.isEditing = false;
   }
 
   puedeGuardar(): boolean {
-    const formularioCompleto = Boolean(
-      this.camaRequest.tipoId && this.camaRequest.habitacionId && this.camaRequest.areaId,
-    );
+    const formularioCompleto = Boolean(this.camaRequest.tipoId && this.camaRequest.habitacionId);
 
     if (!formularioCompleto) {
       return false;
@@ -282,8 +324,7 @@ EstadoCama = EstadoCama;
 
     return (
       this.camaRequest.tipoId !== this.camaRequestInicial.tipoId ||
-      this.camaRequest.habitacionId !== this.camaRequestInicial.habitacionId ||
-      this.camaRequest.areaId !== this.camaRequestInicial.areaId
+      this.camaRequest.habitacionId !== this.camaRequestInicial.habitacionId
     );
   }
 }

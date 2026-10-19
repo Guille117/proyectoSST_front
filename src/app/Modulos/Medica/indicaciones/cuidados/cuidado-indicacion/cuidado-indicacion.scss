@@ -1,0 +1,14 @@
+@use '../../../panel-seccion';
+@use '../../comun';
+
+/* El nombre del cuidado ocupa dos columnas y la frecuencia comparte la tercera con la fila
+   siguiente, de modo que la rejilla del formulario queda alineada de arriba abajo. */
+.indicacion-campo--ancho {
+  grid-column: span 2;
+}
+
+@media (max-width: 900px) {
+  .indicacion-campo--ancho {
+    grid-column: auto;
+  }
+}

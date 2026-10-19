@@ -1,24 +1,140 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { of, throwError, TimeoutError } from 'rxjs';
 
 import { PopUps } from '../../../shared/popUps/popUpsService';
+import { AuthService } from '../../Auth/data/auth-service';
+import { EpisodioActivoService } from '../data/episodio-activo-service';
+import { EvolucionService } from './data/evolucion-service';
+import {
+  EvolucionRequest,
+  EvolucionResponse,
+  EstadoEvolucionApi,
+} from './data/evolucionInterfaz';
 import { Evolucion } from './evolucion';
 
 describe('Evolucion', () => {
   let component: Evolucion;
   let fixture: ComponentFixture<Evolucion>;
+  let evolucionesMock: EvolucionResponse[] = [];
 
-  // El popup global se simula: la eliminación solo necesita saber si el usuario confirmó
   const popUps = {
     confirmarToast: vi.fn(),
+    exito: vi.fn(),
+    error: vi.fn(),
+    errorDesdeBackend: vi.fn(),
+    advertencia: vi.fn(),
+  };
+
+  const servicio = {
+    buscarPorEpisodio: vi.fn(),
+    crear: vi.fn(),
+    actualizar: vi.fn(),
+    eliminar: vi.fn(),
+  };
+
+  const auth = { currentUser: () => ({ id: 2 }) };
+  const episodio = {
+    obtener: vi.fn<() => number | null>(() => 1),
+    guardar: vi.fn(),
+    limpiar: vi.fn(),
+    esSoloLectura: () => false,
+  };
+
+  const evolucion = (
+    id: number,
+    estado: EstadoEvolucionApi,
+    overrides: Partial<EvolucionResponse> = {},
+  ): EvolucionResponse => ({
+    id,
+    evolucionClinica: 'Paciente con mejoría clínica.',
+    planMedico: 'Continuar con el esquema indicado.',
+    episodioId: 1,
+    usuarioId: 2,
+    usuarioNombre: 'Dr. Juan Pérez',
+    fecha: '2026-10-12T10:30:00',
+    estado,
+    ...overrides,
+  });
+
+  const reiniciarEvoluciones = (): void => {
+    evolucionesMock = [
+      evolucion(1, 'ACTIVA', {
+        evolucionClinica:
+          'Paciente con disminución del dolor abdominal, sin nuevos episodios de vómitos. ' +
+          'Presenta mejoría clínica.',
+        planMedico:
+          'Continuar con el esquema indicado, mantener la hidratación y vigilar la respuesta al ' +
+          'tratamiento.',
+        fecha: '2026-10-12T10:30:00',
+      }),
+      evolucion(2, 'ACTIVA', {
+        evolucionClinica:
+          'Paciente persiste con molestias abdominales. Se realiza valoración de seguimiento y ' +
+          'respuesta al tratamiento.',
+        planMedico: 'Mantener analgesia, control de signos vitales y valorar nuevos estudios.',
+        usuarioNombre: 'Dra. Ana López',
+        fecha: '2026-10-11T09:15:00',
+      }),
+      evolucion(3, 'ELIMINADA', {
+        evolucionClinica:
+          'Paciente ingresa con dolor abdominal y vómitos. Se inicia hidratación y analgesia.',
+        planMedico: 'Solicitar hemograma, control de signos vitales y reevaluar en cuatro horas.',
+        fecha: '2026-10-10T08:00:00',
+      }),
+    ];
+
+    servicio.buscarPorEpisodio.mockImplementation(
+      (_episodioId: number, estado: EstadoEvolucionApi) =>
+        of(
+          evolucionesMock
+            .filter((registro) => registro.estado === estado)
+            .sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime()),
+        ),
+    );
+    servicio.crear.mockImplementation((request: EvolucionRequest) => {
+      const nueva: EvolucionResponse = {
+        ...request,
+        id: 4,
+        usuarioNombre: 'Dr. Juan Pérez',
+        fecha: '2026-10-13T11:00:00',
+        estado: 'ACTIVA',
+      };
+      evolucionesMock = [...evolucionesMock, nueva];
+      return of(nueva);
+    });
+    servicio.actualizar.mockImplementation((id: number, request: EvolucionRequest) => {
+      const actualizada: EvolucionResponse = {
+        ...evolucionesMock.find((registro) => registro.id === id)!,
+        ...request,
+        id,
+      };
+      evolucionesMock = evolucionesMock.map((registro) =>
+        registro.id === id ? actualizada : registro,
+      );
+      return of(actualizada);
+    });
+    servicio.eliminar.mockImplementation((id: number) => {
+      evolucionesMock = evolucionesMock.map((registro) =>
+        registro.id === id ? { ...registro, estado: 'ELIMINADA' as const } : registro,
+      );
+      return of(void 0);
+    });
   };
 
   beforeEach(async () => {
     vi.resetAllMocks();
+    reiniciarEvoluciones();
     popUps.confirmarToast.mockResolvedValue(true);
+    episodio.obtener.mockReturnValue(1);
 
     await TestBed.configureTestingModule({
       imports: [Evolucion],
-      providers: [{ provide: PopUps, useValue: popUps }],
+      providers: [
+        { provide: EvolucionService, useValue: servicio },
+        { provide: EpisodioActivoService, useValue: episodio },
+        { provide: AuthService, useValue: auth },
+        { provide: PopUps, useValue: popUps },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(Evolucion);
@@ -114,6 +230,18 @@ describe('Evolucion', () => {
     ).toBeTruthy();
   });
 
+  it('deja el desplazamiento solo para las tarjetas del historial', () => {
+    const panel = elemento<HTMLElement>('.panel-historial');
+    const filtros = elemento<HTMLElement>('.historial-filtros');
+    const lista = elemento<HTMLElement>('.historial-lista');
+
+    // El título y los filtros quedan fuera de la pista que se desplaza
+    expect(panel.firstElementChild?.classList.contains('panel-titulo')).toBe(true);
+    expect(filtros.closest('.historial-lista')).toBeNull();
+    expect(filtros.nextElementSibling?.classList.contains('historial-lista')).toBe(true);
+    expect(getComputedStyle(lista).overflowY).toBe('auto');
+  });
+
   it('pide la evolución clínica y el plan médico en cuadros de texto con su límite de caracteres', () => {
     expect(campos().length).toBe(2);
     expect(elementos<HTMLLabelElement>('.evolucion-etiqueta').length).toBe(2);
@@ -178,8 +306,8 @@ describe('Evolucion', () => {
     expect(filtroActivo().getAttribute('aria-pressed')).toBe('true');
     expect(elementos<HTMLElement>('.historial-filtro[aria-pressed="true"]').length).toBe(1);
 
-    // El MOCK guarda una evolución eliminada que no se lista entre las vigentes
-    expect(tarjetas().length).toBe(component.evolucionesFiltradas.length);
+    // «Activas» consulta el estado vigente del backend y deja fuera las eliminadas
+    expect(servicio.buscarPorEpisodio).toHaveBeenCalledWith(1, 'ACTIVA');
     expect(tarjetas().length).toBe(2);
   });
 
@@ -188,6 +316,7 @@ describe('Evolucion', () => {
 
     expect(component.filtroEvolucion).toBe('eliminadas');
     expect(filtroActivo().textContent?.trim()).toBe('Eliminadas');
+    expect(servicio.buscarPorEpisodio).toHaveBeenCalledWith(1, 'ELIMINADA');
     expect(tarjetas().length).toBe(1);
     expect(tarjetas()[0].textContent).toContain('Paciente ingresa con dolor abdominal');
     // La tarjeta de una evolución dada de baja lleva su acento gris
@@ -339,6 +468,15 @@ describe('Evolucion', () => {
     botonGuardar().click();
     await fixture.whenStable();
 
+    expect(popUps.confirmarToast).toHaveBeenCalledWith(
+      `¿Está seguro de guardar los cambios de la evolución del ${elegida.fecha}?`,
+    );
+    expect(servicio.actualizar).toHaveBeenCalledWith(2, {
+      evolucionClinica: 'Paciente estable, sin dolor abdominal.',
+      planMedico: 'Alta con control en consulta externa.',
+      episodioId: 1,
+      usuarioId: 2,
+    });
     expect(component.evoluciones.length).toBe(total);
     expect(tarjetas()[1].textContent).toContain('Paciente estable, sin dolor abdominal.');
     expect(tarjetas()[1].textContent).toContain(elegida.fecha);
@@ -380,20 +518,18 @@ describe('Evolucion', () => {
   it('da de baja la evolución confirmada en el popup y la deja entre las eliminadas', async () => {
     const eliminada = component.evoluciones[0];
     const restante = component.evoluciones[1];
-    const total = component.evoluciones.length;
     const vigentes = component.evolucionesFiltradas.length;
 
     await abrirMenu(0);
     botonEliminarDelMenu().click();
     await fixture.whenStable();
 
-    expect(popUps.confirmarToast).toHaveBeenCalledWith(expect.stringContaining(eliminada.fecha));
-    expect(component.menuEvolucionAbierta).toBeNull();
-    // La baja es lógica: el registro no se borra del historial
-    expect(component.evoluciones.length).toBe(total);
-    expect(component.evoluciones.find((registrada) => registrada.id === eliminada.id)?.estado).toBe(
-      'eliminada',
+    expect(popUps.confirmarToast).toHaveBeenCalledWith(
+      `¿Está seguro de eliminar la evolución del ${eliminada.fecha}?`,
     );
+    expect(servicio.eliminar).toHaveBeenCalledWith(eliminada.id);
+    expect(component.menuEvolucionAbierta).toBeNull();
+    // La baja es lógica: el registro sigue consultable con el filtro de eliminadas
     expect(tarjetas().length).toBe(vigentes - 1);
     expect(tarjetas()[0].textContent).toContain(restante.medico);
 
@@ -412,6 +548,7 @@ describe('Evolucion', () => {
     botonEliminarDelMenu().click();
     await fixture.whenStable();
 
+    expect(servicio.eliminar).not.toHaveBeenCalled();
     expect(component.evolucionesFiltradas.length).toBe(vigentes);
     expect(tarjetas().length).toBe(vigentes);
     expect(component.evolucionesFiltradas.every((evolucion) => evolucion.estado === 'activa')).toBe(
@@ -443,7 +580,6 @@ describe('Evolucion', () => {
 
   it('guarda la evolución escrita al inicio del historial y limpia el formulario', async () => {
     const total = component.evoluciones.length;
-    const vigentes = component.evolucionesFiltradas.length;
     // La evolución registrada antes de guardar pasa a ser la segunda tarjeta del historial
     const anterior = component.evolucionesFiltradas[0].evolucionClinica;
 
@@ -453,9 +589,14 @@ describe('Evolucion', () => {
     botonGuardar().click();
     await fixture.whenStable();
 
+    expect(servicio.crear).toHaveBeenCalledWith({
+      evolucionClinica: 'Sin fiebre y con tolerancia a la vía oral.',
+      planMedico: 'Alta con control en consulta externa.',
+      episodioId: 1,
+      usuarioId: 2,
+    });
     expect(component.evoluciones.length).toBe(total + 1);
-    expect(component.evolucionesFiltradas.length).toBe(vigentes + 1);
-    expect(tarjetas().length).toBe(vigentes + 1);
+    expect(tarjetas().length).toBe(total + 1);
     expect(tarjetas()[0].textContent).toContain('Sin fiebre y con tolerancia a la vía oral.');
     expect(tarjetas()[1].textContent).toContain(anterior);
 
@@ -489,6 +630,7 @@ describe('Evolucion', () => {
     botonGuardar().click();
     await fixture.whenStable();
 
+    expect(servicio.crear).not.toHaveBeenCalled();
     expect(component.evoluciones.length).toBe(total);
 
     // El envío del formulario vacío tampoco registra nada
@@ -496,6 +638,7 @@ describe('Evolucion', () => {
     component.guardarEvolucion();
     await fixture.whenStable();
 
+    expect(servicio.crear).not.toHaveBeenCalled();
     expect(component.evoluciones.length).toBe(total);
   });
 
@@ -514,9 +657,7 @@ describe('Evolucion', () => {
 
   it('avisa cuando el filtro de eliminadas no tiene evoluciones', async () => {
     // Sin evoluciones dadas de baja el listado queda vacío con su propio aviso
-    component.evoluciones = component.evoluciones.filter(
-      (evolucion) => evolucion.estado === 'activa',
-    );
+    evolucionesMock = evolucionesMock.filter((evolucion) => evolucion.estado === 'ACTIVA');
 
     await elegirFiltro('Eliminadas');
 
@@ -558,6 +699,32 @@ describe('Evolucion', () => {
       'Evolución registrada desde el filtro de eliminadas.',
     );
   });
+
+  it('avisa cuando no hay un episodio activo', async () => {
+    episodio.obtener.mockReturnValue(null);
+
+    component.cargarEvoluciones();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(component.sinEpisodioActivo).toBe(true);
+    expect(tarjetas().length).toBe(0);
+    expect(elemento<HTMLElement>('.historial-vacio').textContent).toContain(
+      'Abra un episodio para consultar sus evoluciones.',
+    );
+  });
+
+  it('avisa cuando el servidor no responde al cargar el historial', async () => {
+    servicio.buscarPorEpisodio.mockReturnValue(throwError(() => new TimeoutError()));
+
+    component.cargarEvoluciones();
+    await fixture.whenStable();
+
+    expect(popUps.error).toHaveBeenCalledWith(
+      'Error de comunicación. El servidor no respondió dentro del tiempo esperado.',
+    );
+  });
+
   // Ficha con los datos del paciente: el mismo bloque compartido que usan evaluación clínica e
   // indicaciones médicas
   const botonPestanaPaciente = (): HTMLButtonElement =>
@@ -636,5 +803,14 @@ describe('Evolucion', () => {
     expect(elemento<HTMLElement>('.ficha-cuerpo').classList.contains('ficha-cuerpo--plegado')).toBe(
       false,
     );
+  });
+
+  it('oculta el registro y las acciones cuando el episodio es solo lectura', async () => {
+    episodio.esSoloLectura = () => true;
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(elemento('.evolucion-form')).toBeNull();
+    expect(elemento('.evolucion-menu-trigger')).toBeNull();
   });
 });

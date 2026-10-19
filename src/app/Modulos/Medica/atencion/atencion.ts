@@ -1,19 +1,31 @@
 import { ChangeDetectorRef, Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { finalize, Subscription } from 'rxjs';
 import { PacienteService } from '../../Pacientes/paciente/data/paciente-service';
 import { PacienteResumido, TipoAtencion } from '../../Pacientes/paciente/data/pacienteInterfaz';
 import { PopUps } from '../../../shared/popUps/popUpsService';
+import { AltaService } from '../alta/data/alta-service';
+import { AltaRecienteResponse, TipoAltaApi } from '../alta/data/altaInterfaz';
 import { EpisodioActivoService } from '../data/episodio-activo-service';
 
-/** Filtro del listado de pacientes por tipo de atención. */
-type FiltroAtencion = 'todos' | 'emergencia' | 'hospitalizacion';
+/** Filtro del listado de pacientes por tipo de atención o por altas recientes. */
+type FiltroAtencion = 'todos' | 'emergencia' | 'hospitalizacion' | 'altasRecientes';
 
 /** Orden del listado de pacientes. */
 type OrdenAtencion = 'reciente' | 'nombre';
 
 /** Estado de atención con el que se etiqueta la tarjeta del paciente. */
-type EstadoAtencion = 'en-atencion' | 'pendiente' | 'en-observacion';
+type EstadoAtencion = 'en-atencion' | 'pendiente' | 'en-observacion' | 'alta';
+
+/** Egreso del paciente que se muestra cuando el listado filtra altas recientes. */
+interface EgresoVista {
+  tipoAlta: TipoAltaApi;
+  fecha: string;
+  hora: string;
+  condicion: string;
+  observacion: string;
+}
 
 /** Signo vital que se muestra en el panel del paciente seleccionado. */
 interface SignoVitalVista {
@@ -26,8 +38,9 @@ interface SignoVitalVista {
 interface PacienteAtencionVista {
   expediente: string;
   episodioId: number | null;
+  ultimoEpisodioId: number | null;
   nombre: string;
-  edad: number;
+  edad: number | null;
   sexo: string;
   estadoAtencion: EstadoAtencion;
   tipoAtencion: TipoAtencion;
@@ -37,6 +50,10 @@ interface PacienteAtencionVista {
   fechaIngreso: string;
   alergias: string;
   signosVitales: SignoVitalVista[];
+  /** El paciente viene del listado de altas recientes y su episodio ya está cerrado. */
+  esAlta: boolean;
+  /** Datos del egreso cuando el paciente viene del listado de altas recientes. */
+  egreso: EgresoVista | null;
 }
 
 /** Detalle de la maqueta que acompaña a cada paciente del listado. */
@@ -114,16 +131,21 @@ const DETALLES_MOCK: DetallePacienteMock[] = [
 })
 export class Atencion implements OnInit, OnDestroy {
   private readonly servicioPaciente = inject(PacienteService);
+  private readonly servicioAltas = inject(AltaService);
   private readonly router = inject(Router);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly popUps = inject(PopUps);
   private readonly episodioActivo = inject(EpisodioActivoService);
 
   private destruido = false;
+  private peticionAltas?: Subscription;
 
   // ------------------- ESTADO DE LA VISTA -------------------
   /** Pacientes en atención que devuelve el backend con el detalle temporal de la maqueta. */
   pacientes: PacienteAtencionVista[] = [];
+
+  /** Pacientes dados de alta en las últimas 48 horas. */
+  altasRecientes: PacienteAtencionVista[] = [];
 
   /** Paciente cuyo detalle se muestra en el panel de la derecha; nulo mientras no hay lista. */
   pacienteSeleccionado: PacienteAtencionVista | null = null;
@@ -141,25 +163,43 @@ export class Atencion implements OnInit, OnDestroy {
   cargando = false;
   errorCarga = false;
 
+  /** Mientras cargan las altas recientes y cuando falla la consulta. */
+  cargandoAltas = false;
+  errorAltas = false;
+
   /** Etiquetas del tipo de atención del paciente. */
   protected readonly etiquetasTipo: Record<TipoAtencion, string> = {
     HOSPITALIZACION: 'Hospitalización',
     EMERGENCIA: 'Emergencia',
   };
 
+  /** Etiquetas del tipo de alta del paciente. */
+  protected readonly etiquetasTipoAlta: Record<TipoAltaApi, string> = {
+    INDICACION_MEDICA: 'Alta médica',
+    RETIRO_VOLUNTARIO: 'Retiro voluntario',
+    REFERENCIA_TRASLADO: 'Referencia o traslado',
+  };
+
   // ------------------- CONSULTAS PARA LA VISTA -------------------
   /** Pacientes que cumplen el filtro y la búsqueda, con el orden elegido. */
   get pacientesFiltrados(): PacienteAtencionVista[] {
     const texto = this.textoBusqueda.trim().toLowerCase();
+    const base = this.filtroActivo === 'altasRecientes' ? this.altasRecientes : this.pacientes;
+    const buscando = texto.length > 0;
 
-    const filtrados = this.pacientes.filter((paciente) => {
-      if (!this.coincideFiltro(paciente)) return false;
-      if (!texto) return true;
+    const filtrados = base.filter((paciente) => {
+      // La búsqueda incluye a los egresados; sin texto, los filtros solo listan pacientes activos
+      if (buscando) {
+        return (
+          paciente.nombre.toLowerCase().includes(texto) ||
+          paciente.expediente.toLowerCase().includes(texto)
+        );
+      }
 
-      return (
-        paciente.nombre.toLowerCase().includes(texto) ||
-        paciente.expediente.toLowerCase().includes(texto)
-      );
+      if (this.filtroActivo === 'altasRecientes') return true;
+      if (paciente.episodioId === null) return false;
+
+      return this.coincideFiltro(paciente);
     });
 
     return filtrados.sort((a, b) =>
@@ -169,9 +209,16 @@ export class Atencion implements OnInit, OnDestroy {
     );
   }
 
-  /** Solo las atenciones con hospitalización tienen cama; la emergencia no muestra destino. */
+  /** Texto del listado cuando no hay pacientes que mostrar. */
+  get mensajeListaVacio(): string {
+    return this.filtroActivo === 'altasRecientes'
+      ? 'No hay pacientes dados de alta en las últimas 48 horas.'
+      : 'No hay pacientes que coincidan con la búsqueda.';
+  }
+
+  /** Solo las atenciones con hospitalización tienen cama; la emergencia y las altas no muestran destino. */
   protected esHospitalizacion(paciente: PacienteAtencionVista): boolean {
-    return paciente.tipoAtencion === 'HOSPITALIZACION';
+    return paciente.tipoAtencion === 'HOSPITALIZACION' && !paciente.esAlta;
   }
 
   /** El paciente está seleccionado y su detalle se muestra a la derecha. */
@@ -197,6 +244,7 @@ export class Atencion implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.destruido = true;
+    this.peticionAltas?.unsubscribe();
   }
 
   /** Carga los pacientes en atención y deja seleccionado el primero del listado. */
@@ -228,15 +276,61 @@ export class Atencion implements OnInit, OnDestroy {
     });
   }
 
+  /** Carga los pacientes dados de alta en las últimas 48 horas. */
+  cargarAltasRecientes(): void {
+    if (this.destruido || this.cargandoAltas) return;
+
+    this.cargandoAltas = true;
+    this.errorAltas = false;
+    this.pacienteSeleccionado = null;
+    this.cdr.markForCheck();
+    this.peticionAltas?.unsubscribe();
+
+    this.peticionAltas = this.servicioAltas
+      .recientes(48)
+      .pipe(
+        finalize(() => {
+          this.cargandoAltas = false;
+          if (!this.destruido) this.cdr.detectChanges();
+        }),
+      )
+      .subscribe({
+        next: (altas) => {
+          if (this.destruido) return;
+
+          this.altasRecientes = altas.map((alta) => this.aVistaAlta(alta));
+          if (this.filtroActivo === 'altasRecientes') {
+            this.pacienteSeleccionado = this.pacientesFiltrados[0] ?? null;
+          }
+        },
+        error: (error) => {
+          if (this.destruido) return;
+
+          console.error('Error al listar las altas recientes', error);
+          this.altasRecientes = [];
+          this.pacienteSeleccionado = null;
+          this.errorAltas = true;
+        },
+      });
+  }
+
   /** Elige el paciente cuyo detalle muestra el panel de la derecha y guarda su episodio activo. */
   seleccionarPaciente(paciente: PacienteAtencionVista): void {
     this.pacienteSeleccionado = paciente;
-    this.episodioActivo.guardar(paciente.episodioId);
+    if (!paciente.esAlta) {
+      this.episodioActivo.guardar(paciente.episodioId);
+    }
   }
 
   /** Cambia el filtro del listado y ajusta la selección a lo que queda a la vista. */
   cambiarFiltro(filtro: FiltroAtencion): void {
     this.filtroActivo = filtro;
+
+    if (filtro === 'altasRecientes') {
+      this.cargarAltasRecientes();
+      return;
+    }
+
     this.asegurarSeleccion();
   }
 
@@ -251,7 +345,9 @@ export class Atencion implements OnInit, OnDestroy {
       !visibles.some((paciente) => paciente.expediente === this.pacienteSeleccionado?.expediente)
     ) {
       this.pacienteSeleccionado = visibles[0] ?? null;
-      this.episodioActivo.guardar(this.pacienteSeleccionado?.episodioId ?? null);
+      if (this.pacienteSeleccionado && !this.pacienteSeleccionado.esAlta) {
+        this.episodioActivo.guardar(this.pacienteSeleccionado.episodioId);
+      }
     }
   }
 
@@ -259,12 +355,36 @@ export class Atencion implements OnInit, OnDestroy {
   abrirEpisodio(): void {
     if (!this.pacienteSeleccionado) return;
 
+    if (this.pacienteSeleccionado.esAlta) {
+      this.popUps.advertencia(
+        'El paciente ya tiene el alta registrada; no se puede abrir el episodio.',
+      );
+      return;
+    }
+
     if (this.pacienteSeleccionado.episodioId === null) {
       this.popUps.advertencia('El paciente seleccionado no tiene un episodio activo.');
       return;
     }
 
     this.episodioActivo.guardar(this.pacienteSeleccionado.episodioId);
+    this.router.navigate(['/medica', 'evaluacion']);
+  }
+
+  /**
+   * Abre el último episodio de un paciente egresado en modo solo lectura: sus pantallas muestran el
+   * historial completo, pero ocultan las acciones de crear, editar y eliminar.
+   */
+  abrirUltimoEpisodio(): void {
+    if (!this.pacienteSeleccionado) return;
+
+    const episodioId = this.pacienteSeleccionado.ultimoEpisodioId ?? null;
+    if (episodioId === null) {
+      this.popUps.advertencia('El paciente seleccionado no tiene episodios registrados.');
+      return;
+    }
+
+    this.episodioActivo.guardar(episodioId, true);
     this.router.navigate(['/medica', 'evaluacion']);
   }
 
@@ -280,6 +400,60 @@ export class Atencion implements OnInit, OnDestroy {
     return true;
   }
 
+  /** Traduce un alta reciente del backend a la tarjeta y al detalle de la pantalla. */
+  private aVistaAlta(alta: AltaRecienteResponse): PacienteAtencionVista {
+    const fecha = new Date(alta.fechaHoraEgreso);
+
+    return {
+      expediente: alta.codigoExpediente ?? '',
+      episodioId: null,
+      ultimoEpisodioId: alta.episodioId,
+      nombre: alta.nombreCompleto,
+      edad: alta.edad,
+      sexo: this.textoSexo(alta.sexo),
+      estadoAtencion: 'alta',
+      tipoAtencion: alta.tipoAtencion,
+      ubicacion: '',
+      diagnostico: alta.diagnosticoEgreso,
+      fechaIngreso: this.formatearFecha(fecha),
+      alergias: '',
+      signosVitales: [],
+      esAlta: true,
+      egreso: {
+        tipoAlta: alta.tipoAlta,
+        fecha: this.formatearFecha(fecha),
+        hora: this.formatearHora(fecha),
+        condicion: alta.condicionEgresoNombre?.trim() || 'No registrada',
+        observacion: alta.observacionEgreso?.trim() || 'Sin observaciones',
+      },
+    };
+  }
+
+  /** Texto del sexo del paciente para la ficha. */
+  private textoSexo(sexo: AltaRecienteResponse['sexo']): string {
+    if (sexo === 'MASCULINO') return 'Masculino';
+    if (sexo === 'FEMENINO') return 'Femenino';
+    return '—';
+  }
+
+  /** Fecha de la ficha en el formato dd-mm-yyyy. */
+  private formatearFecha(fecha: Date): string {
+    if (Number.isNaN(fecha.getTime())) return '';
+
+    const dia = `${fecha.getDate()}`.padStart(2, '0');
+    const mes = `${fecha.getMonth() + 1}`.padStart(2, '0');
+    return `${dia}-${mes}-${fecha.getFullYear()}`;
+  }
+
+  /** Hora de la ficha en el formato HH:mm. */
+  private formatearHora(fecha: Date): string {
+    if (Number.isNaN(fecha.getTime())) return '';
+
+    const horas = `${fecha.getHours()}`.padStart(2, '0');
+    const minutos = `${fecha.getMinutes()}`.padStart(2, '0');
+    return `${horas}:${minutos}`;
+  }
+
   /** Combina los datos reales del resumen con el detalle temporal de la maqueta. */
   private aVista(paciente: PacienteResumido, posicion: number): PacienteAtencionVista {
     const detalle = DETALLES_MOCK[posicion % DETALLES_MOCK.length];
@@ -287,8 +461,11 @@ export class Atencion implements OnInit, OnDestroy {
     return {
       expediente: paciente.codigoExpediente,
       episodioId: paciente.episodioId,
+      ultimoEpisodioId: paciente.ultimoEpisodioId ?? paciente.episodioId ?? null,
       nombre: paciente.nombreCompleto,
       tipoAtencion: paciente.tipoTratamiento,
+      esAlta: false,
+      egreso: null,
       ...detalle,
     };
   }

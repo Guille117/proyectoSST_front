@@ -145,6 +145,11 @@ export class Evaluacion implements OnInit, OnDestroy {
   ];
 
   // ------------------- CONSULTAS PARA LA VISTA -------------------
+  /** El episodio es un historial cerrado: se consulta, pero no se registran cambios. */
+  get soloLectura(): boolean {
+    return this.episodioActivo.esSoloLectura();
+  }
+
   /** Las secciones de historia clínica y diagnóstico muestran siempre el bloque de datos del paciente. */
   get seccionConDatosPaciente(): boolean {
     return this.seccionActiva !== 'examen-fisico';

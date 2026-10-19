@@ -2,6 +2,7 @@
 <section class="panel panel-seccion" aria-labelledby="tituloExamenes">
   <h3 class="panel-titulo indicacion-titulo" id="tituloExamenes">Exámenes</h3>
 
+  @if (!soloLectura) {
   <form class="indicacion-form" (ngSubmit)="agregarExamen()">
     <!-- Nombre del examen y su observación: solo el nombre es obligatorio -->
     <div class="indicacion-fila indicacion-fila--dos">
@@ -133,6 +134,7 @@
       </button>
     </div>
   </form>
+  }
 </section>
 
 <!-- Exámenes indicados en el episodio actual -->
@@ -183,6 +185,7 @@
             <span class="indicacion-nombre">{{ examen.nombre }}</span>
 
             <!-- Menú de opciones de la tarjeta: mismo despliegue del listado de medicamentos -->
+            @if (!soloLectura) {
             <button
               type="button"
               class="indicacion-menu-trigger"
@@ -194,6 +197,7 @@
             >
               <i class="bi bi-three-dots-vertical" aria-hidden="true"></i>
             </button>
+            }
           </header>
 
           @if (examen.observacion) {
@@ -214,7 +218,7 @@
           }
 
           <!-- Menú de opciones: se dibuja al final de la tarjeta y flota sobre ella -->
-          @if (menuIndicacionAbierta === examen.id) {
+          @if (menuIndicacionAbierta === examen.id && !soloLectura) {
             <div
               class="indicacion-menu"
               role="menu"

@@ -23,6 +23,11 @@
   padding-right: calc(var(--ficha-ancho) + 1.5rem);
 }
 
+/* Con tratamiento, las tarjetas ocupan el mismo borde derecho que la ficha del paciente. */
+.alta--tratamiento-abierto {
+  padding-right: calc(var(--ficha-ancho) + 1.5rem);
+}
+
 /* El panel de secciones es solo el contenedor de las tarjetas: sin fondo ni borde propios, para que
    las tarjetas blancas se apoyen sobre el fondo de la página. Sin relleno a los lados para que el
    título y las tarjetas queden arrimados al borde del área de trabajo y con el mismo relleno superior
@@ -43,6 +48,17 @@
   padding: 1.25rem;
 }
 
+/* Aviso de carga, error o episodio sin seleccionar en el registro */
+.egreso-aviso {
+  margin: 1rem 0 0;
+  padding: 1.25rem;
+  border: 1px dashed #cfdcee;
+  border-radius: 14px;
+  color: #5b6b85;
+  font-size: 0.95rem;
+  text-align: center;
+}
+
 /* ==================== REGISTRO DEL EGRESO ==================== */
 /* El formulario va precedido solo por el título del panel: el margen superior lo separa de él */
 .egreso-form {
@@ -60,6 +76,34 @@
   & + & {
     margin-top: 1.25rem;
   }
+}
+
+/* Cuerpo del registro: una sola columna salvo en el retiro voluntario y la referencia, que se dividen en dos */
+.egreso-cuerpo {
+  display: block;
+}
+
+.egreso-cuerpo--dividido {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 2rem;
+}
+
+/* Línea divisoria vertical entre las dos columnas del retiro y la referencia */
+.egreso-cuerpo--dividido::before {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 1px;
+  background: #e4ebf5;
+  content: '';
+  transform: translateX(-50%);
+}
+
+.egreso-columna {
+  min-width: 0;
 }
 
 .egreso-etiqueta {
@@ -115,6 +159,71 @@ select.egreso-input {
   resize: vertical;
 }
 
+/* Riesgos del retiro voluntario: campo para agregarlos y lista de los ya registrados */
+.egreso-riesgo-agregar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+
+  .egreso-input {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .btn {
+    flex: 0 0 auto;
+    margin-bottom: 0;
+  }
+}
+
+.egreso-riesgos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.egreso-riesgo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.45rem 0.7rem;
+  border: 1px solid #dfe7f3;
+  border-radius: 999px;
+  background: #f7fafd;
+  color: #33445e;
+  font-size: 0.9rem;
+
+  button {
+    display: grid;
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    place-items: center;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: #667085;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition:
+      color 0.2s ease,
+      background-color 0.2s ease;
+
+    &:hover {
+      color: #fff;
+      background: #ed1a0f;
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--azulSecundario);
+      outline-offset: 2px;
+    }
+  }
+}
+
 /* Separación y línea divisoria de la fila de acciones compartida (.acciones-formulario) */
 .egreso-acciones {
   gap: 1rem;
@@ -123,103 +232,204 @@ select.egreso-input {
   border-top: 1px solid #e4ebf5;
 }
 
-/* ==================== TRATAMIENTO DEL EGRESO ==================== */
-/* Tarjeta de medicamentos del componente compartido: ocupa el área del registro del egreso mientras
-   el médico agrega el tratamiento */
-.panel-tratamiento {
+/* Dos grupos dentro de la fila: la constancia a la izquierda y las acciones a la derecha */
+.egreso-acciones-grupo {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.egreso-acciones-grupo--izquierda {
+  margin-right: auto;
+}
+
+/* ==================== VENTANA DEL TRATAMIENTO ==================== */
+/* La ventana ocupa el área del registro: las pestañas arriba y debajo el formulario reutilizado */
+.tratamiento-ventana {
   grid-area: registro;
   align-self: start;
-}
-
-/* Listado de los medicamentos agregados al tratamiento: separado del último campo del registro */
-.tratamiento-lista {
-  margin-top: 1.5rem;
-  padding-top: 1rem;
-  border-top: 1px solid #e4ebf5;
-}
-
-.tratamiento-titulo {
-  margin: 0 0 0.75rem;
-  color: var(--azulPrincipal);
-  font-size: 1.1rem;
-  font-weight: 700;
-}
-
-.tratamiento-items {
   display: flex;
   flex-direction: column;
-  gap: 0.65rem;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-/* Cada medicamento agregado: sus datos a la izquierda y el botón con el que se quita a la derecha */
-.tratamiento-item {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
   gap: 1rem;
-  padding: 0.75rem 0.9rem;
-  border: 1px solid #dfe7f3;
-  border-radius: 12px;
-  background: #f7fafd;
-}
-
-.tratamiento-datos {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
   min-width: 0;
 }
 
-.tratamiento-nombre {
-  color: #101828;
-  font-size: 1rem;
-  font-weight: 600;
+.tratamiento-ventana_titulo {
+  flex: 0 0 auto;
+  margin: 0;
+  color: var(--azulPrincipal);
+  font-size: 1.35rem;
+  font-weight: 700;
 }
 
-.tratamiento-detalle {
+.tratamiento-cabecera {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.35rem 0.9rem;
-  color: #5b6b85;
-  font-size: 0.9rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
 }
 
-.tratamiento-observaciones {
-  color: #5b6b85;
-  font-size: 0.9rem;
-  font-style: italic;
-}
-
-/* Botón de quitar: mismo tratamiento del botón de eliminar de los listados del módulo */
-.tratamiento-quitar {
+.tratamiento-cabecera app-tab-switch {
   flex: 0 0 auto;
+  width: max-content;
+  max-width: 100%;
+}
+
+/* ==================== TRATAMIENTO AGREGADO ==================== */
+/* Panel derecho: ocupa el lugar de la ficha del paciente cuando hay tratamiento */
+.tratamiento-panel {
+  position: fixed;
+  top: var(--heightTopBar);
+  right: 0;
+  bottom: 0;
+  z-index: 4;
+  width: var(--ficha-ancho, 340px);
+  max-width: 100%;
+  padding: 1.5rem;
+  overflow-x: hidden;
+  overflow-y: auto;
+  border-left: 1px solid #dfe7f3;
+  background: #fff;
+  box-shadow: -4px 0 14px rgba(15, 23, 42, 0.06);
+}
+
+.tratamiento-panel_titulo {
+  margin: 0 0 1rem;
+  color: var(--azulPrincipal);
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+
+.tratamiento-grupo + .tratamiento-grupo {
+  margin-top: 1.5rem;
+}
+
+.tratamiento-grupo_titulo {
+  margin: 0 0 0.75rem;
+  color: var(--azulSecundario);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+/* Cada indicación agregada: mismo estilo de tarjeta de las indicaciones médicas */
+.tratamiento-card {
+  position: relative;
+  margin-bottom: 1rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid #dfe7f3;
+  border-left: 4px solid #22c55e;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.tratamiento-card_encabezado {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.tratamiento-card_nombre-grupo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.tratamiento-card_nombre {
+  min-width: 0;
+  color: var(--azulPrincipal);
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.tratamiento-card_no-registrado {
+  color: #b42318;
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+.tratamiento-card_acciones {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 0.35rem;
+}
+
+.tratamiento-card_accion {
   display: grid;
-  width: 34px;
-  height: 34px;
+  width: 30px;
+  height: 30px;
   padding: 0;
   place-items: center;
   border: 1px solid rgba(148, 163, 184, 0.45);
   border-radius: 50%;
   background: #fff;
-  color: #ed1a0f;
-  font-size: 15px;
+  font-size: 14px;
   cursor: pointer;
   transition:
     color 0.2s ease,
-    background 0.2s ease;
+    background-color 0.2s ease;
 
-  &:hover {
+  &--editar {
+    color: #f59e0b;
+  }
+
+  &--eliminar {
+    color: #ed1a0f;
+  }
+
+  &--editar:hover {
+    color: #fff;
+    background: #f59e0b;
+  }
+
+  &--eliminar:hover {
     color: #fff;
     background: #ed1a0f;
   }
 
   &:focus-visible {
-    outline: 2px solid #ed1a0f;
+    outline: 2px solid var(--azulSecundario);
     outline-offset: 2px;
   }
+}
+
+/* Valores de la indicación en línea, separados por un punto medio */
+.tratamiento-card_detalle {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+  margin: 0;
+  padding: 0;
+  color: var(--azulPrincipal);
+  font-size: 0.95rem;
+  font-weight: 700;
+  list-style: none;
+
+  li + li::before {
+    margin-right: 6px;
+    color: #93a3bb;
+    content: '·';
+  }
+}
+
+.tratamiento-card_observaciones {
+  margin: 0.6rem 0 0;
+  color: #1f2f45;
+  font-size: 1rem;
+  line-height: 1.5;
 }
 
 /* ==================== RESPONSIVIDAD ==================== */
@@ -238,5 +448,29 @@ select.egreso-input {
 
   .alta--ficha-abierta {
     padding-right: 1rem;
+  }
+
+  .alta--tratamiento-abierto {
+    padding-right: 1rem;
+  }
+
+  .tratamiento-cabecera {
+    flex-wrap: wrap;
+  }
+
+  /* El retiro voluntario se apila y la línea divisoria pasa a ser horizontal */
+  .egreso-cuerpo--dividido {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+
+  .egreso-cuerpo--dividido::before {
+    display: none;
+  }
+
+  .egreso-columna + .egreso-columna {
+    margin-top: 1.25rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid #e4ebf5;
   }
 }
