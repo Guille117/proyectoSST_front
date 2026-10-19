@@ -45,6 +45,14 @@ export class CatalogoGestionClinica implements OnInit, OnDestroy {
       descripcion: 'Indica la condición con la que egresa el paciente',
       cantidad: 0
     },
+    {
+      key: 'Procedimientos',
+      url: 'procedimientos',
+      icono: 'bi bi-clipboard2-pulse',
+      titulo: 'Procedimiento',
+      descripcion: 'Indica los tipos de procedimiento médico disponibles',
+      cantidad: 0
+    },
   ];
 
   catalogoSeleccionado = '';
@@ -77,7 +85,11 @@ export class CatalogoGestionClinica implements OnInit, OnDestroy {
 // ---------------------------------------------------------------------------------
   // obtener la cantidad de registros en las tablas relacionadas con gestión clínica
 
-  conteosCatalogos: ConteoCatalogosClinica = { partesCuerpo: 0, condicionesEgreso: 0 };
+  conteosCatalogos: ConteoCatalogosClinica = {
+    partesCuerpo: 0,
+    condicionesEgreso: 0,
+    procedimientos: 0,
+  };
 
   obtenerConteoCatalogos(){
     this.peticionConteos?.unsubscribe();
@@ -97,6 +109,7 @@ export class CatalogoGestionClinica implements OnInit, OnDestroy {
   llenarConetoACatalogos() {
     this.listaCatalogos[0].cantidad = this.conteosCatalogos.partesCuerpo;
     this.listaCatalogos[1].cantidad = this.conteosCatalogos.condicionesEgreso;
+    this.listaCatalogos[2].cantidad = this.conteosCatalogos.procedimientos;
   }
 // ---------------------------------------------------------------------------------
 

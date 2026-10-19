@@ -65,5 +65,6 @@ export interface ConteoCatalogosUsuarios {
 export interface ConteoCatalogosClinica {
   partesCuerpo: number;
   condicionesEgreso: number;
+  procedimientos: number;
 }
 

@@ -35,6 +35,7 @@
             id="tipoProcedimientoMedico"
             name="tipoProcedimiento"
             aria-required="true"
+            [disabled]="cargandoTipos"
             [(ngModel)]="tipoProcedimiento"
           >
             <option [ngValue]="null" disabled>Seleccionar...</option>
@@ -55,6 +56,7 @@
             name="descripcionProcedimiento"
             placeholder="Descripción del procedimiento realizado..."
             aria-required="true"
+            maxlength="2000"
             [(ngModel)]="descripcion"
           ></textarea>
         </div>
@@ -67,6 +69,7 @@
             id="resultadoProcedimiento"
             name="resultadoProcedimiento"
             placeholder="Resultado y observaciones del procedimiento..."
+            maxlength="2000"
             [(ngModel)]="resultado"
           ></textarea>
         </div>
@@ -101,7 +104,14 @@
         </div>
 
         <div class="acciones-formulario indicacion-acciones">
-          <button type="button" class="btn _cancelar" (click)="cancelarRegistro()">Cancelar</button>
+          <button
+            type="button"
+            class="btn _cancelar"
+            [disabled]="guardando"
+            (click)="cancelarRegistro()"
+          >
+            Cancelar
+          </button>
 
           <button type="submit" class="btn _guardar" [disabled]="!puedeRegistrarProcedimiento">
             {{ textoBotonRegistro }}
@@ -112,23 +122,25 @@
     } @else {
       <h3 class="panel-titulo" id="tituloProcedimientosRealizados">Procedimientos realizados</h3>
 
-      <div
-        class="indicados-filtros"
-        role="group"
-        aria-label="Filtrar procedimientos por estado"
-      >
-        @for (filtro of filtrosProcedimiento; track filtro.id) {
-          <button
-            type="button"
-            class="indicados-filtro"
-            [class.indicados-filtro--activo]="filtroProcedimiento === filtro.id"
-            [attr.aria-pressed]="filtroProcedimiento === filtro.id"
-            (click)="seleccionarFiltroProcedimiento(filtro.id)"
-          >
-            {{ filtro.etiqueta }}
-          </button>
-        }
-      </div>
+      @if (!soloLectura) {
+        <div
+          class="indicados-filtros"
+          role="group"
+          aria-label="Filtrar procedimientos por estado"
+        >
+          @for (filtro of filtrosProcedimiento; track filtro.id) {
+            <button
+              type="button"
+              class="indicados-filtro"
+              [class.indicados-filtro--activo]="filtroProcedimiento === filtro.id"
+              [attr.aria-pressed]="filtroProcedimiento === filtro.id"
+              (click)="seleccionarFiltroProcedimiento(filtro.id)"
+            >
+              {{ filtro.etiqueta }}
+            </button>
+          }
+        </div>
+      }
 
       <div class="contenido-scroll">
         <div class="procedimientos-lista">
@@ -149,17 +161,19 @@
             <header class="indicacion-encabezado">
               <span class="indicacion-nombre">{{ procedimiento.tipo }}</span>
 
-              <button
-                type="button"
-                class="indicacion-menu-trigger"
-                title="Más opciones"
-                aria-haspopup="menu"
-                [attr.aria-label]="'Más opciones para ' + procedimiento.tipo"
-                [attr.aria-expanded]="menuProcedimientoAbierto === procedimiento.id"
-                (click)="$event.stopPropagation(); alternarMenuProcedimiento(procedimiento.id)"
-              >
-                <i class="bi bi-three-dots-vertical" aria-hidden="true"></i>
-              </button>
+              @if (!soloLectura) {
+                <button
+                  type="button"
+                  class="indicacion-menu-trigger"
+                  title="Más opciones"
+                  aria-haspopup="menu"
+                  [attr.aria-label]="'Más opciones para ' + procedimiento.tipo"
+                  [attr.aria-expanded]="menuProcedimientoAbierto === procedimiento.id"
+                  (click)="$event.stopPropagation(); alternarMenuProcedimiento(procedimiento.id)"
+                >
+                  <i class="bi bi-three-dots-vertical" aria-hidden="true"></i>
+                </button>
+              }
             </header>
 
             <footer class="indicacion-meta">
@@ -175,7 +189,7 @@
 
             <p class="indicacion-observaciones">{{ procedimiento.descripcion }}</p>
 
-            @if (menuProcedimientoAbierto === procedimiento.id) {
+            @if (!soloLectura && menuProcedimientoAbierto === procedimiento.id) {
               <div
                 class="indicacion-menu"
                 role="menu"
@@ -213,7 +227,15 @@
             }
           </article>
         } @empty {
-          <p class="indicacion-vacio">No hay procedimientos para mostrar.</p>
+          <p class="indicacion-vacio">
+            {{
+              cargandoProcedimientos
+                ? 'Cargando procedimientos...'
+                : sinEpisodioActivo
+                  ? 'No hay un episodio activo. Abra el episodio del paciente.'
+                  : 'No hay procedimientos para mostrar.'
+            }}
+          </p>
         }
         </div>
       </div>
@@ -281,6 +303,7 @@
               type="text"
               [placeholder]="'Buscar ' + etiquetaRecurso + '...'"
               [attr.aria-label]="'Buscar ' + etiquetaRecurso"
+              [disabled]="cargandoRecursos"
               [(ngModel)]="textoBusquedaRecurso"
               (keydown.enter)="$event.preventDefault(); buscarRecursos()"
             />
@@ -290,6 +313,7 @@
               type="button"
               [title]="'Buscar ' + etiquetaRecurso"
               [attr.aria-label]="'Buscar ' + etiquetaRecurso"
+              [disabled]="cargandoRecursos"
               (click)="buscarRecursos()"
             >
               <i class="bi bi-search fs-5" aria-hidden="true"></i>
@@ -299,7 +323,9 @@
 
         @if (busquedaRecursoRealizada) {
           <div class="recursos-resultados">
-            @if (recursosEncontrados.length) {
+            @if (cargandoRecursos) {
+              <p class="indicacion-vacio">Buscando {{ etiquetaRecurso }}s...</p>
+            } @else if (recursosEncontrados.length) {
               <div class="tabla-container">
                 <table [attr.aria-label]="'Recursos disponibles: ' + etiquetaRecurso">
                   <thead>

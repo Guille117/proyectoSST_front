@@ -33,7 +33,9 @@ describe('CatalogoGestionClinica', () => {
     servicio.crear.mockReturnValue(of(null));
     servicio.actualizar1.mockReturnValue(of(null));
     servicio.cambiarEstado.mockReturnValue(of(null));
-    servicio.obtenerConteoCatalogosClinica.mockReturnValue(of({ partesCuerpo: 3, condicionesEgreso: 4 }));
+    servicio.obtenerConteoCatalogosClinica.mockReturnValue(
+      of({ partesCuerpo: 3, condicionesEgreso: 4, procedimientos: 5 }),
+    );
     popUps.confirmarToast.mockResolvedValue(true);
     await TestBed.configureTestingModule({
       imports: [CatalogoGestionClinica],
@@ -52,10 +54,14 @@ describe('CatalogoGestionClinica', () => {
     expect(component).toBeTruthy();
     expect(servicio.listar).toHaveBeenCalledExactlyOnceWith('partesCuerpo', true);
     expect(fixture.nativeElement.querySelector('tbody').textContent).toContain('Parte del cuerpo 1');
-    expect(component.listaCatalogos.map(catalogo => catalogo.cantidad)).toEqual([3, 4]);
+    expect(component.listaCatalogos.map(catalogo => catalogo.cantidad)).toEqual([3, 4, 5]);
   });
 
-  it.each([['Parte del cuerpo', 'partesCuerpo'], ['Condición de egreso', 'condicionesEgreso']])
+  it.each([
+    ['Parte del cuerpo', 'partesCuerpo'],
+    ['Condición de egreso', 'condicionesEgreso'],
+    ['Procedimiento', 'procedimientos'],
+  ])
     ('guarda unicamente el nombre para %s', (titulo, url) => {
       component.seleccionarCatalogo(titulo, url);
       component.variableEntrada = { id: 99, nombre: 'Registro' };
@@ -65,7 +71,11 @@ describe('CatalogoGestionClinica', () => {
       expect(component.variableEntrada.nombre).toBe('');
     });
 
-  it.each([['Parte del cuerpo', 'partesCuerpo'], ['Condición de egreso', 'condicionesEgreso']])
+  it.each([
+    ['Parte del cuerpo', 'partesCuerpo'],
+    ['Condición de egreso', 'condicionesEgreso'],
+    ['Procedimiento', 'procedimientos'],
+  ])
     ('precarga el formulario y actualiza desde el campo visible para %s', async (titulo, url) => {
       component.seleccionarCatalogo(titulo, url);
       fixture.nativeElement.querySelector('.iconEditar').click();
@@ -132,10 +142,10 @@ describe('CatalogoGestionClinica', () => {
     component.obtenerConteoCatalogos();
     actual.next(registros(2));
     anterior.next(registros(1));
-    conteoActual.next({ partesCuerpo: 12, condicionesEgreso: 20 });
-    conteoAnterior.next({ partesCuerpo: 1, condicionesEgreso: 2 });
+    conteoActual.next({ partesCuerpo: 12, condicionesEgreso: 20, procedimientos: 30 });
+    conteoAnterior.next({ partesCuerpo: 1, condicionesEgreso: 2, procedimientos: 3 });
     expect(component.datos.length).toBe(2);
-    expect(component.listaCatalogos.map(catalogo => catalogo.cantidad)).toEqual([12, 20]);
+    expect(component.listaCatalogos.map(catalogo => catalogo.cantidad)).toEqual([12, 20, 30]);
     expect(anterior.observed).toBe(false);
     expect(conteoAnterior.observed).toBe(false);
     fixture.destroy();

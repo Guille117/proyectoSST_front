@@ -1,10 +1,19 @@
-import { Component, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { finalize, Subscription, TimeoutError } from 'rxjs';
 import { PopUps } from '../../../shared/popUps/popUpsService';
 import { TabSwitch } from '../../../shared/tab-switch/tab-switch';
 import { AuthService } from '../../Auth/data/auth-service';
+import { EpisodioActivoService } from '../data/episodio-activo-service';
+import { ProcedimientoMedicoService } from './data/procedimiento-medico-service';
+import {
+  EstadoProcedimientoApi,
+  ProcedimientoMedicoRequest,
+  ProcedimientoMedicoResponse,
+  TipoRecursoProcedimientoApi,
+} from './data/procedimientoMedicoInterfaz';
 
-/* Tipos locales de la maqueta: se sustituirán por el contrato real del backend en la integración. */
+/* Tipos locales de la vista: traducen el contrato del backend al lenguaje de las tarjetas. */
 type SeccionProcedimiento = 'registrar' | 'realizados';
 type FiltroProcedimiento = 'todos' | 'realizados' | 'pendientes' | 'eliminados';
 type EstadoProcedimiento = 'realizado' | 'pendiente' | 'eliminado';
@@ -36,6 +45,7 @@ interface RecursoDisponible {
 /** Recurso utilizado en un procedimiento o agregado para solicitar a farmacia. */
 interface RecursoUtilizado {
   tipo: TipoRecurso;
+  referenciaId: number;
   nombre: string;
   cantidad: number;
 }
@@ -43,6 +53,8 @@ interface RecursoUtilizado {
 /** Procedimiento del listado y de las tarjetas de resumen. */
 interface ProcedimientoVista {
   id: number;
+  /** Identificador del tipo de procedimiento en el catálogo. */
+  tipoProcedimientoId: number;
   /** Título de la tarjeta: nombre del tipo de procedimiento. */
   tipo: string;
   descripcion: string;
@@ -68,9 +80,18 @@ interface ProcedimientoVista {
     '(document:click)': 'cerrarMenuAlClicFuera($event)',
   },
 })
-export class ProcedimientoMedico {
+export class ProcedimientoMedico implements OnInit, OnDestroy {
   private readonly popUps = inject(PopUps);
   private readonly authService = inject(AuthService);
+  private readonly servicio = inject(ProcedimientoMedicoService);
+  private readonly episodioActivo = inject(EpisodioActivoService);
+  private readonly cdr = inject(ChangeDetectorRef);
+
+  private peticionTipos?: Subscription;
+  private peticionLista?: Subscription;
+  private peticionRecursos?: Subscription;
+  private peticionAccion?: Subscription;
+  private destruido = false;
 
   // ------------------- ESTADO DE LA VISTA -------------------
   /** Opción del rail que se muestra en el área central y en el panel derecho. */
@@ -106,11 +127,20 @@ export class ProcedimientoMedico {
   /** Tarjeta con su menú de opciones desplegado; null si no hay ninguna. */
   menuProcedimientoAbierto: number | null = null;
 
-  // ------------------- MOCK: datos temporales para diseño -------------------
-  readonly secciones: SeccionVista[] = [
-    { id: 'registrar', titulo: 'Registrar procedimiento', icono: 'bi-clipboard2-pulse' },
-    { id: 'realizados', titulo: 'Procedimientos realizados', icono: 'bi-list-check' },
-  ];
+  /** Tipos de procedimiento activos del catálogo de gestión clínica. */
+  tiposProcedimiento: TipoProcedimientoVista[] = [];
+
+  /** Procedimientos del episodio activo, incluidos los eliminados para su filtro. */
+  procedimientos: ProcedimientoVista[] = [];
+
+  /** Estados de las peticiones: bloquean acciones incompatibles y muestran la carga. */
+  cargandoTipos = false;
+  cargandoProcedimientos = false;
+  cargandoRecursos = false;
+  guardando = false;
+  eliminando = false;
+  confirmando = false;
+  sinEpisodioActivo = false;
 
   readonly filtrosProcedimiento: FiltroProcedimientoVista[] = [
     { id: 'todos', etiqueta: 'Todos' },
@@ -119,103 +149,50 @@ export class ProcedimientoMedico {
     { id: 'eliminados', etiqueta: 'Eliminados' },
   ];
 
-  readonly tiposProcedimiento: TipoProcedimientoVista[] = [
-    { id: 1, nombre: 'Curación de herida' },
-    { id: 2, nombre: 'Sutura' },
-    { id: 3, nombre: 'Cateterismo' },
-    { id: 4, nombre: 'Drenaje de absceso' },
-    { id: 5, nombre: 'Biopsia' },
-  ];
+  // ------------------- CICLO DE VIDA -------------------
+  ngOnInit(): void {
+    // Un episodio cerrado solo permite consultar los procedimientos realizados.
+    if (this.soloLectura) {
+      this.seccionActiva = 'realizados';
+      this.filtroProcedimiento = 'realizados';
+    }
 
-  /** MOCK: medicamentos disponibles para el procedimiento. */
-  readonly medicamentos: RecursoDisponible[] = [
-    { id: 1, nombre: 'Amoxicilina Bayer tabletas de 500 mg', disponible: 20 },
-    { id: 2, nombre: 'Paracetamol Genfar tabletas de 500 mg', disponible: 15 },
-    { id: 3, nombre: 'Ibuprofeno MK tabletas de 400 mg', disponible: 8 },
-    { id: 4, nombre: 'Metoclopramida Genfar solución inyectable de 10 mg', disponible: 12 },
-  ];
-
-  /** MOCK: insumos disponibles para el procedimiento. */
-  readonly insumos: RecursoDisponible[] = [
-    { id: 1, nombre: 'Gasas estériles 10x10', disponible: 30 },
-    { id: 2, nombre: 'Guantes de nitrilo talla M', disponible: 50 },
-    { id: 3, nombre: 'Jeringa 5 ml', disponible: 40 },
-    { id: 4, nombre: 'Sutura absorbible 3-0', disponible: 18 },
-  ];
-
-  /** MOCK: procedimientos registrados en el episodio. */
-  procedimientos: ProcedimientoVista[] = [
-    {
-      id: 1,
-      tipo: 'Curación de herida',
-      descripcion: 'Limpieza y cambio de vendaje de la herida quirúrgica.',
-      resultado: 'Herida sin signos de infección, bordes limpios.',
-      inicio: '2026-10-18T09:00',
-      fin: '2026-10-18T09:30',
-      profesional: 'Dra. Ana López',
-      estado: 'realizado',
-      recursos: [
-        { tipo: 'medicamento', nombre: 'Amoxicilina Bayer tabletas de 500 mg', cantidad: 2 },
-        { tipo: 'insumo', nombre: 'Gasas estériles 10x10', cantidad: 4 },
-      ],
-    },
-    {
-      id: 2,
-      tipo: 'Sutura',
-      descripcion: 'Sutura de herida en el antebrazo derecho.',
-      resultado: '',
-      inicio: '2026-10-19T11:00',
-      fin: '2026-10-19T12:00',
-      profesional: 'Dr. Carlos Méndez',
-      estado: 'pendiente',
-      recursos: [],
-    },
-    {
-      id: 3,
-      tipo: 'Drenaje de absceso',
-      descripcion: 'Drenaje de absceso en la región glútea.',
-      resultado: 'Se drena material purulento; paciente estable.',
-      inicio: '2026-10-17T15:30',
-      fin: '2026-10-17T16:10',
-      profesional: 'Dra. Ana López',
-      estado: 'realizado',
-      recursos: [
-        { tipo: 'insumo', nombre: 'Guantes de nitrilo talla M', cantidad: 2 },
-        { tipo: 'insumo', nombre: 'Jeringa 5 ml', cantidad: 1 },
-      ],
-    },
-    {
-      id: 4,
-      tipo: 'Biopsia',
-      descripcion: 'Toma de muestra para estudio histopatológico.',
-      resultado: '',
-      inicio: '2026-10-20T08:00',
-      fin: '2026-10-20T08:40',
-      profesional: 'Dr. Carlos Méndez',
-      estado: 'pendiente',
-      recursos: [],
-    },
-    {
-      id: 5,
-      tipo: 'Cateterismo',
-      descripcion: 'Colocación de catéter venoso central.',
-      resultado: 'Procedimiento cancelado por decisión del paciente.',
-      inicio: '2026-10-16T10:00',
-      fin: '',
-      profesional: 'Dr. Carlos Méndez',
-      estado: 'eliminado',
-      recursos: [],
-    },
-  ];
-  // ------------------- FIN MOCK -------------------
-
-  // ------------------- CONSULTAS PARA LA VISTA -------------------
-  get esRegistrar(): boolean {
-    return this.seccionActiva === 'registrar';
+    this.cargarTiposProcedimiento();
+    this.cargarProcedimientos();
   }
 
-  get recursosDisponibles(): RecursoDisponible[] {
-    return this.tipoRecurso === 'medicamento' ? this.medicamentos : this.insumos;
+  ngOnDestroy(): void {
+    this.destruido = true;
+    this.peticionTipos?.unsubscribe();
+    this.peticionLista?.unsubscribe();
+    this.peticionRecursos?.unsubscribe();
+    this.peticionAccion?.unsubscribe();
+  }
+
+  // ------------------- CONSULTAS PARA LA VISTA -------------------
+  /** El episodio está cerrado: solo se muestran los procedimientos realizados. */
+  get soloLectura(): boolean {
+    return this.episodioActivo.esSoloLectura();
+  }
+
+  /** Secciones del rail; en solo lectura únicamente queda la consulta de realizados. */
+  get secciones(): SeccionVista[] {
+    const registrar: SeccionVista = {
+      id: 'registrar',
+      titulo: 'Registrar procedimiento',
+      icono: 'bi-clipboard2-pulse',
+    };
+    const realizados: SeccionVista = {
+      id: 'realizados',
+      titulo: 'Procedimientos realizados',
+      icono: 'bi-list-check',
+    };
+
+    return this.soloLectura ? [realizados] : [registrar, realizados];
+  }
+
+  get esRegistrar(): boolean {
+    return this.seccionActiva === 'registrar';
   }
 
   get etiquetaRecurso(): string {
@@ -223,6 +200,12 @@ export class ProcedimientoMedico {
   }
 
   get procedimientosFiltrados(): ProcedimientoVista[] {
+    if (this.soloLectura) {
+      return this.procedimientos.filter(
+        (procedimiento) => procedimiento.estado === 'realizado',
+      );
+    }
+
     if (this.filtroProcedimiento === 'todos') {
       return this.procedimientos.filter(
         (procedimiento) => procedimiento.estado !== 'eliminado',
@@ -253,6 +236,9 @@ export class ProcedimientoMedico {
 
   get puedeRegistrarProcedimiento(): boolean {
     return (
+      !this.soloLectura &&
+      !this.sinEpisodioActivo &&
+      !this.guardando &&
       this.tipoProcedimiento !== null &&
       this.descripcion.trim().length > 0 &&
       this.fechasValidas
@@ -263,12 +249,14 @@ export class ProcedimientoMedico {
     const seleccionado = this.recursoSeleccionado;
     if (!seleccionado) return 0;
 
-    const existente = this.buscarRecursoAgregado(seleccionado.nombre);
+    const existente = this.buscarRecursoAgregado(seleccionado.id);
     return Math.max(0, seleccionado.disponible - (existente?.cantidad ?? 0));
   }
 
   get puedeAgregarRecurso(): boolean {
     return (
+      !this.cargandoRecursos &&
+      !this.guardando &&
       this.recursoSeleccionado !== null &&
       this.cantidadRecurso !== null &&
       Number.isInteger(this.cantidadRecurso) &&
@@ -291,9 +279,96 @@ export class ProcedimientoMedico {
     return !Number.isNaN(fin.getTime()) && fin.getTime() >= inicio.getTime();
   }
 
+  // ------------------- CARGA DE DATOS -------------------
+  /** Carga los tipos de procedimiento activos del catálogo. */
+  cargarTiposProcedimiento(): void {
+    if (this.destruido) return;
+
+    this.peticionTipos?.unsubscribe();
+    this.cargandoTipos = true;
+    this.cdr.markForCheck();
+    this.peticionTipos = this.servicio
+      .getTiposProcedimiento()
+      .pipe(
+        finalize(() => {
+          this.cargandoTipos = false;
+          if (!this.destruido) this.cdr.markForCheck();
+        }),
+      )
+      .subscribe({
+        next: (tipos) => {
+          if (this.destruido) return;
+
+          this.tiposProcedimiento = tipos
+            .filter((tipo) => tipo.estado !== false)
+            .map((tipo) => ({ id: tipo.id, nombre: tipo.nombre }));
+        },
+        error: (error) => {
+          if (this.destruido) return;
+
+          this.tiposProcedimiento = [];
+          this.mostrarError(error, 'No se pudieron cargar los tipos de procedimiento.');
+        },
+      });
+  }
+
+  /** Carga los procedimientos del episodio activo y conserva la selección indicada. */
+  cargarProcedimientos(seleccionarId?: number): void {
+    if (this.destruido) return;
+
+    const episodioId = this.episodioActivo.obtener();
+    this.sinEpisodioActivo = episodioId === null;
+
+    if (episodioId === null) {
+      this.procedimientos = [];
+      this.procedimientoSeleccionado = null;
+      this.cargandoProcedimientos = false;
+      this.cdr.markForCheck();
+      return;
+    }
+
+    this.peticionLista?.unsubscribe();
+    this.cargandoProcedimientos = true;
+    this.cdr.markForCheck();
+    this.peticionLista = this.servicio
+      .getProcedimientos(episodioId)
+      .pipe(
+        finalize(() => {
+          this.cargandoProcedimientos = false;
+          if (!this.destruido) this.cdr.markForCheck();
+        }),
+      )
+      .subscribe({
+        next: (respuestas) => {
+          if (this.destruido) return;
+
+          this.procedimientos = respuestas.map((respuesta) => this.aVista(respuesta));
+          if (
+            seleccionarId !== undefined &&
+            this.procedimientos.some((procedimiento) => procedimiento.id === seleccionarId)
+          ) {
+            this.procedimientoSeleccionado = seleccionarId;
+          }
+          this.asegurarProcedimientoSeleccionado();
+        },
+        error: (error) => {
+          if (this.destruido) return;
+
+          this.procedimientos = [];
+          this.procedimientoSeleccionado = null;
+          this.mostrarError(
+            error,
+            'No se pudieron cargar los procedimientos. Intente nuevamente.',
+          );
+        },
+      });
+  }
+
   // ------------------- ACCIONES DE LA VISTA -------------------
   /** Cambia la opción del rail y mantiene una tarjeta seleccionada en el listado. */
   seleccionarSeccion(id: SeccionProcedimiento): void {
+    if (this.soloLectura && id === 'registrar') return;
+
     this.cerrarMenuProcedimiento();
     this.seccionActiva = id;
 
@@ -316,6 +391,8 @@ export class ProcedimientoMedico {
 
   /** Muestra u oculta el menú de opciones de la tarjeta. */
   alternarMenuProcedimiento(id: number): void {
+    if (this.soloLectura) return;
+
     this.menuProcedimientoAbierto = this.menuProcedimientoAbierto === id ? null : id;
   }
 
@@ -340,14 +417,24 @@ export class ProcedimientoMedico {
 
   /** Carga en el formulario el procedimiento elegido para corregirlo. */
   editarProcedimiento(procedimiento: ProcedimientoVista): void {
-    const tipo = this.tiposProcedimiento.find((opcion) => opcion.nombre === procedimiento.tipo);
+    if (this.soloLectura || this.guardando || this.eliminando || this.confirmando) return;
+
+    let tipo = this.tiposProcedimiento.find(
+      (opcion) => opcion.id === procedimiento.tipoProcedimientoId,
+    );
+
+    // El tipo puede estar inactivo en el catálogo y no venir en la lista de activos.
+    if (!tipo) {
+      tipo = { id: procedimiento.tipoProcedimientoId, nombre: procedimiento.tipo };
+      this.tiposProcedimiento = [...this.tiposProcedimiento, tipo];
+    }
 
     this.tipoProcedimiento = tipo?.id ?? null;
     this.descripcion = procedimiento.descripcion;
     this.resultado = procedimiento.resultado;
     this.inicio = procedimiento.inicio;
     this.fin = procedimiento.fin;
-    this.recursosAgregados = [...procedimiento.recursos];
+    this.recursosAgregados = procedimiento.recursos.map((recurso) => ({ ...recurso }));
     this.cancelarSeleccionRecurso();
     this.procedimientoEnEdicion = procedimiento.id;
     this.seccionActiva = 'registrar';
@@ -358,31 +445,58 @@ export class ProcedimientoMedico {
   async eliminarProcedimiento(procedimiento: ProcedimientoVista): Promise<void> {
     this.cerrarMenuProcedimiento();
 
+    if (this.soloLectura || this.eliminando || this.guardando || this.confirmando) return;
+
+    this.confirmando = true;
+    this.cdr.markForCheck();
     const confirmado = await this.popUps
       .confirmarToast(`¿Está seguro de eliminar el procedimiento "${procedimiento.tipo}"?`)
       .catch(() => false);
+    this.confirmando = false;
+    this.cdr.markForCheck();
 
-    if (!confirmado) {
+    if (!confirmado || this.destruido) return;
+
+    this.peticionAccion?.unsubscribe();
+    this.eliminando = true;
+    this.cdr.markForCheck();
+    this.peticionAccion = this.servicio
+      .eliminarProcedimiento(procedimiento.id)
+      .pipe(
+        finalize(() => {
+          this.eliminando = false;
+          if (!this.destruido) this.cdr.markForCheck();
+        }),
+      )
+      .subscribe({
+        next: () => {
+          if (this.destruido) return;
+
+          if (this.procedimientoEnEdicion === procedimiento.id) {
+            this.limpiarFormulario();
+            this.limpiarRecursos();
+          }
+
+          this.popUps.exito('Procedimiento eliminado exitosamente.');
+          this.cargarProcedimientos();
+        },
+        error: (error) => {
+          if (this.destruido) return;
+
+          this.mostrarError(error, 'No se pudo eliminar el procedimiento. Intente nuevamente.');
+        },
+      });
+  }
+
+  /** Registra o actualiza el procedimiento con sus fechas y los recursos agregados. */
+  async registrarProcedimiento(): Promise<void> {
+    if (this.destruido || this.guardando || this.eliminando || this.confirmando) return;
+
+    if (this.soloLectura) {
+      this.popUps.advertencia('El episodio está cerrado y no permite registrar procedimientos.');
       return;
     }
 
-    this.procedimientos = this.procedimientos.map<ProcedimientoVista>((registrado) =>
-      registrado.id === procedimiento.id
-        ? { ...registrado, estado: 'eliminado' }
-        : registrado,
-    );
-
-    if (this.procedimientoEnEdicion === procedimiento.id) {
-      this.limpiarFormulario();
-      this.limpiarRecursos();
-    }
-
-    this.asegurarProcedimientoSeleccionado();
-    this.popUps.exito('Procedimiento eliminado exitosamente.');
-  }
-
-  /** Registra el procedimiento con sus fechas y los recursos agregados. */
-  registrarProcedimiento(): void {
     if (!this.puedeRegistrarProcedimiento) {
       this.popUps.advertencia(
         'Complete el tipo, la descripción y la fecha de inicio; la fecha de fin, si se indica, no puede ser anterior al inicio.',
@@ -390,60 +504,92 @@ export class ProcedimientoMedico {
       return;
     }
 
-    const tipo = this.tiposProcedimiento.find(
-      (opcion) => opcion.id === this.tipoProcedimiento,
-    );
-    if (!tipo) return;
-
-    const idEdicion = this.procedimientoEnEdicion;
-    const registroExistente =
-      idEdicion === null
-        ? null
-        : this.procedimientos.find((procedimiento) => procedimiento.id === idEdicion);
-
-    if (registroExistente) {
-      const actualizado: ProcedimientoVista = {
-        ...registroExistente,
-        tipo: tipo.nombre,
-        descripcion: this.descripcion.trim(),
-        resultado: this.resultado.trim(),
-        inicio: this.inicio,
-        fin: this.fin,
-        estado: this.estadoSegunDatos(registroExistente.estado),
-        recursos: [...this.recursosAgregados],
-      };
-
-      this.procedimientos = this.procedimientos.map((procedimiento) =>
-        procedimiento.id === registroExistente.id ? actualizado : procedimiento,
-      );
-      this.filtroProcedimiento = this.filtroDeEstado(actualizado.estado);
-      this.limpiarFormulario();
-      this.limpiarRecursos();
-      this.seccionActiva = 'realizados';
-      this.procedimientoSeleccionado = actualizado.id;
-      this.popUps.exito('Procedimiento actualizado exitosamente.');
+    const episodioId = this.episodioActivo.obtener();
+    if (episodioId === null) {
+      this.popUps.advertencia('No hay un episodio activo. Abra el episodio del paciente.');
       return;
     }
 
-    const nuevo: ProcedimientoVista = {
-      id: this.siguienteIdProcedimiento(),
-      tipo: tipo.nombre,
+    const usuarioId = this.authService.currentUser()?.id;
+    if (!usuarioId) {
+      this.popUps.error(
+        'No se pudo identificar al usuario de la sesión. Inicie sesión nuevamente.',
+      );
+      return;
+    }
+
+    const tipoProcedimientoId = this.tipoProcedimiento;
+    const inicio = this.aLocalDateTime(this.inicio);
+    if (tipoProcedimientoId === null || !inicio) return;
+
+    const idEdicion = this.procedimientoEnEdicion;
+    const tipo = this.tiposProcedimiento.find((opcion) => opcion.id === tipoProcedimientoId);
+
+    if (idEdicion !== null) {
+      this.confirmando = true;
+      this.cdr.markForCheck();
+      const confirmado = await this.popUps
+        .confirmarToast(
+          `¿Está seguro de guardar los cambios del procedimiento "${tipo?.nombre ?? ''}"?`,
+        )
+        .catch(() => false);
+      this.confirmando = false;
+      this.cdr.markForCheck();
+
+      if (!confirmado || this.destruido) return;
+    }
+
+    const request: ProcedimientoMedicoRequest = {
+      tipoProcedimientoId,
       descripcion: this.descripcion.trim(),
-      resultado: this.resultado.trim(),
-      inicio: this.inicio,
-      fin: this.fin,
-      profesional: this.profesionalActual(),
-      estado: this.estadoSegunDatos(null),
-      recursos: [...this.recursosAgregados],
+      resultado: this.resultado.trim() || null,
+      inicio,
+      fin: this.fin ? this.aLocalDateTime(this.fin) : null,
+      episodioId,
+      usuarioId,
+      recursos: this.recursosAgregados.map((recurso) => ({
+        tipo: this.aTipoRecursoApi(recurso.tipo),
+        referenciaId: recurso.referenciaId,
+        cantidad: recurso.cantidad,
+      })),
     };
 
-    this.procedimientos = [nuevo, ...this.procedimientos];
-    this.limpiarFormulario();
-    this.limpiarRecursos();
-    this.filtroProcedimiento = 'todos';
-    this.seccionActiva = 'realizados';
-    this.procedimientoSeleccionado = nuevo.id;
-    this.popUps.exito('Procedimiento registrado exitosamente.');
+    this.peticionAccion?.unsubscribe();
+    this.guardando = true;
+    this.cdr.markForCheck();
+    this.peticionAccion = (
+      idEdicion === null
+        ? this.servicio.crearProcedimiento(request)
+        : this.servicio.actualizarProcedimiento(idEdicion, request)
+    )
+      .pipe(
+        finalize(() => {
+          this.guardando = false;
+          if (!this.destruido) this.cdr.markForCheck();
+        }),
+      )
+      .subscribe({
+        next: (respuesta) => {
+          if (this.destruido) return;
+
+          this.limpiarFormulario();
+          this.limpiarRecursos();
+          this.filtroProcedimiento = 'todos';
+          this.seccionActiva = 'realizados';
+          this.procedimientoSeleccionado = respuesta.id;
+          this.popUps.exito(
+            idEdicion === null
+              ? 'Procedimiento registrado exitosamente.'
+              : 'Procedimiento actualizado exitosamente.',
+          );
+          this.cargarProcedimientos(respuesta.id);
+        },
+        error: (error) => {
+          if (this.destruido) return;
+
+          this.mostrarError(error, 'No se pudo guardar el procedimiento. Intente nuevamente.');
+        },
+      });
   }
 
   /** Descarta el formulario y los recursos agregados. */
@@ -458,19 +604,38 @@ export class ProcedimientoMedico {
     this.cancelarSeleccionRecurso();
   }
 
-  /** Busca en el catálogo mock del tipo de recurso activo. */
+  /** Busca en el catálogo de farmacia del tipo de recurso activo. */
   buscarRecursos(): void {
-    const termino = this.normalizarTexto(this.textoBusquedaRecurso);
+    if (this.destruido || this.cargandoRecursos) return;
 
+    this.peticionRecursos?.unsubscribe();
     this.busquedaRecursoRealizada = true;
+    this.cargandoRecursos = true;
     this.recursoSeleccionado = null;
     this.cantidadRecurso = null;
+    this.recursosEncontrados = [];
+    this.cdr.markForCheck();
+    this.peticionRecursos = this.servicio
+      .buscarRecursos(this.aTipoRecursoApi(this.tipoRecurso), this.textoBusquedaRecurso)
+      .pipe(
+        finalize(() => {
+          this.cargandoRecursos = false;
+          if (!this.destruido) this.cdr.markForCheck();
+        }),
+      )
+      .subscribe({
+        next: (recursos) => {
+          if (this.destruido) return;
 
-    this.recursosEncontrados = this.recursosDisponibles.filter(
-      (recurso) =>
-        recurso.disponible > 0 &&
-        (!termino || this.normalizarTexto(recurso.nombre).includes(termino)),
-    );
+          this.recursosEncontrados = recursos;
+        },
+        error: (error) => {
+          if (this.destruido) return;
+
+          this.recursosEncontrados = [];
+          this.mostrarError(error, `No se pudo buscar ${this.etiquetaRecurso} en farmacia.`);
+        },
+      });
   }
 
   /** Elige el recurso de la tabla: oculta el buscador y deja solo la captura de cantidad. */
@@ -500,16 +665,23 @@ export class ProcedimientoMedico {
       return;
     }
 
-    const existente = this.buscarRecursoAgregado(seleccionado.nombre);
+    const existente = this.buscarRecursoAgregado(seleccionado.id);
 
     if (existente) {
       this.recursosAgregados = this.recursosAgregados.map((recurso) =>
-        recurso === existente ? { ...recurso, cantidad: recurso.cantidad + cantidad } : recurso,
+        recurso === existente
+          ? { ...recurso, cantidad: recurso.cantidad + cantidad }
+          : recurso,
       );
     } else {
       this.recursosAgregados = [
         ...this.recursosAgregados,
-        { tipo: this.tipoRecurso, nombre: seleccionado.nombre, cantidad },
+        {
+          tipo: this.tipoRecurso,
+          referenciaId: seleccionado.id,
+          nombre: seleccionado.nombre,
+          cantidad,
+        },
       ];
     }
 
@@ -568,23 +740,50 @@ export class ProcedimientoMedico {
   }
 
   // ------------------- APOYO -------------------
-  /** Un procedimiento solo es realizado si tiene resultado y fecha de finalización. */
-  private estadoSegunDatos(estadoOriginal: EstadoProcedimiento | null): EstadoProcedimiento {
-    if (estadoOriginal === 'eliminado') return 'eliminado';
-
-    return this.resultado.trim().length > 0 && this.fin ? 'realizado' : 'pendiente';
+  /** Convierte la respuesta del backend a los datos que pintan las tarjetas. */
+  private aVista(respuesta: ProcedimientoMedicoResponse): ProcedimientoVista {
+    return {
+      id: respuesta.id,
+      tipoProcedimientoId: respuesta.tipoProcedimientoId,
+      tipo: respuesta.tipoProcedimientoNombre,
+      descripcion: respuesta.descripcion,
+      resultado: respuesta.resultado ?? '',
+      inicio: this.aDatetimeLocal(respuesta.inicio),
+      fin: this.aDatetimeLocal(respuesta.fin),
+      profesional: respuesta.usuarioNombre?.trim() || 'Médico de turno',
+      estado: this.aEstadoVista(respuesta.estado),
+      recursos: respuesta.recursos.map((recurso) => ({
+        tipo: recurso.tipo === 'MEDICAMENTO' ? 'medicamento' : 'insumo',
+        referenciaId: recurso.referenciaId,
+        nombre: recurso.nombre,
+        cantidad: recurso.cantidad,
+      })),
+    };
   }
 
-  /** Filtro que corresponde al estado del procedimiento. */
-  private filtroDeEstado(estado: EstadoProcedimiento): FiltroProcedimiento {
-    if (estado === 'realizado') return 'realizados';
-    if (estado === 'pendiente') return 'pendientes';
-    return 'eliminados';
+  /** Estado del backend al estado con el que la vista colorea las tarjetas. */
+  private aEstadoVista(estado: EstadoProcedimientoApi): EstadoProcedimiento {
+    if (estado === 'REALIZADO') return 'realizado';
+    if (estado === 'ELIMINADO') return 'eliminado';
+    return 'pendiente';
   }
 
-  /** Nombre del profesional de la sesión que registra el procedimiento. */
-  private profesionalActual(): string {
-    return this.authService.currentUser()?.nombreCompleto?.trim() || 'Médico de turno';
+  /** Tipo de recurso de la vista al enum del backend. */
+  private aTipoRecursoApi(tipo: TipoRecurso): TipoRecursoProcedimientoApi {
+    return tipo === 'medicamento' ? 'MEDICAMENTO' : 'INSUMO';
+  }
+
+  /** Fecha y hora del backend al valor que acepta datetime-local. */
+  private aDatetimeLocal(valor: string | null): string {
+    if (!valor) return '';
+    return valor.length >= 16 ? valor.slice(0, 16) : valor;
+  }
+
+  /** Fecha y hora del formulario al formato ISO que espera el backend. */
+  private aLocalDateTime(valor: string): string | null {
+    const texto = valor.trim();
+    if (!texto) return null;
+    return texto.length === 16 ? `${texto}:00` : texto;
   }
 
   /** Deja el formulario listo para un procedimiento nuevo. */
@@ -603,20 +802,10 @@ export class ProcedimientoMedico {
     this.cancelarSeleccionRecurso();
   }
 
-  /** Nombre siguiente para el procedimiento nuevo. */
-  private siguienteIdProcedimiento(): number {
-    const mayor = this.procedimientos.reduce(
-      (maximo, procedimiento) => Math.max(maximo, procedimiento.id),
-      0,
-    );
-
-    return mayor + 1;
-  }
-
-  /** El recurso ya agregado del mismo tipo, si existe. */
-  private buscarRecursoAgregado(nombre: string): RecursoUtilizado | undefined {
+  /** El recurso ya agregado del mismo tipo y referencia, si existe. */
+  private buscarRecursoAgregado(referenciaId: number): RecursoUtilizado | undefined {
     return this.recursosAgregados.find(
-      (recurso) => recurso.tipo === this.tipoRecurso && recurso.nombre === nombre,
+      (recurso) => recurso.tipo === this.tipoRecurso && recurso.referenciaId === referenciaId,
     );
   }
 
@@ -629,12 +818,15 @@ export class ProcedimientoMedico {
     }
   }
 
-  /** Texto sin mayúsculas ni acentos para comparar la búsqueda con el catálogo. */
-  private normalizarTexto(texto: string): string {
-    return texto
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .toLowerCase()
-      .trim();
+  /** Distingue el timeout de comunicación del resto de errores del backend. */
+  private mostrarError(error: unknown, mensajeDefault: string): void {
+    if (error instanceof TimeoutError) {
+      this.popUps.error(
+        'Error de comunicación. El servidor no respondió dentro del tiempo esperado.',
+      );
+      return;
+    }
+
+    this.popUps.errorDesdeBackend(error, mensajeDefault);
   }
 }
