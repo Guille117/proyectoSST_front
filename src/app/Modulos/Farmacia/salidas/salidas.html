@@ -9,292 +9,376 @@
           <input
             class="inputB"
             type="search"
-            placeholder="Buscar por paciente, N° solicitud o servicio..."
+            placeholder="Buscar por paciente, N° solicitud o procedimiento..."
             aria-label="Buscar solicitud de salida"
+            [(ngModel)]="textoBusqueda"
+            (keydown.enter)="$event.preventDefault(); buscar()"
           />
-          <button type="button" class="btnLupa" title="Buscar" aria-label="Buscar">
+          <button
+            type="button"
+            class="btnLupa"
+            title="Buscar"
+            aria-label="Buscar"
+            (click)="buscar()"
+          >
             <i class="bi bi-search fs-5" aria-hidden="true"></i>
           </button>
         </div>
       </div>
 
       <div class="filtros" role="group" aria-label="Filtrar solicitudes por estado">
-        <button type="button" class="chip activo">Todas (12)</button>
-        <button type="button" class="chip">
-          <span class="punto punto-naranja" aria-hidden="true"></span>Pendientes (6)
+        <button
+          type="button"
+          class="chip"
+          [class.activo]="filtro === 'todas'"
+          [attr.aria-pressed]="filtro === 'todas'"
+          (click)="seleccionarFiltro('todas')"
+        >
+          Todas
         </button>
-        <button type="button" class="chip">
-          <span class="punto punto-azul" aria-hidden="true"></span>Parciales (4)
+        <button
+          type="button"
+          class="chip"
+          [class.activo]="filtro === 'PENDIENTE'"
+          [attr.aria-pressed]="filtro === 'PENDIENTE'"
+          (click)="seleccionarFiltro('PENDIENTE')"
+        >
+          <span class="punto punto-naranja" aria-hidden="true"></span>Pendientes
         </button>
-        <button type="button" class="chip">
-          <span class="punto punto-verde" aria-hidden="true"></span>Completadas (2)
+        <button
+          type="button"
+          class="chip"
+          [class.activo]="filtro === 'PARCIAL'"
+          [attr.aria-pressed]="filtro === 'PARCIAL'"
+          (click)="seleccionarFiltro('PARCIAL')"
+        >
+          <span class="punto punto-azul" aria-hidden="true"></span>Parciales
+        </button>
+        <button
+          type="button"
+          class="chip"
+          [class.activo]="filtro === 'COMPLETADA'"
+          [attr.aria-pressed]="filtro === 'COMPLETADA'"
+          (click)="seleccionarFiltro('COMPLETADA')"
+        >
+          <span class="punto punto-verde" aria-hidden="true"></span>Completadas
         </button>
       </div>
 
       <div class="lista-solicitudes">
-        <article class="solicitud activo">
-          <div class="solicitud-encabezado">
-            <span class="solicitud-codigo">SOL-1</span>
-            <span class="solicitud-paciente">María Fernanda López</span>
-            <span class="punto punto-naranja" title="Pendiente" aria-label="Pendiente"></span>
-          </div>
-          <div class="solicitud-detalle">
-            <span>3 medicamentos</span>
-            <span>2 insumos</span>
-            <span class="solicitud-fecha">12/04/2024<br />10:24</span>
-          </div>
-        </article>
+        @if (cargandoSolicitudes) {
+          <p class="indicacion-vacio">Cargando solicitudes...</p>
+        } @else {
+          @for (solicitud of solicitudes; track solicitud.id) {
+            <article
+              class="solicitud"
+              [class.activo]="solicitudSeleccionada?.id === solicitud.id"
+              role="button"
+              tabindex="0"
+              (click)="seleccionarSolicitud(solicitud.id)"
+              (keyup.enter)="seleccionarSolicitud(solicitud.id)"
+            >
+              <div class="solicitud-encabezado">
+                <span class="solicitud-codigo">{{ solicitud.codigo }}</span>
+                <span class="solicitud-paciente">{{ solicitud.paciente }}</span>
+                <span
+                  class="punto"
+                  [ngClass]="clasePunto(solicitud.estado)"
+                  [title]="estadoTexto(solicitud.estado)"
+                  [attr.aria-label]="estadoTexto(solicitud.estado)"
+                ></span>
+              </div>
+              <div class="solicitud-detalle">
+                <span>{{ solicitud.medicamentos }} medicamentos</span>
+                <span>{{ solicitud.insumos }} insumos</span>
+                <span class="solicitud-fecha">{{ formatearFechaHora(solicitud.fecha) }}</span>
+              </div>
+            </article>
+          } @empty {
+            <p class="indicacion-vacio">No hay solicitudes para mostrar.</p>
+          }
+        }
       </div>
     </section>
 
     <!-- ==================== COLUMNA DERECHA: DETALLE ==================== -->
     <section class="panel-detalle" aria-labelledby="tituloDetalle">
-      <header class="detalle-encabezado">
-        <div class="detalle-titulo">
-          <h2 id="tituloDetalle" class="titulo-panel">
-            {{ enDevoluciones() ? 'Detalle de devolución' : 'Detalle de solicitud' }}
-          </h2>
-          <span class="etiqueta-sol">N° SOL-1</span>
+      @if (solicitudSeleccionada; as solicitud) {
+        <header class="detalle-encabezado">
+          <div class="detalle-titulo">
+            <h2 id="tituloDetalle" class="titulo-panel">{{ tituloDetalle }}</h2>
+            <span class="etiqueta-sol">N° {{ solicitud.codigo }}</span>
+          </div>
+
+          <nav class="subMenuNav submenu-detalle" aria-label="Sección de la solicitud">
+            <div class="option" [class.active]="!enDevoluciones()" (click)="seleccionarVista(false)">
+              Solicitudes
+            </div>
+            <div class="option" [class.active]="enDevoluciones()" (click)="seleccionarVista(true)">
+              Devoluciones
+            </div>
+          </nav>
+        </header>
+
+        <div class="paciente-detalle">
+          <span class="avatar"><i class="bi bi-person" aria-hidden="true"></i></span>
+          <div class="paciente-datos">
+            <h3>{{ solicitud.paciente }}</h3>
+            <p class="detalle-meta">
+              <span>
+                <i class="bi bi-clipboard2-pulse" aria-hidden="true"></i>
+                {{ solicitud.procedimiento }}
+              </span>
+              <span>
+                <i class="bi bi-hospital" aria-hidden="true"></i>
+                {{ tipoAtencionTexto(solicitud.tipoAtencion) }}
+              </span>
+              <span>
+                <i class="bi bi-calendar3" aria-hidden="true"></i>
+                {{ formatearFechaHora(solicitud.fecha) }}
+              </span>
+            </p>
+          </div>
+          <span class="estado" [ngClass]="claseEstado(solicitud.estado)">
+            {{ estadoTexto(solicitud.estado) }}
+          </span>
         </div>
 
-        <nav class="subMenuNav submenu-detalle" aria-label="Sección de la solicitud">
-          <div class="option" [class.active]="!enDevoluciones()" (click)="seleccionarVista(false)">
-            Solicitudes
-          </div>
-          <div class="option" [class.active]="enDevoluciones()" (click)="seleccionarVista(true)">
-            Devoluciones
-          </div>
-        </nav>
-      </header>
+        <div class="aviso-lote" role="note">
+          <i class="bi bi-info-circle" aria-hidden="true"></i>
+          @if (enDevoluciones()) {
+            <p>
+              <strong>
+                Registre la condición y el motivo de la devolución. El sistema valida el lote
+                entregado antes de actualizar el inventario.
+              </strong>
+            </p>
+          } @else {
+            <p>
+              <strong>
+                El sistema sugiere el lote con vencimiento más próximo. Puede seleccionar otro lote
+                disponible si lo requiere.
+              </strong>
+            </p>
+          }
+        </div>
 
-      <div class="aviso-lote" role="note">
-        <i class="bi bi-info-circle" aria-hidden="true"></i>
-        @if (enDevoluciones()) {
-          <p><strong>
-            Registre la condición y el motivo de la devolución. El sistema valida el lote entregado
-            antes de actualizar el inventario.
-          </strong></p>
+        @if (cargandoDetalle) {
+          <p class="indicacion-vacio">Cargando detalle de la solicitud...</p>
+        } @else if (enDevoluciones()) {
+          <!-- ==================== DEVOLUCIONES ==================== -->
+          <div class="tabla-detalle">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th class="celda_centrada">Tipo</th>
+                  <th class="celda_izquierda">Producto</th>
+                  <th class="celda_centrada">Entregado</th>
+                  <th class="celda_centrada">Lote entregado</th>
+                  <th class="celda_centrada">Condición</th>
+                  <th class="celda_centrada">Motivo devolución</th>
+                  <th class="celda_centrada">Cantidad a devolver</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (detalle of detallesConEntregas; track detalle.id) {
+                  <tr>
+                    <td class="celda_centrada">
+                      <span
+                        class="tipo"
+                        [class.tipo-med]="detalle.tipo === 'MEDICAMENTO'"
+                        [class.tipo-ins]="detalle.tipo === 'INSUMO'"
+                      >
+                        {{ detalle.tipo === 'MEDICAMENTO' ? 'MED' : 'INS' }}
+                      </span>
+                    </td>
+                    <td class="celda_izquierda">{{ detalle.nombre }}</td>
+                    <td class="celda_centrada">{{ detalle.entregado }}</td>
+                    <td class="celda_centrada">
+                      <select
+                        class="lote-select"
+                        aria-label="Lote entregado"
+                        [ngModelOptions]="{ standalone: true }"
+                        [(ngModel)]="detalle.loteDevueltoId"
+                        (ngModelChange)="ajustarCantidadDevolucion(detalle)"
+                      >
+                        @for (lote of detalle.lotesEntregados; track lote.loteId) {
+                          <option [ngValue]="lote.loteId">
+                            {{ lote.codigoLote }} ({{ lote.disponibleDevolver }})
+                          </option>
+                        }
+                      </select>
+                    </td>
+                    <td class="celda_centrada">
+                      <select
+                        class="lote-select"
+                        aria-label="Condición del producto"
+                        [ngModelOptions]="{ standalone: true }"
+                        [(ngModel)]="detalle.condicion"
+                      >
+                        <option value="APTO">Apto</option>
+                        <option value="NO_APTO">No apto</option>
+                      </select>
+                    </td>
+                    <td class="celda_centrada">
+                      <select
+                        class="lote-select select-motivo"
+                        aria-label="Motivo de devolución"
+                        [disabled]="cargandoMotivos"
+                        [ngModelOptions]="{ standalone: true }"
+                        [(ngModel)]="detalle.motivoBajaId"
+                      >
+                        <option [ngValue]="null">
+                          {{ cargandoMotivos ? 'Cargando...' : 'Seleccionar motivo...' }}
+                        </option>
+                        @for (motivo of motivos; track motivo.id) {
+                          <option [ngValue]="motivo.id">{{ motivo.nombre }}</option>
+                        }
+                      </select>
+                    </td>
+                    <td class="celda_centrada">
+                      <input
+                        class="cantidad-input"
+                        type="number"
+                        min="0"
+                        step="1"
+                        [max]="maximoDevolucion(detalle)"
+                        aria-label="Cantidad a devolver"
+                        [ngModelOptions]="{ standalone: true }"
+                        [(ngModel)]="detalle.cantidadDevolver"
+                        (ngModelChange)="ajustarCantidadDevolucion(detalle)"
+                      />
+                      <span class="sub-dato">Máx. {{ maximoDevolucion(detalle) }}</span>
+                    </td>
+                  </tr>
+                } @empty {
+                  <tr>
+                    <td colspan="7" class="celda_centrada">
+                      Esta solicitud no tiene productos entregados.
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+
+          <div class="botones-detalle">
+            <button
+              type="button"
+              class="btn _guardar"
+              [disabled]="!puedeGuardarDevolucion"
+              (click)="devolver()"
+            >
+              {{ etiquetaGuardarDevolucion }}
+            </button>
+          </div>
         } @else {
-          <p><strong>
-            El sistema sugiere el lote con vencimiento más próximo. Puede seleccionar otro lote
-            disponible si lo requiere.
-          </strong></p>
+          <!-- ==================== ENTREGAS ==================== -->
+          <div class="tabla-detalle">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th class="celda_centrada">Tipo</th>
+                  <th class="celda_izquierda">Producto</th>
+                  <th class="celda_centrada">Solicitado</th>
+                  <th class="celda_centrada">Lote sugerido</th>
+                  <th class="celda_centrada">Vence</th>
+                  <th class="celda_centrada">Lote entregado</th>
+                  <th class="celda_centrada">Cantidad a entregar</th>
+                  <th class="celda_centrada">Entregado</th>
+                  <th class="celda_centrada">Estado</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (detalle of solicitud.detalles; track detalle.id) {
+                  <tr>
+                    <td class="celda_centrada">
+                      <span
+                        class="tipo"
+                        [class.tipo-med]="detalle.tipo === 'MEDICAMENTO'"
+                        [class.tipo-ins]="detalle.tipo === 'INSUMO'"
+                      >
+                        {{ detalle.tipo === 'MEDICAMENTO' ? 'MED' : 'INS' }}
+                      </span>
+                    </td>
+                    <td class="celda_izquierda">{{ detalle.nombre }}</td>
+                    <td class="celda_centrada">{{ detalle.solicitado }}</td>
+                    <td class="celda_centrada">
+                      {{ loteSugerido(detalle)?.codigoLote ?? 'Sin lote' }}
+                    </td>
+                    <td class="celda_centrada">
+                      {{ formatearFecha(loteSugerido(detalle)?.fechaVencimiento ?? null) }}
+                    </td>
+                    <td class="celda_centrada">
+                      @if (detalle.pendiente > 0 && detalle.lotesDisponibles.length) {
+                        <select
+                          class="lote-select"
+                          aria-label="Lote a entregar"
+                          [ngModelOptions]="{ standalone: true }"
+                          [(ngModel)]="detalle.loteSeleccionadoId"
+                          (ngModelChange)="ajustarCantidadEntrega(detalle)"
+                        >
+                          @for (lote of detalle.lotesDisponibles; track lote.id) {
+                            <option [ngValue]="lote.id">
+                              {{ lote.codigoLote }} · {{ lote.disponible }}
+                            </option>
+                          }
+                        </select>
+                      } @else {
+                        <span class="sub-dato">Sin lote disponible</span>
+                      }
+                    </td>
+                    <td class="celda_centrada">
+                      @if (detalle.pendiente > 0 && detalle.lotesDisponibles.length) {
+                        <input
+                          class="cantidad-input"
+                          type="number"
+                          min="1"
+                          step="1"
+                          [max]="maximoEntrega(detalle)"
+                          aria-label="Cantidad a entregar"
+                          [ngModelOptions]="{ standalone: true }"
+                          [(ngModel)]="detalle.cantidadEntrega"
+                          (ngModelChange)="ajustarCantidadEntrega(detalle)"
+                        />
+                        <span class="sub-dato">Máx. {{ maximoEntrega(detalle) }}</span>
+                      } @else {
+                        —
+                      }
+                    </td>
+                    <td class="celda_centrada">{{ detalle.entregado }}</td>
+                    <td class="celda_centrada">
+                      <span class="estado" [ngClass]="claseEstado(detalle.estado)">
+                        {{ estadoTexto(detalle.estado) }}
+                      </span>
+                    </td>
+                  </tr>
+                } @empty {
+                  <tr>
+                    <td colspan="9" class="celda_centrada">
+                      No hay productos en esta solicitud.
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+
+          <div class="botones-detalle">
+            <button
+              type="button"
+              class="btn _guardar"
+              [disabled]="!puedeGuardarEntrega"
+              (click)="entregar()"
+            >
+              {{ etiquetaGuardarEntrega }}
+            </button>
+          </div>
         }
-        
-      </div>
-
-      @if (enDevoluciones()) {
-        <!-- ==================== MEDICAMENTOS ==================== -->
-        <h4 class="subtitulo-detalle">Medicamentos (1)</h4>
-        <div class="tabla-detalle">
-          <table class="table">
-            <thead>
-              <tr>
-                <th class="celda_centrada">Tipo</th>
-                <th class="celda_izquierda">Producto</th>
-                <th class="celda_centrada">Entregado</th>
-                <th class="celda_centrada">Lote entregado</th>
-                <th class="celda_centrada">Condición</th>
-                <th class="celda_centrada">Motivo devolución</th>
-                <th class="celda_centrada">Cantidad a devolver</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td class="celda_centrada"><span class="tipo tipo-med">MED</span></td>
-                <td class="celda_izquierda">Paracetamol 500mg</td>
-                <td class="celda_centrada">
-                  20<span class="sub-dato">comprimidos</span>
-                </td>
-                <td class="celda_centrada">
-                  <select class="lote-select" aria-label="Lote entregado">
-                    <option selected>PCH1234</option>
-                  </select>
-                </td>
-                <td class="celda_centrada">
-                  <select class="lote-select" aria-label="Condición del producto">
-                    <option selected>Apto</option>
-                    <option>No apto</option>
-                  </select>
-                </td>
-                <td class="celda_centrada">
-                  <select class="lote-select select-motivo" aria-label="Motivo de devolución">
-                    <option selected>Seleccionar motivo...</option>
-                  </select>
-                </td>
-                <td class="celda_centrada">
-                  <input
-                    class="cantidad-input"
-                    type="number"
-                    value="20"
-                    aria-label="Cantidad a devolver"
-                  />
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <!-- ==================== INSUMOS ==================== -->
-        <h4 class="subtitulo-detalle">Insumos (1)</h4>
-        <div class="tabla-detalle">
-          <table class="table">
-            <thead>
-              <tr>
-                <th class="celda_centrada">Tipo</th>
-                <th class="celda_izquierda">Producto</th>
-                <th class="celda_centrada">Entregado</th>
-                <th class="celda_centrada">Lote entregado</th>
-                <th class="celda_centrada">Condición</th>
-                <th class="celda_centrada">Motivo devolución</th>
-                <th class="celda_centrada">Cantidad a devolver</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td class="celda_centrada"><span class="tipo tipo-ins">INS</span></td>
-                <td class="celda_izquierda">
-                  Jeringa 10 ml<span class="sub-dato">Estéril desechable</span>
-                </td>
-                <td class="celda_centrada">
-                  10<span class="sub-dato">unidades</span>
-                </td>
-                <td class="celda_centrada">
-                  <select class="lote-select" aria-label="Lote entregado">
-                    <option selected>JER7781</option>
-                  </select>
-                </td>
-                <td class="celda_centrada">
-                  <select class="lote-select" aria-label="Condición del producto">
-                    <option>Apto</option>
-                    <option selected>No apto</option>
-                  </select>
-                </td>
-                <td class="celda_centrada">
-                  <select class="lote-select select-motivo" aria-label="Motivo de devolución">
-                    <option selected>Seleccionar motivo...</option>
-                  </select>
-                </td>
-                <td class="celda_centrada">
-                  <input
-                    class="cantidad-input"
-                    type="number"
-                    value="10"
-                    aria-label="Cantidad a devolver"
-                  />
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <!-- ==================== ACCIONES ==================== -->
-        <div class="botones-detalle">
-          <button type="button" class="btn _guardar">Guardar devolución</button>
-        </div>
       } @else {
-      <!-- ==================== MEDICAMENTOS ==================== -->
-      <h4 class="subtitulo-detalle">Medicamentos (1)</h4>
-      <div class="tabla-detalle">
-        <table class="table">
-          <thead>
-            <tr>
-              <th class="celda_centrada">Tipo</th>
-              <th class="celda_izquierda">Producto</th>
-              <th class="celda_centrada">Solicitado</th>
-              <th class="celda_centrada">Lote sugerido</th>
-              <th class="celda_centrada">Vence</th>
-              <th class="celda_centrada">Lote entregado</th>
-              <th class="celda_centrada">Cantidad a entregar</th>
-              <th class="celda_centrada">Estado</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td class="celda_centrada"><span class="tipo tipo-med">MED</span></td>
-              <td class="celda_izquierda">Paracetamol 500mg</td>
-              <td class="celda_centrada">
-                20<span class="sub-dato">comprimidos</span>
-              </td>
-              <td class="celda_centrada">PCH1234</td>
-              <td class="celda_centrada">12/2025</td>
-              <td class="celda_centrada">
-                <select class="lote-select" aria-label="Lote a entregar">
-                  <option selected>PCH1234</option>
-                </select>
-              </td>
-              <td class="celda_centrada">
-                <input
-                  class="cantidad-input"
-                  type="number"
-                  value="20"
-                  aria-label="Cantidad a entregar"
-                />
-              </td>
-              <td class="celda_centrada">
-                <span class="estado estado-completo">
-                  <i class="bi bi-check-lg" aria-hidden="true"></i> Completo
-                </span>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <!-- ==================== INSUMOS ==================== -->
-      <h4 class="subtitulo-detalle">Insumos (1)</h4>
-      <div class="tabla-detalle">
-        <table class="table">
-          <thead>
-            <tr>
-              <th class="celda_centrada">Tipo</th>
-              <th class="celda_izquierda">Producto</th>
-              <th class="celda_centrada">Solicitado</th>
-              <th class="celda_centrada">Lote sugerido</th>
-              <th class="celda_centrada">Vence</th>
-              <th class="celda_centrada">Lote entregado</th>
-              <th class="celda_centrada">Cantidad a entregar</th>
-              <th class="celda_centrada">Estado</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td class="celda_centrada"><span class="tipo tipo-ins">INS</span></td>
-              <td class="celda_izquierda">
-                Jeringa 10 ml<span class="sub-dato">Estéril desechable</span>
-              </td>
-              <td class="celda_centrada">
-                10<span class="sub-dato">unidades</span>
-              </td>
-              <td class="celda_centrada">JER7781</td>
-              <td class="celda_centrada">04/2028</td>
-              <td class="celda_centrada">
-                <select class="lote-select" aria-label="Lote a entregar">
-                  <option selected>JER7781</option>
-                </select>
-              </td>
-              <td class="celda_centrada">
-                <input
-                  class="cantidad-input"
-                  type="number"
-                  value="10"
-                  aria-label="Cantidad a entregar"
-                />
-              </td>
-              <td class="celda_centrada">
-                <span class="estado estado-completo">
-                  <i class="bi bi-check-lg" aria-hidden="true"></i> Completo
-                </span>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <!-- ==================== ACCIONES ==================== -->
-      <div class="botones-detalle">
-        <button type="button" class="btn _guardar">Guardar</button>
-      </div>
+        <p class="indicacion-vacio">
+          Seleccione una solicitud de salida para ver su detalle.
+        </p>
       }
     </section>
   </div>

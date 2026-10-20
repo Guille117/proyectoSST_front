@@ -9,7 +9,7 @@
 /* ==================== CONTENEDOR PRINCIPAL (GRID 2 COLUMNAS) ==================== */
 .trabajoArea {
   display: grid;
-  grid-template-columns: minmax(300px, 0.9fr) minmax(0, 1.5fr);
+  grid-template-columns: minmax(260px, 0.7fr) minmax(0, 1.8fr);
   gap: 24px;
   align-items: start;
   padding: 0;
@@ -77,8 +77,8 @@
   }
 
   &.activo {
-    border-color: #0b1739;
-    background: #0b1739;
+    border-color: var(--azulSecundario);
+    background: var(--azulSecundario);
     color: #fff;
     font-weight: 600;
   }
@@ -102,6 +102,10 @@
 
 .punto-verde {
   background: #22c55e;
+}
+
+.punto-gris {
+  background: #94a3b8;
 }
 
 /* ==================== LISTA DE SOLICITUDES ==================== */
@@ -229,12 +233,49 @@
   align-items: center;
   gap: 14px;
 
+  > .estado {
+    margin-left: auto;
+  }
+
   h3 {
     margin: 0;
     color: #14213d;
     font-size: 1.2rem;
     font-weight: 700;
   }
+}
+
+.paciente-datos {
+  flex: 1;
+  min-width: 0;
+}
+
+.detalle-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin: 6px 0 0;
+  color: #667085;
+  font-size: 0.85rem;
+
+  span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+}
+
+.indicacion-vacio {
+  margin: 0;
+  padding: 16px;
+  color: #667085;
+  font-size: 0.95rem;
+  text-align: center;
+}
+
+.solicitud:focus-visible {
+  outline: 2px solid var(--azulSecundario);
+  outline-offset: 2px;
 }
 
 .avatar {
@@ -270,13 +311,6 @@
     font-size: 0.9rem;
     line-height: 1.35;
   }
-}
-
-.subtitulo-detalle {
-  margin: 4px 0 0;
-  color: #14213d;
-  font-size: 1.05rem;
-  font-weight: 700;
 }
 
 /* ==================== TABLAS DEL DETALLE ==================== */
@@ -376,6 +410,21 @@
 .estado-completo {
   background: #e7f7ec;
   color: #16a34a;
+}
+
+.estado-pendiente {
+  background: #fff4e5;
+  color: #b45309;
+}
+
+.estado-parcial {
+  background: #e8f1ff;
+  color: #1d4ed8;
+}
+
+.estado-cancelado {
+  background: #f1f5f9;
+  color: #64748b;
 }
 
 /* ==================== ACCIONES ==================== */
