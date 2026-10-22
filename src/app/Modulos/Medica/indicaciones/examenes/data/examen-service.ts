@@ -49,6 +49,17 @@ export class IndicacionExamenService {
       .pipe(timeout(TIEMPO_SUBIDA_MS));
   }
 
+  agregarArchivos(id: number, archivos: File[]): Observable<ExamenResponse> {
+    const datos = new FormData();
+    for (const archivo of archivos) {
+      datos.append('archivos', archivo);
+    }
+
+    return this.http
+      .post<ExamenResponse>(`${this.apiUrl}/${id}/archivos`, datos)
+      .pipe(timeout(TIEMPO_SUBIDA_MS));
+  }
+
   cambiarEstado(id: number, estado: EstadoExamenApi): Observable<ExamenResponse> {
     const params = new HttpParams().set('estado', estado);
     return this.http

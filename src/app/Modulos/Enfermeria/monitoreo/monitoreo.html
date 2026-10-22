@@ -1,0 +1,632 @@
+<!-- Monitoreo de enfermería: rail de secciones, registro de signos vitales e historial de tomas -->
+<div class="monitoreo" [class.monitoreo--ficha-abierta]="pacienteAbierto">
+  <!-- Datos del paciente: bloque compartido con el módulo Médico, pegado al borde derecho -->
+  <app-datos-paciente
+    [plegable]="true"
+    [abierto]="pacienteAbierto"
+    (abiertoCambia)="cambiarFichaPaciente($event)"
+    [cuerpoVisible]="datosPacienteVisibles"
+    (cuerpoVisibleCambia)="datosPacienteVisibles = $event"
+  ></app-datos-paciente>
+
+  <!-- Rail de secciones del monitoreo -->
+  <section class="panel panel-secciones">
+    <h3 class="panel-titulo">Monitoreo</h3>
+
+    @for (seccion of secciones; track seccion.id) {
+      <button
+        type="button"
+        class="tarjeta"
+        [class.tarjeta--activa]="seccionActiva === seccion.id"
+        [attr.aria-pressed]="seccionActiva === seccion.id"
+        (click)="seleccionarSeccion(seccion.id)"
+      >
+        <span class="tarjeta_icono"><i class="bi {{ seccion.icono }}" aria-hidden="true"></i></span>
+        <span class="tarjeta_texto">
+          <span class="tarjeta_titulo">{{ seccion.titulo }}</span>
+        </span>
+      </button>
+    }
+  </section>
+
+  @switch (seccionActiva) {
+    @case ('signos') {
+      <!-- Registro de signos vitales -->
+      <section class="panel panel-formulario" aria-labelledby="tituloSignosVitales">
+        <h3 class="panel-titulo monitoreo-titulo" id="tituloSignosVitales">Signos vitales</h3>
+
+        <form class="monitoreo-form" (ngSubmit)="guardarRegistro()">
+          <div class="monitoreo-fila">
+            <div class="monitoreo-campo monitoreo-campo--presion">
+              <span class="monitoreo-etiqueta" id="etiquetaPresionArterial">
+                Presión arterial (mmHg)
+              </span>
+
+              <div class="presion-inputs" role="group" aria-labelledby="etiquetaPresionArterial">
+                <input
+                  class="monitoreo-input"
+                  id="presionSistolica"
+                  name="presionSistolica"
+                  type="number"
+                  min="1"
+                  inputmode="numeric"
+                  placeholder="Sistólica"
+                  aria-label="Presión arterial sistólica"
+                  [(ngModel)]="sistolica"
+                />
+
+                <input
+                  class="monitoreo-input"
+                  id="presionDiastolica"
+                  name="presionDiastolica"
+                  type="number"
+                  min="1"
+                  inputmode="numeric"
+                  placeholder="Diastólica"
+                  aria-label="Presión arterial diastólica"
+                  [(ngModel)]="diastolica"
+                />
+              </div>
+            </div>
+
+            <div class="monitoreo-campo">
+              <label class="monitoreo-etiqueta" for="frecuenciaCardiaca">
+                Frecuencia cardíaca (lpm)
+              </label>
+              <input
+                class="monitoreo-input"
+                id="frecuenciaCardiaca"
+                name="frecuenciaCardiaca"
+                type="number"
+                min="1"
+                inputmode="numeric"
+                placeholder="82"
+                [(ngModel)]="frecuenciaCardiaca"
+              />
+            </div>
+          </div>
+
+          <div class="monitoreo-fila">
+            <div class="monitoreo-campo">
+              <label class="monitoreo-etiqueta" for="frecuenciaRespiratoria">
+                Frecuencia respiratoria (rpm)
+              </label>
+              <input
+                class="monitoreo-input"
+                id="frecuenciaRespiratoria"
+                name="frecuenciaRespiratoria"
+                type="number"
+                min="1"
+                inputmode="numeric"
+                placeholder="18"
+                [(ngModel)]="frecuenciaRespiratoria"
+              />
+            </div>
+
+            <div class="monitoreo-campo">
+              <label class="monitoreo-etiqueta" for="temperatura">Temperatura (°C)</label>
+              <input
+                class="monitoreo-input"
+                id="temperatura"
+                name="temperatura"
+                type="number"
+                min="1"
+                step="0.1"
+                inputmode="decimal"
+                placeholder="36.8"
+                [(ngModel)]="temperatura"
+              />
+            </div>
+
+            <div class="monitoreo-campo">
+              <label class="monitoreo-etiqueta" for="saturacionOxigeno">
+                Saturación de oxígeno (%)
+              </label>
+              <input
+                class="monitoreo-input"
+                id="saturacionOxigeno"
+                name="saturacionOxigeno"
+                type="number"
+                min="1"
+                max="100"
+                inputmode="numeric"
+                placeholder="98"
+                [(ngModel)]="saturacion"
+              />
+            </div>
+          </div>
+
+          <div class="monitoreo-campo monitoreo-campo--observacion">
+            <label class="monitoreo-etiqueta" for="observacionSignos">Observación breve</label>
+            <textarea
+              class="monitoreo-input monitoreo-textarea"
+              id="observacionSignos"
+              name="observacionSignos"
+              placeholder="Observaciones de la toma..."
+              maxlength="500"
+              [(ngModel)]="observacion"
+            ></textarea>
+          </div>
+
+          <div class="acciones-formulario monitoreo-acciones">
+            <button type="button" class="btn _cancelar" (click)="limpiarFormulario()">
+              Cancelar
+            </button>
+            <button type="submit" class="btn _guardar" [disabled]="!puedeGuardar">Guardar</button>
+          </div>
+        </form>
+      </section>
+
+      <!-- Historial de signos vitales -->
+      <section class="panel panel-historial" aria-labelledby="tituloHistorialSignos">
+        <h3 class="panel-titulo monitoreo-titulo" id="tituloHistorialSignos">Historial</h3>
+
+        <div class="registros-lista">
+          @if (sinEpisodioActivo) {
+            <p class="monitoreo-vacio">Abra un episodio para consultar los signos vitales.</p>
+          } @else if (cargandoSignos) {
+            <p class="monitoreo-vacio">Cargando signos vitales...</p>
+          } @else if (errorSignos) {
+            <p class="monitoreo-vacio">No se pudieron cargar los signos vitales.</p>
+          } @else {
+          @for (registro of registros; track registro.id) {
+            <article
+              class="registro-card"
+              [class.registro-card--menu-abierto]="menuRegistroAbierto === registro.id"
+              [class.registro-card--edicion]="registroEnEdicion === registro.id"
+              [attr.data-registro-id]="registro.id"
+            >
+              <header class="registro-encabezado">
+                <button
+                  type="button"
+                  class="registro-menu-trigger"
+                  title="Más opciones"
+                  aria-haspopup="menu"
+                  [attr.aria-label]="'Más opciones del registro de las ' + registro.hora"
+                  [attr.aria-expanded]="menuRegistroAbierto === registro.id"
+                  (click)="alternarMenuRegistro(registro.id)"
+                >
+                  <i class="bi bi-three-dots-vertical" aria-hidden="true"></i>
+                </button>
+              </header>
+
+              <ul class="registro-valores">
+                <li>
+                  <span class="registro-valor_etiqueta">PA (mmHg)</span>
+                  <span class="registro-valor">
+                    {{ registro.sistolica }}/{{ registro.diastolica }}
+                  </span>
+                </li>
+                <li>
+                  <span class="registro-valor_etiqueta">FC (lpm)</span>
+                  <span class="registro-valor">{{ registro.frecuenciaCardiaca }}</span>
+                </li>
+                <li>
+                  <span class="registro-valor_etiqueta">FR (rpm)</span>
+                  <span class="registro-valor">{{ registro.frecuenciaRespiratoria }}</span>
+                </li>
+                <li>
+                  <span class="registro-valor_etiqueta">Temp. (°C)</span>
+                  <span class="registro-valor">{{ registro.temperatura }}</span>
+                </li>
+                <li>
+                  <span class="registro-valor_etiqueta">SpO<sub>2</sub> (%)</span>
+                  <span class="registro-valor">{{ registro.saturacion }}</span>
+                </li>
+              </ul>
+
+              @if (registro.observacion) {
+                <p class="registro-observacion">{{ registro.observacion }}</p>
+              }
+
+              <footer class="registro-meta">
+                <span><i class="bi bi-calendar3" aria-hidden="true"></i>{{ registro.fecha }}</span>
+                <span><i class="bi bi-clock" aria-hidden="true"></i>{{ registro.hora }}</span>
+                <span><i class="bi bi-person" aria-hidden="true"></i>{{ registro.usuario }}</span>
+              </footer>
+
+              <!-- Menú de opciones: flota sobre la tarjeta y no cambia su tamaño -->
+              @if (menuRegistroAbierto === registro.id) {
+                <div
+                  class="registro-menu"
+                  role="menu"
+                  [attr.aria-label]="'Opciones del registro de las ' + registro.hora"
+                >
+                  <div class="registro-menu-opcion">
+                    <span>Editar</span>
+                    <button
+                      type="button"
+                      class="iconEditar"
+                      role="menuitem"
+                      title="Editar registro"
+                      [attr.aria-label]="'Editar el registro de las ' + registro.hora"
+                      (click)="editarRegistro(registro)"
+                    >
+                      <i class="bi bi-pencil-square" aria-hidden="true"></i>
+                    </button>
+                  </div>
+
+                  <div class="registro-menu-opcion">
+                    <span>Eliminar</span>
+                    <button
+                      type="button"
+                      class="iconQuitar"
+                      role="menuitem"
+                      title="Eliminar registro"
+                      [attr.aria-label]="'Eliminar el registro de las ' + registro.hora"
+                      (click)="eliminarRegistro(registro)"
+                    >
+                      <i class="bi bi-trash3" aria-hidden="true"></i>
+                    </button>
+                  </div>
+                </div>
+              }
+            </article>
+          } @empty {
+            <p class="monitoreo-vacio">Aǧn no hay registros de signos vitales para el paciente.</p>
+          }
+          }
+        </div>
+      </section>
+    }
+
+    @case ('hidrico') {
+      <!-- Registro de control hídrico -->
+      <section class="panel panel-formulario" aria-labelledby="tituloControlHidrico">
+        <div class="hidrico-cabecera">
+          <h3 class="panel-titulo monitoreo-titulo" id="tituloControlHidrico">Control hídrico</h3>
+
+          <div class="hidrico-switch" role="group" aria-label="Tipo de registro">
+            <app-tab-switch
+              op1="Ingreso"
+              op2="Egreso"
+              [mostrarActivos]="tipoHidrico === 'ingreso'"
+              (opcionCambiada)="cambiarTipoHidrico($event)"
+            ></app-tab-switch>
+          </div>
+        </div>
+
+        <form class="monitoreo-form hidrico-form" (ngSubmit)="guardarRegistroHidrico()">
+          <div class="hidrico-fila">
+            <div class="monitoreo-campo">
+              <label class="monitoreo-etiqueta" for="viaHidrica">Vía</label>
+              <select
+                class="monitoreo-input"
+                id="viaHidrica"
+                name="viaHidrica"
+                [(ngModel)]="viaHidrica"
+              >
+                <option value="">Seleccionar vía...</option>
+                @for (via of viasHidricas; track via) {
+                  <option [value]="via">{{ via }}</option>
+                }
+              </select>
+            </div>
+
+            <div class="monitoreo-campo">
+              <label class="monitoreo-etiqueta" for="cantidadHidrica">Cantidad (ml)</label>
+              <input
+                class="monitoreo-input"
+                id="cantidadHidrica"
+                name="cantidadHidrica"
+                type="number"
+                min="1"
+                step="1"
+                inputmode="numeric"
+                placeholder="500"
+                [(ngModel)]="cantidadHidrica"
+              />
+            </div>
+          </div>
+
+          <div class="monitoreo-campo hidrico-campo--descripcion">
+            <label class="monitoreo-etiqueta" for="descripcionHidrica">Descripción</label>
+            <input
+              class="monitoreo-input"
+              id="descripcionHidrica"
+              name="descripcionHidrica"
+              type="text"
+              maxlength="200"
+              placeholder="Descripción del registro..."
+              [(ngModel)]="descripcionHidrica"
+            />
+          </div>
+
+          <div class="acciones-formulario monitoreo-acciones">
+            <button type="button" class="btn _cancelar" (click)="limpiarFormularioHidrico()">
+              Cancelar
+            </button>
+            <button type="submit" class="btn _guardar" [disabled]="!puedeGuardarHidrico">
+              Guardar
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <!-- Historial de control hídrico -->
+      <section class="panel panel-historial" aria-label="Historial de control hídrico">
+        <div class="hidrico-totales" aria-label="Totales del control hídrico">
+          <div class="hidrico-total">
+            <span class="hidrico-total_etiqueta">Total ingresos</span>
+            <span class="hidrico-total_valor hidrico-total_valor--ingreso">
+              {{ totalIngresosHidricos }} ml
+            </span>
+          </div>
+
+          <div class="hidrico-total">
+            <span class="hidrico-total_etiqueta">Total egresos</span>
+            <span class="hidrico-total_valor hidrico-total_valor--egreso">
+              {{ totalEgresosHidricos }} ml
+            </span>
+          </div>
+
+          <div class="hidrico-total">
+            <span class="hidrico-total_etiqueta">Balance</span>
+            <span class="hidrico-total_valor hidrico-total_valor--balance">
+              {{ balanceHidrico }} ml
+            </span>
+          </div>
+        </div>
+
+        <div class="hidrico-filtros" role="group" aria-label="Filtrar registros de control hídrico">
+          @for (filtro of filtrosHidricos; track filtro.id) {
+            <button
+              type="button"
+              class="hidrico-filtro"
+              [class.hidrico-filtro--activo]="filtroHidrico === filtro.id"
+              [attr.aria-pressed]="filtroHidrico === filtro.id"
+              (click)="seleccionarFiltroHidrico(filtro.id)"
+            >
+              {{ filtro.etiqueta }}
+            </button>
+          }
+        </div>
+
+        <div class="hidrico-lista">
+          @if (sinEpisodioActivo) {
+            <p class="monitoreo-vacio">Abra un episodio para consultar el control hídrico.</p>
+          } @else if (cargandoHidrico) {
+            <p class="monitoreo-vacio">Cargando control hídrico...</p>
+          } @else if (errorHidrico) {
+            <p class="monitoreo-vacio">No se pudo cargar el control hídrico.</p>
+          } @else {
+          @for (registro of registrosHidricosFiltrados; track registro.id) {
+            <article
+              class="hidrico-card"
+              [class.hidrico-card--ingreso]="registro.tipo === 'ingreso'"
+              [class.hidrico-card--egreso]="registro.tipo === 'egreso'"
+              [class.hidrico-card--eliminado]="registro.eliminado"
+              [class.hidrico-card--menu-abierto]="menuHidricoAbierto === registro.id"
+              [class.hidrico-card--edicion]="registroHidricoEnEdicion === registro.id"
+              [attr.data-registro-id]="registro.id"
+            >
+              <header class="hidrico-encabezado">
+                <div class="hidrico-tipo-grupo">
+                  <span class="hidrico-tipo">
+                    {{ registro.tipo === 'ingreso' ? 'Ingreso' : 'Egreso' }}
+                  </span>
+                  <span class="hidrico-via">{{ registro.via }}</span>
+                  <span class="hidrico-cantidad">{{ registro.cantidad }}<small>ml</small></span>
+                </div>
+
+                <button
+                  type="button"
+                  class="registro-menu-trigger"
+                  title="Más opciones"
+                  aria-haspopup="menu"
+                  [attr.aria-label]="'Más opciones del registro de ' + registro.descripcion"
+                  [attr.aria-expanded]="menuHidricoAbierto === registro.id"
+                  (click)="alternarMenuHidrico(registro.id)"
+                >
+                  <i class="bi bi-three-dots-vertical" aria-hidden="true"></i>
+                </button>
+              </header>
+
+              <p class="hidrico-descripcion">{{ registro.descripcion }}</p>
+
+              <footer class="registro-meta">
+                <span><i class="bi bi-calendar3" aria-hidden="true"></i>{{ registro.fecha }}</span>
+                <span><i class="bi bi-clock" aria-hidden="true"></i>{{ registro.hora }}</span>
+                <span><i class="bi bi-person" aria-hidden="true"></i>{{ registro.usuario }}</span>
+              </footer>
+
+              <!-- Menú de opciones: flota sobre la tarjeta y no cambia su tamaño -->
+              @if (menuHidricoAbierto === registro.id) {
+                <div
+                  class="registro-menu"
+                  role="menu"
+                  [attr.aria-label]="'Opciones del registro de ' + registro.descripcion"
+                >
+                  <div class="registro-menu-opcion">
+                    <span>Editar</span>
+                    <button
+                      type="button"
+                      class="iconEditar"
+                      role="menuitem"
+                      title="Editar registro"
+                      [attr.aria-label]="'Editar el registro de ' + registro.descripcion"
+                      (click)="editarRegistroHidrico(registro)"
+                    >
+                      <i class="bi bi-pencil-square" aria-hidden="true"></i>
+                    </button>
+                  </div>
+
+                  @if (!registro.eliminado) {
+                    <div class="registro-menu-opcion">
+                      <span>Eliminar</span>
+                      <button
+                        type="button"
+                        class="iconQuitar"
+                        role="menuitem"
+                        title="Eliminar registro"
+                        [attr.aria-label]="'Eliminar el registro de ' + registro.descripcion"
+                        (click)="eliminarRegistroHidrico(registro)"
+                      >
+                        <i class="bi bi-trash3" aria-hidden="true"></i>
+                      </button>
+                    </div>
+                  }
+                </div>
+              }
+            </article>
+          } @empty {
+            <p class="monitoreo-vacio">No hay registros para el filtro seleccionado.</p>
+          }
+          }
+        </div>
+      </section>
+    }
+
+    @case ('glucosa') {
+      <!-- Registro de glucosa -->
+      <section class="panel panel-formulario" aria-labelledby="tituloGlucosa">
+        <h3 class="panel-titulo monitoreo-titulo" id="tituloGlucosa">Glucosa</h3>
+
+        <form class="monitoreo-form glucosa-form" (ngSubmit)="guardarRegistroGlucosa()">
+          <div class="glucosa-fila">
+            <div class="monitoreo-campo">
+              <label class="monitoreo-etiqueta" for="valorGlucosa">Glucosa (mg/dL)</label>
+              <input
+                class="monitoreo-input"
+                id="valorGlucosa"
+                name="valorGlucosa"
+                type="number"
+                min="1"
+                step="1"
+                inputmode="numeric"
+                placeholder="95"
+                [(ngModel)]="glucosa"
+              />
+            </div>
+
+            <div class="monitoreo-campo">
+              <label class="monitoreo-etiqueta" for="tipoGlucosa">Tipo de medición</label>
+              <select
+                class="monitoreo-input"
+                id="tipoGlucosa"
+                name="tipoGlucosa"
+                [(ngModel)]="tipoGlucosa"
+              >
+                <option value="">Seleccionar tipo...</option>
+                @for (tipo of tiposGlucosa; track tipo) {
+                  <option [value]="tipo">{{ tipo }}</option>
+                }
+              </select>
+            </div>
+          </div>
+
+          <div class="monitoreo-campo glucosa-campo--observacion">
+            <label class="monitoreo-etiqueta" for="observacionGlucosa">Observación</label>
+            <textarea
+              class="monitoreo-input monitoreo-textarea"
+              id="observacionGlucosa"
+              name="observacionGlucosa"
+              placeholder="Observaciones del registro..."
+              maxlength="500"
+              [(ngModel)]="observacionGlucosa"
+            ></textarea>
+          </div>
+
+          <div class="acciones-formulario monitoreo-acciones">
+            <button type="button" class="btn _cancelar" (click)="limpiarFormularioGlucosa()">
+              Cancelar
+            </button>
+            <button type="submit" class="btn _guardar" [disabled]="!puedeGuardarGlucosa">
+              Guardar
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <!-- Historial de glucosa -->
+      <section class="panel panel-historial" aria-label="Historial de glucosa">
+        <div class="glucosa-lista">
+          @if (sinEpisodioActivo) {
+            <p class="monitoreo-vacio">Abra un episodio para consultar la glucosa.</p>
+          } @else if (cargandoGlucosa) {
+            <p class="monitoreo-vacio">Cargando glucosa...</p>
+          } @else if (errorGlucosa) {
+            <p class="monitoreo-vacio">No se pudo cargar la glucosa.</p>
+          } @else {
+          @for (registro of registrosGlucosa; track registro.id) {
+            <article
+              class="glucosa-card"
+              [class.glucosa-card--menu-abierto]="menuGlucosaAbierto === registro.id"
+              [class.glucosa-card--edicion]="registroGlucosaEnEdicion === registro.id"
+              [attr.data-registro-id]="registro.id"
+            >
+              <header class="glucosa-encabezado">
+                <div class="glucosa-tipo-grupo">
+                  <span class="glucosa-valor">{{ registro.glucosa }}<small>mg/dL</small></span>
+                  <span class="glucosa-tipo">{{ registro.tipo }}</span>
+                </div>
+
+                <button
+                  type="button"
+                  class="registro-menu-trigger"
+                  title="Más opciones"
+                  aria-haspopup="menu"
+                  [attr.aria-label]="'Más opciones del registro de ' + registro.tipo"
+                  [attr.aria-expanded]="menuGlucosaAbierto === registro.id"
+                  (click)="alternarMenuGlucosa(registro.id)"
+                >
+                  <i class="bi bi-three-dots-vertical" aria-hidden="true"></i>
+                </button>
+              </header>
+
+              @if (registro.observacion) {
+                <p class="glucosa-observacion">{{ registro.observacion }}</p>
+              }
+
+              <footer class="registro-meta">
+                <span><i class="bi bi-calendar3" aria-hidden="true"></i>{{ registro.fecha }}</span>
+                <span><i class="bi bi-clock" aria-hidden="true"></i>{{ registro.hora }}</span>
+                <span><i class="bi bi-person" aria-hidden="true"></i>{{ registro.usuario }}</span>
+              </footer>
+
+              <!-- Menú de opciones: flota sobre la tarjeta y no cambia su tamaño -->
+              @if (menuGlucosaAbierto === registro.id) {
+                <div
+                  class="registro-menu"
+                  role="menu"
+                  [attr.aria-label]="'Opciones del registro de ' + registro.tipo"
+                >
+                  <div class="registro-menu-opcion">
+                    <span>Editar</span>
+                    <button
+                      type="button"
+                      class="iconEditar"
+                      role="menuitem"
+                      title="Editar registro"
+                      [attr.aria-label]="'Editar el registro de ' + registro.tipo"
+                      (click)="editarRegistroGlucosa(registro)"
+                    >
+                      <i class="bi bi-pencil-square" aria-hidden="true"></i>
+                    </button>
+                  </div>
+
+                  <div class="registro-menu-opcion">
+                    <span>Eliminar</span>
+                    <button
+                      type="button"
+                      class="iconQuitar"
+                      role="menuitem"
+                      title="Eliminar registro"
+                      [attr.aria-label]="'Eliminar el registro de ' + registro.tipo"
+                      (click)="eliminarRegistroGlucosa(registro)"
+                    >
+                      <i class="bi bi-trash3" aria-hidden="true"></i>
+                    </button>
+                  </div>
+                </div>
+              }
+            </article>
+          } @empty {
+            <p class="monitoreo-vacio">Aǧn no hay registros de glucosa para el paciente.</p>
+          }
+          }
+        </div>
+      </section>
+    }
+  }
+</div>

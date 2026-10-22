@@ -1,0 +1,11 @@
+import { Routes } from '@angular/router';
+import { Monitoreo } from './monitoreo/monitoreo';
+import { Notas } from './notas/notas';
+import { Tratamientos } from './tratamientos/tratamientos';
+
+export const rutasEnfermeria: Routes = [
+  { path: '', redirectTo: 'monitoreo', pathMatch: 'full' },
+  { path: 'monitoreo', component: Monitoreo },
+  { path: 'tratamientos', component: Tratamientos },
+  { path: 'notas', component: Notas },
+];

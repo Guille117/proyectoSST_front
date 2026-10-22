@@ -26,6 +26,26 @@
   grid-column: span 2;
 }
 
+.indicacion-meta-toggle {
+  margin-left: auto;
+}
+
+.indicacion-registros {
+  margin-top: 0.85rem;
+  padding-top: 0.85rem;
+  border-top: 1px dashed #e4ebf5;
+}
+
+.registro-positivo {
+  color: #15803d;
+  font-weight: 700;
+}
+
+.registro-negativo {
+  color: #b42318;
+  font-weight: 700;
+}
+
 @media (max-width: 900px) {
   .indicacion-campo--ancho {
     grid-column: auto;

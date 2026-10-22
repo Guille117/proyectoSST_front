@@ -16,6 +16,7 @@ export interface MedicamentoIndicacionRequest {
   observaciones: string | null;
   episodioId: number;
   usuarioId: number;
+  fechaInicio: string;
 }
 
 /** Indicación de medicamento tal como la devuelve el backend. */
@@ -35,6 +36,7 @@ export interface MedicamentoIndicacionResponse {
   usuarioNombre: string;
   fecha: string;
   estado: EstadoIndicacionMedicamento;
+  fechaInicio: string;
 }
 
 /** Medicamento del catálogo de farmacia que puede indicarse al paciente. */

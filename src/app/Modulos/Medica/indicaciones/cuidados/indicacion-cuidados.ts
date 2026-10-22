@@ -18,6 +18,8 @@ import {
   TipoDuracionCuidadoApi,
 } from './data/cuidadoInterfaz';
 import { IndicacionCuidadoService } from './data/cuidado-service';
+import { RegistrosEnfermeriaService } from '../../../Enfermeria/data/registrosEnfermeriaService';
+import { EjecucionCuidadoResponse } from '../../../Enfermeria/data/registrosEnfermeriaInterfaz';
 
 /* Tipos locales de la vista: traducen el contrato del backend al lenguaje de las tarjetas. */
 /** Colores de acento lateral de la tarjeta del cuidado; describen su estado en el listado. */
@@ -36,11 +38,24 @@ interface CuidadoVista extends DuracionVista {
   /** Frecuencia indicada en horas. */
   frecuencia: number;
   observaciones: string;
+  fechaInicio: string;
   fecha: string;
   hora: string;
   medico: string;
   /** Estado del registro: los eliminados solo se listan con el filtro «Eliminadas». */
   estado: EstadoCuidado;
+}
+
+/** Ejecución de Enfermería lista para la tabla desplegable de la tarjeta. */
+interface EjecucionCuidadoVista {
+  id: number;
+  numero: number;
+  fechaHoraProgramada: string;
+  fechaRegistro: string;
+  estado: string;
+  esPositivo: boolean;
+  usuario: string;
+  observacion: string;
 }
 
 /** Opción del filtro que decide qué cuidados se muestran en el listado. */
@@ -70,10 +85,12 @@ export class IndicacionCuidados implements OnInit, OnDestroy {
   private readonly servicio = inject(IndicacionCuidadoService);
   private readonly authService = inject(AuthService);
   private readonly episodioActivo = inject(EpisodioActivoService);
+  private readonly registrosEnfermeria = inject(RegistrosEnfermeriaService);
   private readonly cdr = inject(ChangeDetectorRef);
 
   private peticionLista?: Subscription;
   private peticionAccion?: Subscription;
+  private peticionRegistros?: Subscription;
   private destruido = false;
 
   // ------------------- ESTADO DE LA VISTA -------------------
@@ -87,6 +104,7 @@ export class IndicacionCuidados implements OnInit, OnDestroy {
   frecuenciaCuidado: number | null = null;
   duracionTipoCuidado: TipoDuracion | '' = '';
   duracionCantidadCuidado: number | null = null;
+  fechaInicioCuidado = this.fechaHoraLocalActual();
   observacionesCuidado = '';
 
   /** Tarjeta del listado con su menú desplegado; null si no hay ninguna. */
@@ -100,6 +118,16 @@ export class IndicacionCuidados implements OnInit, OnDestroy {
 
   /** Cuidados del episodio con el filtro elegido, ya traducidos a la vista. */
   cuidados: CuidadoVista[] = [];
+
+  /** Tarjeta cuyos registros de Enfermería están desplegados; null si ninguno. */
+  registrosCuidadoAbierta: number | null = null;
+
+  /** Ejecuciones de Enfermería cargadas por cuidado. */
+  private readonly registrosPorCuidado = new Map<number, EjecucionCuidadoVista[]>();
+
+  /** Estado de la carga de los registros de la tarjeta desplegada. */
+  cargandoRegistros = false;
+  errorRegistros = false;
 
   /** Estados de las peticiones: bloquean acciones incompatibles y muestran la carga. */
   cargando = false;
@@ -130,6 +158,7 @@ export class IndicacionCuidados implements OnInit, OnDestroy {
     this.destruido = true;
     this.peticionLista?.unsubscribe();
     this.peticionAccion?.unsubscribe();
+    this.peticionRegistros?.unsubscribe();
   }
 
   // ------------------- CONSULTAS PARA LA VISTA -------------------
@@ -152,6 +181,7 @@ export class IndicacionCuidados implements OnInit, OnDestroy {
       this.hayCuidado &&
       !this.faltaDuracionEnDiasCuidado &&
       this.duracionTipoCuidado !== '' &&
+      this.fechaInicioCuidado.trim().length > 0 &&
       this.frecuenciaCuidado !== null &&
       Number.isInteger(this.frecuenciaCuidado) &&
       this.frecuenciaCuidado > 0 &&
@@ -241,7 +271,11 @@ export class IndicacionCuidados implements OnInit, OnDestroy {
 
           const respuestas = grupos
             .flat()
-            .sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
+            .sort(
+              (a, b) =>
+                new Date(b.fechaInicio || b.fecha).getTime() -
+                new Date(a.fechaInicio || a.fecha).getTime(),
+            );
 
           this.cuidados = respuestas.map((respuesta) => this.aVista(respuesta));
 
@@ -267,6 +301,7 @@ export class IndicacionCuidados implements OnInit, OnDestroy {
   seleccionarFiltroCuidado(filtro: FiltroCuidado): void {
     this.filtroCuidado = filtro;
     this.cerrarMenuIndicacion();
+    this.registrosCuidadoAbierta = null;
     this.cargarCuidados();
   }
 
@@ -296,6 +331,84 @@ export class IndicacionCuidados implements OnInit, OnDestroy {
     }
   }
 
+  // ------------------- REGISTROS DE ENFERMERÍA -------------------
+  /** Indica si los registros de Enfermería del cuidado están desplegados. */
+  registrosAbiertos(id: number): boolean {
+    return this.registrosCuidadoAbierta === id;
+  }
+
+  /** Despliega u oculta las ejecuciones de Enfermería del cuidado. */
+  alternarRegistros(cuidado: CuidadoVista): void {
+    if (this.registrosCuidadoAbierta === cuidado.id) {
+      this.registrosCuidadoAbierta = null;
+      return;
+    }
+
+    this.registrosCuidadoAbierta = cuidado.id;
+    this.cargarRegistros(cuidado.id);
+  }
+
+  /** Ejecuciones de Enfermería ya cargadas de un cuidado. */
+  registrosDe(id: number): EjecucionCuidadoVista[] {
+    return this.registrosPorCuidado.get(id) ?? [];
+  }
+
+  /** Consulta las ejecuciones registradas por Enfermería para el cuidado. */
+  private cargarRegistros(cuidadoId: number): void {
+    if (this.destruido) return;
+
+    this.cargandoRegistros = true;
+    this.errorRegistros = false;
+    this.cdr.markForCheck();
+    this.peticionRegistros?.unsubscribe();
+
+    this.peticionRegistros = this.registrosEnfermeria
+      .buscarEjecucionesPorCuidado(cuidadoId)
+      .pipe(
+        finalize(() => {
+          this.cargandoRegistros = false;
+          if (!this.destruido) this.cdr.markForCheck();
+        }),
+      )
+      .subscribe({
+        next: (registros) => {
+          if (this.destruido) return;
+
+          this.registrosPorCuidado.set(
+            cuidadoId,
+            registros.map((registro, indice) => this.aEjecucionVista(registro, indice)),
+          );
+        },
+        error: (error) => {
+          if (this.destruido) return;
+
+          this.errorRegistros = true;
+          this.registrosPorCuidado.delete(cuidadoId);
+          this.mostrarError(error, 'No se pudieron cargar los registros de Enfermería.');
+        },
+      });
+  }
+
+  /** Traduce una ejecución de Enfermería a la fila de la tabla. */
+  private aEjecucionVista(
+    respuesta: EjecucionCuidadoResponse,
+    indice: number,
+  ): EjecucionCuidadoVista {
+    const programada = new Date(respuesta.fechaHoraProgramada);
+    const registrada = new Date(respuesta.fechaRegistro);
+
+    return {
+      id: respuesta.id,
+      numero: indice + 1,
+      fechaHoraProgramada: this.formatearFechaHora(programada),
+      fechaRegistro: this.formatearFechaHora(registrada),
+      estado: respuesta.estado === 'REALIZADO' ? 'Realizado' : 'No realizado',
+      esPositivo: respuesta.estado === 'REALIZADO',
+      usuario: respuesta.usuarioNombre,
+      observacion: respuesta.observacion ?? '',
+    };
+  }
+
   // ------------------- CAPTURA Y EDICIÓN -------------------
   /** Carga en el formulario el cuidado elegido para corregirlo. */
   editarCuidado(cuidado: CuidadoVista): void {
@@ -307,6 +420,7 @@ export class IndicacionCuidados implements OnInit, OnDestroy {
     this.frecuenciaCuidado = cuidado.frecuencia;
     this.duracionTipoCuidado = cuidado.duracionTipo;
     this.duracionCantidadCuidado = cuidado.duracionCantidad;
+    this.fechaInicioCuidado = this.aFechaHoraInput(cuidado.fechaInicio);
     this.observacionesCuidado = cuidado.observaciones;
   }
 
@@ -316,6 +430,7 @@ export class IndicacionCuidados implements OnInit, OnDestroy {
     this.frecuenciaCuidado = null;
     this.duracionTipoCuidado = '';
     this.duracionCantidadCuidado = null;
+    this.fechaInicioCuidado = this.fechaHoraLocalActual();
     this.observacionesCuidado = '';
     this.cuidadoEnEdicion = null;
   }
@@ -371,6 +486,7 @@ export class IndicacionCuidados implements OnInit, OnDestroy {
       observacion: this.observacionesCuidado.trim() || null,
       episodioId,
       usuarioId,
+      fechaInicio: this.fechaInicioCuidado,
     };
 
     this.guardando = true;
@@ -455,7 +571,7 @@ export class IndicacionCuidados implements OnInit, OnDestroy {
   // ------------------- APOYO -------------------
   /** Traduce el cuidado del backend a los datos que pinta la tarjeta. */
   private aVista(respuesta: CuidadoResponse): CuidadoVista {
-    const fecha = new Date(respuesta.fecha);
+    const fechaInicio = new Date(respuesta.fechaInicio || respuesta.fecha);
 
     return {
       id: respuesta.id,
@@ -464,8 +580,9 @@ export class IndicacionCuidados implements OnInit, OnDestroy {
       duracionTipo: this.aDuracionVista(respuesta.tipoDuracion),
       duracionCantidad: respuesta.duracion,
       observaciones: respuesta.observacion ?? '',
-      fecha: this.formatearFecha(fecha),
-      hora: this.formatearHora(fecha),
+      fechaInicio: respuesta.fechaInicio || respuesta.fecha,
+      fecha: this.formatearFecha(fechaInicio),
+      hora: this.formatearHora(fechaInicio),
       medico: respuesta.usuarioNombre,
       estado: this.aEstadoVista(respuesta.estado),
     };
@@ -517,10 +634,34 @@ export class IndicacionCuidados implements OnInit, OnDestroy {
     return `${horas}:${minutos}`;
   }
 
+  /** Fecha y hora en formato dd/MM/yyyy HH:mm. */
+  private formatearFechaHora(fecha: Date): string {
+    return `${this.formatearFecha(fecha)} ${this.formatearHora(fecha)}`;
+  }
+
+  /** Fecha y hora local en el formato del input datetime-local. */
+  private fechaHoraLocalActual(): string {
+    const ahora = new Date();
+    const dosDigitos = (valor: number): string => `${valor}`.padStart(2, '0');
+
+    return `${ahora.getFullYear()}-${dosDigitos(ahora.getMonth() + 1)}-${dosDigitos(
+      ahora.getDate(),
+    )}T${dosDigitos(ahora.getHours())}:${dosDigitos(ahora.getMinutes())}`;
+  }
+
+  /** Recorta la fecha ISO al formato que acepta datetime-local. */
+  private aFechaHoraInput(fecha: string): string {
+    return fecha ? fecha.slice(0, 16) : this.fechaHoraLocalActual();
+  }
+
   /** Avisa del campo que impide guardar cuando el formulario se envía incompleto. */
   private avisarValidacion(): void {
     if (!this.hayCuidado) {
       this.popUps.advertencia('El nombre del cuidado es obligatorio.');
+      return;
+    }
+    if (!this.fechaInicioCuidado.trim()) {
+      this.popUps.advertencia('Seleccione la fecha y hora de inicio.');
       return;
     }
     if (

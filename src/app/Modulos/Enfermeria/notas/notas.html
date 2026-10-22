@@ -1,0 +1,113 @@
+<!-- Notas de enfermería: editor de la nota e historial de notas registradas -->
+<div class="notas">
+  <!-- Editor de la nota -->
+  <section class="panel panel-editor" aria-labelledby="tituloEditorNotas">
+    <h3 class="panel-titulo notas-titulo" id="tituloEditorNotas">{{ tituloEditor }}</h3>
+
+    <form class="nota-form" (ngSubmit)="guardarNota()">
+      <textarea
+        class="nota-textarea"
+        id="textoNota"
+        name="textoNota"
+        aria-label="Nota de enfermería"
+        placeholder="Escriba la nota de enfermería..."
+        maxlength="4000"
+        [(ngModel)]="textoNota"
+      ></textarea>
+
+      <div class="acciones-formulario nota-acciones">
+        <button type="button" class="btn _cancelar" (click)="limpiarFormulario()">
+          Cancelar
+        </button>
+        <button type="submit" class="btn _guardar" [disabled]="!puedeGuardar">Guardar</button>
+      </div>
+    </form>
+  </section>
+
+  <!-- Historial de notas -->
+  <section class="panel panel-historial" aria-labelledby="tituloHistorialNotas">
+    <h3 class="panel-titulo notas-titulo" id="tituloHistorialNotas">Historial de notas</h3>
+
+    <div class="notas-lista">
+      @if (sinEpisodioActivo) {
+        <p class="notas-vacio">Abra un episodio para consultar las notas.</p>
+      } @else if (cargando) {
+        <p class="notas-vacio">Cargando notas...</p>
+      } @else if (errorCarga) {
+        <p class="notas-vacio">No se pudieron cargar las notas.</p>
+      } @else {
+      @for (nota of notas; track nota.id) {
+        <article
+          class="indicacion-card nota-card"
+          [class.nota-card--menu-abierto]="menuNotaAbierta === nota.id"
+          [class.nota-card--edicion]="notaEnEdicion === nota.id"
+          [attr.data-nota-id]="nota.id"
+        >
+          <header class="indicacion-encabezado">
+            <span class="indicacion-nombre">Nota de enfermería</span>
+
+            <button
+              type="button"
+              class="indicacion-menu-trigger"
+              title="Más opciones"
+              aria-haspopup="menu"
+              [attr.aria-label]="'Más opciones para la nota de las ' + nota.hora"
+              [attr.aria-expanded]="menuNotaAbierta === nota.id"
+              (click)="alternarMenuNota(nota.id)"
+            >
+              <i class="bi bi-three-dots-vertical" aria-hidden="true"></i>
+            </button>
+          </header>
+
+          <p class="indicacion-observaciones">{{ nota.texto }}</p>
+
+          <footer class="indicacion-meta">
+            <span><i class="bi bi-calendar3" aria-hidden="true"></i>{{ nota.fecha }}</span>
+            <span><i class="bi bi-clock" aria-hidden="true"></i>{{ nota.hora }}</span>
+            <span><i class="bi bi-person" aria-hidden="true"></i>{{ nota.usuario }}</span>
+          </footer>
+
+          <!-- Menú de opciones de la nota -->
+          @if (menuNotaAbierta === nota.id) {
+            <div
+              class="indicacion-menu"
+              role="menu"
+              [attr.aria-label]="'Opciones para la nota de las ' + nota.hora"
+            >
+              <div class="indicacion-menu-opcion">
+                <span>Editar</span>
+                <button
+                  type="button"
+                  class="iconEditar"
+                  role="menuitem"
+                  title="Editar nota"
+                  [attr.aria-label]="'Editar la nota de las ' + nota.hora"
+                  (click)="editarNota(nota)"
+                >
+                  <i class="bi bi-pencil-square" aria-hidden="true"></i>
+                </button>
+              </div>
+
+              <div class="indicacion-menu-opcion">
+                <span>Eliminar</span>
+                <button
+                  type="button"
+                  class="iconQuitar"
+                  role="menuitem"
+                  title="Eliminar nota"
+                  [attr.aria-label]="'Eliminar la nota de las ' + nota.hora"
+                  (click)="eliminarNota(nota)"
+                >
+                  <i class="bi bi-trash3" aria-hidden="true"></i>
+                </button>
+              </div>
+            </div>
+          }
+        </article>
+      } @empty {
+        <p class="notas-vacio">Aǧn no hay notas registradas.</p>
+      }
+      }
+    </div>
+  </section>
+</div>

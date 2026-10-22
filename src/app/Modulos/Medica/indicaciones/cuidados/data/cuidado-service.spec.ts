@@ -19,6 +19,7 @@ describe('IndicacionCuidadoService', () => {
     observacion: 'Alternar decúbito',
     episodioId: 1,
     usuarioId: 2,
+    fechaInicio: '2026-10-10T09:15:00',
   };
 
   beforeEach(() => {

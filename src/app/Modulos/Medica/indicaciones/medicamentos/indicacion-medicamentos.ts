@@ -22,6 +22,8 @@ import {
   TipoDuracionApi,
 } from './data/medicamentoInterfaz';
 import { MedicamentoIndicacionService } from './data/medicamento-service';
+import { RegistrosEnfermeriaService } from '../../../Enfermeria/data/registrosEnfermeriaService';
+import { AplicacionMedicamentoResponse } from '../../../Enfermeria/data/registrosEnfermeriaInterfaz';
 
 /* Tipos locales de la vista: traducen el contrato del backend al lenguaje de las tarjetas. */
 /** Colores de acento lateral de la tarjeta de la indicación; describen su estado. */
@@ -47,11 +49,24 @@ interface IndicacionMedicamentoVista extends DuracionVista {
   /** Frecuencia indicada; el contrato la exige como entero mayor a 0. */
   frecuencia: number;
   observaciones: string;
+  fechaInicio: string;
   fecha: string;
   hora: string;
   medico: string;
   estado: EstadoIndicacionVista;
   tono: TonoIndicacion;
+}
+
+/** Registro de Enfermería listo para la tabla desplegable de la tarjeta. */
+interface AplicacionMedicamentoVista {
+  id: number;
+  numero: number;
+  fechaHoraProgramada: string;
+  fechaRegistro: string;
+  estado: string;
+  esPositivo: boolean;
+  usuario: string;
+  observacion: string;
 }
 
 /** Opción del filtro que decide qué indicaciones se muestran en el listado. */
@@ -82,12 +97,14 @@ export class IndicacionMedicamentos implements OnInit, OnDestroy {
   private readonly catalogoService = inject(CatalogoService);
   private readonly authService = inject(AuthService);
   private readonly episodioActivo = inject(EpisodioActivoService);
+  private readonly registrosEnfermeria = inject(RegistrosEnfermeriaService);
   private readonly cdr = inject(ChangeDetectorRef);
 
   private peticionLista?: Subscription;
   private peticionCatalogo?: Subscription;
   private peticionUnidades?: Subscription;
   private peticionAccion?: Subscription;
+  private peticionRegistros?: Subscription;
   private destruido = false;
 
   /** Abreviatura de cada unidad de medida del catálogo, por nombre de la unidad. */
@@ -108,6 +125,7 @@ export class IndicacionMedicamentos implements OnInit, OnDestroy {
   frecuencia: number | null = null;
   duracionTipo: TipoDuracion | '' = '';
   duracionCantidad: number | null = null;
+  fechaInicio = this.fechaHoraLocalActual();
   observaciones = '';
 
   /** Medicamentos que devolvió la última búsqueda del catálogo. */
@@ -137,6 +155,16 @@ export class IndicacionMedicamentos implements OnInit, OnDestroy {
 
   /** Indicaciones del episodio con el filtro elegido, ya traducidas a la vista. */
   indicaciones: IndicacionMedicamentoVista[] = [];
+
+  /** Tarjeta cuyos registros de Enfermería están desplegados; null si ninguno. */
+  registrosIndicacionAbierta: number | null = null;
+
+  /** Aplicaciones de Enfermería cargadas por indicación. */
+  private readonly registrosPorIndicacion = new Map<number, AplicacionMedicamentoVista[]>();
+
+  /** Estado de la carga de los registros de la tarjeta desplegada. */
+  cargandoRegistros = false;
+  errorRegistros = false;
 
   /** Estados de las peticiones: bloquean acciones incompatibles y muestran la carga. */
   cargando = false;
@@ -180,6 +208,7 @@ export class IndicacionMedicamentos implements OnInit, OnDestroy {
     this.peticionCatalogo?.unsubscribe();
     this.peticionUnidades?.unsubscribe();
     this.peticionAccion?.unsubscribe();
+    this.peticionRegistros?.unsubscribe();
   }
 
   // ------------------- CONSULTAS PARA LA VISTA -------------------
@@ -208,6 +237,7 @@ export class IndicacionMedicamentos implements OnInit, OnDestroy {
       this.hayMedicamentoSeleccionado &&
       !this.faltaDuracionEnDias &&
       this.duracionTipo !== '' &&
+      this.fechaInicio.trim().length > 0 &&
       this.cantidad !== null &&
       Number.isInteger(this.cantidad) &&
       this.cantidad > 0 &&
@@ -392,7 +422,11 @@ export class IndicacionMedicamentos implements OnInit, OnDestroy {
 
           const respuestas = grupos
             .flat()
-            .sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
+            .sort(
+              (a, b) =>
+                new Date(b.fechaInicio || b.fecha).getTime() -
+                new Date(a.fechaInicio || a.fecha).getTime(),
+            );
 
           this.indicaciones = respuestas.map((respuesta) => this.aVista(respuesta));
         },
@@ -409,6 +443,7 @@ export class IndicacionMedicamentos implements OnInit, OnDestroy {
   seleccionarFiltroIndicacion(filtro: FiltroIndicacion): void {
     this.filtroIndicacion = filtro;
     this.cerrarMenuIndicacion();
+    this.registrosIndicacionAbierta = null;
 
     // La indicación en edición puede quedar fuera del listado que se va a cargar
     if (this.indicacionEnEdicion !== null) {
@@ -533,6 +568,84 @@ export class IndicacionMedicamentos implements OnInit, OnDestroy {
     }
   }
 
+  // ------------------- REGISTROS DE ENFERMERÍA -------------------
+  /** Indica si los registros de Enfermería de la tarjeta están desplegados. */
+  registrosAbiertos(id: number): boolean {
+    return this.registrosIndicacionAbierta === id;
+  }
+
+  /** Despliega u oculta los registros de Enfermería de la indicación. */
+  alternarRegistros(indicacion: IndicacionMedicamentoVista): void {
+    if (this.registrosIndicacionAbierta === indicacion.id) {
+      this.registrosIndicacionAbierta = null;
+      return;
+    }
+
+    this.registrosIndicacionAbierta = indicacion.id;
+    this.cargarRegistros(indicacion.id);
+  }
+
+  /** Registros de Enfermería ya cargados de una indicación. */
+  registrosDe(id: number): AplicacionMedicamentoVista[] {
+    return this.registrosPorIndicacion.get(id) ?? [];
+  }
+
+  /** Consulta las aplicaciones registradas por Enfermería para la indicación. */
+  private cargarRegistros(indicacionId: number): void {
+    if (this.destruido) return;
+
+    this.cargandoRegistros = true;
+    this.errorRegistros = false;
+    this.cdr.markForCheck();
+    this.peticionRegistros?.unsubscribe();
+
+    this.peticionRegistros = this.registrosEnfermeria
+      .buscarAplicacionesPorIndicacion(indicacionId)
+      .pipe(
+        finalize(() => {
+          this.cargandoRegistros = false;
+          if (!this.destruido) this.cdr.markForCheck();
+        }),
+      )
+      .subscribe({
+        next: (registros) => {
+          if (this.destruido) return;
+
+          this.registrosPorIndicacion.set(
+            indicacionId,
+            registros.map((registro, indice) => this.aAplicacionVista(registro, indice)),
+          );
+        },
+        error: (error) => {
+          if (this.destruido) return;
+
+          this.errorRegistros = true;
+          this.registrosPorIndicacion.delete(indicacionId);
+          this.mostrarError(error, 'No se pudieron cargar los registros de Enfermería.');
+        },
+      });
+  }
+
+  /** Traduce una aplicación de Enfermería a la fila de la tabla. */
+  private aAplicacionVista(
+    respuesta: AplicacionMedicamentoResponse,
+    indice: number,
+  ): AplicacionMedicamentoVista {
+    const programada = new Date(respuesta.fechaHoraProgramada);
+    const registrada = new Date(respuesta.fechaRegistro);
+
+    return {
+      id: respuesta.id,
+      numero: indice + 1,
+      fechaHoraProgramada: this.formatearFechaHora(programada),
+      fechaRegistro: this.formatearFechaHora(registrada),
+      estado: respuesta.estado === 'ADMINISTRADO' ? 'Administrado' : 'No administrado',
+      esPositivo: respuesta.estado === 'ADMINISTRADO',
+      usuario: respuesta.usuarioNombre,
+      observacion: respuesta.observacion ?? '',
+    };
+  }
+
   // ------------------- CAPTURA Y EDICIÓN -------------------
   /** Carga en el formulario la indicación elegida para corregirla. */
   editarIndicacion(indicacion: IndicacionMedicamentoVista): void {
@@ -556,6 +669,7 @@ export class IndicacionMedicamentos implements OnInit, OnDestroy {
     this.frecuencia = indicacion.frecuencia;
     this.duracionTipo = indicacion.duracionTipo;
     this.duracionCantidad = indicacion.duracionCantidad;
+    this.fechaInicio = this.aFechaHoraInput(indicacion.fechaInicio);
     this.observaciones = indicacion.observaciones;
     this.busquedaMedicamentoRealizada = false;
     this.medicamentosEncontrados = [];
@@ -571,6 +685,7 @@ export class IndicacionMedicamentos implements OnInit, OnDestroy {
     this.frecuencia = null;
     this.duracionTipo = '';
     this.duracionCantidad = null;
+    this.fechaInicio = this.fechaHoraLocalActual();
     this.observaciones = '';
     this.indicacionEnEdicion = null;
     this.cerrarResultadosMedicamento();
@@ -633,6 +748,7 @@ export class IndicacionMedicamentos implements OnInit, OnDestroy {
       observaciones: this.observaciones.trim() || null,
       episodioId,
       usuarioId,
+      fechaInicio: this.fechaInicio,
     };
 
     this.guardando = true;
@@ -864,7 +980,7 @@ export class IndicacionMedicamentos implements OnInit, OnDestroy {
 
   /** Traduce la indicación del backend a los datos que pinta la tarjeta. */
   private aVista(respuesta: MedicamentoIndicacionResponse): IndicacionMedicamentoVista {
-    const fecha = new Date(respuesta.fecha);
+    const fechaInicio = new Date(respuesta.fechaInicio || respuesta.fecha);
 
     return {
       id: respuesta.id,
@@ -877,8 +993,9 @@ export class IndicacionMedicamentos implements OnInit, OnDestroy {
       duracionTipo: this.aDuracionVista(respuesta.tipoDuracion),
       duracionCantidad: respuesta.duracion,
       observaciones: respuesta.observaciones ?? '',
-      fecha: this.formatearFecha(fecha),
-      hora: this.formatearHora(fecha),
+      fechaInicio: respuesta.fechaInicio || respuesta.fecha,
+      fecha: this.formatearFecha(fechaInicio),
+      hora: this.formatearHora(fechaInicio),
       medico: respuesta.usuarioNombre,
       estado: this.aEstadoVista(respuesta.estado),
       tono: this.tonoDe(respuesta.estado),
@@ -948,12 +1065,36 @@ export class IndicacionMedicamentos implements OnInit, OnDestroy {
     return `${horas}:${minutos}`;
   }
 
+  /** Fecha y hora en formato dd/MM/yyyy HH:mm. */
+  private formatearFechaHora(fecha: Date): string {
+    return `${this.formatearFecha(fecha)} ${this.formatearHora(fecha)}`;
+  }
+
+  /** Fecha y hora local en el formato del input datetime-local. */
+  private fechaHoraLocalActual(): string {
+    const ahora = new Date();
+    const dosDigitos = (valor: number): string => `${valor}`.padStart(2, '0');
+
+    return `${ahora.getFullYear()}-${dosDigitos(ahora.getMonth() + 1)}-${dosDigitos(
+      ahora.getDate(),
+    )}T${dosDigitos(ahora.getHours())}:${dosDigitos(ahora.getMinutes())}`;
+  }
+
+  /** Recorta la fecha ISO al formato que acepta datetime-local. */
+  private aFechaHoraInput(fecha: string): string {
+    return fecha ? fecha.slice(0, 16) : this.fechaHoraLocalActual();
+  }
+
   /** Avisa del campo que impide guardar cuando el formulario se envía incompleto. */
   private avisarValidacion(): void {
     if (!this.hayMedicamentoSeleccionado) {
       this.popUps.advertencia(
         'Busque y seleccione un medicamento del catálogo o indique uno no registrado.',
       );
+      return;
+    }
+    if (!this.fechaInicio.trim()) {
+      this.popUps.advertencia('Seleccione la fecha y hora de inicio.');
       return;
     }
     if (this.cantidad === null || !Number.isInteger(this.cantidad) || this.cantidad <= 0) {

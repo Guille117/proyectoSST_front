@@ -23,6 +23,7 @@ describe('MedicamentoIndicacionService', () => {
     observaciones: 'Observación',
     episodioId: 1,
     usuarioId: 2,
+    fechaInicio: '2026-10-16T11:00:00',
   };
 
   beforeEach(() => {

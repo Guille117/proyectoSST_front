@@ -11,6 +11,7 @@ import { EpisodioActivoService } from '../../data/episodio-activo-service';
 import { AuthService } from '../../../Auth/data/auth-service';
 import { CatalogoService } from '../../../Catalogos/data/serviceCatalogo';
 import { PopUps } from '../../../../shared/popUps/popUpsService';
+import { RegistrosEnfermeriaService } from '../../../Enfermeria/data/registrosEnfermeriaService';
 
 describe('IndicacionMedicamentos', () => {
   let component: IndicacionMedicamentos;
@@ -49,6 +50,7 @@ describe('IndicacionMedicamentos', () => {
     usuarioNombre: 'Carlos Méndez',
     fecha: '2026-10-16T11:00:00',
     estado: 'ACTIVO',
+    fechaInicio: '2026-10-16T11:00:00',
     ...cambios,
   });
 
@@ -77,6 +79,9 @@ describe('IndicacionMedicamentos', () => {
   const catalogoService = {
     listarUnidadMedida: vi.fn(),
   };
+  const registrosEnfermeria = {
+    buscarAplicacionesPorIndicacion: vi.fn(),
+  };
 
   beforeEach(async () => {
     vi.resetAllMocks();
@@ -87,6 +92,7 @@ describe('IndicacionMedicamentos', () => {
     servicio.cambiarEstado.mockReturnValue(of(indicacion({ estado: 'FINALIZADO' })));
     servicio.eliminarIndicacion.mockReturnValue(of(void 0));
     catalogoService.listarUnidadMedida.mockReturnValue(of([]));
+    registrosEnfermeria.buscarAplicacionesPorIndicacion.mockReturnValue(of([]));
     popUps.confirmarToast.mockResolvedValue(true);
     episodio.obtener.mockReturnValue(1);
 
@@ -98,6 +104,7 @@ describe('IndicacionMedicamentos', () => {
         { provide: AuthService, useValue: auth },
         { provide: EpisodioActivoService, useValue: episodio },
         { provide: PopUps, useValue: popUps },
+        { provide: RegistrosEnfermeriaService, useValue: registrosEnfermeria },
       ],
     }).compileComponents();
 
@@ -150,6 +157,7 @@ describe('IndicacionMedicamentos', () => {
     await escribir('#frecuenciaIndicada', '8');
     await elegir('#duracionTipoIndicada', 'dias');
     await escribir('#duracionCantidadIndicada', '7');
+    await escribir('#fechaInicioIndicada', '2026-10-16T11:00');
     await escribir('#observacionesIndicadas', 'Observación');
   };
 
@@ -212,6 +220,7 @@ describe('IndicacionMedicamentos', () => {
       observaciones: 'Observación',
       episodioId: 1,
       usuarioId: 2,
+      fechaInicio: '2026-10-16T11:00',
     });
     expect(popUps.exito).toHaveBeenCalled();
     expect(servicio.getIndicacionesPorEpisodio).toHaveBeenCalled();
@@ -361,6 +370,7 @@ describe('IndicacionMedicamentos', () => {
     await escribir('#frecuenciaIndicada', '8');
     await elegir('#duracionTipoIndicada', 'dias');
     await escribir('#duracionCantidadIndicada', '7');
+    await escribir('#fechaInicioIndicada', '2026-10-16T11:00');
     botonGuardar().click();
     await fixture.whenStable();
 
@@ -385,6 +395,7 @@ describe('IndicacionMedicamentos', () => {
     await escribir('#frecuenciaIndicada', '8');
     await elegir('#duracionTipoIndicada', 'dias');
     await escribir('#duracionCantidadIndicada', '7');
+    await escribir('#fechaInicioIndicada', '2026-10-16T11:00');
     botonGuardar().click();
     await fixture.whenStable();
 
@@ -399,6 +410,7 @@ describe('IndicacionMedicamentos', () => {
       observaciones: null,
       episodioId: 1,
       usuarioId: 2,
+      fechaInicio: '2026-10-16T11:00',
     });
   });
 
@@ -478,6 +490,7 @@ describe('IndicacionMedicamentos', () => {
       observaciones: 'Observación actualizada',
       episodioId: 1,
       usuarioId: 2,
+      fechaInicio: '2026-10-16T11:00',
     });
     expect(popUps.exito).toHaveBeenCalledWith('Indicación actualizada exitosamente.');
   });
@@ -595,6 +608,35 @@ describe('IndicacionMedicamentos', () => {
     expect(popUps.error).toHaveBeenCalledWith(
       'Error de comunicación. El servidor no respondió dentro del tiempo esperado.',
     );
+  });
+
+  it('carga los registros de enfermería al desplegar la tarjeta', async () => {
+    registrosEnfermeria.buscarAplicacionesPorIndicacion.mockReturnValue(
+      of([
+        {
+          id: 1,
+          indicacionMedicamentoId: 30,
+          fechaHoraProgramada: '2026-10-16T08:00:00',
+          estado: 'ADMINISTRADO',
+          cantidad: 2,
+          observacion: 'Administrado sin novedad.',
+          usuarioId: 3,
+          usuarioNombre: 'Enf. María López',
+          fechaRegistro: '2026-10-16T08:05:00',
+        },
+      ]),
+    );
+    await cargarListado([indicacion()]);
+
+    elemento<HTMLButtonElement>('.indicacion-meta-toggle').click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(registrosEnfermeria.buscarAplicacionesPorIndicacion).toHaveBeenCalledWith(30);
+    expect(elemento<HTMLElement>('.indicacion-registros')?.textContent).toContain(
+      'Enf. María López',
+    );
+    expect(elemento<HTMLElement>('.indicacion-registros')?.textContent).toContain('Administrado');
   });
 
   it('avisa cuando no hay un episodio activo', async () => {

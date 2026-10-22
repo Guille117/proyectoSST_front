@@ -13,6 +13,7 @@ import { EpisodioActivoService } from '../data/episodio-activo-service';
 import { AuthService } from '../../Auth/data/auth-service';
 import { CatalogoService } from '../../Catalogos/data/serviceCatalogo';
 import { PopUps } from '../../../shared/popUps/popUpsService';
+import { RegistrosEnfermeriaService } from '../../Enfermeria/data/registrosEnfermeriaService';
 import { IndicacionCuidadoService } from './cuidados/data/cuidado-service';
 import {
   CuidadoRequest,
@@ -62,6 +63,10 @@ describe('Indicaciones', () => {
     actualizarCuidado: vi.fn(),
     eliminarCuidado: vi.fn(),
   };
+  const registrosEnfermeria = {
+    buscarEjecucionesPorCuidado: vi.fn(),
+    buscarAplicacionesPorIndicacion: vi.fn(),
+  };
 
   const cuidado = (
     id: number,
@@ -80,6 +85,7 @@ describe('Indicaciones', () => {
     usuarioNombre: 'Dr. Gómez',
     fecha: '2026-10-10T09:15:00',
     estado,
+    fechaInicio: '2026-10-10T09:15:00',
     ...overrides,
   });
 
@@ -117,12 +123,15 @@ describe('Indicaciones', () => {
       (_episodioId: number, estado: EstadoCuidadoApi) =>
         of(cuidadosMock.filter((registro) => registro.estado === estado)),
     );
+    registrosEnfermeria.buscarEjecucionesPorCuidado.mockReturnValue(of([]));
+    registrosEnfermeria.buscarAplicacionesPorIndicacion.mockReturnValue(of([]));
     cuidadoService.crearCuidado.mockImplementation((request: CuidadoRequest) => {
       const nuevo: CuidadoResponse = {
         ...request,
         id: 6,
         usuarioNombre: 'Dr. Gómez',
         fecha: '2026-10-10T08:40:00',
+        fechaInicio: '2026-10-10T08:40:00',
         estado: 'EN_PROCESO',
       };
       cuidadosMock = [...cuidadosMock, nuevo];
@@ -180,6 +189,7 @@ describe('Indicaciones', () => {
     usuarioNombre: 'Carlos Méndez',
     fecha: '2026-10-16T11:00:00',
     estado,
+    fechaInicio: '2026-10-16T11:00:00',
   });
 
   beforeEach(async () => {
@@ -216,6 +226,7 @@ describe('Indicaciones', () => {
         { provide: CatalogoService, useValue: catalogoService },
         { provide: IndicacionExamenService, useValue: examenService },
         { provide: IndicacionCuidadoService, useValue: cuidadoService },
+        { provide: RegistrosEnfermeriaService, useValue: registrosEnfermeria },
         { provide: ModalService, useValue: modalService },
         { provide: AuthService, useValue: authService },
         { provide: EpisodioActivoService, useValue: episodioActivo },
@@ -270,7 +281,7 @@ describe('Indicaciones', () => {
 
   // Menú de opciones de cada tarjeta (mismo patrón del listado de camas)
   const disparadoresMenu = (): NodeListOf<HTMLButtonElement> =>
-    elementos<HTMLButtonElement>('.indicacion-menu-trigger');
+    elementos<HTMLButtonElement>('.indicacion-encabezado .indicacion-menu-trigger');
 
   const abrirMenu = async (indice: number): Promise<void> => {
     disparadoresMenu()[indice].click();
@@ -436,21 +447,23 @@ describe('Indicaciones', () => {
     );
     const obligatorio = elemento<HTMLElement>('.indicacion-obligatorio');
 
-    expect(etiquetas.length).toBe(5);
+    expect(etiquetas.length).toBe(6);
     expect(etiquetas[0]).toContain('Nombre de cuidado');
     expect(etiquetas[1]).toContain('Frecuencia (horas)');
-    expect(etiquetas[2]).toBe('Duración');
-    expect(etiquetas[3]).toContain('Tipo de duración');
-    expect(etiquetas[4]).toBe('Observaciones');
+    expect(etiquetas[2]).toContain('Fecha y hora de inicio');
+    expect(etiquetas[3]).toContain('Duraci');
+    expect(etiquetas[4]).toContain('Tipo de duraci');
+    expect(etiquetas[5]).toBe('Observaciones');
 
-    // Los cuatro campos del cuidado están en el formulario
+    // Los cinco campos del cuidado estǭn en el formulario
     expect(elemento('#nombreCuidado')).not.toBeNull();
     expect(elemento('#frecuenciaCuidado')).not.toBeNull();
+    expect(elemento('#fechaInicioCuidado')).not.toBeNull();
     expect(elemento('#duracionCuidado')).not.toBeNull();
     expect(elemento('#observacionesCuidado')).not.toBeNull();
 
-    // El nombre, la frecuencia y el tipo de duración son obligatorios
-    expect(elementos<HTMLElement>('.indicacion-obligatorio').length).toBe(3);
+    // El nombre, la frecuencia, la fecha de inicio y el tipo de duraci��n son obligatorios
+    expect(elementos<HTMLElement>('.indicacion-obligatorio').length).toBe(4);
     expect(obligatorio.closest('label')?.textContent).toContain('Nombre de cuidado');
     expect(botonGuardar().disabled).toBe(true);
   });
@@ -482,6 +495,7 @@ describe('Indicaciones', () => {
       observacion: 'Sin residuos y en porciones pequeñas.',
       episodioId: 1,
       usuarioId: 2,
+      fechaInicio: expect.any(String),
     });
     expect(tarjetas().length).toBe(5);
     expect(tarjetas()[4].textContent).toContain('Dieta blanda');
@@ -540,6 +554,7 @@ describe('Indicaciones', () => {
       observacion: null,
       episodioId: 1,
       usuarioId: 2,
+      fechaInicio: expect.any(String),
     });
     expect(insignias(4)).toEqual(['Realizar una vez']);
   });
@@ -726,11 +741,12 @@ describe('Indicaciones', () => {
       'bi bi-calendar3',
       'bi bi-clock',
       'bi bi-person',
+      'bi bi-chevron-down',
     ]);
 
     // Cada tarjeta de cuidado lleva el menú de opciones de las otras tarjetas del listado
     expect(disparadoresMenu().length).toBe(4);
-    expect(tarjeta.querySelector('.indicacion-menu-trigger')).not.toBeNull();
+    expect(tarjeta.querySelector('.indicacion-encabezado .indicacion-menu-trigger')).not.toBeNull();
 
     // El tipo de duración distinto de «días» se muestra con su nombre
     await elegirFiltro('Eliminadas');
@@ -789,6 +805,7 @@ describe('Indicaciones', () => {
       observacion: 'Alternar decúbito lateral y evitar apoyar la zona de la úlcera.',
       episodioId: 1,
       usuarioId: 2,
+      fechaInicio: expect.any(String),
     });
 
     // Los cambios se guardan en la misma tarjeta, que conserva su fecha, hora, médico y estado
@@ -973,7 +990,7 @@ describe('Indicaciones', () => {
     await fixture.whenStable();
 
     expect(elemento('.indicacion-form')).toBeNull();
-    expect(elemento('.indicacion-menu-trigger')).toBeNull();
+    expect(elemento('.indicacion-encabezado .indicacion-menu-trigger')).toBeNull();
   });
 });
 

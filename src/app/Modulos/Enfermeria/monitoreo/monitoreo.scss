@@ -1,0 +1,834 @@
+/* ==================== CONTENEDOR (SECCIONES / FORMULARIO / HISTORIAL) ==================== */
+/* Misma rejilla del submenú de indicaciones médicas: rail de secciones, registro de la sección
+   activa e historial de las tomas. Cada pista flexible lleva mínimo 0 para que la rejilla pueda
+   encogerse sin desbordar. */
+.monitoreo {
+  /* Ancho del bloque de datos del paciente: lo comparten el propio bloque y su pestaña */
+  --ficha-ancho: 340px;
+
+  display: grid;
+  grid-template-columns: auto minmax(0, 1.1fr) minmax(0, 0.9fr);
+  grid-template-areas: 'secciones formulario historial';
+  gap: 1.25rem;
+  box-sizing: border-box;
+  width: 100%;
+  padding: 1.5rem;
+
+  /* Alto que ocupan la ventana y el marco de la pantalla fuera del historial y que hay que descontar
+     del área bajo la barra superior (--heightNavBar) para que su listado nunca pase del borde
+     inferior: relleno del área de trabajo, título del módulo, submenú, relleno de la pantalla y un
+     margen de seguridad para la barra de desplazamiento. */
+  --alto-fuera-de-monitoreo: 16rem;
+}
+
+/* Ficha de los datos del paciente abierta: la rejilla le reserva a la derecha el ancho del bloque
+   compartido, que queda pegado al borde de la pantalla sin cubrir los paneles. */
+.monitoreo--ficha-abierta {
+  padding-right: calc(var(--ficha-ancho) + 1.5rem);
+}
+
+/* ==================== PANELES ==================== */
+/* Tarjeta blanca base de los paneles, con el mismo lenguaje visual de evaluación clínica e
+   indicaciones médicas. */
+.panel {
+  padding: 1.5rem;
+  border: 1px solid #dfe7f3;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
+}
+
+.panel-titulo {
+  margin: 0 0 1rem;
+  color: var(--azulPrincipal);
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+
+.monitoreo-titulo {
+  margin-bottom: 0.35rem;
+  font-size: 1.5rem;
+}
+
+/* El rail es solo el contenedor de las tarjetas: sin fondo ni borde propios, para que las tarjetas
+   blancas se apoyen sobre el fondo de la página. Sin relleno izquierdo para que el título y las
+   tarjetas queden arrimados al borde del área de trabajo. */
+.panel-secciones {
+  grid-area: secciones;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  padding-left: 0;
+}
+
+/* El rail muestra solo el título de cada sección: el icono queda alineado con él */
+.panel-secciones .tarjeta_titulo {
+  margin-bottom: 0;
+}
+
+/* El formulario se ancla al alto de su propio contenido para no heredar el alto del historial */
+.panel-formulario {
+  grid-area: formulario;
+  align-self: start;
+}
+
+/* El historial reparte el alto disponible entre su título y las tarjetas, que son lo único que se
+   desplaza; el título queda fijo en la parte superior. */
+.panel-historial {
+  grid-area: historial;
+  display: flex;
+  flex-direction: column;
+  max-height: calc(var(--heightNavBar) - var(--alto-fuera-de-monitoreo));
+  overflow: hidden;
+}
+
+/* ==================== FORMULARIO DE SIGNOS VITALES ==================== */
+.monitoreo-form {
+  display: flex;
+  flex-direction: column;
+  margin-top: 1.25rem;
+}
+
+.monitoreo-fila {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.25rem;
+  align-items: start;
+  margin-top: 1.25rem;
+
+  > * {
+    min-width: 0;
+  }
+}
+
+.monitoreo-campo {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+/* La presión arterial ocupa dos columnas para que sus dos inputs quepan lado a lado */
+.monitoreo-campo--presion {
+  grid-column: span 2;
+}
+
+.monitoreo-campo--observacion {
+  margin-top: 1.25rem;
+}
+
+.monitoreo-etiqueta {
+  color: #101828;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.presion-inputs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+
+/* Campo de texto y numérico: mismo lenguaje visual de los formularios del módulo */
+.monitoreo-input {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 45px;
+  padding: 10px 12px;
+  border: 1px solid #cfdcee;
+  border-radius: 12px;
+  background: #fff;
+  color: #21324d;
+  font-family: inherit;
+  font-size: 1rem;
+  outline: none;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+
+  &:focus,
+  &:focus-visible {
+    border-color: var(--azulSecundario);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.14);
+  }
+}
+
+.monitoreo-textarea {
+  min-height: 96px;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+select.monitoreo-input {
+  cursor: pointer;
+}
+
+/* Separación y línea divisoria de la fila de acciones compartida (.acciones-formulario) */
+.monitoreo-acciones {
+  gap: 1rem;
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid #e4ebf5;
+}
+
+/* ==================== HISTORIAL DE SIGNOS VITALES ==================== */
+.registros-lista {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding-right: 0.4rem;
+  overflow-y: auto;
+}
+
+/* Tarjeta de la toma: mismo lenguaje de las tarjetas de indicaciones médicas, con un acento azul a
+   la izquierda. */
+.registro-card {
+  position: relative;
+  margin-bottom: 1rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid #dfe7f3;
+  border-left: 4px solid var(--azulSecundario);
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+
+  /* Con el menú desplegado la tarjeta pasa al frente para dibujarse sobre las siguientes */
+  &.registro-card--menu-abierto {
+    z-index: 2;
+  }
+
+  /* Tarjeta cuyos datos están cargados en el formulario para corregirlos */
+  &.registro-card--edicion {
+    border-left-color: #f59e0b;
+    background: #fffbf2;
+  }
+}
+
+.registro-encabezado {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+/* Valores de la toma: una sola fila con un segmento por constante, separados por líneas
+   verticales. */
+.registro-valores {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    display: flex;
+    flex: 1 1 72px;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    padding: 0 0.7rem;
+    text-align: center;
+
+    &:first-child {
+      padding-left: 0;
+    }
+
+    &:last-child {
+      padding-right: 0;
+    }
+
+    & + li {
+      border-left: 1px solid #e4ebf5;
+    }
+  }
+}
+
+.registro-valor_etiqueta {
+  color: #5b6b85;
+  font-size: 0.9rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.registro-valor {
+  color: var(--azulPrincipal);
+  font-size: 1.1rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* Subíndice de la saturación (SpO₂) sin aumentar el alto de la línea */
+.registro-valor_etiqueta sub {
+  font-size: 0.7em;
+  line-height: 0;
+}
+
+.registro-observacion {
+  margin: 0.75rem 0 0;
+  color: #1f2f45;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+/* Pie de la tarjeta: fecha, hora y nombre de quien tomó los signos */
+.registro-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 1rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid #e4ebf5;
+  color: #33445e;
+  font-size: 0.95rem;
+
+  span {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  i {
+    color: var(--azulSecundario);
+    font-size: 1.05rem;
+  }
+}
+
+/* Estado vacío del historial */
+.monitoreo-vacio {
+  margin: 0;
+  padding: 1.25rem;
+  border: 1px dashed #cfdcee;
+  border-radius: 14px;
+  color: #5b6b85;
+  font-size: 0.95rem;
+  text-align: center;
+}
+
+/* ==================== MENÚ DE OPCIONES DE LA TARJETA ==================== */
+/* Botón de tres puntos: mismo tratamiento del botón equivalente de las indicaciones médicas. */
+.registro-menu-trigger {
+  display: grid;
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  place-items: center;
+  color: #52627f;
+  background: transparent;
+  border: 0;
+  border-radius: 50%;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    color 0.2s ease,
+    background 0.2s ease;
+
+  &:hover,
+  &:focus-visible {
+    color: #1e293b;
+    background: #eef4ff;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--azulSecundario);
+    outline-offset: 2px;
+  }
+}
+
+/* El menú flota sobre la tarjeta: al no ocupar espacio en el flujo, desplegarlo y replegarlo no
+   redimensiona la tarjeta ni desplaza el resto del listado */
+.registro-menu {
+  position: absolute;
+  z-index: 3;
+  top: 2.7rem;
+  right: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-sizing: border-box;
+  width: 162px;
+  max-width: calc(100% - 2rem);
+  padding: 10px 12px;
+  background: #fff;
+  border: 1px solid #dfe7f3;
+  border-radius: 12px;
+  box-shadow: 0 12px 26px rgba(15, 23, 42, 0.14);
+
+  /* Botón de editar: el ámbar viene de los estilos globales de src/styles/botonesStyle.scss */
+  .iconEditar {
+    width: 34px;
+    height: 34px;
+    box-shadow: none;
+    font-size: 17px;
+  }
+}
+
+/* Cada opción alinea su nombre a la izquierda y su botón a la derecha */
+.registro-menu-opcion {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  color: #475569;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+/* Botón de eliminar: mismo tratamiento del botón equivalente de las indicaciones médicas */
+.iconQuitar {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  place-items: center;
+  color: #ed1a0f;
+  background: rgba(255, 255, 255, 0.62);
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  border-radius: 50%;
+  box-shadow: 0 2px 6px rgba(26, 37, 53, 0.12);
+  font-size: 15px;
+  cursor: pointer;
+  transition:
+    color 0.2s ease,
+    background 0.2s ease,
+    transform 0.2s ease;
+
+  &:hover {
+    color: #fff;
+    background: #ed1a0f;
+    transform: translateY(-1px);
+  }
+
+  &:focus-visible {
+    outline: 2px solid #ed1a0f;
+    outline-offset: 2px;
+  }
+}
+
+/* ==================== CONTROL HÍDRICO ==================== */
+.hidrico-cabecera {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+}
+
+.hidrico-cabecera .panel-titulo {
+  margin-bottom: 0;
+}
+
+.hidrico-switch {
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
+.hidrico-switch app-tab-switch {
+  display: block;
+  width: max-content;
+  max-width: 100%;
+}
+
+.hidrico-fila {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  align-items: start;
+  margin-top: 1.25rem;
+
+  > * {
+    min-width: 0;
+  }
+}
+
+.hidrico-campo--descripcion {
+  margin-top: 1.25rem;
+}
+
+/* Totales del control hídrico: ingresos, egresos y balance en una sola fila */
+.hidrico-totales {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 0 0 1rem;
+  padding: 0.85rem 0;
+  border-top: 1px solid #e4ebf5;
+  border-bottom: 1px solid #e4ebf5;
+}
+
+.hidrico-total {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  padding: 0 0.6rem;
+  text-align: center;
+
+  & + & {
+    border-left: 1px solid #e4ebf5;
+  }
+}
+
+.hidrico-total_etiqueta {
+  color: #5b6b85;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.hidrico-total_valor {
+  color: var(--azulPrincipal);
+  font-size: 1.05rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.hidrico-total_valor--ingreso {
+  color: #0d6efd;
+}
+
+.hidrico-total_valor--egreso {
+  color: #ed1a0f;
+}
+
+.hidrico-total_valor--balance {
+  color: #16a34a;
+}
+
+/* Filtros del historial: chips de selección en píldora */
+.hidrico-filtros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 1rem;
+}
+
+.hidrico-filtro {
+  padding: 8px 15px;
+  border: 1px solid #dbe4f0;
+  border-radius: 999px;
+  background: #fff;
+  color: #3f4d66;
+  font-family: inherit;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition:
+    border-color 0.2s ease,
+    background-color 0.2s ease,
+    color 0.2s ease;
+
+  &:hover {
+    border-color: #b9c8e2;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--azulSecundario);
+    outline-offset: 2px;
+  }
+}
+
+.hidrico-filtro--activo {
+  border-color: var(--azulSecundario);
+  background: var(--azulSecundario);
+  color: #fff;
+  font-weight: 600;
+}
+
+/* Solo las tarjetas se desplazan; totales, filtros y título quedan fijos */
+.hidrico-lista {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding-right: 0.4rem;
+  overflow-y: auto;
+}
+
+/* Tarjeta del registro hídrico: acento azul para ingresos y rojo para egresos */
+.hidrico-card {
+  position: relative;
+  margin-bottom: 1rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid #dfe7f3;
+  border-left: 4px solid #dfe7f3;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+
+  &.hidrico-card--ingreso {
+    border-left-color: #0d6efd;
+    background: #f5f9ff;
+  }
+
+  &.hidrico-card--egreso {
+    border-left-color: #ed1a0f;
+    background: #fdf5f5;
+  }
+
+  &.hidrico-card--eliminado {
+    border-left-color: #b6c2d4;
+    background: #f8fafc;
+    opacity: 0.72;
+  }
+
+  /* Con el menú desplegado la tarjeta pasa al frente para dibujarse sobre las siguientes */
+  &.hidrico-card--menu-abierto {
+    z-index: 2;
+  }
+
+  /* Tarjeta cuyos datos están cargados en el formulario para corregirlos */
+  &.hidrico-card--edicion {
+    border-left-color: #f59e0b;
+    background: #fffbf2;
+  }
+}
+
+.hidrico-encabezado {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.hidrico-tipo-grupo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0;
+  min-width: 0;
+
+  > * {
+    display: inline-flex;
+    align-items: center;
+    align-self: stretch;
+    padding: 0 0.7rem;
+  }
+
+  > *:first-child {
+    padding-left: 0;
+  }
+
+  /* Línea vertical entre el tipo, la vía y la cantidad */
+  > * + * {
+    border-left: 1px solid #dfe7f3;
+  }
+}
+
+.hidrico-tipo {
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.hidrico-card--ingreso .hidrico-tipo {
+  color: #0d6efd;
+}
+
+.hidrico-card--egreso .hidrico-tipo {
+  color: #ed1a0f;
+}
+
+.hidrico-card--eliminado .hidrico-tipo {
+  color: #64748b;
+}
+
+/* Cantidad en ml: el dato principal de la tarjeta */
+.hidrico-cantidad {
+  flex: 0 0 auto;
+  font-size: 1.45rem;
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.hidrico-card--ingreso .hidrico-cantidad {
+  color: #0d6efd;
+}
+
+.hidrico-card--egreso .hidrico-cantidad {
+  color: #ed1a0f;
+}
+
+.hidrico-card--eliminado .hidrico-cantidad {
+  color: #64748b;
+}
+
+.hidrico-cantidad small {
+  margin-left: 4px;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.hidrico-via {
+  color: #5b6b85;
+  font-size: 1rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.hidrico-descripcion {
+  margin: 0;
+  color: #1f2f45;
+  font-size: 1.05rem;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+/* ==================== GLUCOSA ==================== */
+.glucosa-fila {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  align-items: start;
+  margin-top: 1.25rem;
+
+  > * {
+    min-width: 0;
+  }
+}
+
+.glucosa-campo--observacion {
+  margin-top: 1.25rem;
+}
+
+/* Solo las tarjetas se desplazan dentro del panel del historial */
+.glucosa-lista {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding-right: 0.4rem;
+  overflow-y: auto;
+}
+
+.glucosa-card {
+  position: relative;
+  margin-bottom: 1rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid #dfe7f3;
+  border-left: 4px solid #0ea5e9;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+
+  /* Con el menú desplegado la tarjeta pasa al frente para dibujarse sobre las siguientes */
+  &.glucosa-card--menu-abierto {
+    z-index: 2;
+  }
+
+  /* Tarjeta cuyos datos están cargados en el formulario para corregirlos */
+  &.glucosa-card--edicion {
+    border-left-color: #f59e0b;
+    background: #fffbf2;
+  }
+}
+
+/* Glucosa y tipo de medición en la misma línea, con el menú de opciones a la derecha */
+.glucosa-encabezado {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.glucosa-tipo-grupo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.9rem;
+  min-width: 0;
+}
+
+.glucosa-valor {
+  color: var(--azulPrincipal);
+  font-size: 1.6rem;
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.glucosa-valor small {
+  margin-left: 4px;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.glucosa-tipo {
+  display: inline-flex;
+  align-self: stretch;
+  align-items: center;
+  padding-left: 0.9rem;
+  border-left: 1px solid #dfe7f3;
+  color: #0b4f9c;
+  font-size: 0.9rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.glucosa-observacion {
+  margin: 0.7rem 0 0;
+  color: #1f2f45;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+/* ==================== RESPONSIVIDAD ==================== */
+@media (max-width: 1280px) {
+  /* El historial pasa a una fila completa para no dejar el formulario demasiado estrecho */
+  .monitoreo {
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas:
+      'secciones formulario'
+      'historial historial';
+  }
+}
+
+@media (max-width: 900px) {
+  /* Una sola columna: cada bloque en su propia fila. La ficha del paciente conserva el ancho de su
+     pestaña para que esta siga siendo visible en el borde derecho de la pantalla. */
+  .monitoreo {
+    --ficha-ancho: calc(100% - 40px);
+
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      'secciones'
+      'formulario'
+      'historial';
+    padding: 1rem;
+  }
+
+  /* La ficha cubre casi toda la pantalla, así que no hace falta reservarle espacio extra */
+  .monitoreo--ficha-abierta {
+    padding-right: 1rem;
+  }
+
+  /* Una sola columna para los campos y para los dos inputs de la presión */
+  .monitoreo-fila,
+  .hidrico-fila,
+  .glucosa-fila {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .monitoreo-campo--presion {
+    grid-column: auto;
+  }
+
+  .presion-inputs {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

@@ -1,0 +1,931 @@
+/* ==================== CONTENEDOR (SECCIONES / LISTADO / PANEL LATERAL) ==================== */
+/* Misma rejilla del submenú de monitoreo: rail de secciones, listado de indicaciones de la sección
+   activa y panel lateral con el formulario de administración o el historial. Cada pista flexible
+   lleva mínimo 0 para que la rejilla pueda encogerse sin desbordar. */
+.tratamientos {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1.4fr) minmax(300px, 0.7fr);
+  grid-template-areas: 'secciones indicaciones lateral';
+  gap: 1.25rem;
+  box-sizing: border-box;
+  width: 100%;
+  padding: 1.5rem;
+
+  /* Alto que ocupan la ventana y el marco de la pantalla fuera del listado y que hay que descontar
+     del área bajo la barra superior (--heightNavBar) para que sus tarjetas nunca pasen del borde
+     inferior: relleno del área de trabajo, título del módulo, submenú, relleno de la pantalla y un
+     margen de seguridad para la barra de desplazamiento. */
+  --alto-fuera-de-tratamientos: 16rem;
+}
+
+/* ==================== PANELES ==================== */
+/* Tarjeta blanca base de los paneles, con el mismo lenguaje visual del resto del módulo. */
+.panel {
+  padding: 1.5rem;
+  border: 1px solid #dfe7f3;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
+}
+
+.panel-titulo {
+  margin: 0 0 1rem;
+  color: var(--azulPrincipal);
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+
+/* El rail es solo el contenedor de las tarjetas: sin fondo ni borde propios, para que las tarjetas
+   blancas se apoyen sobre el fondo de la página. Sin relleno izquierdo para que el título y las
+   tarjetas queden arrimados al borde del área de trabajo. */
+.panel-secciones {
+  grid-area: secciones;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  padding-left: 0;
+}
+
+/* El rail muestra solo el título de cada sección: el icono queda alineado con él */
+.panel-secciones .tarjeta_titulo {
+  margin-bottom: 0;
+}
+
+/* Listado de indicaciones: la sección nunca supera el alto de la ventana y reparte ese alto entre el
+   título, los filtros y las tarjetas, que son lo único que se desplaza. */
+.panel-indicaciones {
+  grid-area: indicaciones;
+  display: flex;
+  flex-direction: column;
+  align-self: start;
+  max-height: calc(var(--heightNavBar) - var(--alto-fuera-de-tratamientos));
+  overflow: hidden;
+}
+
+.tratamientos-titulo {
+  margin-bottom: 0.35rem;
+  font-size: 1.8rem;
+}
+
+/* Cabecera del listado: título y botón de solicitud de medicamento */
+.tratamientos-cabecera {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  margin-bottom: 0.35rem;
+  flex: 0 0 auto;
+}
+
+.tratamientos-cabecera .tratamientos-titulo {
+  margin-bottom: 0;
+}
+
+.tratamientos-solicitar {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 40px;
+  margin-bottom: 0;
+  font-size: 1rem;
+}
+
+/* El título del formulario lateral queda por debajo del listado en jerarquía */
+.tratamientos-titulo-lateral {
+  font-size: 1.2rem;
+}
+
+.panel-lateral {
+  grid-area: lateral;
+  align-self: start;
+}
+
+/* Al solicitar el medicamento, los dos paneles se ocultan aunque tengan display propio */
+.panel-indicaciones[hidden],
+.panel-lateral[hidden] {
+  display: none;
+}
+
+/* ==================== FORMULARIO DE ADMINISTRACIÓN ==================== */
+/* Mismos campos y acciones de los formularios del módulo. */
+.administracion-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  margin-top: 1.25rem;
+}
+
+.administracion-campo {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.administracion-etiqueta {
+  color: #101828;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+/* Asterisco de campo obligatorio: mismo tratamiento de los formularios del módulo */
+.administracion-obligatorio {
+  margin-left: 3px;
+  color: #d34a42;
+  font-size: 1.35em;
+  font-weight: 800;
+}
+
+.administracion-input {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 45px;
+  padding: 10px 12px;
+  border: 1px solid #cfdcee;
+  border-radius: 12px;
+  background: #fff;
+  color: #21324d;
+  font-family: inherit;
+  font-size: 1rem;
+  outline: none;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+
+  &:focus,
+  &:focus-visible {
+    border-color: var(--azulSecundario);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.14);
+  }
+}
+
+select.administracion-input {
+  cursor: pointer;
+}
+
+.administracion-textarea {
+  min-height: 96px;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.administracion-acciones {
+  gap: 1rem;
+  margin-top: 0.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid #e4ebf5;
+}
+
+/* ==================== FILTROS DEL LISTADO ==================== */
+/* Mismos chips en píldora del listado de indicaciones médicas. */
+.indicados-filtros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 1rem;
+}
+
+/* Los filtros quedan fijos sobre la lista desplazable */
+.panel-indicaciones > .indicados-filtros {
+  flex: 0 0 auto;
+}
+
+.indicados-filtro {
+  padding: 8px 15px;
+  border: 1px solid #dbe4f0;
+  border-radius: 999px;
+  background: #fff;
+  color: #3f4d66;
+  font-family: inherit;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition:
+    border-color 0.2s ease,
+    background-color 0.2s ease,
+    color 0.2s ease;
+
+  &:hover {
+    border-color: #b9c8e2;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--azulSecundario);
+    outline-offset: 2px;
+  }
+}
+
+/* Opción elegida: mismo azul de selección del resto de controles del módulo */
+.indicados-filtro--activo {
+  border-color: var(--azulSecundario);
+  background: var(--azulSecundario);
+  color: #fff;
+  font-weight: 600;
+}
+
+/* Pista del desplazamiento: solo las tarjetas se mueven dentro del panel, de modo que el título y
+   los filtros quedan fijos en su parte superior. El relleno derecho separa la barra de las tarjetas
+   y el alto libre se reparte con la pista encogible, sin desbordar el panel. */
+.indicados-lista {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding-right: 0.4rem;
+  overflow-y: auto;
+}
+
+/* ==================== TARJETAS DE LAS INDICACIONES ==================== */
+/* Mismo lenguaje de tarjeta de las indicaciones médicas: borde, radio y sombra del panel, con un
+   acento de color a la izquierda que describe el estado de la indicación. */
+.indicacion-card {
+  position: relative;
+  margin-bottom: 1rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid #dfe7f3;
+  border-left: 4px solid #dfe7f3;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+
+  /* Indicación pendiente: naranja, como el estado «en proceso» de las indicaciones médicas */
+  &.indicacion-card--naranja {
+    border-left-color: #ff921c;
+  }
+
+  /* Indicación realizada: verde, como el estado completado de las indicaciones médicas */
+  &.indicacion-card--verde {
+    border-left-color: #22c55e;
+  }
+
+  /* Card de medicamentos: conserva la línea naranja del diseño en cualquier estado */
+  &.indicacion-card--tratamiento {
+    border-left-color: #ff921c;
+  }
+}
+
+.indicacion-encabezado {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+/* Nombre del medicamento y su aviso de no registrado, uno al lado del otro */
+.indicacion-nombre-grupo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  min-width: 0;
+  gap: 14px;
+}
+
+.indicacion-nombre {
+  color: var(--azulPrincipal);
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+/* Aviso en la tarjeta cuando la indicación usa un medicamento no registrado */
+.indicacion-badge-no-registrado {
+  display: inline-flex;
+  align-items: center;
+  color: #b42318;
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+/* Valores de la indicación en línea, separados por un punto medio */
+.indicacion-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+  margin: 0;
+  padding: 0;
+  color: var(--azulPrincipal);
+  font-size: 0.95rem;
+  font-weight: 700;
+  list-style: none;
+
+  li + li::before {
+    margin-right: 6px;
+    color: #93a3bb;
+    content: '·';
+  }
+}
+
+/* Tarjeta de medicamento: indicación a la izquierda y aplicaciones a la derecha */
+.indicacion-contenido {
+  display: grid;
+  grid-template-columns: minmax(0, 60fr) minmax(0, 40fr);
+  column-gap: 0.75rem;
+  align-items: stretch;
+}
+
+.indicacion-detalle {
+  min-width: 0;
+}
+
+/* Lado derecho: última y próxima aplicación, separadas de la indicación por una barra vertical */
+.indicacion-aplicaciones {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-sizing: border-box;
+  min-width: 0;
+  padding-left: 0.75rem;
+  border-left: 1px solid #e4ebf5;
+}
+
+/* Bloques informativos de las aplicaciones */
+.indicacion-aplicacion {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  box-sizing: border-box;
+  padding: 7px 10px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+}
+
+.indicacion-aplicacion--ultima {
+  background: #f4f7fb;
+}
+
+.indicacion-aplicacion--proxima {
+  border-color: #cfe0f7;
+  background: #eef5ff;
+}
+
+.indicacion-aplicacion_etiqueta {
+  color: #5b6b85;
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.indicacion-aplicacion--proxima .indicacion-aplicacion_etiqueta {
+  color: var(--azulSecundario);
+}
+
+.indicacion-aplicacion_valor {
+  color: var(--azulPrincipal);
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+  letter-spacing: 0.04em;
+}
+
+.indicacion-aplicacion--proxima .indicacion-aplicacion_valor {
+  color: var(--azulSecundario);
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.indicacion-observaciones {
+  margin: 0.6rem 0 0;
+  color: #1f2f45;
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+/* Pie de la tarjeta: fecha, hora y médico de la indicación */
+.indicacion-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 1rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid #e4ebf5;
+  color: #33445e;
+  font-size: 0.95rem;
+
+  span {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  i {
+    color: var(--azulSecundario);
+    font-size: 1.05rem;
+  }
+}
+
+/* ==================== CARD DE MEDICAMENTOS ==================== */
+/* Los ajustes se limitan al card de medicamentos para no alterar exámenes ni cuidados. */
+.indicacion-card--tratamiento {
+  .indicacion-encabezado {
+    margin-bottom: 8px;
+  }
+
+  .indicacion-nombre-grupo {
+    gap: 8px;
+  }
+
+  .indicacion-nombre {
+    font-size: 1.15rem;
+    line-height: 1.25;
+  }
+
+  .indicacion-badges {
+    color: var(--azulPrincipal);
+    font-size: 0.95rem;
+    font-weight: 600;
+    line-height: 1.35;
+  }
+
+  .indicacion-badge-no-registrado {
+    font-size: 0.9rem;
+    line-height: 1.2;
+    white-space: normal;
+  }
+
+  .indicacion-observaciones {
+    margin-top: 10px;
+    color: #475569;
+    font-size: 1rem;
+    font-weight: 400;
+    line-height: 1.5;
+  }
+}
+
+/* ==================== HISTORIAL DE APLICACIONES DEL MEDICAMENTO ==================== */
+/* Botón del footer para desplegar u ocultar el historial de aplicaciones */
+.indicacion-meta-toggle {
+  display: grid;
+  flex: 0 0 30px;
+  width: 30px;
+  height: 30px;
+  margin-left: auto;
+  padding: 0;
+  place-items: center;
+  color: var(--azulSecundario);
+  background: transparent;
+  border: 0;
+  border-radius: 50%;
+  font-size: 1.15rem;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    color 0.2s ease,
+    background-color 0.2s ease;
+
+  &:hover,
+  &:focus-visible {
+    color: var(--azulPrincipal);
+    background: #eef4ff;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--azulSecundario);
+    outline-offset: 2px;
+  }
+}
+
+.indicacion-meta-toggle i {
+  color: inherit;
+  font-size: 1.15rem;
+}
+
+/* Cuando el historial está desplegado, el footer se reduce al botón de cierre */
+.indicacion-meta--plegada {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+  justify-content: flex-end;
+}
+
+/* Listado de aplicaciones registradas */
+.aplicaciones-historial {
+  margin-top: 10px;
+}
+
+.aplicaciones-tabla {
+  width: 100%;
+  border: 1px solid #e4ebf5;
+  border-spacing: 0;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: none;
+  table-layout: fixed;
+  overflow: hidden;
+}
+
+.aplicaciones-tabla th,
+.aplicaciones-tabla td {
+  padding: 8px;
+  border-bottom: 1px solid #eef2f8;
+  color: #1f2f45;
+  font-size: 1rem;
+  font-weight: 400;
+  line-height: 1.35;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
+.aplicaciones-tabla th {
+  background: #f8fafc;
+  color: #475569;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.aplicaciones-tabla tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.aplicaciones-tabla th + th,
+.aplicaciones-tabla td + td {
+  border-left: 1px solid #eef2f8;
+}
+
+.aplicaciones-tabla_numero {
+  width: 48px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.aplicaciones-tabla_fecha {
+  width: 22%;
+}
+
+.aplicaciones-tabla_usuario {
+  width: 18%;
+}
+
+.aplicaciones-tabla_acciones {
+  width: 80px;
+  white-space: nowrap;
+}
+
+/* Celdas de las aplicaciones que todavía no tienen registro */
+.aplicaciones-tabla_pendiente {
+  color: #93a3bb;
+  font-weight: 600;
+  text-align: center;
+}
+
+/* Acciones de cada aplicación: editar y eliminar */
+.aplicaciones-acciones {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.aplicaciones-accion {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  place-items: center;
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 6px rgba(26, 37, 53, 0.12);
+  font-size: 14px;
+  cursor: pointer;
+  transition:
+    color 0.2s ease,
+    background-color 0.2s ease,
+    transform 0.2s ease;
+
+  &:hover {
+    color: #fff;
+    transform: translateY(-1px);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--azulSecundario);
+    outline-offset: 2px;
+  }
+}
+
+.aplicaciones-accion--editar {
+  color: #f59e0b;
+
+  &:hover {
+    background: #f59e0b;
+  }
+
+  &:focus-visible {
+    outline-color: #f59e0b;
+  }
+}
+
+.aplicaciones-accion--eliminar {
+  color: #ed1a0f;
+
+  &:hover {
+    background: #ed1a0f;
+  }
+
+  &:focus-visible {
+    outline-color: #ed1a0f;
+  }
+}
+
+/* Input oculto para adjuntar archivos a los exámenes */
+.examen-archivo-input {
+  display: none;
+}
+
+/* Acciones del examen: ver archivos y cargar varios */
+.examen-acciones {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 6px;
+}
+
+.examen-accion {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  place-items: center;
+  color: var(--azulSecundario);
+  background: #fff;
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  border-radius: 50%;
+  box-shadow: 0 2px 6px rgba(26, 37, 53, 0.12);
+  font-size: 16px;
+  cursor: pointer;
+  transition:
+    color 0.2s ease,
+    background-color 0.2s ease,
+    transform 0.2s ease;
+
+  &:hover {
+    color: #fff;
+    background: var(--azulSecundario);
+    transform: translateY(-1px);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--azulSecundario);
+    outline-offset: 2px;
+  }
+}
+
+.examen-accion--ver {
+  color: #15803d;
+
+  &:hover {
+    background: #16a34a;
+  }
+
+  &:focus-visible {
+    outline-color: #22c55e;
+  }
+}
+
+/* ==================== ESTADOS DE LA MAQUETA ==================== */
+.tratamientos-vacio,
+.indicacion-vacio {
+  margin: 0;
+  padding: 1.25rem;
+  border: 1px dashed #cfdcee;
+  border-radius: 14px;
+  color: #5b6b85;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  text-align: center;
+}
+
+/* ==================== RESPONSIVIDAD ==================== */
+@media (max-width: 1280px) {
+  /* El panel lateral pasa a una fila completa para no dejar el listado demasiado estrecho */
+  .tratamientos {
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas:
+      'secciones indicaciones'
+      'lateral lateral';
+  }
+}
+
+@media (max-width: 900px) {
+  /* Una sola columna: cada bloque en su propia fila */
+  .tratamientos {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      'secciones'
+      'indicaciones'
+      'lateral';
+    padding: 1rem;
+  }
+}
+
+/* ==================== SOLICITUD DE MEDICAMENTO ==================== */
+/* La solicitud ocupa las dos secciones centrales; el rail de tratamientos se conserva. */
+.tratamientos--solicitud {
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas: 'secciones solicitud';
+}
+
+.solicitud-medicamento {
+  grid-area: solicitud;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.solicitud-medicamento_cabecera {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+}
+
+.solicitud-medicamento_cabecera .panel-titulo {
+  margin: 0;
+}
+
+.solicitud-medicamento_cabecera .btn {
+  margin-bottom: 0;
+}
+
+/* Dos secciones: medicamentos agregados y búsqueda en farmacia */
+.solicitud-medicamento_contenido {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 1.25rem;
+  align-items: start;
+}
+
+.solicitud-medicamento_lista,
+.solicitud-medicamento_busqueda {
+  min-width: 0;
+}
+
+.solicitud-medicamento_items {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.solicitud-medicamento_item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid #dfe7f3;
+  border-radius: 12px;
+  background: #f7fafd;
+}
+
+.solicitud-medicamento_nombre {
+  min-width: 0;
+  color: #101828;
+  font-size: 0.95rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.solicitud-medicamento_cantidad {
+  color: var(--azulPrincipal);
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.solicitud-medicamento_quitar {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  place-items: center;
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  border-radius: 50%;
+  background: #fff;
+  color: #ed1a0f;
+  font-size: 13px;
+  cursor: pointer;
+  transition:
+    color 0.2s ease,
+    background-color 0.2s ease;
+
+  &:hover {
+    color: #fff;
+    background: #ed1a0f;
+  }
+
+  &:focus-visible {
+    outline: 2px solid #ed1a0f;
+    outline-offset: 2px;
+  }
+}
+
+.solicitud-medicamento_acciones {
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid #e4ebf5;
+}
+
+/* Buscador y resultados de farmacia */
+.solicitud-medicamento_buscador {
+  height: 45px;
+  margin-top: 1.25rem;
+
+  .buscador .inputB {
+    min-width: 0;
+    width: 0;
+  }
+
+  .buscador .btnLupa {
+    flex: 0 0 40px;
+    width: 40px;
+  }
+}
+
+.solicitud-medicamento_busqueda > .indicacion-vacio {
+  margin-top: 1rem;
+}
+
+.solicitud-medicamento_resultados {
+  margin-top: 1rem;
+}
+
+.solicitud-medicamento_resultados .tabla-container {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.solicitud-medicamento_resultados table {
+  min-width: 340px;
+}
+
+.solicitud-medicamento_resultados .columna-numero {
+  width: 60px;
+}
+
+.solicitud-medicamento_fila {
+  cursor: pointer;
+
+  &:hover td {
+    background: #f5f9ff;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--azulSecundario);
+    outline-offset: -2px;
+  }
+}
+
+.solicitud-medicamento_ayuda {
+  color: #5b6b85;
+  font-size: 0.85rem;
+}
+
+.solicitud-medicamento_seleccionado {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+  padding: 1rem;
+  border: 1px solid #cfdcee;
+  border-radius: 14px;
+  background: #f7fafd;
+}
+
+.solicitud-medicamento_seleccionado-nombre {
+  margin: 0;
+  color: var(--azulPrincipal);
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.solicitud-medicamento_seleccionado-disponible {
+  margin: 0;
+  color: #5b6b85;
+  font-size: 0.9rem;
+}
+
+@media (max-width: 900px) {
+  .tratamientos--solicitud {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      'secciones'
+      'solicitud';
+  }
+
+  .solicitud-medicamento_contenido {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

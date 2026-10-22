@@ -148,6 +148,23 @@
     <!-- Resto de la captura: espera al medicamento elegido, porque con la tabla de resultados
          desplegada el formulario solo muestra el buscador y sus resultados -->
     @if (!busquedaMedicamentoRealizada) {
+      <!-- Fecha y hora de inicio de la indicación -->
+      <div class="indicacion-fila">
+        <div class="indicacion-campo">
+          <label class="indicacion-etiqueta" for="fechaInicioIndicada">
+            Fecha y hora de inicio<span class="indicacion-obligatorio" aria-hidden="true">*</span>
+          </label>
+          <input
+            class="indicacion-input"
+            id="fechaInicioIndicada"
+            name="fechaInicio"
+            type="datetime-local"
+            aria-required="true"
+            [(ngModel)]="fechaInicio"
+          />
+        </div>
+      </div>
+
       <!-- Cantidad, unidad de medida y frecuencia: la frecuencia solo admite números -->
       <div class="indicacion-fila indicacion-fila--cantidad">
         <div class="indicacion-campo">
@@ -345,10 +362,81 @@
         }
 
         <footer class="indicacion-meta">
-          <span><i class="bi bi-calendar3" aria-hidden="true"></i>{{ indicacion.fecha }}</span>
+          <span><i class="bi bi-calendar3" aria-hidden="true"></i>Inicio: {{ indicacion.fecha }}</span>
           <span><i class="bi bi-clock" aria-hidden="true"></i>{{ indicacion.hora }}</span>
           <span><i class="bi bi-person" aria-hidden="true"></i>{{ indicacion.medico }}</span>
+          <button
+            type="button"
+            class="indicacion-menu-trigger indicacion-meta-toggle"
+            [attr.aria-expanded]="registrosAbiertos(indicacion.id)"
+            [attr.aria-controls]="'registros-' + indicacion.id"
+            [attr.aria-label]="
+              registrosAbiertos(indicacion.id)
+                ? 'Ocultar registros de Enfermería'
+                : 'Mostrar registros de Enfermería'
+            "
+            [title]="
+              registrosAbiertos(indicacion.id)
+                ? 'Ocultar registros de Enfermería'
+                : 'Mostrar registros de Enfermería'
+            "
+            (click)="alternarRegistros(indicacion)"
+          >
+            <i
+              class="bi"
+              [class.bi-chevron-up]="registrosAbiertos(indicacion.id)"
+              [class.bi-chevron-down]="!registrosAbiertos(indicacion.id)"
+              aria-hidden="true"
+            ></i>
+          </button>
         </footer>
+
+        <!-- Registros que ya realizó Enfermería -->
+        @if (registrosAbiertos(indicacion.id)) {
+          <div class="indicacion-registros" [attr.id]="'registros-' + indicacion.id">
+            @if (cargandoRegistros) {
+              <p class="indicacion-vacio">Cargando registros de Enfermería...</p>
+            } @else if (errorRegistros) {
+              <p class="indicacion-vacio">
+                No se pudieron cargar los registros. Cierre y vuelva a desplegar la tarjeta.
+              </p>
+            } @else if (registrosDe(indicacion.id).length) {
+              <div class="tabla-container">
+                <table class="registros-tabla" aria-label="Registros de Enfermería">
+                  <thead>
+                    <tr>
+                      <th>No.</th>
+                      <th>Programada</th>
+                      <th>Registrada</th>
+                      <th>Estado</th>
+                      <th>Enfermera</th>
+                      <th>Observación</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (registro of registrosDe(indicacion.id); track registro.id) {
+                      <tr>
+                        <td>{{ registro.numero }}</td>
+                        <td>{{ registro.fechaHoraProgramada }}</td>
+                        <td>{{ registro.fechaRegistro }}</td>
+                        <td
+                          [class.registro-positivo]="registro.esPositivo"
+                          [class.registro-negativo]="!registro.esPositivo"
+                        >
+                          {{ registro.estado }}
+                        </td>
+                        <td>{{ registro.usuario }}</td>
+                        <td>{{ registro.observacion || '---' }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            } @else {
+              <p class="indicacion-vacio">La enfermera aún no ha registrado aplicaciones.</p>
+            }
+          </div>
+        }
 
         <!-- Menú de opciones: se dibuja al final de la tarjeta y flota sobre ella -->
         @if (menuIndicacionAbierta === indicacion.id && !soloLectura) {
