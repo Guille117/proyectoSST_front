@@ -44,12 +44,24 @@ tbody tr {
     white-space: nowrap;
 }
 
+.acciones-contenido {
+    display: inline-grid;
+    grid-template-columns: 36px 38px;
+    gap: 10px;
+    align-items: center;
+    justify-content: center;
+    min-height: 36px;
+
+    .interruptor-estado {
+        margin-left: 0;
+    }
+}
+
 .boton-icono-editar {
     display: inline-grid;
     width: 36px;
     height: 36px;
     padding: 0;
-    margin-right: 10px;
     place-items: center;
     color: rgb(243, 177, 23);
     background: var(--colorFondoPrincipal);

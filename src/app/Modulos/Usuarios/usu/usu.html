@@ -45,27 +45,31 @@
                         <td class="celda_centrada">{{ getTelefono(user) }}</td>
                         <td class="celda_izquierda">{{ getRol(user) }}</td>
                         <td class="celda_centrada acciones-tabla">
-                            <button
-                                type="button"
-                                class="boton-icono-editar"
-                                aria-label="Editar usuario"
-                                title="Editar usuario"
-                                (click)="$event.stopPropagation(); abrirModalEditar(user)"
-                            >
-                                <i class="bi bi-pencil-square"></i>
-                            </button>
-                            @if (!esUsuarioActual(user)) {
-                                <label class="interruptor-estado" [title]="user.estado ? 'Usuario activo' : 'Usuario inactivo'">
-                                    <input
-                                        type="checkbox"
-                                        [checked]="user.estado"
-                                        [attr.aria-label]="user.estado ? 'Desactivar usuario' : 'Activar usuario'"
-                                        (click)="$event.stopPropagation()"
-                                        (change)="cambiarEstadoUsuario($event, user)"
+                            <div class="acciones-contenido">
+                                @if (!esUsuarioSistema(user)) {
+                                    <button
+                                        type="button"
+                                        class="boton-icono-editar"
+                                        aria-label="Editar usuario"
+                                        title="Editar usuario"
+                                        (click)="$event.stopPropagation(); abrirModalEditar(user)"
                                     >
-                                    <span></span>
-                                </label>
-                            }
+                                        <i class="bi bi-pencil-square"></i>
+                                    </button>
+                                }
+                                @if (!esUsuarioActual(user) && !esUsuarioSistema(user)) {
+                                    <label class="interruptor-estado" [title]="user.estado ? 'Usuario activo' : 'Usuario inactivo'">
+                                        <input
+                                            type="checkbox"
+                                            [checked]="user.estado"
+                                            [attr.aria-label]="user.estado ? 'Desactivar usuario' : 'Activar usuario'"
+                                            (click)="$event.stopPropagation()"
+                                            (change)="cambiarEstadoUsuario($event, user)"
+                                        >
+                                        <span></span>
+                                    </label>
+                                }
+                            </div>
                         </td>
                     </tr>
                 } @empty {

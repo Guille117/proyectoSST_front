@@ -32,6 +32,7 @@ export class ModalAgregarUusuario implements OnInit, OnChanges {
   roles: RolResponse[] = [];
   especialidades: Inter_base[] = [];
   rolesAbierto = false;
+  private snapshotInicial = '';
 
   persona: PersonaDatos = {
     cui: '',
@@ -155,8 +156,32 @@ export class ModalAgregarUusuario implements OnInit, OnChanges {
       this.usuarioReq.horarioId &&
       this.usuarioReq.rolIds?.length &&
       this.usuarioReq.username?.trim() &&
-      (!this.esMedico || this.usuarioReq.especialidadId)
+      (!this.esMedico || this.usuarioReq.especialidadId) &&
+      (!this.isEditing || this.hayCambios)
     );
+  }
+
+  get hayCambios(): boolean {
+    return this.crearSnapshot() !== this.snapshotInicial;
+  }
+
+  private crearSnapshot(): string {
+    return JSON.stringify({
+      persona: {
+        cui: this.persona.cui.trim(),
+        nombres: this.persona.nombres.trim(),
+        apellidos: this.persona.apellidos.trim(),
+        sexo: this.persona.sexo,
+        fechaNacimiento: this.persona.fechaNacimiento,
+        telefono: this.persona.telefono?.trim() ?? '',
+        email: this.persona.email?.trim() ?? '',
+      },
+      puestoId: Number(this.usuarioReq.puestoId),
+      horarioId: Number(this.usuarioReq.horarioId),
+      rolIds: [...(this.usuarioReq.rolIds ?? [])].map(Number).sort((a, b) => a - b),
+      username: this.usuarioReq.username?.trim() ?? '',
+      especialidadId: Number(this.usuarioReq.especialidadId ?? 0),
+    });
   }
 
   get esMedico(): boolean {
@@ -183,15 +208,20 @@ export class ModalAgregarUusuario implements OnInit, OnChanges {
       const puestoIdVal = this.usuarioToEdit.puesto?.id || (this.usuarioToEdit as any).puestoId || 0;
       const horarioIdVal = this.usuarioToEdit.horario?.id || (this.usuarioToEdit as any).horarioId || 0;
       const rolIdsVal = this.obtenerRolIds(this.usuarioToEdit);
+      const especialidad = this.usuarioToEdit.especialidad;
+      const especialidadIdVal =
+        this.usuarioToEdit.especialidadId ??
+        (especialidad && typeof especialidad === 'object' ? especialidad.id : undefined);
 
       this.usuarioReq = {
         puestoId: Number(puestoIdVal),
         horarioId: Number(horarioIdVal),
         rolIds: rolIdsVal.map((id: number | string) => Number(id)),
         username: this.usuarioToEdit.username || '',
-        especialidadId: this.usuarioToEdit.especialidadId || 0,
+        especialidadId: Number(especialidadIdVal ?? 0),
         estado: this.usuarioToEdit.estado ?? true,
       };
+      this.snapshotInicial = this.crearSnapshot();
       this.cdr.detectChanges();
     }
   }

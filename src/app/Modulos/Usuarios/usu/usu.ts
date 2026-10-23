@@ -68,9 +68,28 @@ export class Usu implements OnInit {
   }
 
   private actualizarListaUsuarios(data: UsuarioListadoResponse[]): void {
-    this.usuariosTodos = data;
+    this.usuariosTodos = this.ordenarUsuarios(data);
     this.paginaActual = 1;
     this.actualizarPagina();
+  }
+
+  private ordenarUsuarios(data: UsuarioListadoResponse[]): UsuarioListadoResponse[] {
+    const usuarioActualId = this.authService.currentUser()?.id;
+
+    return data
+      .map((usuario, indice) => ({ usuario, indice }))
+      .sort((a, b) => {
+        const diferencia = this.prioridadUsuario(a.usuario, usuarioActualId)
+          - this.prioridadUsuario(b.usuario, usuarioActualId);
+        return diferencia !== 0 ? diferencia : a.indice - b.indice;
+      })
+      .map(({ usuario }) => usuario);
+  }
+
+  private prioridadUsuario(usuario: UsuarioListadoResponse, usuarioActualId?: number): number {
+    if (usuario.id === usuarioActualId) return 0;
+    if (this.esUsuarioSistema(usuario)) return 1;
+    return 2;
   }
 
   actualizarPagina(pagina: number = this.paginaActual): void {
@@ -103,6 +122,10 @@ export class Usu implements OnInit {
 
   esUsuarioActual(user: UsuarioListadoResponse | UsuarioResponse): boolean {
     return this.authService.currentUser()?.id === user.id;
+  }
+
+  esUsuarioSistema(user: UsuarioListadoResponse | UsuarioResponse): boolean {
+    return user.codigo?.trim().toUpperCase() === 'USR-01';
   }
 
   async abrirRestablecerContrasena(user: UsuarioResponse): Promise<void> {

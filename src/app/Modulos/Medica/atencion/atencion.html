@@ -53,15 +53,17 @@
         >
           Hospitalización
         </button>
-        <button
-          type="button"
-          class="chip"
-          [class.activo]="filtroActivo === 'altasRecientes'"
-          [attr.aria-pressed]="filtroActivo === 'altasRecientes'"
-          (click)="cambiarFiltro('altasRecientes')"
-        >
-          Altas recientes
-        </button>
+        @if (mostrarAltas) {
+          <button
+            type="button"
+            class="chip"
+            [class.activo]="filtroActivo === 'altasRecientes'"
+            [attr.aria-pressed]="filtroActivo === 'altasRecientes'"
+            (click)="cambiarFiltro('altasRecientes')"
+          >
+            Altas recientes
+          </button>
+        }
       </div>
 
       <div class="pacientes-orden">
@@ -219,13 +221,17 @@
       }
 
       <div class="seleccionado-acciones">
-        <button type="button" class="btn _principal" (click)="abrirExpediente()">
-          Abrir expediente
-        </button>
-        @if (paciente.episodioId === null) {
-          <button type="button" class="btn _guardar" (click)="abrirUltimoEpisodio()">
-            Abrir último episodio
+        @if (mostrarExpediente) {
+          <button type="button" class="btn _principal" (click)="abrirExpediente()">
+            Abrir expediente
           </button>
+        }
+        @if (paciente.episodioId === null) {
+          @if (mostrarUltimoEpisodio) {
+            <button type="button" class="btn _guardar" (click)="abrirUltimoEpisodio()">
+              Abrir ǧltimo episodio
+            </button>
+          }
         } @else {
           <button type="button" class="btn _guardar" (click)="abrirEpisodio()">
             Abrir episodio actual

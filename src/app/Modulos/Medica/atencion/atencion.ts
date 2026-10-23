@@ -1,6 +1,6 @@
 import { ChangeDetectorRef, Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { finalize, Subscription } from 'rxjs';
 import { PacienteService } from '../../Pacientes/paciente/data/paciente-service';
 import { PacienteResumido, TipoAtencion } from '../../Pacientes/paciente/data/pacienteInterfaz';
@@ -133,9 +133,23 @@ export class Atencion implements OnInit, OnDestroy {
   private readonly servicioPaciente = inject(PacienteService);
   private readonly servicioAltas = inject(AltaService);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly popUps = inject(PopUps);
   private readonly episodioActivo = inject(EpisodioActivoService);
+
+  /** Configuración del módulo que reutiliza la pantalla (Médica o Enfermería). */
+  protected readonly mostrarAltas = this.route.snapshot.data['mostrarAltas'] !== false;
+  protected readonly mostrarExpediente = this.route.snapshot.data['mostrarExpediente'] !== false;
+  protected readonly mostrarUltimoEpisodio =
+    this.route.snapshot.data['mostrarUltimoEpisodio'] !== false;
+  private readonly rutaEpisodio =
+    (this.route.snapshot.data['rutaEpisodio'] as string[] | undefined) ?? ['/medica', 'evaluacion'];
+  private readonly rutaUltimoEpisodio =
+    (this.route.snapshot.data['rutaUltimoEpisodio'] as string[] | undefined) ?? [
+      '/medica',
+      'evaluacion',
+    ];
 
   private destruido = false;
   private peticionAltas?: Subscription;
@@ -278,7 +292,7 @@ export class Atencion implements OnInit, OnDestroy {
 
   /** Carga los pacientes dados de alta en las últimas 48 horas. */
   cargarAltasRecientes(): void {
-    if (this.destruido || this.cargandoAltas) return;
+    if (!this.mostrarAltas || this.destruido || this.cargandoAltas) return;
 
     this.cargandoAltas = true;
     this.errorAltas = false;
@@ -324,6 +338,8 @@ export class Atencion implements OnInit, OnDestroy {
 
   /** Cambia el filtro del listado y ajusta la selección a lo que queda a la vista. */
   cambiarFiltro(filtro: FiltroAtencion): void {
+    if (filtro === 'altasRecientes' && !this.mostrarAltas) return;
+
     this.filtroActivo = filtro;
 
     if (filtro === 'altasRecientes') {
@@ -368,7 +384,7 @@ export class Atencion implements OnInit, OnDestroy {
     }
 
     this.episodioActivo.guardar(this.pacienteSeleccionado.episodioId);
-    this.router.navigate(['/medica', 'evaluacion']);
+    this.router.navigate(this.rutaEpisodio);
   }
 
   /**
@@ -385,7 +401,7 @@ export class Atencion implements OnInit, OnDestroy {
     }
 
     this.episodioActivo.guardar(episodioId, true);
-    this.router.navigate(['/medica', 'evaluacion']);
+    this.router.navigate(this.rutaUltimoEpisodio);
   }
 
   // TODO fase 2: abrir el expediente clínico del paciente seleccionado cuando exista esa pantalla.

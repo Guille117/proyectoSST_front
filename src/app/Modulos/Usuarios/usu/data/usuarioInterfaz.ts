@@ -57,7 +57,7 @@ export interface UsuarioResponse {
   username: string;
   nombres: string;
   apellidos: string;
-  especialidad?: string;
+  especialidad?: string | CatalogoReferencia;
   especialidadId?: number;
   estado: boolean;
   pin?: string | number;
