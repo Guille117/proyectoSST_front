@@ -1,3 +1,4 @@
+import { Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { TabSwitch } from './tab-switch';
@@ -63,5 +64,53 @@ describe('TabSwitch', () => {
 
     expect(contenedor.classList.contains('deshabilitado')).toBe(false);
     expect(contenedor.getAttribute('aria-disabled')).toBeNull();
+  });
+});
+
+@Component({
+  selector: 'app-tab-switch-host',
+  imports: [TabSwitch],
+  template: `
+    <app-tab-switch
+      [op1]="'Activos'"
+      [op2]="'Inactivos'"
+      [mostrarActivos]="mostrarActivos"
+      (opcionCambiada)="mostrarActivos = $event"
+    ></app-tab-switch>
+  `,
+})
+class TabSwitchHost {
+  mostrarActivos = true;
+}
+
+describe('TabSwitch controlado por el padre', () => {
+  let fixture: ComponentFixture<TabSwitchHost>;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [TabSwitchHost],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(TabSwitchHost);
+    await fixture.whenStable();
+  });
+
+  it('mantiene el resaltado sincronizado con el estado del padre', async () => {
+    const opciones: NodeListOf<HTMLDivElement> =
+      fixture.nativeElement.querySelectorAll('.miniSubMenu > div');
+
+    (opciones[1] as HTMLDivElement).click();
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.mostrarActivos).toBe(false);
+    expect(opciones[0].classList.contains('op2')).toBe(false);
+    expect(opciones[1].classList.contains('op2')).toBe(true);
+
+    (opciones[0] as HTMLDivElement).click();
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.mostrarActivos).toBe(true);
+    expect(opciones[0].classList.contains('op2')).toBe(true);
+    expect(opciones[1].classList.contains('op2')).toBe(false);
   });
 });

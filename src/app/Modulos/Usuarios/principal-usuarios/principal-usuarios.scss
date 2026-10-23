@@ -1,0 +1,18 @@
+:host {
+  font-family: 'Inter', sans-serif;
+  font-weight: 500;
+}
+
+/* En Usuarios el área de trabajo no lleva el fondo, borde ni sombra de otros módulos. */
+:host ::ng-deep .trabajoArea {
+  background-color: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+/* Los campos de formulario no heredan el peso del texto por defecto. */
+:host ::ng-deep input,
+:host ::ng-deep select,
+:host ::ng-deep textarea {
+  font-weight: 500;
+}

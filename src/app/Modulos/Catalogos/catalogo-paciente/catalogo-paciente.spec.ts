@@ -57,13 +57,13 @@ describe('CatalogoPaciente', () => {
 
   it.each([
     ['Tipo cama', 'tiposCama'], ['Habitación', 'habitaciones'], ['Institución', 'instituciones'],
-    ['Parentesco', 'parentescos'],
+    ['Parentesco', 'parentescos'], ['Área', 'areas'],
   ])('envia unicamente los campos del catalogo %s', (titulo, url) => {
     component.seleccionarCatalogo(titulo, url);
     component.variableEntrada = { nombre: 'Registro', descripcion: 'Detalle', telefono: '123', direccion: 'Calle' };
     const esperado = url === 'instituciones'
       ? { nombre: 'Registro', telefono: '123', direccion: 'Calle' }
-      : url === 'parentescos' ? { nombre: 'Registro' }
+      : url === 'parentescos' || url === 'areas' ? { nombre: 'Registro' }
       : { nombre: 'Registro', descripcion: 'Detalle' };
     expect(component.selecciontipoDato()).toEqual(esperado);
     component.guardar(formulario());
@@ -100,10 +100,29 @@ describe('CatalogoPaciente', () => {
     expect(servicio.actualizar1).toHaveBeenCalledExactlyOnceWith('parentescos', 4, { nombre: 'Padre' });
   });
 
+  it('muestra solo nombre en Área y usa el endpoint de áreas', async () => {
+    servicio.listar.mockReturnValue(of([{ id: 8, nombre: 'Consultorio' }]));
+    component.seleccionarCatalogo('Área', 'areas');
+    await fixture.whenStable();
+
+    expect(servicio.listar).toHaveBeenLastCalledWith('areas', true);
+    expect(fixture.nativeElement.querySelectorAll('form input').length).toBe(1);
+    expect(fixture.nativeElement.querySelector('#descripcionRegistro')).toBeNull();
+    expect(fixture.nativeElement.querySelectorAll('thead th').length).toBe(3);
+    expect(fixture.nativeElement.querySelectorAll('tbody tr td').length).toBe(3);
+    expect(fixture.nativeElement.querySelector('tfoot td').getAttribute('colspan')).toBe('3');
+  });
+
   it('asigna el conteo de parentescos cuando el backend lo incluye', () => {
     servicio.obtenerRegistrosCatalogosPacientes.mockReturnValue(of([{ tabla: 'parentescos', total: 7 }]));
     component.obtenerContedoCatalogos();
     expect(component.listaCatalogos.find(catalogo => catalogo.url === 'parentescos')?.cantidad).toBe(7);
+  });
+
+  it('asigna el conteo de áreas cuando el backend lo incluye', () => {
+    servicio.obtenerRegistrosCatalogosPacientes.mockReturnValue(of([{ tabla: 'areas', total: 4 }]));
+    component.obtenerContedoCatalogos();
+    expect(component.listaCatalogos.find(catalogo => catalogo.url === 'areas')?.cantidad).toBe(4);
   });
 
   it.each([false, true])('precarga los campos visibles y detecta cambios (institucion: %s)', async (institucion) => {
@@ -129,20 +148,40 @@ describe('CatalogoPaciente', () => {
     expect(component.editar).toBe(false);
   });
 
+  it('pagina los catálogos en grupos de cinco con controles visuales', async () => {
+    const total = component.listaCatalogos.length;
+    const controles: NodeListOf<HTMLButtonElement> =
+      fixture.nativeElement.querySelectorAll('.paginacion-catalogos-control');
+
+    expect(controles.length).toBe(2);
+    expect(fixture.nativeElement.querySelectorAll('.catalogos').length).toBe(Math.min(5, total));
+
+    if (total <= 5) return;
+
+    controles[1].click();
+    await fixture.whenStable();
+
+    const restantes = Math.min(5, total - 5);
+    expect(component.paginaCatalogos).toBe(2);
+    expect(fixture.nativeElement.querySelectorAll('.catalogos').length).toBe(restantes);
+    expect(fixture.nativeElement.querySelector('.paginacion-catalogos-resumen').textContent)
+      .toContain(`Mostrando ${restantes} de ${total} · Página 2`);
+  });
+
   it('pagina en grupos de cinco con numeracion continua', async () => {
     servicio.listar.mockReturnValue(of(registros(11)));
     component.traerRegistros(true);
-    const siguiente: HTMLButtonElement = fixture.nativeElement.querySelector('app-paginacion .derecha');
+    const siguiente: HTMLButtonElement = fixture.nativeElement.querySelector('.panel_tabla app-paginacion .derecha');
     expect(fixture.nativeElement.querySelectorAll('tbody tr').length).toBe(5);
     siguiente.click();
     await fixture.whenStable();
-    expect(fixture.nativeElement.querySelector('tbody td').textContent.trim()).toBe('6');
+    expect(fixture.nativeElement.querySelector('.panel_tabla tbody td').textContent.trim()).toBe('6');
     siguiente.click();
     await fixture.whenStable();
-    expect(fixture.nativeElement.querySelectorAll('tbody tr').length).toBe(1);
-    expect(fixture.nativeElement.querySelector('tbody td').textContent.trim()).toBe('11');
+    expect(fixture.nativeElement.querySelectorAll('.panel_tabla tbody tr').length).toBe(1);
+    expect(fixture.nativeElement.querySelector('.panel_tabla tbody td').textContent.trim()).toBe('11');
     expect(siguiente.disabled).toBe(true);
-    expect(fixture.nativeElement.querySelector('app-paginacion .texto').textContent).toContain('Mostrando 1 de 11 resultados');
+    expect(fixture.nativeElement.querySelector('.panel_tabla app-paginacion .texto').textContent).toContain('Mostrando 1 de 11 resultados');
     component.traerRegistros(false);
     expect(component.paginaActual).toBe(1);
   });

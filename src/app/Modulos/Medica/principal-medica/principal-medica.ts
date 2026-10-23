@@ -19,7 +19,7 @@ export class PrincipalMedica {
 
   /**
    * Submódulos del módulo a la vista. El módulo arranca en la selección del paciente, que se muestra
-   * sin título ni submenú: los submódulos se descubren al abrir el episodio de un paciente.
+   * sin el submenú de submódulos: estos se descubren al abrir el episodio de un paciente.
    */
   readonly submenuVisible = signal(this.mostrarSubmenu(this.router.url));
 
@@ -42,7 +42,7 @@ export class PrincipalMedica {
     this.router.navigate(['/medica', 'atencion']);
   }
 
-  /** La pantalla activa lleva el título del módulo y el submenú de submódulos. */
+  /** La pantalla activa lleva el submenú de submódulos. */
   private mostrarSubmenu(url: string): boolean {
     return !RUTAS_SIN_SUBMENU.includes(url.split('?')[0]);
   }

@@ -25,6 +25,12 @@
     }
 }
 
+/* La lista ajusta su alto a la pantalla para que el footer de paginación quede visible. */
+.tabla-pacientes {
+    max-height: calc(100vh - var(--heightTopBar) - 220px);
+    overflow-y: auto;
+}
+
 /* Las filas del listado son seleccionables: el detalle se muestra a la derecha */
 tbody tr {
 	cursor: pointer;
@@ -40,16 +46,22 @@ tbody tr {
 	}
 }
 
+/* El registro seleccionado conserva el resaltado, pero sin cursiva. */
+tbody tr.selected-row,
+tbody tr.selected-row td {
+	font-style: normal;
+}
+
 .derecha {
 	display: flex;
 	flex-direction: column;
 	box-sizing: border-box;
 	min-width: 300px;
 	padding: 16px 18px;
-	border: 1px solid #e2e8f0;
-	border-radius: 16px;
+	border: solid 2px var(--colorBorde);
+	border-radius: 18px;
 	background: #fff;
-	box-shadow: 0 2px 10px rgba(15, 23, 42, 0.05);
+	box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
 
 	/* Identificación del paciente y estado del mismo */
 	.paciente {

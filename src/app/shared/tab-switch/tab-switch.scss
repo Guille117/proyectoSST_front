@@ -1,27 +1,37 @@
 .miniSubMenu{
-    display: flex;
+    display: inline-flex;
+    align-items: center;
+    width: fit-content;
+    max-width: 100%;
+    height: auto;
+    padding: 4px;
+    gap: 6px;
     background-color: #f1f1e5d2;
     border-radius: 20px;
-    border: solid 1px #DDE3EC;
-    padding: 5px;
-    align-items: center;
-    gap: 20px;
-    width: 100%;
-    height: 45px;
+    border: solid 1px rgba(169, 188, 214, 0.55);
+    box-shadow:
+        0 0 3px rgba(169, 188, 214, 0.25),
+        0 2px 5px rgba(11, 23, 57, 0.1);
+    letter-spacing: 0.4px;
+
+    .op,
+    .op2 {
+        padding: 7px 14px;
+        border-radius: 15px;
+        font-size: 16px;
+        line-height: 1.2;
+        white-space: nowrap;
+    }
 
     .op{
         color:#7A8A9E;
-        padding: 10px 15px;
         cursor: pointer;
     }
 
     .op2{
         background-color: #1A6FBD;
         color: white;
-        padding: 9px 12px;
-        border-radius: 15px;
-        font-size: 17px;
-        letter-spacing: 0.4px;
+        font-weight: 700;
     }
 
     &.deshabilitado {

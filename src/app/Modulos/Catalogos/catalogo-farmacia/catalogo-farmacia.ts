@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, ChangeDetectorRef, OnDestroy, OnInit } from '@angular/core';
+import { Component, ChangeDetectorRef, ElementRef, HostListener, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { FormsModule, NgForm } from '@angular/forms';
 import { finalize, Subscription } from 'rxjs';
 import { TabSwitch } from '../../../shared/tab-switch/tab-switch';
@@ -7,6 +7,7 @@ import { PopUps } from '../../../shared/popUps/popUpsService';
 import { CatalogoService } from '../data/serviceCatalogo';
 import { Inter_base, Inter_descripcion, Inter_unidadMedida, registrosCatalogos } from '../data/nombreInterfaz';
 import { Paginacion } from '../../../shared/paginacion/paginacion';
+import { calcularFilasVisibles, FILAS_VISIBLES_POR_DEFECTO } from '../../../shared/paginacion/filas-visibles';
 
 // Registro genérico de los catálogos de farmacia (unidad de medida, fabricante, vía, presentación, motivo baja)
 type RegistroFarmacia = Inter_unidadMedida & Partial<Inter_descripcion>;
@@ -21,6 +22,7 @@ export class CatalogoFarmacia implements OnInit, OnDestroy {
   private peticionRegistros?: Subscription;
   private peticionConteos?: Subscription;
   private versionCatalogo = 0;
+  @ViewChild('panelTabla') private panelTabla?: ElementRef<HTMLElement>;
 
   constructor(
     private cdr: ChangeDetectorRef,
@@ -138,9 +140,18 @@ mostrarActivos:boolean = true;
 
 datos: RegistroFarmacia[] = [];
 paginaActual = 1;
-readonly cantidadMostrar = 5;
+cantidadMostrar = FILAS_VISIBLES_POR_DEFECTO;
 cambiandoEstado = false;
 cargandoRegistros = false;
+
+@HostListener('window:resize')
+ajustarCantidadMostrar(): void {
+  const cantidad = calcularFilasVisibles(this.panelTabla?.nativeElement ?? null);
+  if (cantidad === this.cantidadMostrar) return;
+  this.cantidadMostrar = cantidad;
+  this.paginaActual = 1;
+  this.cdr.detectChanges();
+}
 
 traerRegistros(estado: boolean){
   if (estado !== this.mostrarActivos) this.paginaActual = 1;
@@ -159,6 +170,7 @@ traerRegistros(estado: boolean){
       this.cargandoRegistros = false;
       this.paginaActual = Math.min(this.paginaActual, Math.max(1, Math.ceil(data.length / this.cantidadMostrar)));
       this.cdr.detectChanges();
+      this.ajustarCantidadMostrar();
     },
     error: (error) => {
       this.datos = [];

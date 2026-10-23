@@ -28,6 +28,7 @@ export class Roles implements OnInit {
   mostrarActivos = true;
 
   permisosMap: Map<number, { id?: number; puedeLeer: boolean; puedeCrear: boolean; puedeEditar: boolean; puedeEliminar: boolean }> = new Map();
+  private solicitudRoles = 0;
   constructor(
     private rolService: RolService,
     private cdr: ChangeDetectorRef,
@@ -52,8 +53,10 @@ export class Roles implements OnInit {
 
   cargarRoles(activos: boolean = this.mostrarActivos, idSeleccionar?: number): void {
     this.mostrarActivos = activos;
+    const solicitud = ++this.solicitudRoles;
     this.rolService.getRoles(activos).subscribe({
       next: (data) => {
+        if (solicitud !== this.solicitudRoles) return;
         this.actualizarListaRoles(data, idSeleccionar);
       }
     });
@@ -66,11 +69,14 @@ export class Roles implements OnInit {
       return;
     }
 
+    const solicitud = ++this.solicitudRoles;
     this.rolService.buscarRoles(query, this.mostrarActivos).subscribe({
       next: (data) => {
+        if (solicitud !== this.solicitudRoles) return;
         this.actualizarListaRoles(data);
       },
       error: (err) => {
+        if (solicitud !== this.solicitudRoles) return;
         this.popUps.errorDesdeBackend(err, 'Error al buscar roles');
       }
     });

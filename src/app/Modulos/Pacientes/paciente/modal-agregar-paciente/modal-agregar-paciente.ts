@@ -68,6 +68,7 @@ export class ModalAgregarPaciente {
 
   pasos: string[] = [
     'Información del paciente',
+    'Enfermedades y alergias',
     'Tipo de atención',
     'Información de responsable',
     'Referencia',
@@ -91,12 +92,18 @@ export class ModalAgregarPaciente {
   camas: camaResponseSimple[] = [];
   parentesco: Inter_base[] = [];  //
   insituciones: Inter_institucion[] = [];
+  enfermedades: Inter_base[] = [];
+  alergias: Inter_base[] = [];
+  enfermedadesSeleccionadas: string[] = [];
+  alergiasSeleccionadas: string[] = [];
 
   llenarSelects(){
     this.cargarParentescos();
     this.cargarInstituciones();
     this.cargarCamas();
     this.cargarMedicos();
+    this.cargarEnfermedades();
+    this.cargarAlergias();
   }
 
   cargarMedicos() {
@@ -168,6 +175,26 @@ export class ModalAgregarPaciente {
         this.cdr.detectChanges();
       },
       error: (error) => this.popUps.errorDesdeBackend(error, 'No se pudieron cargar las instituciones.'),
+    });
+  }
+
+  cargarEnfermedades() {
+    this.servicioCatalogo.listar<Inter_base>('enfermedades').subscribe({
+      next: (enfermedades) => {
+        this.enfermedades = enfermedades;
+        this.cdr.detectChanges();
+      },
+      error: (error) => this.popUps.errorDesdeBackend(error, 'No se pudieron cargar las enfermedades.'),
+    });
+  }
+
+  cargarAlergias() {
+    this.servicioCatalogo.listar<Inter_base>('alergias').subscribe({
+      next: (alergias) => {
+        this.alergias = alergias;
+        this.cdr.detectChanges();
+      },
+      error: (error) => this.popUps.errorDesdeBackend(error, 'No se pudieron cargar las alergias.'),
     });
   }
 
@@ -365,6 +392,8 @@ export class ModalAgregarPaciente {
     this.motivoReferencia = '';
     this.archivoReferencia = null;
     this.contador = 0;
+    this.enfermedadesSeleccionadas = [];
+    this.alergiasSeleccionadas = [];
   }
 
   private precargarPacienteSeleccionado(detalle: PacienteDetalle): void {
@@ -575,14 +604,14 @@ export class ModalAgregarPaciente {
     const medicoId = this.medicoSeleccionado?.id;
     const descripcion = this.descripcionAtencion.trim();
 
-    // Paso 2: médico y descripción siempre; cama solo para hospitalización.
+    // Paso 3: médico y descripción siempre; cama solo para hospitalización.
     if (medicoId == null || !descripcion) {
-      this.contador = 1;
+      this.contador = 2;
       this.popUps.formIncompleto('Selecciona un médico e ingresa la descripción de la atención.');
       return null;
     }
     if (this.tipoAtencion === 'hospitalizacion' && camaId == null) {
-      this.contador = 1;
+      this.contador = 2;
       this.popUps.formIncompleto('Selecciona una cama para la hospitalización.');
       return null;
     }
@@ -592,7 +621,7 @@ export class ModalAgregarPaciente {
     const parentescoId = responsable.parentescoId;
     let responsableRequest: PacienteRequest['episodio']['responsable'] = null;
 
-    // Paso 3: siempre aplica en hospitalización y en emergencia con paciente menor de edad.
+    // Paso 4: siempre aplica en hospitalización y en emergencia con paciente menor de edad.
     // Si es opcional pero se empezó a llenar, se exige el mismo conjunto completo de datos.
     if (this.responsableCamposRequeridos) {
       const nombres = datosResponsable.nombres?.trim() ?? '';
@@ -602,18 +631,18 @@ export class ModalAgregarPaciente {
       const telefono = datosResponsable.telefono?.trim() ?? '';
 
       if (!nombres || !apellidos || !fechaNacimiento || !datosResponsable.sexo || !cui || !telefono || parentescoId == null) {
-        this.contador = 2;
+        this.contador = 3;
         this.popUps.formIncompleto('Completa nombre, apellidos, nacimiento, sexo, CUI, teléfono y parentesco del responsable.');
         return null;
       }
 
       if (!/^\d{13}$/.test(cui)) {
-        this.contador = 2;
+        this.contador = 3;
         this.popUps.formIncompleto('El CUI del responsable debe contener exactamente 13 dígitos.');
         return null;
       }
       if (!/^\d{8}$/.test(telefono)) {
-        this.contador = 2;
+        this.contador = 3;
         this.popUps.formIncompleto('El teléfono del responsable debe contener exactamente 8 dígitos.');
         return null;
       }
@@ -636,9 +665,9 @@ export class ModalAgregarPaciente {
     const institucionId = this.institucionSeleccionada?.id;
     const hayReferencia = this.referenciaTieneDatos;
 
-    // Paso 4: la referencia es opcional; si hay motivo o archivo, sí debe indicarse institución.
+    // Paso 5: la referencia es opcional; si hay motivo o archivo, sí debe indicarse institución.
     if (hayReferencia && institucionId == null) {
-      this.contador = 3;
+      this.contador = 4;
       this.popUps.formIncompleto('Selecciona la institución que refiere.');
       return null;
     }

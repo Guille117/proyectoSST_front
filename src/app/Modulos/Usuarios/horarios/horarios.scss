@@ -47,8 +47,8 @@
   padding: 30px 10px;
   text-align: center;
   color: #64748b;
-  font-size: 14px;
-  font-style: italic;
+  font-size: 15px;
+  font-weight: 500;
 }
 
 .horario-card {
@@ -112,7 +112,7 @@
   border-radius: 6px;
   background-color: #f1f5f9;
   color: #475569;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 800;
   transition: all 0.2s ease;
 }
@@ -268,7 +268,7 @@
   gap: 8px;
   margin: 0 0 5px;
   color: #52607a;
-  font-size: 10px;
+  font-size: 13px;
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -307,7 +307,7 @@
   border-radius: 10px;
   background: #ffffff;
   padding: 0 6px;
-  font-size: 13px;
+  font-size: 14px;
   color: var(--azulPrincipal);
   text-align: center;
   outline: none;

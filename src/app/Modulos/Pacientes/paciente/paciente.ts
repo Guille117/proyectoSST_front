@@ -1,8 +1,10 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { ChangeDetectorRef, Component, DestroyRef, OnInit, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, DestroyRef, ElementRef, HostListener, OnInit, ViewChild, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { TimeoutError } from 'rxjs';
 import { TabSwitch } from '../../../shared/tab-switch/tab-switch';
+import { Paginacion } from '../../../shared/paginacion/paginacion';
+import { calcularFilasVisibles, FILAS_VISIBLES_POR_DEFECTO } from '../../../shared/paginacion/filas-visibles';
 import { ModalService } from '../../../modal-principal/modal-service';
 import { ArchivoService } from '../../../shared/archivos/archivoService';
 import { PopUps } from '../../../shared/popUps/popUpsService';
@@ -24,7 +26,7 @@ interface TipoDocumentoVista {
 
 @Component({
   selector: 'app-paciente',
-  imports: [TabSwitch],
+  imports: [TabSwitch, Paginacion],
   templateUrl: './paciente.html',
   styleUrl: './paciente.scss',
 })
@@ -37,10 +39,13 @@ export class Paciente implements OnInit {
   private readonly popUps = inject(PopUps);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly destroyRef = inject(DestroyRef);
+  @ViewChild('panelTabla') private panelTabla?: ElementRef<HTMLElement>;
 
   // ------------------- LISTADO Y SELECCIÓN -------------------
   pacientes: PacienteResumido[] = [];
   pacienteSeleccionado: PacienteResumido | null = null;
+  paginaActual = 1;
+  cantidadMostrar = FILAS_VISIBLES_POR_DEFECTO;
 
   detalle: PacienteDetalle | null = null;
   cargandoDetalle = false;
@@ -94,8 +99,10 @@ export class Paciente implements OnInit {
             pacientes.find((paciente) => paciente.pacienteId === pacienteIdSeleccionado) ??
             pacientes[0] ??
             null;
+          this.paginaActual = this.paginaDelPaciente(seleccionado);
           this.seleccionarPaciente(seleccionado, true);
           this.cdr.detectChanges();
+          this.ajustarCantidadMostrar();
         },
         error: (error) => {
           this.popUps.errorDesdeBackend(error, 'No se pudieron cargar los pacientes.');
@@ -123,6 +130,32 @@ export class Paciente implements OnInit {
 
   esSeleccionado(paciente: PacienteResumido): boolean {
     return this.pacienteSeleccionado?.pacienteId === paciente.pacienteId;
+  }
+
+  get pacientesPagina(): PacienteResumido[] {
+    const inicio = (this.paginaActual - 1) * this.cantidadMostrar;
+    return this.pacientes.slice(inicio, inicio + this.cantidadMostrar);
+  }
+
+  actualizarPagina(pagina: number): void {
+    this.paginaActual = pagina;
+    const primero = this.pacientesPagina[0];
+    if (primero) this.seleccionarPaciente(primero);
+  }
+
+  @HostListener('window:resize')
+  ajustarCantidadMostrar(): void {
+    const cantidad = calcularFilasVisibles(this.panelTabla?.nativeElement ?? null);
+    if (cantidad === this.cantidadMostrar) return;
+    this.cantidadMostrar = cantidad;
+    this.paginaActual = this.paginaDelPaciente(this.pacienteSeleccionado);
+    this.cdr.detectChanges();
+  }
+
+  private paginaDelPaciente(paciente: PacienteResumido | null): number {
+    if (!paciente) return 1;
+    const indice = this.pacientes.findIndex((item) => item.pacienteId === paciente.pacienteId);
+    return indice >= 0 ? Math.floor(indice / this.cantidadMostrar) + 1 : 1;
   }
 
   // ------------------- DETALLE -------------------

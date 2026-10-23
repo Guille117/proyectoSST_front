@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, ElementRef, HostListener, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, NgForm } from '@angular/forms';
 import { finalize, Subscription } from 'rxjs';
@@ -7,6 +7,7 @@ import { PopUps } from '../../../shared/popUps/popUpsService';
 import { TabSwitch } from '../../../shared/tab-switch/tab-switch';
 import { Paginacion } from '../../../shared/paginacion/paginacion';
 import { CatalogoService } from '../data/serviceCatalogo';
+import { calcularFilasVisibles, FILAS_VISIBLES_POR_DEFECTO } from '../../../shared/paginacion/filas-visibles';
 
 type RegistroPaciente = Inter_base & Partial<Inter_descripcion & Inter_institucion>;
 
@@ -20,6 +21,7 @@ export class CatalogoPaciente implements OnInit, OnDestroy {
   private peticionRegistros?: Subscription;
   private peticionConteos?: Subscription;
   private versionCatalogo = 0;
+  @ViewChild('panelTabla') private panelTabla?: ElementRef<HTMLElement>;
 
   constructor(
     private cdr: ChangeDetectorRef,
@@ -63,10 +65,49 @@ export class CatalogoPaciente implements OnInit, OnDestroy {
       descripcion: 'Indica el parentesco de los contactos del paciente',
       cantidad: 0
     },
+    {
+      key: 'alergias',
+      url: 'alergias',
+      icono: 'bi bi-exclamation-triangle',
+      titulo: 'Alergia',
+      descripcion: 'Indica las alergias registradas para los pacientes',
+      cantidad: 0
+    },
+    {
+      key: 'enfermedades',
+      url: 'enfermedades',
+      icono: 'bi bi-activity',
+      titulo: 'Enfermedad',
+      descripcion: 'Indica las enfermedades registradas para los pacientes',
+      cantidad: 0
+    },
+    {
+      key: 'areas',
+      url: 'areas',
+      icono: 'bi bi-geo-alt',
+      titulo: 'Área',
+      descripcion: 'Indica las áreas donde se encuentran las camas y habitaciones',
+      cantidad: 0
+    },
   ];
    
   catalogoSeleccionado = '';
   catalogoUrl = '';
+  readonly catalogosPorPagina = 5;
+  paginaCatalogos = 1;
+
+  get catalogosPaginados() {
+    const inicio = (this.paginaCatalogos - 1) * this.catalogosPorPagina;
+    return this.listaCatalogos.slice(inicio, inicio + this.catalogosPorPagina);
+  }
+
+  get totalPaginasCatalogos(): number {
+    return Math.max(1, Math.ceil(this.listaCatalogos.length / this.catalogosPorPagina));
+  }
+
+  cambiarPaginaCatalogos(pagina: number): void {
+    this.paginaCatalogos = Math.min(Math.max(pagina, 1), this.totalPaginasCatalogos);
+  }
 
   // métodos
 
@@ -126,9 +167,18 @@ export class CatalogoPaciente implements OnInit, OnDestroy {
 
   datos: RegistroPaciente[] = [];
   paginaActual = 1;
-  readonly cantidadMostrar = 5;
+  cantidadMostrar = FILAS_VISIBLES_POR_DEFECTO;
   cambiandoEstado = false;
   cargandoRegistros = false;
+
+  @HostListener('window:resize')
+  ajustarCantidadMostrar(): void {
+    const cantidad = calcularFilasVisibles(this.panelTabla?.nativeElement ?? null);
+    if (cantidad === this.cantidadMostrar) return;
+    this.cantidadMostrar = cantidad;
+    this.paginaActual = 1;
+    this.cdr.detectChanges();
+  }
 
   traerRegistros(estado: boolean){
     if (estado !== this.mostrarActivos) this.paginaActual = 1;
@@ -147,6 +197,7 @@ export class CatalogoPaciente implements OnInit, OnDestroy {
         this.cargandoRegistros = false;
         this.paginaActual = Math.min(this.paginaActual, Math.max(1, Math.ceil(data.length / this.cantidadMostrar)));
         this.cdr.detectChanges();
+        this.ajustarCantidadMostrar();
       },
       error: (error) => {
         this.datos = [];
@@ -240,10 +291,18 @@ export class CatalogoPaciente implements OnInit, OnDestroy {
 
   // Helper para seleccionar el tipo de dato según el catálogo seleccionado
   selecciontipoDato(): Inter_base | Inter_descripcion | Inter_institucion {
-    if (this.catalogoSeleccionado === 'Parentesco') return { nombre: this.variableEntrada.nombre };
+    if (this.esCatalogoSimple) return { nombre: this.variableEntrada.nombre };
     return this.catalogoSeleccionado === 'Institución'
       ? { nombre: this.variableEntrada.nombre, telefono: this.variableEntrada.telefono, direccion: this.variableEntrada.direccion }
       : { nombre: this.variableEntrada.nombre, descripcion: this.variableEntrada.descripcion };
+  }
+
+  /** Catálogos que solo manejan el nombre del registro. */
+  get esCatalogoSimple(): boolean {
+    return this.catalogoSeleccionado === 'Parentesco'
+      || this.catalogoSeleccionado === 'Área'
+      || this.catalogoSeleccionado === 'Alergia'
+      || this.catalogoSeleccionado === 'Enfermedad';
   }
   // ---------------------------------------------------------------------------------
 
@@ -273,8 +332,8 @@ export class CatalogoPaciente implements OnInit, OnDestroy {
       return this.variableEntrada.telefono.trim() !== this.telefonoOriginal.trim()
         || this.variableEntrada.direccion.trim() !== this.direccionOriginal.trim();
     }
-    return this.catalogoSeleccionado !== 'Parentesco'
-      && this.variableEntrada.descripcion.trim() !== this.descripcionOriginal.trim();
+    if (this.esCatalogoSimple) return false;
+    return this.variableEntrada.descripcion.trim() !== this.descripcionOriginal.trim();
   }
 
   //--------------

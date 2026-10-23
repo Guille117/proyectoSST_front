@@ -1,5 +1,5 @@
 <!-- Listado de pacientes a la izquierda y detalle del paciente seleccionado a la derecha. -->
-<div class="contenedorPrincipal trabajoArea">
+<div class="contenedorPrincipal">
     <div class="izquierda">
         <div class="seccionSuperior">
             <div class="buscador-container">
@@ -18,33 +18,47 @@
             <button type="button" class="btn _principal" (click)="abrirModalAgregar()">Agregar paciente</button>
         </div>
 
-        <table class="table">
-            <thead>
-                <tr>
-                    <th class="celda_centrada">No.</th>
-                    <th class="celda_centrada">Expediente</th>
-                    <th class="celda_izquierda">Nombre</th>
-                    <th class="celda_centrada">Teléfono</th>
-                    <th class="celda_centrada">Tratamiento</th>
-                </tr>
-            </thead>
-            <tbody>
-                @for (paciente of pacientes; track paciente.pacienteId) {
-                    <tr
-                        [class.selected-row]="esSeleccionado(paciente)"
-                        tabindex="0"
-                        (click)="seleccionarPaciente(paciente)"
-                        (keydown.enter)="seleccionarPaciente(paciente)"
-                    >
-                        <td class="celda_centrada">{{ $index + 1 }}</td>
-                        <td class="celda_centrada">{{ paciente.codigoExpediente }}</td>
-                        <td class="celda_izquierda">{{ paciente.nombreCompleto }}</td>
-                        <td class="celda_centrada">{{ paciente.telefono }}</td>
-                        <td class="celda_centrada">{{ paciente.tipoTratamiento }}</td>
+        <div class="tabla-pacientes" #panelTabla>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th class="celda_centrada">No.</th>
+                        <th class="celda_centrada">Expediente</th>
+                        <th class="celda_izquierda">Nombre</th>
+                        <th class="celda_centrada">Teléfono</th>
+                        <th class="celda_centrada">Tratamiento</th>
                     </tr>
-                }
-            </tbody>
-        </table>
+                </thead>
+                <tbody>
+                    @for (paciente of pacientesPagina; track paciente.pacienteId) {
+                        <tr
+                            [class.selected-row]="esSeleccionado(paciente)"
+                            tabindex="0"
+                            (click)="seleccionarPaciente(paciente)"
+                            (keydown.enter)="seleccionarPaciente(paciente)"
+                        >
+                            <td class="celda_centrada">{{ (paginaActual - 1) * cantidadMostrar + $index + 1 }}</td>
+                            <td class="celda_centrada">{{ paciente.codigoExpediente }}</td>
+                            <td class="celda_izquierda">{{ paciente.nombreCompleto }}</td>
+                            <td class="celda_centrada">{{ paciente.telefono }}</td>
+                            <td class="celda_centrada">{{ paciente.tipoTratamiento }}</td>
+                        </tr>
+                    }
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="5">
+                            <app-paginacion
+                                [paginaActual]="paginaActual"
+                                [totalregistros]="pacientes.length"
+                                [cantidadMostrar]="cantidadMostrar"
+                                (paginaCambiada)="actualizarPagina($event)"
+                            ></app-paginacion>
+                        </td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
     </div>
 
     <div class="derecha">

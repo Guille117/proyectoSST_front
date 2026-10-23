@@ -1,3 +1,14 @@
+:host {
+    font-family: 'Inter', sans-serif;
+    font-weight: 500;
+}
+
+input,
+select,
+textarea {
+    font-weight: 500;
+}
+
 .pasos {
     display: flex;
     align-items: center;
@@ -14,6 +25,12 @@
     white-space: nowrap;
     font-size: 14px;
 
+    .texto {
+        font-size: 16px;
+        font-weight: 600;
+        line-height: 1.2;
+    }
+
     .numero {
         display: flex;
         align-items: center;
@@ -21,7 +38,7 @@
         width: 30px;
         height: 30px;
         border-radius: 50%;
-        background-color: #E9EEF5;
+        background-color: #ffffff;
         color: #667085;
         font-weight: 700;
     }
@@ -99,7 +116,7 @@
         width: 100%;
 
         .texto {
-            font-size: 13px;
+            font-size: 14px;
         }
     }
 }

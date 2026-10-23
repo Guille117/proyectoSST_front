@@ -129,6 +129,12 @@ mat-select {
 	}
 }
 
+.paso-enfermedades {
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+}
+
 .paso2 {
 	display: flex;
 	flex-direction: column;
@@ -395,9 +401,9 @@ mat-select {
 	}
 
 	.paso2 {
-			.fila-tipo-atencion {
-				grid-template-columns: 1fr;
-			}
+		.fila-tipo-atencion {
+			grid-template-columns: 1fr;
+		}
 
 		.fila-paso2 {
 			grid-template-columns: 1fr;

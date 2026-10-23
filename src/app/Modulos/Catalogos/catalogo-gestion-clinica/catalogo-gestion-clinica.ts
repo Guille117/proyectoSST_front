@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, ElementRef, HostListener, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { FormsModule, NgForm } from '@angular/forms';
 import { finalize, Subscription } from 'rxjs';
 import { TabSwitch } from '../../../shared/tab-switch/tab-switch';
@@ -7,6 +7,7 @@ import { PopUps } from '../../../shared/popUps/popUpsService';
 import { ConteoCatalogosClinica, Inter_base } from '../data/nombreInterfaz';
 import { Paginacion } from '../../../shared/paginacion/paginacion';
 import { CatalogoService } from '../data/serviceCatalogo';
+import { calcularFilasVisibles, FILAS_VISIBLES_POR_DEFECTO } from '../../../shared/paginacion/filas-visibles';
 
 @Component({
   selector: 'app-catalogo-gestion-clinica',
@@ -18,6 +19,7 @@ export class CatalogoGestionClinica implements OnInit, OnDestroy {
   private peticionRegistros?: Subscription;
   private peticionConteos?: Subscription;
   private versionCatalogo = 0;
+  @ViewChild('panelTabla') private panelTabla?: ElementRef<HTMLElement>;
 
   constructor(
     private cdr: ChangeDetectorRef,
@@ -120,9 +122,18 @@ export class CatalogoGestionClinica implements OnInit, OnDestroy {
 
   datos: Inter_base[] = [];
   paginaActual = 1;
-  readonly cantidadMostrar = 5;
+  cantidadMostrar = FILAS_VISIBLES_POR_DEFECTO;
   cambiandoEstado = false;
   cargandoRegistros = false;
+
+  @HostListener('window:resize')
+  ajustarCantidadMostrar(): void {
+    const cantidad = calcularFilasVisibles(this.panelTabla?.nativeElement ?? null);
+    if (cantidad === this.cantidadMostrar) return;
+    this.cantidadMostrar = cantidad;
+    this.paginaActual = 1;
+    this.cdr.detectChanges();
+  }
 
   traerRegistros(estado: boolean){
     if (estado !== this.mostrarActivos) this.paginaActual = 1;
@@ -141,6 +152,7 @@ export class CatalogoGestionClinica implements OnInit, OnDestroy {
         this.cargandoRegistros = false;
         this.paginaActual = Math.min(this.paginaActual, Math.max(1, Math.ceil(data.length / this.cantidadMostrar)));
         this.cdr.detectChanges();
+        this.ajustarCantidadMostrar();
       },
       error: (error) => {
         this.datos = [];

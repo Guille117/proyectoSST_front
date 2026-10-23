@@ -109,6 +109,12 @@
 							</p>
 						}
 					</div>
+					<div class="cama-card-hover" aria-hidden="true">
+						<span class="cama-hover-etiqueta">Área</span>
+						<strong class="cama-hover-valor">{{ cama.nombreArea }}</strong>
+						<span class="cama-hover-etiqueta">Precio por día</span>
+						<strong class="cama-hover-valor">{{ precioPorDia(cama) }}</strong>
+					</div>
 					@if(!isEditing) {
 						@if (menuCamaAbierto === cama.idCama) {
 							<div class="cama-card-actions" role="menu" aria-label="Acciones para {{ cama.codigo }}">
@@ -182,6 +188,16 @@
 		<div class="f_body">
 			<form class="body_container">
 				<div class="subFormulario">
+					<label for="area">Área</label>
+					<select id="area" name="area" [(ngModel)]="camaRequest.areaId" required>
+						<option [ngValue]="0" disabled>Selecciona un área</option>
+						@for (area of areas; track area.id) {
+							<option [ngValue]="area.id">{{ area.nombre }}</option>
+						}
+					</select>
+				</div>
+
+				<div class="subFormulario">
 					<label for="tipoCama">Tipo de cama</label>
 					<select id="tipoCama" name="tipoCama" [(ngModel)]="camaRequest.tipoId" required>
 						<option [ngValue]="0" disabled>Selecciona un tipo de cama</option>
@@ -199,6 +215,19 @@
 							<option [ngValue]="habitacion.id">{{ habitacion.nombre }}</option>
 						}
 					</select>
+				</div>
+
+				<div class="subFormulario">
+					<label for="precio">Precio</label>
+					<input
+						id="precio"
+						name="precio"
+						type="number"
+						min="0"
+						step="0.01"
+						placeholder="Ingrese el precio"
+						[(ngModel)]="precio"
+					>
 				</div>
 			</form>
 		</div>

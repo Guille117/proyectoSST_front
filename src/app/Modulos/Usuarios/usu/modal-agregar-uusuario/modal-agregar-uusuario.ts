@@ -58,7 +58,7 @@ export class ModalAgregarUusuario implements OnInit, OnChanges {
       {
         id: 'cancelar',
         label: 'Cancelar',
-        className: '_cancelar',
+        className: '_cancelarModal',
         onClick: () => this.cerrarModal(),
       },
     ];

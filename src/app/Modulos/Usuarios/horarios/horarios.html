@@ -17,7 +17,12 @@
       </div>
 
       <div class="miniSub-container">
-        <app-tab-switch [op1]="'Activos'" [op2]="'Inactivos'" (opcionCambiada)="getHorarios($event)"></app-tab-switch>
+        <app-tab-switch
+          [op1]="'Activos'"
+          [op2]="'Inactivos'"
+          [mostrarActivos]="mostrarActivos"
+          (opcionCambiada)="getHorarios($event)"
+        ></app-tab-switch>
       </div>
     </div>
 

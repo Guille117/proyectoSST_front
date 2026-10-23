@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { of } from 'rxjs';
+import { Observable, of } from 'rxjs';
 import { ModalService } from '../../../../modal-principal/modal-service';
 import { ArchivoService } from '../../../../shared/archivos/archivoService';
 import { ModalPopUps } from '../../../../shared/popUps/modal-popUpsService';
@@ -121,7 +121,7 @@ describe('ModalAgregarPaciente', () => {
   };
 
   const servicioCatalogo = {
-    listar: vi.fn(() => of([])),
+    listar: vi.fn<(recurso: string, activos?: boolean) => Observable<unknown[]>>(() => of([])),
   };
 
   const modalService = { open: vi.fn(), close: vi.fn() };
@@ -180,6 +180,26 @@ describe('ModalAgregarPaciente', () => {
     fixture.detectChanges();
   };
 
+  it('carga las enfermedades y alergias desde el backend para el paso 2', async () => {
+    servicioCatalogo.listar.mockImplementation((recurso: string) => {
+      if (recurso === 'enfermedades') return of([{ id: 1, nombre: 'Diabetes' }]);
+      if (recurso === 'alergias') return of([{ id: 2, nombre: 'Penicilina' }]);
+      return of([]);
+    });
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(servicioCatalogo.listar).toHaveBeenCalledWith('enfermedades');
+    expect(servicioCatalogo.listar).toHaveBeenCalledWith('alergias');
+    expect(component.enfermedades).toEqual([{ id: 1, nombre: 'Diabetes' }]);
+    expect(component.alergias).toEqual([{ id: 2, nombre: 'Penicilina' }]);
+
+    component.contador = 1;
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelectorAll('mat-select').length).toBe(2);
+  });
+
   it('precarga todos los datos del paciente para editar', async () => {
     await crearEnEdicion(detalle);
 
@@ -195,7 +215,7 @@ describe('ModalAgregarPaciente', () => {
     expect(component.responsableForm.parentescoId).toBe(7);
     expect(component.institucionSeleccionada?.id).toBe(8);
     expect(component.motivoReferencia).toBe('Evaluación');
-    expect(component.pasos.length).toBe(4);
+    expect(component.pasos.length).toBe(5);
   });
 
   it('guarda la edición con confirmación y envía la cama seleccionada', async () => {

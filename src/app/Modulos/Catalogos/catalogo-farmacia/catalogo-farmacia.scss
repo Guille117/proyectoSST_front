@@ -5,17 +5,23 @@
   width: 100%;
   min-height: 420px;
 }
+
 .panel{
   border-radius: 12px;
   padding: 1rem;
   min-height: 300px;
+  min-width: 0;
 }
 
+/* La sección central conserva su fondo blanco y se desplaza de forma independiente */
 .panel_tabla {
+  align-self: start;
+  max-height: calc(100vh - var(--heightTopBar) - 180px);
+  overflow-y: auto;
   background: #fff;
-  border: 1px solid var(--colorBorde);
-  border-radius: 20px;
-  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.04);
+  box-shadow:
+    0 0 0 1px rgba(203, 213, 225, 0.7),
+    0 8px 20px rgba(15, 23, 42, 0.12);
 }
 
 
@@ -134,6 +140,51 @@
   min-width: 200px;
 }
 
+/* Paginación visual de los catálogos, con el mismo estilo de los cards de camas. */
+.paginacion-catalogos {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.paginacion-catalogos-resumen {
+  min-width: 88px;
+  color: #64748b;
+  font-size: 14px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.paginacion-catalogos-control {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  padding: 0;
+  color: #475569;
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  border-radius: 50%;
+  font-size: 17px;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+
+  &:hover:not(:disabled),
+  &:focus-visible {
+    color: #fff;
+    background: var(--azulSecundario);
+    border-color: var(--azulSecundario);
+    outline: none;
+  }
+
+  &:disabled {
+    color: #cbd5e1;
+    cursor: default;
+  }
+}
+
 .acciones {
   display: flex;
   justify-content: center;
@@ -153,8 +204,7 @@
   font-weight: 600;
   color: #1a2535;
 }
-// :not([type="checkbox"])
-input {
+input:not([type="checkbox"]) {
   width: 100%;
   padding: 10px 12px;
   border-radius: 12px;
@@ -165,8 +215,8 @@ input {
   margin-top: 10px;
   margin-bottom: 10px;
 }
-// :not([type="checkbox"])
-input:disabled {
+
+input:not([type="checkbox"]):disabled {
   background: #f4f5f7;
   color: #7a8699;
 }

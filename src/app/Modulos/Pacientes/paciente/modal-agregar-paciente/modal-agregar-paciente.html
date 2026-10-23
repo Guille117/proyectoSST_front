@@ -6,7 +6,7 @@
 		<div class="descripcion-paso">
 			<div class="encabezado-paso">
 				<strong>Paso {{ contador + 1 }} de {{ pasos.length }}</strong>
-				@if ((contador === 2 && !responsableRequerido) || contador === 3) {
+				@if (contador === 1 || (contador === 3 && !responsableRequerido) || contador === 4) {
 					<span class="etiqueta-opcional">Opcional</span>
 				}
 			</div>
@@ -135,6 +135,48 @@
 }
 
 @if (contador === 1) {
+	<div class="paso-enfermedades">
+		<div class="fila">
+			<app-campo-validado [label]="'Enfermedades confirmadas'" [fieldId]="'enfermedadesPaciente'">
+				<mat-select
+					[(ngModel)]="enfermedadesSeleccionadas"
+					name="enfermedadesPaciente"
+					multiple
+					[disabled]="guardando"
+					placeholder="Seleccione las enfermedades"
+					panelClass="panel-medicos"
+				>
+					<mat-select-trigger>
+						{{ enfermedadesSeleccionadas.length ? enfermedadesSeleccionadas.join(', ') : 'Seleccione las enfermedades' }}
+					</mat-select-trigger>
+					@for (enfermedad of enfermedades; track enfermedad.id ?? enfermedad.nombre) {
+						<mat-option [value]="enfermedad.nombre">{{ enfermedad.nombre }}</mat-option>
+					}
+				</mat-select>
+			</app-campo-validado>
+
+			<app-campo-validado [label]="'Alergias'" [fieldId]="'alergiasPaciente'">
+				<mat-select
+					[(ngModel)]="alergiasSeleccionadas"
+					name="alergiasPaciente"
+					multiple
+					[disabled]="guardando"
+					placeholder="Seleccione las alergias"
+					panelClass="panel-medicos"
+				>
+					<mat-select-trigger>
+						{{ alergiasSeleccionadas.length ? alergiasSeleccionadas.join(', ') : 'Seleccione las alergias' }}
+					</mat-select-trigger>
+					@for (alergia of alergias; track alergia.id ?? alergia.nombre) {
+						<mat-option [value]="alergia.nombre">{{ alergia.nombre }}</mat-option>
+					}
+				</mat-select>
+			</app-campo-validado>
+		</div>
+	</div>
+}
+
+@if (contador === 2) {
 	<div class="paso2">
 		<div class="fila-tipo-atencion">
 			<div class="control-atencion">
@@ -216,7 +258,7 @@
 	</div>
 }
 
-@if (contador === 2) {
+@if (contador === 3) {
 	<div>
 		<div class="fila">
 			<app-campo-validado
@@ -365,7 +407,7 @@
 	</div>
 }
 
-@if (contador === 3) {
+@if (contador === 4) {
 	<div class="paso4">
 		<app-campo-validado [label]="'Institución que refiere'" [fieldId]="'institucionReferencia'" [required]="referenciaTieneDatos" [showError]="!!(institucionReferenciaControl.touched && institucionReferenciaControl.invalid)" [errorMessage]="'Debe seleccionar una institución'">
 			<mat-select
@@ -435,7 +477,7 @@
 }
 
 <div class="acciones-modal">
-	<button type="button" class="btn _eliminar" (click)="cerrarModal()">Cancelar</button>
+	<button type="button" class="btn _cancelarModal" (click)="cerrarModal()">Cancelar</button>
 
 	@if (contador > 0) {
 		<button type="button" class="btn _principal" (click)="contador -= 1">
@@ -449,7 +491,13 @@
 			<button
 				type="button"
 				class="btn _principal"
-				[disabled]="contador === 0 ? !puedeAvanzarPaso1 : contador === 1 ? !puedeAvanzarPaso2 : !puedeAvanzarPaso3"
+				[disabled]="contador === 0
+					? !puedeAvanzarPaso1
+					: contador === 2
+						? !puedeAvanzarPaso2
+						: contador === 3
+							? !puedeAvanzarPaso3
+							: false"
 				(click)="contador += 1"
 			>
 				Siguiente

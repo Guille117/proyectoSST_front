@@ -19,7 +19,12 @@
             </div>
 
             <div class="switchContainer">
-                <app-tab-switch [op1]="'Activos'" [op2]="'Inactivos'" (opcionCambiada)="cambiarTab($event)"></app-tab-switch>
+                <app-tab-switch
+                    [op1]="'Activos'"
+                    [op2]="'Inactivos'"
+                    [mostrarActivos]="mostrarActivos"
+                    (opcionCambiada)="cambiarTab($event)"
+                ></app-tab-switch>
             </div>
 
             <button type="button" class="btn _principal" (click)="abrirModalAgregar()">Agregar usuario</button>

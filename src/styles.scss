@@ -29,6 +29,14 @@ body {
   background-color: var(--colorFondoPrincipal);
 }
 
+/* Los controles de formulario no heredan la tipografía del body por defecto. */
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+}
+
 
 // variables
 :root{

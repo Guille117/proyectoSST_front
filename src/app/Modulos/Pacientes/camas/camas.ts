@@ -74,11 +74,12 @@ EstadoCama = EstadoCama;
     tipoId: 0,
     areaId: 0,
   };
+    precio = 0;
     private camaRequestInicial: camaRequest | null = null;
 
   validarCama(): boolean {
-    if (!this.camaRequest.habitacionId || !this.camaRequest.tipoId) {
-      this.popUp.formIncompleto('Debe seleccionar tipo de cama y habitación.');
+    if (!this.camaRequest.habitacionId || !this.camaRequest.tipoId || !this.camaRequest.areaId) {
+      this.popUp.formIncompleto('Debe seleccionar área, tipo de cama y habitación.');
       return false;
     }
 
@@ -172,6 +173,11 @@ EstadoCama = EstadoCama;
     return this.nombresPacientesPorCama.get(cama.idCama) ?? '';
   }
 
+  /** MOCK: precio por día mientras el backend no expone ese dato. */
+  precioPorDia(_cama: camaResponseSimple): string {
+    return 'Q 150.00';
+  }
+
   /** Reduce el nombre completo al primer nombre y al primer apellido. */
   private formatearNombrePaciente(nombreCompleto: string): string {
     const partes = nombreCompleto.trim().split(/\s+/).filter(Boolean);
@@ -244,6 +250,7 @@ EstadoCama = EstadoCama;
       next: (data) => {
         this.camaRequest = data;
         this.camaRequestInicial = { ...data };
+        this.precio = 0;
         this.isEditing = true;
         this.idActualizar = id;
         this.cdr.detectChanges();
@@ -307,12 +314,15 @@ EstadoCama = EstadoCama;
       tipoId: 0,
       areaId: this.areas[0]?.id ?? 0,
     };
+    this.precio = 0;
     this.camaRequestInicial = null;
     this.isEditing = false;
   }
 
   puedeGuardar(): boolean {
-    const formularioCompleto = Boolean(this.camaRequest.tipoId && this.camaRequest.habitacionId);
+    const formularioCompleto = Boolean(
+      this.camaRequest.tipoId && this.camaRequest.habitacionId && this.camaRequest.areaId,
+    );
 
     if (!formularioCompleto) {
       return false;
@@ -324,7 +334,8 @@ EstadoCama = EstadoCama;
 
     return (
       this.camaRequest.tipoId !== this.camaRequestInicial.tipoId ||
-      this.camaRequest.habitacionId !== this.camaRequestInicial.habitacionId
+      this.camaRequest.habitacionId !== this.camaRequestInicial.habitacionId ||
+      this.camaRequest.areaId !== this.camaRequestInicial.areaId
     );
   }
 }

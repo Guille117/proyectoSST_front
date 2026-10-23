@@ -24,3 +24,9 @@
         border-bottom: solid 3px #e10c05;
     }
 }
+
+/* El submenú del módulo se pega a la barra superior: cancela su margen y el relleno
+   superior del área de trabajo, sin afectar a los submenús internos de cada pantalla. */
+.principal > .subMenuNav {
+    margin-top: -20px;
+}

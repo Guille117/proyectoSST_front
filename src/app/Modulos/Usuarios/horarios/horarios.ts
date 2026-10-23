@@ -29,6 +29,7 @@ export class Horarios implements OnInit {
   horarios: HorarioResponse[] = [];
   mostrarActivos = true;
   private horarioOriginalClave = '';
+  private solicitudHorarios = 0;
 
   dias = listaDias;
 
@@ -101,8 +102,10 @@ export class Horarios implements OnInit {
 
   getHorarios(activos: boolean): void {
     this.mostrarActivos = activos;
+    const solicitud = ++this.solicitudHorarios;
     this.horarioService.getHorarios(activos).subscribe({
       next: (data) => {
+        if (solicitud !== this.solicitudHorarios) return;
         this.horarios = data;
         if (this.horarios.length > 0) {
           this.seleccionarHorario(this.horarios[0]);
@@ -234,8 +237,10 @@ export class Horarios implements OnInit {
   }
 
   private recargarHorarios(idSeleccionar?: number): void {
+    const solicitud = ++this.solicitudHorarios;
     this.horarioService.getHorarios(this.mostrarActivos).subscribe({
       next: (data) => {
+        if (solicitud !== this.solicitudHorarios) return;
         this.horarios = data;
         if (idSeleccionar) {
           const objetivo = this.horarios.find((h) => h.id === idSeleccionar);

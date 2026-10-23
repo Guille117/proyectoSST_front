@@ -24,6 +24,8 @@ export class Usu implements OnInit {
   private modalPopUps = inject(ModalPopUps);
   private cdr = inject(ChangeDetectorRef);
   private authService = inject(AuthService);
+  private solicitudListado = 0;
+  private solicitudDetalle = 0;
 
   usuarios: UsuarioListadoResponse[] = [];
   usuariosTodos: UsuarioListadoResponse[] = [];
@@ -39,9 +41,16 @@ export class Usu implements OnInit {
 
   cargarUsuarios(activos: boolean = this.mostrarActivos): void {
     this.mostrarActivos = activos;
+    const solicitud = ++this.solicitudListado;
     this.usuarioService.getUsuarios(activos).subscribe({
-      next: (data) => this.actualizarListaUsuarios(data),
-      error: (err) => this.popUps.errorDesdeBackend(err, 'Error al cargar los usuarios'),
+      next: (data) => {
+        if (solicitud !== this.solicitudListado) return;
+        this.actualizarListaUsuarios(data);
+      },
+      error: (err) => {
+        if (solicitud !== this.solicitudListado) return;
+        this.popUps.errorDesdeBackend(err, 'Error al cargar los usuarios');
+      },
     });
   }
 
@@ -52,9 +61,16 @@ export class Usu implements OnInit {
       return;
     }
 
+    const solicitud = ++this.solicitudListado;
     this.usuarioService.buscarUsuarios(query, this.mostrarActivos).subscribe({
-      next: (data) => this.actualizarListaUsuarios(data),
-      error: (err) => this.popUps.errorDesdeBackend(err, 'Error al buscar usuarios'),
+      next: (data) => {
+        if (solicitud !== this.solicitudListado) return;
+        this.actualizarListaUsuarios(data);
+      },
+      error: (err) => {
+        if (solicitud !== this.solicitudListado) return;
+        this.popUps.errorDesdeBackend(err, 'Error al buscar usuarios');
+      },
     });
   }
 
@@ -101,6 +117,7 @@ export class Usu implements OnInit {
     const primerUsuario = this.usuarios[0];
 
     if (!primerUsuario) {
+      this.solicitudDetalle++;
       this.usuarioSeleccionado = null;
       this.cdr.detectChanges();
       return;
@@ -111,12 +128,17 @@ export class Usu implements OnInit {
   }
 
   seleccionarUsuario(user: UsuarioListadoResponse): void {
+    const solicitud = ++this.solicitudDetalle;
     this.usuarioService.getUsuarioById(user.id).subscribe({
       next: (fullUser) => {
+        if (solicitud !== this.solicitudDetalle) return;
         this.usuarioSeleccionado = fullUser;
         this.cdr.detectChanges();
       },
-      error: (err) => this.popUps.errorDesdeBackend(err, 'Error al cargar el detalle del usuario'),
+      error: (err) => {
+        if (solicitud !== this.solicitudDetalle) return;
+        this.popUps.errorDesdeBackend(err, 'Error al cargar el detalle del usuario');
+      },
     });
   }
 

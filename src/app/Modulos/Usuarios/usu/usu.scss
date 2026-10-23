@@ -21,6 +21,15 @@
     height: 45px;
 }
 
+.buscador {
+    background-color: #ffffff;
+
+    .inputB,
+    .btnLupa {
+        background-color: transparent;
+    }
+}
+
 .switchContainer{
     width: 21%;
 }
@@ -133,14 +142,16 @@ tbody tr {
 .sin-usuarios {
     padding: 20px;
     color: #64748b;
-    font-style: italic;
+    font-size: 15px;
+    font-weight: 500;
 }
 
 .sin-seleccion {
     padding: 40px 20px;
     text-align: center;
     color: #64748b;
-    font-style: italic;
+    font-size: 15px;
+    font-weight: 500;
 }
 
 
@@ -150,6 +161,7 @@ tbody tr {
     padding: 16px;
     border: 2px solid var(--colorBorde);
     border-radius: 14px;
+    background-color: #ffffff;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
     display: flex;
     flex-direction: column;

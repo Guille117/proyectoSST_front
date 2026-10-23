@@ -2,7 +2,7 @@
   <section class="panel">
     <h3 class="panel-title">Catálogos</h3>
     
-    @for(catalogo of listaCatalogos; track $index) {
+    @for(catalogo of catalogosPaginados; track catalogo.url) {
       <div class="catalogos" [class.selected]="catalogoSeleccionado === catalogo.titulo" (click)="seleccionarCatalogo(catalogo.titulo, catalogo.url)">
         <div class="icono">
           <i class="{{ catalogo.icono }}"></i>
@@ -17,10 +17,34 @@
         </div>
       </div>
     }
+
+    <nav class="paginacion-catalogos" aria-label="Paginación de catálogos">
+      <button
+        type="button"
+        class="paginacion-catalogos-control"
+        [disabled]="paginaCatalogos === 1"
+        aria-label="Página anterior"
+        (click)="cambiarPaginaCatalogos(paginaCatalogos - 1)"
+      >
+        <i class="bi bi-chevron-left"></i>
+      </button>
+      <span class="paginacion-catalogos-resumen">
+        Mostrando {{ catalogosPaginados.length }} de {{ listaCatalogos.length }} · Página {{ paginaCatalogos }}
+      </span>
+      <button
+        type="button"
+        class="paginacion-catalogos-control"
+        [disabled]="paginaCatalogos === totalPaginasCatalogos"
+        aria-label="Página siguiente"
+        (click)="cambiarPaginaCatalogos(paginaCatalogos + 1)"
+      >
+        <i class="bi bi-chevron-right"></i>
+      </button>
+    </nav>
     
   </section>
 
-  <section class="panel panel_tabla">
+  <section class="panel panel_tabla" #panelTabla>
     <div class="encabezado-registros">
       <h3 class="panel-title">{{ catalogoSeleccionado }}</h3>
       <div class="miniSub-container">
@@ -42,7 +66,7 @@
           @if(catalogoSeleccionado === 'Institución'){
             <th class="celda_centrada">Teléfono</th>
             <th class="celda_izquierda">Dirección</th>
-          } @else if(catalogoSeleccionado !== 'Parentesco') {
+          } @else if(!esCatalogoSimple) {
             <th class="celda_izquierda">Descripción</th>
           }
           <th class="celda_centrada">Acciones</th>
@@ -57,7 +81,7 @@
             @if(catalogoSeleccionado === 'Institución'){
               <td class="celda_centrada">{{ registro.telefono }}</td>
               <td class="celda_izquierda">{{ registro.direccion }}</td>
-            } @else if(catalogoSeleccionado !== 'Parentesco') {
+            } @else if(!esCatalogoSimple) {
               <td class="celda_izquierda">{{ registro.descripcion }}</td>
             }
             <td class="celda_centrada acciones">
@@ -79,7 +103,7 @@
       </tbody>
       <tfoot>
         <tr>
-          <td [attr.colspan]="catalogoSeleccionado === 'Institución' ? 5 : catalogoSeleccionado === 'Parentesco' ? 3 : 4">
+          <td [attr.colspan]="catalogoSeleccionado === 'Institución' ? 5 : esCatalogoSimple ? 3 : 4">
             <app-paginacion
               [paginaActual]="paginaActual"
               [totalregistros]="datos.length"
@@ -114,7 +138,7 @@
 
           <label for="direccionRegistro" class="label">Dirección</label>
           <input id="direccionRegistro" type="text" [(ngModel)]="variableEntrada.direccion" name="direccionRegistro" placeholder="Ingrese dirección" >
-        } @else if(catalogoSeleccionado !== 'Parentesco') {
+        } @else if(!esCatalogoSimple) {
           <label for="descripcionRegistro" class="label">Descripción</label>
           <input id="descripcionRegistro" type="text" [(ngModel)]="variableEntrada.descripcion" name="descripcionRegistro" placeholder="Ingrese descripción" >
         }
