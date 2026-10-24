@@ -1,7 +1,5 @@
 <div class="areaTrabajo-container">
 
-    <div class="trabajoArea">
-        
         <div class="table-container">
             <div class="seccionSuperior">
 
@@ -258,8 +256,26 @@
                             @for (item of inventarioPaginado; track item.id) {
                                 <tr>
                                     <td class="celda_centrada">{{ item.codigo }}</td>
-                                    <td class="celda_izquierda" [title]="item.descripcion ?? ''">
-                                        {{ item.nombre }}
+                                    <td class="celda_izquierda">
+                                        @if (item.tipo === 'INSUMO') {
+                                            <span
+                                                [class.texto-truncado]="
+                                                    esTextoTruncado(item.nombre)
+                                                "
+                                                [attr.data-tooltip]="
+                                                    esTextoTruncado(item.nombre)
+                                                        ? item.nombre
+                                                        : null
+                                                "
+                                                [attr.tabindex]="
+                                                    esTextoTruncado(item.nombre) ? 0 : null
+                                                "
+                                            >
+                                                {{ resumirTexto(item.nombre) }}
+                                            </span>
+                                        } @else {
+                                            {{ item.nombre }}
+                                        }
                                     </td>
                                     @if (isMedicamento) {
                                         <td class="celda_centrada">
@@ -270,7 +286,21 @@
                                         </td>
                                     } @else {
                                         <td class="celda_izquierda">
-                                            {{ item.descripcion ?? '—' }}
+                                            <span
+                                                [class.texto-truncado]="
+                                                    esTextoTruncado(item.descripcion)
+                                                "
+                                                [attr.data-tooltip]="
+                                                    esTextoTruncado(item.descripcion)
+                                                        ? item.descripcion
+                                                        : null
+                                                "
+                                                [attr.tabindex]="
+                                                    esTextoTruncado(item.descripcion) ? 0 : null
+                                                "
+                                            >
+                                                {{ resumirTexto(item.descripcion) }}
+                                            </span>
                                         </td>
                                     }
                                     <td
@@ -330,5 +360,4 @@
                 </table>
             }
         </div>
-    </div>
 </div>

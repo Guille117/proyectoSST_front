@@ -2,52 +2,72 @@
   <section class="resumen" aria-label="Información del lote">
     <h4>{{ nombreMedicamento }}</h4>
 
-    <dl class="datos">
-      <div>
-        <dt>Código</dt>
-        <dd>{{ lote?.codigo ?? '—' }}</dd>
+    <div class="detalle-grid">
+      <div class="detalle-columna">
+        <h5 class="titulo-columna">
+          {{ lote?.tipo === 'MEDICAMENTO' ? 'Datos del medicamento' : 'Datos del insumo' }}
+        </h5>
+
+        <dl class="datos">
+          <div>
+            <dt>Código</dt>
+            <dd>{{ lote?.codigo ?? '—' }}</dd>
+          </div>
+          @if (lote?.tipo === 'MEDICAMENTO') {
+            <div>
+              <dt>Administración</dt>
+              <dd>{{ lote?.administracion ?? '—' }}</dd>
+            </div>
+            <div>
+              <dt>Presentación</dt>
+              <dd>{{ lote?.presentacion ?? '—' }}</dd>
+            </div>
+            <div>
+              <dt>Fabricante</dt>
+              <dd>{{ fabricante }}</dd>
+            </div>
+          } @else {
+            <div class="campo-ancho">
+              <dt>Descripción</dt>
+              <dd>{{ lote?.descripcion ?? '—' }}</dd>
+            </div>
+          }
+        </dl>
       </div>
-      <div>
-        <dt>Lote</dt>
-        <dd>{{ lote?.codigoLote ?? '—' }}</dd>
+
+      <div class="detalle-columna detalle-columna--compra">
+        <h5 class="titulo-columna">Datos de compra</h5>
+
+        <dl class="datos">
+          <div>
+            <dt>Proveedor</dt>
+            <dd>{{ lote?.proveedor ?? '—' }}</dd>
+          </div>
+          <div>
+            <dt>Compra</dt>
+            <dd>{{ lote?.codigoCompra ?? '—' }}</dd>
+          </div>
+          <div>
+            <dt>Lote</dt>
+            <dd>{{ lote?.codigoLote ?? '—' }}</dd>
+          </div>
+          <div>
+            <dt>Cantidad comprada</dt>
+            <dd>{{ lote?.cantidad ?? '—' }}</dd>
+          </div>
+          <div>
+            <dt>Disponible</dt>
+            <dd class="disponible">{{ lote?.disponible ?? '—' }}</dd>
+          </div>
+          <div>
+            <dt>Vencimiento</dt>
+            <dd [class.fecha-vencida]="esFechaVencida(lote?.fechaVencimiento)">
+              {{ formatearFecha(lote?.fechaVencimiento) }}
+            </dd>
+          </div>
+        </dl>
       </div>
-      <div>
-        <dt>Proveedor</dt>
-        <dd>{{ lote?.proveedor ?? '—' }}</dd>
-      </div>
-      <div>
-        <dt>Cantidad comprada</dt>
-        <dd>{{ lote?.cantidad ?? '—' }}</dd>
-      </div>
-      <div>
-        <dt>Disponible</dt>
-        <dd class="disponible">{{ lote?.disponible ?? '—' }}</dd>
-      </div>
-      <div>
-        <dt>Compra</dt>
-        <dd>{{ lote?.codigoCompra ?? '—' }}</dd>
-      </div>
-      <div>
-        <dt>Vencimiento</dt>
-        <dd [class.fecha-vencida]="esFechaVencida(lote?.fechaVencimiento)">
-          {{ formatearFecha(lote?.fechaVencimiento) }}
-        </dd>
-      </div>
-      @if (lote?.tipo === 'MEDICAMENTO') {
-        <div>
-          <dt>Administración</dt>
-          <dd>{{ lote?.administracion ?? '—' }}</dd>
-        </div>
-        <div>
-          <dt>Presentación</dt>
-          <dd>{{ lote?.presentacion ?? '—' }}</dd>
-        </div>
-        <div>
-          <dt>Fabricante</dt>
-          <dd>{{ fabricante }}</dd>
-        </div>
-      }
-    </dl>
+    </div>
   </section>
 
   <form novalidate (ngSubmit)="confirmar()">

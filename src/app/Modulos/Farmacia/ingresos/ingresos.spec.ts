@@ -141,14 +141,15 @@ describe('Ingresos', () => {
     expect(fixture.nativeElement.querySelector('.detalle-compra')).toBeNull();
   });
 
-  it('returns to ingresos when canceling a purchase', () => {
+  it('returns to ingresos with the return button', () => {
     const registerButton: HTMLButtonElement =
       fixture.nativeElement.querySelector('.btn._principal');
     registerButton.click();
     fixture.detectChanges();
 
-    const cancelButton: HTMLButtonElement = fixture.nativeElement.querySelector('button._cancelar');
-    cancelButton.click();
+    const returnButton: HTMLButtonElement =
+      fixture.nativeElement.querySelector('button.boton-regresar');
+    returnButton.click();
     fixture.detectChanges();
 
     expect(fixture.nativeElement.querySelector('app-agregar-compra')).toBeNull();
@@ -396,5 +397,41 @@ describe('Ingresos', () => {
     );
 
     fixtureBusqueda.destroy();
+  });
+
+  it('alterna entre compras activas y eliminadas', () => {
+    const fixtureFiltro = TestBed.createComponent(Ingresos);
+    fixtureFiltro.detectChanges();
+    const componentFiltro = fixtureFiltro.componentInstance;
+
+    componentFiltro.cambiarFiltroEstado(false);
+
+    expect(componentFiltro.mostrarActivos).toBe(false);
+    expect(servicioCompra.listarComprasResumen).toHaveBeenLastCalledWith(false);
+
+    componentFiltro.cambiarFiltroEstado(true);
+
+    expect(componentFiltro.mostrarActivos).toBe(true);
+    expect(servicioCompra.listarComprasResumen).toHaveBeenLastCalledWith(true);
+
+    fixtureFiltro.destroy();
+  });
+
+  it('aplica el estado seleccionado a la busqueda de compras', () => {
+    const fixtureFiltro = TestBed.createComponent(Ingresos);
+    fixtureFiltro.detectChanges();
+    const componentFiltro = fixtureFiltro.componentInstance;
+
+    componentFiltro.cambiarFiltroEstado(false);
+    componentFiltro.criterioBusqueda = 'codigo';
+    componentFiltro.textoBusqueda = 'COM-1';
+    componentFiltro.buscarCompras();
+
+    expect(servicioCompra.buscarComprasResumen).toHaveBeenCalledWith({
+      codigo: 'COM-1',
+      activos: false,
+    });
+
+    fixtureFiltro.destroy();
   });
 });

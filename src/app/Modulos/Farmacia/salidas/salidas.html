@@ -1,7 +1,7 @@
-<div class="areaTrabajo-container">
+﻿<div class="areaTrabajo-container">
   <div class="trabajoArea">
     <!-- ==================== COLUMNA IZQUIERDA: SOLICITUDES ==================== -->
-    <section class="panel-solicitudes" aria-labelledby="tituloSolicitudes">
+    <section class="panel-solicitudes" aria-labelledby="tituloSolicitudes" [class.panel-bloqueado]="generandoSalida()" [attr.inert]="generandoSalida() ? '' : null" [attr.aria-disabled]="generandoSalida() ? 'true' : null">
       <h2 id="tituloSolicitudes" class="titulo-panel">Solicitudes de salida</h2>
 
       <div class="buscador-container">
@@ -9,7 +9,7 @@
           <input
             class="inputB"
             type="search"
-            placeholder="Buscar por paciente, N° solicitud o procedimiento..."
+            placeholder="Buscar por paciente, NÂ° solicitud o procedimiento..."
             aria-label="Buscar solicitud de salida"
             [(ngModel)]="textoBusqueda"
             (keydown.enter)="$event.preventDefault(); buscar()"
@@ -99,23 +99,260 @@
           }
         }
       </div>
-    </section>
 
+      <div class="botones-solicitudes">
+        <button type="button" class="btn _principal" [disabled]="generandoSalida()" (click)="abrirGeneracionSalida()">
+          Generar salida
+        </button>
+      </div>
+    </section>
+    @if (generandoSalida()) {
+    <aside class="panel generacion-recursos" aria-labelledby="tituloRecursos">
+      <div class="generacion-recursos-cuerpo">
+        <div class="generacion-recursos-seleccion">
+          <div class="recursos-cabecera">
+            <h3 id="tituloRecursos" class="panel-titulo">Recursos</h3>
+
+            <app-tab-switch
+              op1="Medicamento"
+              op2="Insumo"
+              [mostrarActivos]="tipoRecurso === 'medicamento'"
+              (opcionCambiada)="cambiarTipoRecurso($event)"
+            ></app-tab-switch>
+          </div>
+
+      @if (recursoSeleccionado; as recurso) {
+        <div class="recurso-seleccionado">
+          <span class="recurso-seleccionado_tipo">
+            {{ tipoRecurso === 'medicamento' ? 'MED' : 'INSU' }}
+          </span>
+
+          <p class="recurso-seleccionado_nombre">{{ recurso.nombre }}</p>
+          <p class="recurso-seleccionado_disponible">Disponible: {{ recurso.disponible }}</p>
+
+          <div class="generacion-recurso-campos">
+            <div class="indicacion-campo">
+              <label class="indicacion-etiqueta" for="cantidadRecurso">Cantidad</label>
+              <input
+                class="indicacion-input"
+                id="cantidadRecurso"
+                name="cantidadRecurso"
+                type="number"
+                min="1"
+                step="1"
+                inputmode="numeric"
+                [max]="cantidadMaximaRecurso"
+                [(ngModel)]="cantidadRecurso"
+                (ngModelChange)="ajustarCantidadRecurso()"
+              />
+              <span class="recurso-seleccionado_ayuda">MÃ¡ximo {{ cantidadMaximaRecurso }}</span>
+            </div>
+
+            <div class="indicacion-campo">
+              <label class="indicacion-etiqueta" for="loteRecurso">Lote</label>
+              <select
+                class="indicacion-input"
+                id="loteRecurso"
+                name="loteRecurso"
+                [ngModelOptions]="{ standalone: true }"
+                [disabled]="cargandoLotes || !lotesRecursoSeleccionado.length"
+                [(ngModel)]="loteRecursoSeleccionadoId"
+                (ngModelChange)="ajustarCantidadRecurso()"
+              >
+                @if (!lotesRecursoSeleccionado.length) {
+                  <option [ngValue]="null">Sin lote disponible</option>
+                }
+                @for (lote of lotesRecursoSeleccionado; track lote.id) {
+                  <option [ngValue]="lote.id">{{ lote.codigoLote }}</option>
+                }
+              </select>
+            </div>
+          </div>
+
+          <div class="acciones-formulario recurso-acciones">
+            <button type="button" class="btn _cancelar" (click)="cancelarSeleccionRecurso()">
+              Cancelar
+            </button>
+            <button
+              type="button"
+              class="btn _guardar"
+              [disabled]="!puedeAgregarRecurso"
+              (click)="agregarRecurso()"
+            >
+              Agregar
+            </button>
+          </div>
+        </div>
+      } @else {
+        <div class="indicacion-buscador recursos-buscador">
+          <div class="buscador">
+            <input
+              class="inputB"
+              type="text"
+              [placeholder]="'Buscar ' + etiquetaRecurso + '...'"
+              [attr.aria-label]="'Buscar ' + etiquetaRecurso"
+              [disabled]="cargandoRecursos"
+              [(ngModel)]="textoBusquedaRecurso"
+              (keydown.enter)="$event.preventDefault(); buscarRecursos()"
+            />
+
+            <button
+              class="btnLupa"
+              type="button"
+              [title]="'Buscar ' + etiquetaRecurso"
+              [attr.aria-label]="'Buscar ' + etiquetaRecurso"
+              [disabled]="cargandoRecursos"
+              (click)="buscarRecursos()"
+            >
+              <i class="bi bi-search fs-5" aria-hidden="true"></i>
+            </button>
+          </div>
+        </div>
+
+        @if (busquedaRecursoRealizada) {
+          <div class="recursos-resultados">
+            @if (cargandoRecursos) {
+              <p class="indicacion-vacio">Buscando {{ etiquetaRecurso }}s...</p>
+            } @else if (recursosEncontrados.length) {
+              <div class="tabla-container">
+                <table [attr.aria-label]="'Recursos disponibles: ' + etiquetaRecurso">
+                  <thead>
+                    <tr>
+                      <th class="columna-numero celda_centrada" scope="col">No.</th>
+                      <th scope="col">Nombre</th>
+                      <th class="celda_centrada" scope="col">Cantidad</th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    @for (
+                      recurso of recursosEncontrados;
+                      track recurso.id;
+                      let indice = $index
+                    ) {
+                      <tr
+                        class="fila-seleccionable"
+                        tabindex="0"
+                        [title]="'Seleccionar ' + recurso.nombre"
+                        (click)="seleccionarRecurso(recurso)"
+                        (keyup.enter)="seleccionarRecurso(recurso)"
+                      >
+                        <td class="celda_centrada">{{ indice + 1 }}</td>
+                        <td class="celda_izquierda">{{ recurso.nombre }}</td>
+                        <td class="celda_centrada">{{ recurso.disponible }}</td>
+                      </tr>
+                    }
+                  </tbody>
+
+                  <tfoot>
+                    <tr>
+                      <td colspan="3" class="recursos-ayuda">Seleccione un {{ etiquetaRecurso }}</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            } @else {
+              <p class="indicacion-vacio">
+                No se encontraron {{ etiquetaRecurso }}s que coincidan con la bÃºsqueda.
+              </p>
+            }
+          </div>
+        }
+      }
+        </div>
+
+        <div class="generacion-recursos-agregados">
+          <div class="generacion-paciente">
+            <label for="pacienteSalida">Paciente</label>
+            <select
+              id="pacienteSalida"
+              class="lote-select paciente-select"
+              aria-label="Paciente de la salida"
+              [ngModelOptions]="{ standalone: true }"
+              [disabled]="cargandoPacientes || guardandoSalida"
+              [(ngModel)]="pacienteSeleccionadoId"
+            >
+              <option [ngValue]="null">
+                {{ cargandoPacientes ? 'Cargando pacientes...' : 'Seleccione un paciente' }}
+              </option>
+              @for (paciente of pacientes; track paciente.pacienteId) {
+                <option [ngValue]="paciente.pacienteId">{{ paciente.nombreCompleto }}</option>
+              }
+            </select>
+          </div>
+
+          <h4 class="recursos-subtitulo">
+            Recursos agregados ({{ lineasSalida.length }})
+          </h4>
+
+          @if (lineasSalida.length) {
+            <ul class="recursos-items">
+              @for (linea of lineasSalida; track $index) {
+                <li class="recurso-item generacion-recurso-item">
+                  <span class="recurso-item_tipo">
+                    {{ linea.tipo === 'medicamento' ? 'MED' : 'INSU' }}
+                  </span>
+                  <span class="recurso-item_nombre">{{ linea.nombre }}</span>
+
+                  <button
+                    type="button"
+                    class="recurso-quitar"
+                    [attr.aria-label]="'Quitar ' + linea.nombre"
+                    (click)="quitarLineaSalida($index)"
+                  >
+                    <i class="bi bi-trash3" aria-hidden="true"></i>
+                  </button>
+
+                  <div class="generacion-recurso-detalle">
+                    <span>Cantidad: {{ linea.cantidad }}</span>
+                    <span>Lote: {{ loteTexto(linea) }}</span>
+                  </div>
+                </li>
+              }
+            </ul>
+          } @else {
+            <p class="indicacion-vacio">Aún no hay recursos agregados.</p>
+          }
+        </div>
+      </div>
+
+      <div class="generacion-panel-acciones">
+        <button type="button" class="btn _cancelar" [disabled]="guardandoSalida" (click)="cancelarGeneracionSalida()">
+          Cancelar
+        </button>
+        <button
+          type="button"
+          class="btn _guardar"
+          [disabled]="!puedeGenerarSalida"
+          (click)="generarSalida()"
+        >
+          {{ guardandoSalida ? 'Generando...' : 'Generar salida' }}
+        </button>
+      </div>
+    </aside>
+    } @else {
     <!-- ==================== COLUMNA DERECHA: DETALLE ==================== -->
     <section class="panel-detalle" aria-labelledby="tituloDetalle">
       @if (solicitudSeleccionada; as solicitud) {
         <header class="detalle-encabezado">
           <div class="detalle-titulo">
             <h2 id="tituloDetalle" class="titulo-panel">{{ tituloDetalle }}</h2>
-            <span class="etiqueta-sol">N° {{ solicitud.codigo }}</span>
+            <span class="etiqueta-sol">NÂ° {{ solicitud.codigo }}</span>
           </div>
 
-          <nav class="subMenuNav submenu-detalle" aria-label="Sección de la solicitud">
-            <div class="option" [class.active]="!enDevoluciones()" (click)="seleccionarVista(false)">
+          <nav class="subMenuNav submenu-detalle" aria-label="SecciÃ³n de la solicitud">
+            <div
+              class="option"
+              [class.active]="!enDevoluciones() && !enHistorial()"
+              (click)="seleccionarVista(false)"
+            >
               Solicitudes
             </div>
             <div class="option" [class.active]="enDevoluciones()" (click)="seleccionarVista(true)">
               Devoluciones
+            </div>
+            <div class="option" [class.active]="enHistorial()" (click)="seleccionarHistorial()">
+              Historial
             </div>
           </nav>
         </header>
@@ -125,18 +362,16 @@
           <div class="paciente-datos">
             <h3>{{ solicitud.paciente }}</h3>
             <p class="detalle-meta">
+              @if (solicitud.tipoAtencion !== 'EMERGENCIA') {
+                <span>
+                  <i class="bi bi-hospital" aria-hidden="true"></i>
+                  {{ tipoAtencionTexto(solicitud.tipoAtencion) }}
+                </span>
+              }
               <span>
-                <i class="bi bi-clipboard2-pulse" aria-hidden="true"></i>
-                {{ solicitud.procedimiento }}
-              </span>
-              <span>
-                <i class="bi bi-hospital" aria-hidden="true"></i>
-                {{ tipoAtencionTexto(solicitud.tipoAtencion) }}
-              </span>
-              <span>
-                <i class="bi bi-calendar3" aria-hidden="true"></i>
                 {{ formatearFechaHora(solicitud.fecha) }}
               </span>
+              <span>Solicitado por: {{ solicitud.solicitante || '—' }}</span>
             </p>
           </div>
           <span class="estado" [ngClass]="claseEstado(solicitud.estado)">
@@ -146,17 +381,21 @@
 
         <div class="aviso-lote" role="note">
           <i class="bi bi-info-circle" aria-hidden="true"></i>
-          @if (enDevoluciones()) {
+          @if (enHistorial()) {
+            <p>
+              <strong>Movimientos agrupados con 10 minutos de margen entre registros.</strong>
+            </p>
+          } @else if (enDevoluciones()) {
             <p>
               <strong>
-                Registre la condición y el motivo de la devolución. El sistema valida el lote
+                Registre la condiciÃ³n y el motivo de la devoluciÃ³n. El sistema valida el lote
                 entregado antes de actualizar el inventario.
               </strong>
             </p>
           } @else {
             <p>
               <strong>
-                El sistema sugiere el lote con vencimiento más próximo. Puede seleccionar otro lote
+                El sistema sugiere el lote con vencimiento prÃ³ximo. Puede seleccionar otro lote
                 disponible si lo requiere.
               </strong>
             </p>
@@ -165,6 +404,40 @@
 
         @if (cargandoDetalle) {
           <p class="indicacion-vacio">Cargando detalle de la solicitud...</p>
+        } @else if (enHistorial()) {
+          <!-- ==================== HISTORIAL ==================== -->
+          <div class="historial-lista">
+            @if (cargandoHistorial) {
+              <p class="indicacion-vacio">Cargando historial...</p>
+            } @else if (errorHistorial) {
+              <p class="indicacion-vacio">No se pudo cargar el historial.</p>
+            } @else {
+              @for (grupo of historialAgrupado; track grupo.fechaHora) {
+                <section class="historial-grupo">
+                  <h3 class="historial-fecha">{{ formatearFechaHora(grupo.fechaHora) }}</h3>
+                  @for (movimiento of grupo.movimientos; track movimiento.id) {
+                    <article class="historial-item">
+                      <div class="historial-detalle">
+                        <p>{{ historialTexto(movimiento) }}</p>
+                        @if (movimiento.motivoBaja || movimiento.observacion) {
+                          <div class="historial-meta">
+                            @if (movimiento.motivoBaja) {
+                              <span>Motivo: {{ movimiento.motivoBaja }}</span>
+                            }
+                            @if (movimiento.observacion) {
+                              <span>{{ movimiento.observacion }}</span>
+                            }
+                          </div>
+                        }
+                      </div>
+                    </article>
+                  }
+                </section>
+              } @empty {
+                <p class="indicacion-vacio">Esta salida aÃºn no tiene movimientos.</p>
+              }
+            }
+          </div>
         } @else if (enDevoluciones()) {
           <!-- ==================== DEVOLUCIONES ==================== -->
           <div class="tabla-detalle">
@@ -175,8 +448,8 @@
                   <th class="celda_izquierda">Producto</th>
                   <th class="celda_centrada">Entregado</th>
                   <th class="celda_centrada">Lote entregado</th>
-                  <th class="celda_centrada">Condición</th>
-                  <th class="celda_centrada">Motivo devolución</th>
+                  <th class="celda_centrada">CondiciÃ³n</th>
+                  <th class="celda_centrada">Motivo devoluciÃ³n</th>
                   <th class="celda_centrada">Cantidad a devolver</th>
                 </tr>
               </thead>
@@ -204,7 +477,7 @@
                       >
                         @for (lote of detalle.lotesEntregados; track lote.loteId) {
                           <option [ngValue]="lote.loteId">
-                            {{ lote.codigoLote }} ({{ lote.disponibleDevolver }})
+                            {{ lote.codigoLote }}
                           </option>
                         }
                       </select>
@@ -212,7 +485,7 @@
                     <td class="celda_centrada">
                       <select
                         class="lote-select"
-                        aria-label="Condición del producto"
+                        aria-label="CondiciÃ³n del producto"
                         [ngModelOptions]="{ standalone: true }"
                         [(ngModel)]="detalle.condicion"
                       >
@@ -223,7 +496,7 @@
                     <td class="celda_centrada">
                       <select
                         class="lote-select select-motivo"
-                        aria-label="Motivo de devolución"
+                        aria-label="Motivo de devoluciÃ³n"
                         [disabled]="cargandoMotivos"
                         [ngModelOptions]="{ standalone: true }"
                         [(ngModel)]="detalle.motivoBajaId"
@@ -239,16 +512,17 @@
                     <td class="celda_centrada">
                       <input
                         class="cantidad-input"
-                        type="number"
-                        min="0"
-                        step="1"
-                        [max]="maximoDevolucion(detalle)"
+                        type="text"
+                        inputmode="numeric"
+                        pattern="[0-9]*"
+                        autocomplete="off"
                         aria-label="Cantidad a devolver"
                         [ngModelOptions]="{ standalone: true }"
                         [(ngModel)]="detalle.cantidadDevolver"
+                        (keydown)="bloquearCantidadMayor($event, maximoDevolucion(detalle))"
                         (ngModelChange)="ajustarCantidadDevolucion(detalle)"
                       />
-                      <span class="sub-dato">Máx. {{ maximoDevolucion(detalle) }}</span>
+                      <span class="sub-dato">MÃ¡x. {{ maximoDevolucion(detalle) }}</span>
                     </td>
                   </tr>
                 } @empty {
@@ -320,10 +594,12 @@
                         >
                           @for (lote of detalle.lotesDisponibles; track lote.id) {
                             <option [ngValue]="lote.id">
-                              {{ lote.codigoLote }} · {{ lote.disponible }}
+                              {{ lote.codigoLote }}
                             </option>
                           }
                         </select>
+                      } @else if (detalle.lotesEntregados.length) {
+                        <span>{{ lotesEntregadosTexto(detalle) }}</span>
                       } @else {
                         <span class="sub-dato">Sin lote disponible</span>
                       }
@@ -332,18 +608,21 @@
                       @if (detalle.pendiente > 0 && detalle.lotesDisponibles.length) {
                         <input
                           class="cantidad-input"
-                          type="number"
-                          min="1"
-                          step="1"
-                          [max]="maximoEntrega(detalle)"
+                          type="text"
+                          inputmode="numeric"
+                          pattern="[0-9]*"
+                          autocomplete="off"
                           aria-label="Cantidad a entregar"
                           [ngModelOptions]="{ standalone: true }"
                           [(ngModel)]="detalle.cantidadEntrega"
+                          (keydown)="bloquearCantidadMayor($event, maximoEntrega(detalle))"
                           (ngModelChange)="ajustarCantidadEntrega(detalle)"
                         />
-                        <span class="sub-dato">Máx. {{ maximoEntrega(detalle) }}</span>
+                        <span class="sub-dato">MÃ¡x. {{ maximoEntrega(detalle) }}</span>
+                      } @else if (detalle.lotesEntregados.length) {
+                        <span>{{ detalle.entregado }}</span>
                       } @else {
-                        —
+                        â€”
                       }
                     </td>
                     <td class="celda_centrada">{{ detalle.entregado }}</td>
@@ -381,5 +660,6 @@
         </p>
       }
     </section>
+    }
   </div>
 </div>

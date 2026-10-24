@@ -17,11 +17,27 @@
    de modo que siempre se lee uno de los dos */
 .texto-alterno{
     grid-area: 1 / 1;
+    opacity: 1;
     animation: alternarTexto 6s ease-in-out infinite;
 }
 
 .texto-alterno--intercalado{
+    opacity: 0;
     animation-delay: 3s;
+    font-weight: 700;
+}
+
+/* Variante que muestra primero la ayuda y luego el recuento */
+.texto--alterno-primero{
+    .texto-alterno{
+        opacity: 0;
+        animation-delay: 3s;
+    }
+
+    .texto-alterno--intercalado{
+        opacity: 1;
+        animation-delay: 0s;
+    }
 }
 
 @keyframes alternarTexto {

@@ -81,8 +81,32 @@
                 <td class="celda_centrada">
                   {{ (paginaActual - 1) * cantidadMostrar + $index + 1 }}
                 </td>
-                <td class="celda_izquierda">{{ insumo.nombre }}</td>
-                <td class="celda_izquierda">{{ insumo.detalle }}</td>
+                <td class="celda_izquierda">
+                  <span
+                    [class.texto-truncado]="esTextoTruncado(insumo.nombre)"
+                    [attr.data-tooltip]="
+                      esTextoTruncado(insumo.nombre) ? insumo.nombre : null
+                    "
+                    [attr.tabindex]="esTextoTruncado(insumo.nombre) ? 0 : null"
+                  >
+                    {{ resumirTexto(insumo.nombre) }}
+                  </span>
+                </td>
+                <td class="celda_izquierda">
+                  @if (insumo.detalle) {
+                    <span
+                      [class.texto-truncado]="esTextoTruncado(insumo.detalle)"
+                      [attr.data-tooltip]="
+                        esTextoTruncado(insumo.detalle) ? insumo.detalle : null
+                      "
+                      [attr.tabindex]="esTextoTruncado(insumo.detalle) ? 0 : null"
+                    >
+                      {{ resumirTexto(insumo.detalle) }}
+                    </span>
+                  } @else {
+                    —
+                  }
+                </td>
                 <td class="celda_izquierda">{{ insumo.marca.nombreMarca }}</td>
                 <td class="celda_centrada celda-acciones">
                   <div
@@ -141,7 +165,11 @@
         novalidate
         (ngSubmit)="actualizar ? actualizarInsumo(insumoForm) : guardarInsumo(insumoForm)"
       >
-        <app-campo-validado label="Nombre" fieldId="nombreInsumo">
+        <app-campo-validado
+          label="Nombre"
+          fieldId="nombreInsumo"
+          [required]="true"
+        >
           <input
             id="nombreInsumo"
             name="nombre"
@@ -164,7 +192,11 @@
           />
         </app-campo-validado>
 
-        <app-campo-validado label="Fabricante" fieldId="fabricanteInsumo">
+        <app-campo-validado
+          label="Fabricante"
+          fieldId="fabricanteInsumo"
+          [required]="true"
+        >
           <select
             id="fabricanteInsumo"
             name="fabricante"

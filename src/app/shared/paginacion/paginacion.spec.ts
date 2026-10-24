@@ -61,4 +61,20 @@ describe('Paginacion', () => {
     expect(alterno.textContent?.trim()).toBe('Seleccione un medicamento');
     expect(elemento<HTMLElement>('.texto').textContent).toContain('Mostrando 2 de 2 resultados');
   });
+
+  it('permite mostrar primero el texto alterno', () => {
+    fixture.componentRef.setInput('cantidadMostrar', 5);
+    fixture.componentRef.setInput('totalregistros', 2);
+    fixture.componentRef.setInput('textoAlterno', 'Seleccione un medicamento');
+    fixture.componentRef.setInput('alternoPrimero', true);
+    fixture.detectChanges();
+
+    const textos: NodeListOf<HTMLElement> =
+      fixture.nativeElement.querySelectorAll('.texto-alterno');
+    const contenedor: HTMLElement = elemento('.texto');
+
+    expect(contenedor.classList.contains('texto--alterno-primero')).toBe(true);
+    expect(textos[0].textContent?.trim()).toBe('Seleccione un medicamento');
+    expect(textos[0].classList.contains('texto-alterno--intercalado')).toBe(true);
+  });
 });

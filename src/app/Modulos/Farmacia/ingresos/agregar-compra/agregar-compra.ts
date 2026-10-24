@@ -66,6 +66,7 @@ export class AgregarCompra implements OnInit {
   medicamentos: MedicamentoLogResponse[] = [];
   insumos: Insumo[] = [];
   cargandoProductos = false;
+  busquedaRealizada = false;
   productoSeleccionadoId: number | null = null;
   paginaActual = 1;
   readonly cantidadMostrar = 5;
@@ -76,7 +77,6 @@ export class AgregarCompra implements OnInit {
 
   // ==================== CICLO DE VIDA ====================
   ngOnInit(): void {
-    this.listarProductos();
     this.listarProveedores();
     if (this.compraEdicion) this.cargarCompraEdicion(this.compraEdicion);
   }
@@ -94,11 +94,16 @@ export class AgregarCompra implements OnInit {
     this.textoBusqueda = '';
     this.paginaActual = 1;
     this.productoSeleccionadoId = null;
-    this.listarProductos();
+    this.busquedaRealizada = false;
+    this.cargandoProductos = false;
+    this.medicamentos = [];
+    this.insumos = [];
+    this.cdr.markForCheck();
   }
 
   // ==================== LISTAR ====================
   listarProductos(): void {
+    this.busquedaRealizada = true;
     this.cargandoProductos = true;
     this.cdr.markForCheck();
 
@@ -149,15 +154,20 @@ export class AgregarCompra implements OnInit {
     if (this.hayProductoSeleccionado) return;
 
     const nombre = this.textoBusqueda.trim();
-    this.cargandoProductos = true;
+    this.busquedaRealizada = true;
     this.paginaActual = 1;
     this.productoSeleccionadoId = null;
+
+    if (!nombre) {
+      this.listarProductos();
+      return;
+    }
+
+    this.cargandoProductos = true;
     this.cdr.markForCheck();
 
     if (this.isMedicamento) {
-      const filtros: MedicamentoLogFiltros = { activo: true };
-      if (nombre) filtros.nombre = nombre;
-
+      const filtros: MedicamentoLogFiltros = { activo: true, nombre };
       this.servicioMedicamento
         .buscarMedicamentoLog(filtros)
         .pipe(takeUntilDestroyed(this.destroyRef))
@@ -168,9 +178,7 @@ export class AgregarCompra implements OnInit {
       return;
     }
 
-    const filtros: FiltrosInsumo = { activo: true };
-    if (nombre) filtros.nombre = nombre;
-
+    const filtros: FiltrosInsumo = { activo: true, nombre };
     this.servicioInsumos
       .buscarInsumos(filtros)
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -183,6 +191,11 @@ export class AgregarCompra implements OnInit {
   // ==================== SELECCIÓN / PAGINACIÓN ====================
   get hayProductoSeleccionado(): boolean {
     return this.productoSeleccionadoId !== null;
+  }
+
+  get textoAlternoPaginacion(): string {
+    if (this.hayProductoSeleccionado) return '';
+    return this.isMedicamento ? 'Seleccione un medicamento' : 'Seleccione un insumo';
   }
 
   seleccionarProducto(id: number): void {
@@ -313,8 +326,15 @@ export class AgregarCompra implements OnInit {
   // ------------ ACUMULADO Y ESTADO DEL ENVÍO ------------
   /** Lotes agregados en el paso 1; se listan en el paso 2 y viajan en `request.lotes`. */
   lotes: LoteCompraVista[] = [];
+  /** Índice del lote que se está actualizando desde el paso 2; null cuando se agrega uno nuevo. */
+  indiceLoteEdicion: number | null = null;
+  private versionProductoEdicion = 0;
   /** Verdadero mientras el servicio envía la compra (deshabilita el botón Guardar). */
   guardando = false;
+
+  get editandoLote(): boolean {
+    return this.indiceLoteEdicion !== null;
+  }
 
   /**
    * Agrega los datos del lote al acumulado de la compra.
@@ -355,6 +375,33 @@ export class AgregarCompra implements OnInit {
     }
 
     const producto = this.productoSeleccionado();
+    const indiceEdicion = this.indiceLoteEdicion;
+
+    if (indiceEdicion !== null) {
+      const original = this.lotes[indiceEdicion];
+      if (!original) {
+        this.indiceLoteEdicion = null;
+        return;
+      }
+
+      this.lotes[indiceEdicion] = {
+        ...original,
+        esMedicamento: this.isMedicamento,
+        idItem: this.productoSeleccionadoId,
+        codigoLote: this.codigoLote,
+        cantidad: this.cantidad!,
+        fechaVencimiento: this.fechaVencimiento,
+        precioCompra: this.precioCompra!,
+        precioVenta: this.precioVenta!,
+        nombreItem: original.nombreItem,
+        descripcionItem: original.descripcionItem,
+      };
+
+      this.limpiarLote(formulario);
+      this.isCargandoProducto = false;
+      this.cdr.markForCheck();
+      return;
+    }
 
     this.lotes.push({
       esMedicamento: this.isMedicamento,
@@ -372,7 +419,158 @@ export class AgregarCompra implements OnInit {
     // Se limpia el formulario y se permanece en el paso 1 para seguir agregando productos;
     // el contador de la caja del indicador refleja cuántos productos se llevan agregados.
     this.limpiarLote(formulario);
-    this.deseleccionarProducto();
+    this.cdr.markForCheck();
+  }
+
+  /** Carga en el paso 1 los datos del lote seleccionado para actualizarlo. */
+  editarLote(index: number): void {
+    const lote = this.lotes[index];
+    if (!lote) return;
+
+    const version = ++this.versionProductoEdicion;
+    const cambiaTipo = this.isMedicamento !== lote.esMedicamento;
+    this.indiceLoteEdicion = index;
+    this.isMedicamento = lote.esMedicamento;
+    this.productoSeleccionadoId = lote.idItem;
+    this.codigoLote = lote.codigoLote;
+    this.fechaVencimiento = lote.fechaVencimiento;
+    this.precioCompra = lote.precioCompra;
+    this.precioVenta = lote.precioVenta;
+    this.cantidad = lote.cantidad;
+    this.isCargandoProducto = true;
+
+    if (cambiaTipo) {
+      this.textoBusqueda = '';
+      this.medicamentos = [];
+      this.insumos = [];
+    }
+
+    this.asegurarProductoVisible(lote, index, version);
+    this.cdr.markForCheck();
+  }
+
+  /** Hace visible y seleccionado en la tabla el producto del lote que se está editando. */
+  private asegurarProductoVisible(
+    lote: LoteCompraVista,
+    indiceEdicion: number,
+    version: number,
+  ): void {
+    const lista = lote.esMedicamento ? this.medicamentos : this.insumos;
+    const posicion = lista.findIndex((item) => item.id === lote.idItem);
+
+    this.busquedaRealizada = true;
+
+    if (posicion >= 0) {
+      this.paginaActual = Math.floor(posicion / this.cantidadMostrar) + 1;
+      return;
+    }
+
+    this.textoBusqueda = lote.nombreItem;
+    this.paginaActual = 1;
+    this.cargandoProductos = true;
+    this.cdr.markForCheck();
+
+    if (lote.esMedicamento) {
+      this.servicioMedicamento
+        .buscarMedicamentoLog({ activo: true, nombre: lote.nombreItem })
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe({
+          next: (medicamentos) => {
+            if (!this.esEdicionProductoVigente(indiceEdicion, version)) return;
+
+            const encontrado = medicamentos.some((item) => item.id === lote.idItem);
+            this.medicamentos = encontrado
+              ? medicamentos
+              : [this.medicamentoSintetico(lote), ...medicamentos];
+            this.finalizarProductoEdicion(lote.idItem);
+          },
+          error: () => {
+            if (!this.esEdicionProductoVigente(indiceEdicion, version)) return;
+
+            this.medicamentos = [this.medicamentoSintetico(lote)];
+            this.finalizarProductoEdicion(lote.idItem);
+          },
+        });
+      return;
+    }
+
+    this.servicioInsumos
+      .buscarInsumos({ activo: true, nombre: lote.nombreItem })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (insumos) => {
+          if (!this.esEdicionProductoVigente(indiceEdicion, version)) return;
+
+          const encontrado = insumos.some((item) => item.id === lote.idItem);
+          this.insumos = encontrado ? insumos : [this.insumoSintetico(lote), ...insumos];
+          this.finalizarProductoEdicion(lote.idItem);
+        },
+        error: () => {
+          if (!this.esEdicionProductoVigente(indiceEdicion, version)) return;
+
+          this.insumos = [this.insumoSintetico(lote)];
+          this.finalizarProductoEdicion(lote.idItem);
+        },
+      });
+  }
+
+  private esEdicionProductoVigente(indiceEdicion: number, version: number): boolean {
+    return this.indiceLoteEdicion === indiceEdicion && this.versionProductoEdicion === version;
+  }
+
+  private finalizarProductoEdicion(idItem: number): void {
+    const lista = this.isMedicamento ? this.medicamentos : this.insumos;
+    const posicion = lista.findIndex((item) => item.id === idItem);
+
+    this.paginaActual = Math.floor(Math.max(0, posicion) / this.cantidadMostrar) + 1;
+    this.cargandoProductos = false;
+    this.cdr.markForCheck();
+  }
+
+  private medicamentoSintetico(lote: LoteCompraVista): MedicamentoLogResponse {
+    const [marca = '', presentacion = '', concentracion = ''] = (
+      lote.descripcionItem ?? ''
+    ).split(' · ');
+    const [dosisTexto = '0', ...unidad] = concentracion.split(' ');
+
+    return {
+      id: lote.idItem,
+      nombre: lote.nombreItem,
+      dosis: Number(dosisTexto) || 0,
+      marca,
+      presentacion,
+      viaAdministracion: '',
+      unidadMedida: unidad.join(' '),
+      estado: true,
+    };
+  }
+
+  private insumoSintetico(lote: LoteCompraVista): Insumo {
+    const [marca = '', ...detalle] = (lote.descripcionItem ?? '').split(' · ');
+
+    return {
+      id: lote.idItem,
+      nombre: lote.nombreItem,
+      marca: { idMarca: 0, nombreMarca: marca },
+      detalle: detalle.join(' · '),
+      estado: true,
+    };
+  }
+
+  /** Limpia el formulario del paso 1; si se editaba un lote, vuelve al paso 2 sin salir. */
+  cancelarPaso1(formulario: NgForm): void {
+    const estabaEditando = this.indiceLoteEdicion !== null;
+    this.limpiarLote(formulario);
+    if (estabaEditando) this.isCargandoProducto = false;
+    this.cdr.markForCheck();
+  }
+
+  /** Limpia los campos del formulario de compra sin salir de la pantalla ni perder los productos. */
+  limpiarFormularioCompra(formulario: NgForm, comprobanteInput?: HTMLInputElement): void {
+    formulario.resetForm({ proveedor: null });
+    this.proveedorSeleccionadoId = null;
+    this.archivoComprobante = null;
+    if (comprobanteInput) comprobanteInput.value = '';
     this.cdr.markForCheck();
   }
 
@@ -381,6 +579,10 @@ export class AgregarCompra implements OnInit {
     if (this.lotes.length === 0) {
       this.popUp.advertencia('Agregue al menos un producto con su lote para continuar.');
       return;
+    }
+
+    if (this.indiceLoteEdicion !== null) {
+      this.limpiarCamposLote();
     }
 
     this.isCargandoProducto = false;
@@ -481,6 +683,13 @@ export class AgregarCompra implements OnInit {
     this.proveedorSeleccionadoId = null;
     this.archivoComprobante = null;
     this.lotes = [];
+    this.textoBusqueda = '';
+    this.medicamentos = [];
+    this.insumos = [];
+    this.productoSeleccionadoId = null;
+    this.paginaActual = 1;
+    this.busquedaRealizada = false;
+    this.cargandoProductos = false;
     this.isCargandoProducto = true;
     this.cdr.markForCheck();
   }
@@ -489,11 +698,17 @@ export class AgregarCompra implements OnInit {
   private limpiarLote(formulario: NgForm): void {
     // resetForm() escribe los valores por defecto en las variables del binding; se limpian después
     formulario.resetForm();
+    this.limpiarCamposLote();
+  }
+
+  private limpiarCamposLote(): void {
     this.codigoLote = '';
     this.fechaVencimiento = '';
     this.precioCompra = null;
     this.precioVenta = null;
     this.cantidad = null;
+    this.indiceLoteEdicion = null;
+    this.deseleccionarProducto();
   }
 
   // ----------------- LISTA Y TOTAL DEL PASO 2 --------------------
@@ -547,11 +762,6 @@ export class AgregarCompra implements OnInit {
     return this.isMedicamento
       ? (this.medicamentos.find((med) => med.id === this.productoSeleccionadoId) ?? null)
       : (this.insumos.find((insumo) => insumo.id === this.productoSeleccionadoId) ?? null);
-  }
-
-  /** Nombre del producto seleccionado; se muestra en el título del formulario del paso 1. */
-  get nombreProductoSeleccionado(): string {
-    return this.productoSeleccionado()?.nombre ?? '';
   }
 
   /** Marca, presentación y concentración del producto, para la columna Producto del paso 2. */

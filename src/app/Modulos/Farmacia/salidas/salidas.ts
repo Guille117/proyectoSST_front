@@ -1,11 +1,21 @@
 import { NgClass } from '@angular/common';
 import { ChangeDetectorRef, Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { finalize, Subscription, timeout, TimeoutError } from 'rxjs';
+import { finalize, forkJoin, Subscription, timeout, TimeoutError } from 'rxjs';
 import { PopUps } from '../../../shared/popUps/popUpsService';
+import { TabSwitch } from '../../../shared/tab-switch/tab-switch';
 import { AuthService } from '../../Auth/data/auth-service';
 import { Inter_base } from '../../Catalogos/data/nombreInterfaz';
 import { CatalogoService } from '../../Catalogos/data/serviceCatalogo';
+import { ProcedimientoMedicoService } from '../../Medica/procedimiento-medico/data/procedimiento-medico-service';
+import {
+  RecursoDisponibleResponse,
+  TipoRecursoProcedimientoApi,
+} from '../../Medica/procedimiento-medico/data/procedimientoMedicoInterfaz';
+import { PacienteResumido } from '../../Pacientes/paciente/data/pacienteInterfaz';
+import { PacienteService } from '../../Pacientes/paciente/data/paciente-service';
+import { InventarioResponse } from '../inventario/data/interfaz-inventario';
+import { ServicioInventario } from '../inventario/data/servicio-inventario';
 import { SalidasService } from './data/salidas-service';
 import {
   CondicionDevolucion,
@@ -14,15 +24,20 @@ import {
   EntregaLineaRequest,
   EstadoDetalleSalida,
   EstadoSolicitudSalida,
+  HistorialMovimiento,
   LoteDisponibleSalida,
+  LoteEntregadoSalida,
+  SalidaDirectaLineaRequest,
+  SalidaDirectaRequest,
   SolicitudSalida,
   SolicitudSalidaBase,
   SolicitudSalidaResumen,
 } from './data/salidasInterfaz';
 
-const TIEMPO_ESPERA_MS = 5000;
-
 type FiltroSolicitud = 'todas' | EstadoSolicitudSalida;
+type TipoRecurso = 'medicamento' | 'insumo';
+
+const TIEMPO_ESPERA_MS = 5000;
 
 interface DetalleSalidaVista extends DetalleSolicitudSalida {
   loteSeleccionadoId: number | null;
@@ -34,7 +49,25 @@ interface DetalleSalidaVista extends DetalleSolicitudSalida {
 }
 
 interface SolicitudSalidaVista extends SolicitudSalidaBase {
+  solicitante: string;
   detalles: DetalleSalidaVista[];
+}
+
+/** Línea de la salida directa que se está capturando desde Farmacia. */
+interface LineaSalidaVista {
+  tipo: TipoRecurso;
+  referenciaId: number;
+  nombre: string;
+  cantidadSolicitada: number;
+  cantidad: number | null;
+  lotes: LoteDisponibleSalida[];
+  loteSeleccionadoId: number | null;
+}
+
+/** Movimientos de una salida agrupados mientras no pasen más de 10 minutos entre uno y otro. */
+interface GrupoHistorial {
+  fechaHora: string;
+  movimientos: HistorialMovimiento[];
 }
 
 /**
@@ -43,7 +76,7 @@ interface SolicitudSalidaVista extends SolicitudSalidaBase {
  */
 @Component({
   selector: 'app-salidas',
-  imports: [FormsModule, NgClass],
+  imports: [FormsModule, NgClass, TabSwitch],
   templateUrl: './salidas.html',
   styleUrl: './salidas.scss',
 })
@@ -51,6 +84,9 @@ export class Salidas implements OnInit, OnDestroy {
   private readonly salidasService = inject(SalidasService);
   private readonly catalogoService = inject(CatalogoService);
   private readonly authService = inject(AuthService);
+  private readonly pacienteService = inject(PacienteService);
+  private readonly inventarioService = inject(ServicioInventario);
+  private readonly procedimientoService = inject(ProcedimientoMedicoService);
   private readonly popUps = inject(PopUps);
   private readonly cdr = inject(ChangeDetectorRef);
 
@@ -58,10 +94,18 @@ export class Salidas implements OnInit, OnDestroy {
   private peticionDetalle?: Subscription;
   private peticionMotivos?: Subscription;
   private peticionAccion?: Subscription;
+  private peticionPacientes?: Subscription;
+  private peticionHistorial?: Subscription;
+  private peticionInventario?: Subscription;
+  private peticionRecursos?: Subscription;
   private destruido = false;
 
   /** Pestaña activa del detalle: `false` = Solicitudes, `true` = Devoluciones. */
   readonly enDevoluciones = signal(false);
+  /** Tercera pestaña del detalle: movimientos de la salida seleccionada. */
+  readonly enHistorial = signal(false);
+  /** La vista principal se reemplaza por la captura de una salida directa. */
+  readonly generandoSalida = signal(false);
 
   filtro: FiltroSolicitud = 'todas';
   textoBusqueda = '';
@@ -76,6 +120,30 @@ export class Salidas implements OnInit, OnDestroy {
   guardandoEntrega = false;
   guardandoDevolucion = false;
 
+  // ------------------- SALIDA DIRECTA -------------------
+  pacientes: PacienteResumido[] = [];
+  cargandoPacientes = false;
+  pacienteSeleccionadoId: number | null = null;
+  lineasSalida: LineaSalidaVista[] = [];
+  lotesInventario: InventarioResponse[] = [];
+  cargandoLotes = false;
+  guardandoSalida = false;
+
+  tipoRecurso: TipoRecurso = 'medicamento';
+  textoBusquedaRecurso = '';
+  busquedaRecursoRealizada = false;
+  recursosEncontrados: RecursoDisponibleResponse[] = [];
+  recursoSeleccionado: RecursoDisponibleResponse | null = null;
+  lotesRecursoSeleccionado: LoteDisponibleSalida[] = [];
+  loteRecursoSeleccionadoId: number | null = null;
+  cantidadRecurso: number | null = null;
+  cargandoRecursos = false;
+
+  // ------------------- HISTORIAL -------------------
+  historial: HistorialMovimiento[] = [];
+  cargandoHistorial = false;
+  errorHistorial = false;
+
   // ------------------- CICLO DE VIDA -------------------
 
   ngOnInit(): void {
@@ -89,6 +157,10 @@ export class Salidas implements OnInit, OnDestroy {
     this.peticionDetalle?.unsubscribe();
     this.peticionMotivos?.unsubscribe();
     this.peticionAccion?.unsubscribe();
+    this.peticionPacientes?.unsubscribe();
+    this.peticionHistorial?.unsubscribe();
+    this.peticionInventario?.unsubscribe();
+    this.peticionRecursos?.unsubscribe();
   }
 
   // ------------------- CONSULTAS PARA LA VISTA -------------------
@@ -128,7 +200,49 @@ export class Salidas implements OnInit, OnDestroy {
   }
 
   get tituloDetalle(): string {
+    if (this.enHistorial()) return 'Detalle de historial';
     return this.enDevoluciones() ? 'Detalle de devolución' : 'Detalle de solicitud';
+  }
+
+  get historialAgrupado(): GrupoHistorial[] {
+    const margenMs = 10 * 60 * 1000;
+    const grupos: GrupoHistorial[] = [];
+
+    for (const movimiento of this.historial) {
+      const instante = new Date(movimiento.fechaHora).getTime();
+      const ultimo = grupos[grupos.length - 1];
+      const anterior = ultimo?.movimientos[ultimo.movimientos.length - 1];
+      const instanteAnterior = anterior ? new Date(anterior.fechaHora).getTime() : Number.NaN;
+
+      if (ultimo && instante >= instanteAnterior && instante - instanteAnterior <= margenMs) {
+        ultimo.movimientos.push(movimiento);
+      } else {
+        grupos.push({ fechaHora: movimiento.fechaHora, movimientos: [movimiento] });
+      }
+    }
+
+    return grupos;
+  }
+
+  get puedeGenerarSalida(): boolean {
+    if (this.guardandoSalida || this.pacienteSeleccionadoId === null) return false;
+    if (!this.lineasSalida.length || this.lineasSalida.some((linea) => linea.cantidad === null)) {
+      return false;
+    }
+
+    const usados = new Set<string>();
+    for (const linea of this.lineasSalida) {
+      if (linea.loteSeleccionadoId === null) return false;
+      const disponible = this.disponibleLinea(linea);
+      if (linea.cantidad === null || linea.cantidad < 1 || linea.cantidad > disponible) {
+        return false;
+      }
+      const clave = `${linea.tipo}#${linea.referenciaId}#${linea.loteSeleccionadoId}`;
+      if (usados.has(clave)) return false;
+      usados.add(clave);
+    }
+
+    return true;
   }
 
   get etiquetaGuardarEntrega(): string {
@@ -208,6 +322,7 @@ export class Salidas implements OnInit, OnDestroy {
           if (this.destruido) return;
 
           this.solicitudSeleccionada = this.aVista(solicitud);
+          if (this.enHistorial()) this.cargarHistorial();
         },
         error: (error) => {
           if (this.destruido) return;
@@ -237,6 +352,11 @@ export class Salidas implements OnInit, OnDestroy {
           if (this.destruido) return;
 
           this.motivos = motivos;
+          for (const detalle of this.solicitudSeleccionada?.detalles ?? []) {
+            if (detalle.entregado > 0 && detalle.motivoBajaId === null) {
+              detalle.motivoBajaId = motivos[0]?.id ?? null;
+            }
+          }
         },
         error: (error) => {
           if (this.destruido) return;
@@ -268,41 +388,502 @@ export class Salidas implements OnInit, OnDestroy {
 
   /** Cambia la vista del detalle entre solicitudes y devoluciones. */
   seleccionarVista(devoluciones: boolean): void {
+    this.enHistorial.set(false);
+
     if (this.enDevoluciones() === devoluciones) {
+      this.cdr.markForCheck();
       return;
     }
 
     this.enDevoluciones.set(devoluciones);
+    this.cdr.markForCheck();
+  }
+
+  /** Activa la pestaña Historial y carga los movimientos de la salida seleccionada. */
+  seleccionarHistorial(): void {
+    this.enDevoluciones.set(false);
+    this.enHistorial.set(true);
+    this.cargarHistorial();
+    this.cdr.markForCheck();
+  }
+
+  // ------------------- SALIDA DIRECTA -------------------
+
+  /** Oculta la vista principal y abre la captura de una salida directa. */
+  abrirGeneracionSalida(): void {
+    if (this.generandoSalida()) return;
+
+    this.generandoSalida.set(true);
+    this.pacienteSeleccionadoId = null;
+    this.lineasSalida = [];
+    this.lotesInventario = [];
+    this.cancelarSeleccionRecurso();
+    this.cargarPacientes();
+    this.cargarLotes();
+    this.cdr.markForCheck();
+  }
+
+  /** Descarta la captura de la salida directa y vuelve a la vista principal. */
+  cancelarGeneracionSalida(): void {
+    this.peticionPacientes?.unsubscribe();
+    this.peticionInventario?.unsubscribe();
+    this.peticionRecursos?.unsubscribe();
+    this.peticionAccion?.unsubscribe();
+    this.generandoSalida.set(false);
+    this.pacienteSeleccionadoId = null;
+    this.lineasSalida = [];
+    this.lotesInventario = [];
+    this.cancelarSeleccionRecurso();
+    this.guardandoSalida = false;
+    this.cdr.markForCheck();
+  }
+
+  private cargarPacientes(): void {
+    this.peticionPacientes?.unsubscribe();
+    this.cargandoPacientes = true;
+    this.cdr.markForCheck();
+
+    this.peticionPacientes = this.pacienteService
+      .listarPacientes()
+      .pipe(
+        finalize(() => {
+          this.cargandoPacientes = false;
+          if (!this.destruido) this.cdr.markForCheck();
+        }),
+      )
+      .subscribe({
+        next: (pacientes) => {
+          if (this.destruido) return;
+          this.pacientes = pacientes.filter((paciente) => paciente.episodioId !== null);
+        },
+        error: (error) => {
+          if (this.destruido) return;
+          this.pacientes = [];
+          this.mostrarError(error, 'No se pudieron cargar los pacientes.');
+        },
+      });
+  }
+
+  private cargarLotes(): void {
+    this.peticionInventario?.unsubscribe();
+    this.cargandoLotes = true;
+    this.cdr.markForCheck();
+
+    this.peticionInventario = forkJoin([
+      this.inventarioService.listarInventario({ tipo: 'medicamento', activos: true }),
+      this.inventarioService.listarInventario({ tipo: 'insumo', activos: true }),
+    ])
+      .pipe(
+        finalize(() => {
+          this.cargandoLotes = false;
+          if (!this.destruido) this.cdr.markForCheck();
+        }),
+      )
+      .subscribe({
+        next: ([medicamentos, insumos]) => {
+          if (this.destruido) return;
+          this.lotesInventario = [...medicamentos, ...insumos];
+          this.actualizarLotesLineas();
+          this.actualizarLotesRecursoSeleccionado();
+        },
+        error: (error) => {
+          if (this.destruido) return;
+          this.lotesInventario = [];
+          this.mostrarError(error, 'No se pudieron cargar los lotes disponibles.');
+        },
+      });
+  }
+
+  // ------------------- RECURSOS DE LA SALIDA -------------------
+
+  get etiquetaRecurso(): string {
+    return this.tipoRecurso === 'medicamento' ? 'medicamento' : 'insumo';
+  }
+
+  get cantidadMaximaRecurso(): number {
+    const seleccionado = this.recursoSeleccionado;
+    const lote = this.lotesRecursoSeleccionado.find(
+      (opcion) => opcion.id === this.loteRecursoSeleccionadoId,
+    );
+    if (!seleccionado || !lote) return 0;
+
+    const agregadoAlRecurso = this.lineasSalida
+      .filter((linea) => linea.tipo === this.tipoRecurso && linea.referenciaId === seleccionado.id)
+      .reduce((total, linea) => total + linea.cantidadSolicitada, 0);
+    const agregadoAlLote = this.lineasSalida
+      .filter(
+        (linea) =>
+          linea.tipo === this.tipoRecurso &&
+          linea.referenciaId === seleccionado.id &&
+          linea.loteSeleccionadoId === lote.id,
+      )
+      .reduce((total, linea) => total + linea.cantidadSolicitada, 0);
+
+    return Math.max(
+      0,
+      Math.min(
+        seleccionado.disponible - agregadoAlRecurso,
+        lote.disponible - agregadoAlLote,
+      ),
+    );
+  }
+
+  get puedeAgregarRecurso(): boolean {
+    const cantidad = this.cantidadRecurso;
+    return (
+      !this.cargandoRecursos &&
+      this.recursoSeleccionado !== null &&
+      this.loteRecursoSeleccionadoId !== null &&
+      cantidad !== null &&
+      Number.isInteger(cantidad) &&
+      cantidad > 0 &&
+      cantidad <= this.cantidadMaximaRecurso
+    );
+  }
+
+  cambiarTipoRecurso(esMedicamento: boolean): void {
+    this.tipoRecurso = esMedicamento ? 'medicamento' : 'insumo';
+    this.cancelarSeleccionRecurso();
+    this.cdr.markForCheck();
+  }
+
+  buscarRecursos(): void {
+    if (this.destruido || this.cargandoRecursos) return;
+
+    this.peticionRecursos?.unsubscribe();
+    this.busquedaRecursoRealizada = true;
+    this.cargandoRecursos = true;
+    this.recursoSeleccionado = null;
+    this.cantidadRecurso = null;
+    this.recursosEncontrados = [];
+    this.cdr.markForCheck();
+
+    this.peticionRecursos = this.procedimientoService
+      .buscarRecursos(this.aTipoRecursoApi(this.tipoRecurso), this.textoBusquedaRecurso)
+      .pipe(
+        finalize(() => {
+          this.cargandoRecursos = false;
+          if (!this.destruido) this.cdr.markForCheck();
+        }),
+      )
+      .subscribe({
+        next: (recursos) => {
+          if (this.destruido) return;
+          this.recursosEncontrados = recursos;
+        },
+        error: (error) => {
+          if (this.destruido) return;
+          this.recursosEncontrados = [];
+          this.mostrarError(error, `No se pudo buscar ${this.etiquetaRecurso} en farmacia.`);
+        },
+      });
+  }
+
+  seleccionarRecurso(recurso: RecursoDisponibleResponse): void {
+    this.recursoSeleccionado = recurso;
+    this.lotesRecursoSeleccionado = this.lotesDeRecurso(this.tipoRecurso, recurso.id);
+    this.loteRecursoSeleccionadoId = this.lotesRecursoSeleccionado[0]?.id ?? null;
+    this.cantidadRecurso = this.lotesRecursoSeleccionado.length ? 1 : null;
+    this.busquedaRecursoRealizada = false;
+    this.recursosEncontrados = [];
+    this.textoBusquedaRecurso = '';
+    this.cdr.markForCheck();
+  }
+
+  cancelarSeleccionRecurso(): void {
+    this.recursoSeleccionado = null;
+    this.lotesRecursoSeleccionado = [];
+    this.loteRecursoSeleccionadoId = null;
+    this.cantidadRecurso = null;
+    this.busquedaRecursoRealizada = false;
+    this.recursosEncontrados = [];
+    this.textoBusquedaRecurso = '';
+  }
+
+  /** Agrega el recurso seleccionado con el lote elegido a la salida. */
+  agregarRecurso(): void {
+    const seleccionado = this.recursoSeleccionado;
+    const cantidad = this.cantidadRecurso;
+    const loteId = this.loteRecursoSeleccionadoId;
+
+    if (!seleccionado || cantidad === null || loteId === null || !this.puedeAgregarRecurso) {
+      return;
+    }
+
+    const existente = this.buscarLineaAgregada(seleccionado.id, loteId);
+    if (existente) {
+      existente.cantidadSolicitada += cantidad;
+      this.actualizarLotesLinea(existente);
+    } else {
+      const linea: LineaSalidaVista = {
+        tipo: this.tipoRecurso,
+        referenciaId: seleccionado.id,
+        nombre: seleccionado.nombre,
+        cantidadSolicitada: cantidad,
+        cantidad: null,
+        lotes: [],
+        loteSeleccionadoId: loteId,
+      };
+      this.lineasSalida = [...this.lineasSalida, linea];
+      this.actualizarLotesLinea(linea);
+    }
+
+    this.cancelarSeleccionRecurso();
+    this.cdr.markForCheck();
+  }
+
+  private buscarLineaAgregada(
+    referenciaId: number,
+    loteSeleccionadoId: number,
+  ): LineaSalidaVista | undefined {
+    return this.lineasSalida.find(
+      (linea) =>
+        linea.tipo === this.tipoRecurso &&
+        linea.referenciaId === referenciaId &&
+        linea.loteSeleccionadoId === loteSeleccionadoId,
+    );
+  }
+
+  private aTipoRecursoApi(tipo: TipoRecurso): TipoRecursoProcedimientoApi {
+    return tipo === 'medicamento' ? 'MEDICAMENTO' : 'INSUMO';
+  }
+
+  quitarLineaSalida(indice: number): void {
+    if (indice < 0 || indice >= this.lineasSalida.length) return;
+
+    this.lineasSalida = this.lineasSalida.filter((_, posicion) => posicion !== indice);
+    this.cdr.markForCheck();
+  }
+
+  /** Limita la cantidad de la captura al máximo del lote, sin rellenarla al borrarla. */
+  ajustarCantidadRecurso(): void {
+    const maximo = this.cantidadMaximaRecurso;
+    if (this.cantidadRecurso !== null && this.cantidadRecurso > maximo) {
+      this.cantidadRecurso = maximo;
+    }
+    this.cdr.markForCheck();
+  }
+
+  /** Código del lote con el que se agregó la línea, para mostrarlo como texto. */
+  loteTexto(linea: LineaSalidaVista): string {
+    return (
+      linea.lotes.find((opcion) => opcion.id === linea.loteSeleccionadoId)?.codigoLote ??
+      'Sin lote'
+    );
+  }
+
+  disponibleLinea(linea: LineaSalidaVista): number {
+    const lote = linea.lotes.find((opcion) => opcion.id === linea.loteSeleccionadoId);
+    return lote?.disponible ?? 0;
+  }
+
+  private actualizarLotesLineas(): void {
+    for (const linea of this.lineasSalida) {
+      this.actualizarLotesLinea(linea);
+    }
+    this.cdr.markForCheck();
+  }
+
+  /** Refresca los lotes del recurso abierto en el panel de selección. */
+  private actualizarLotesRecursoSeleccionado(): void {
+    const seleccionado = this.recursoSeleccionado;
+    if (!seleccionado) {
+      this.lotesRecursoSeleccionado = [];
+      this.loteRecursoSeleccionadoId = null;
+      return;
+    }
+
+    this.lotesRecursoSeleccionado = this.lotesDeRecurso(this.tipoRecurso, seleccionado.id);
+    if (!this.lotesRecursoSeleccionado.some((lote) => lote.id === this.loteRecursoSeleccionadoId)) {
+      this.loteRecursoSeleccionadoId = this.lotesRecursoSeleccionado[0]?.id ?? null;
+    }
+
+    if (this.cantidadRecurso !== null) {
+      this.cantidadRecurso = Math.min(this.cantidadRecurso, this.cantidadMaximaRecurso);
+    } else if (this.cantidadMaximaRecurso > 0) {
+      this.cantidadRecurso = 1;
+    }
+  }
+
+  private actualizarLotesLinea(linea: LineaSalidaVista): void {
+    linea.lotes = this.lotesDeRecurso(linea.tipo, linea.referenciaId);
+    const seleccionado = linea.lotes.find((lote) => lote.id === linea.loteSeleccionadoId);
+    linea.loteSeleccionadoId = seleccionado?.id ?? linea.lotes[0]?.id ?? null;
+
+    const disponible = this.disponibleLinea(linea);
+    linea.cantidad = linea.loteSeleccionadoId === null
+      ? null
+      : Math.min(linea.cantidadSolicitada, disponible);
+  }
+
+  /** Lotes activos, con existencia y no vencidos del recurso, ordenados por vencimiento. */
+  private lotesDeRecurso(tipo: TipoRecurso, referenciaId: number): LoteDisponibleSalida[] {
+    const hoy = new Date().toISOString().slice(0, 10);
+    const tipoApi = tipo === 'medicamento' ? 'MEDICAMENTO' : 'INSUMO';
+
+    return this.lotesInventario
+      .filter(
+        (lote) =>
+          lote.tipo === tipoApi &&
+          lote.idItem === referenciaId &&
+          lote.estado &&
+          lote.disponible > 0 &&
+          (!lote.fechaVencimiento || lote.fechaVencimiento >= hoy),
+      )
+      .sort((a, b) =>
+        (a.fechaVencimiento ?? '9999-12-31').localeCompare(b.fechaVencimiento ?? '9999-12-31'),
+      )
+      .map((lote) => ({
+        id: lote.id,
+        codigoLote: lote.codigoLote,
+        fechaVencimiento: lote.fechaVencimiento,
+        disponible: lote.disponible,
+      }));
+  }
+
+  /** Registra la salida directa y descuenta el inventario de los lotes elegidos. */
+  generarSalida(): void {
+    if (!this.puedeGenerarSalida) return;
+
+    const usuarioId = this.authService.currentUser()?.id;
+    if (!usuarioId) {
+      this.popUps.error('No se pudo identificar al usuario de la sesión.');
+      return;
+    }
+
+    const paciente = this.pacientes.find(
+      (opcion) => opcion.pacienteId === this.pacienteSeleccionadoId,
+    );
+    const episodioId = paciente?.episodioId ?? null;
+    if (episodioId === null) {
+      this.popUps.advertencia('Seleccione un paciente con episodio activo.');
+      return;
+    }
+
+    const lineas: SalidaDirectaLineaRequest[] = this.lineasSalida.map((linea) => ({
+      tipo: this.aTipoRecursoApi(linea.tipo),
+      referenciaId: linea.referenciaId,
+      cantidad: linea.cantidad!,
+      loteId: linea.loteSeleccionadoId!,
+    }));
+    const request: SalidaDirectaRequest = { episodioId, usuarioId, lineas };
+
+    this.peticionAccion?.unsubscribe();
+    this.guardandoSalida = true;
+    this.cdr.markForCheck();
+
+    this.peticionAccion = this.salidasService
+      .crearDirecta(request)
+      .pipe(
+        finalize(() => {
+          this.guardandoSalida = false;
+          if (!this.destruido) this.cdr.markForCheck();
+        }),
+      )
+      .subscribe({
+        next: (respuesta) => {
+          if (this.destruido) return;
+
+          this.popUps.exito('Salida registrada exitosamente.');
+          this.generandoSalida.set(false);
+          this.pacienteSeleccionadoId = null;
+          this.lineasSalida = [];
+          this.cargarSolicitudes(respuesta.id);
+        },
+        error: (error) => {
+          if (this.destruido) return;
+          this.mostrarError(error, 'No se pudo registrar la salida. Intente nuevamente.');
+        },
+      });
+  }
+
+  // ------------------- HISTORIAL -------------------
+
+  cargarHistorial(): void {
+    const id = this.solicitudSeleccionada?.id;
+    if (id === undefined) {
+      this.historial = [];
+      return;
+    }
+
+    this.peticionHistorial?.unsubscribe();
+    this.cargandoHistorial = true;
+    this.errorHistorial = false;
+    this.cdr.markForCheck();
+
+    this.peticionHistorial = this.salidasService
+      .historial(id)
+      .pipe(
+        finalize(() => {
+          this.cargandoHistorial = false;
+          if (!this.destruido) this.cdr.markForCheck();
+        }),
+      )
+      .subscribe({
+        next: (historial) => {
+          if (this.destruido) return;
+          this.historial = historial;
+        },
+        error: (error) => {
+          if (this.destruido) return;
+          this.historial = [];
+          this.errorHistorial = true;
+          this.mostrarError(error, 'No se pudo cargar el historial de la salida.');
+        },
+      });
+  }
+
+  historialTexto(movimiento: HistorialMovimiento): string {
+    const accion = movimiento.tipoMovimiento === 'ENTREGA' ? 'Se entregó' : 'Se devolvió';
+    return `${accion} ${movimiento.cantidad} de ${movimiento.producto} (${movimiento.lote})`;
+  }
+
+  /** Bloquea el tecleo de cantidades mayores a las permitidas en el input. */
+  bloquearCantidadMayor(event: KeyboardEvent, maximo: number): void {
+    if (event.ctrlKey || event.metaKey || event.altKey) return;
+    // Teclas especiales (flechas, borrar, tabulación, etc.).
+    if (event.key.length > 1) return;
+    if (!/^\d$/.test(event.key)) {
+      event.preventDefault();
+      return;
+    }
+
+    const input = event.target as HTMLInputElement;
+    const inicio = input.selectionStart ?? input.value.length;
+    const fin = input.selectionEnd ?? inicio;
+    const siguiente = `${input.value.slice(0, inicio)}${event.key}${input.value.slice(fin)}`;
+
+    if (Number(siguiente) > maximo) {
+      event.preventDefault();
+    }
   }
 
   /** Limita la cantidad de entrega al pendiente y al stock del lote elegido. */
   ajustarCantidadEntrega(detalle: DetalleSalidaVista): void {
     const maximo = this.maximoEntrega(detalle);
-    const cantidad = Number(detalle.cantidadEntrega);
+    const valor = detalle.cantidadEntrega;
+    const cantidad = valor === null || `${valor}`.trim() === '' ? null : Number(valor);
 
-    if (!Number.isInteger(cantidad) || cantidad < 1) {
-      detalle.cantidadEntrega = maximo > 0 ? maximo : null;
+    if (cantidad === null || !Number.isInteger(cantidad) || cantidad < 1) {
+      detalle.cantidadEntrega = null;
       return;
     }
 
-    if (cantidad > maximo) {
-      detalle.cantidadEntrega = maximo;
-    }
+    detalle.cantidadEntrega = Math.min(cantidad, maximo);
   }
 
   /** Al cambiar de lote, reinicia la cantidad de devolución al máximo permitido. */
   ajustarCantidadDevolucion(detalle: DetalleSalidaVista): void {
     const maximo = this.maximoDevolucion(detalle);
-    const cantidad = Number(detalle.cantidadDevolver);
+    const valor = detalle.cantidadDevolver;
+    const cantidad = valor === null || `${valor}`.trim() === '' ? null : Number(valor);
 
-    if (!Number.isInteger(cantidad) || cantidad < 0) {
+    if (cantidad === null || !Number.isInteger(cantidad) || cantidad < 0) {
       detalle.cantidadDevolver = null;
       return;
     }
 
-    if (cantidad > maximo) {
-      detalle.cantidadDevolver = maximo;
-    }
+    detalle.cantidadDevolver = Math.min(cantidad, maximo);
   }
 
   maximoEntrega(detalle: DetalleSalidaVista): number {
@@ -319,8 +900,12 @@ export class Salidas implements OnInit, OnDestroy {
     return lote?.disponibleDevolver ?? 0;
   }
 
-  loteSugerido(detalle: DetalleSalidaVista): LoteDisponibleSalida | null {
-    return detalle.lotesDisponibles[0] ?? null;
+  loteSugerido(detalle: DetalleSalidaVista): LoteDisponibleSalida | LoteEntregadoSalida | null {
+    return detalle.lotesDisponibles[0] ?? detalle.lotesEntregados[0] ?? null;
+  }
+
+  lotesEntregadosTexto(detalle: DetalleSalidaVista): string {
+    return detalle.lotesEntregados.map((lote) => lote.codigoLote).join(', ');
   }
 
   // ------------------- ENTREGAS -------------------
@@ -542,6 +1127,7 @@ export class Salidas implements OnInit, OnDestroy {
       id: solicitud.id,
       codigo: solicitud.codigo,
       paciente: solicitud.paciente,
+      solicitante: solicitud.solicitante,
       tipoAtencion: solicitud.tipoAtencion,
       procedimiento: solicitud.procedimiento,
       fecha: solicitud.fecha,
@@ -564,7 +1150,7 @@ export class Salidas implements OnInit, OnDestroy {
       loteDevueltoId: loteEntregado?.loteId ?? null,
       cantidadDevolver: null,
       condicion: 'APTO',
-      motivoBajaId: null,
+      motivoBajaId: this.motivos[0]?.id ?? null,
     };
   }
 

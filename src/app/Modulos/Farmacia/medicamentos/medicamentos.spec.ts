@@ -23,6 +23,7 @@ describe('Medicamentos', () => {
     buscarMedLogActualizar: vi.fn<(id: number, activo: boolean) => Observable<MedicamentoLogRequest>>(),
     actualizarMedicamentoLog: vi.fn<(id: number, medicamento: MedicamentoLogRequest) => Observable<unknown>>(),
     crearMedicamentoLog: vi.fn<(medicamento: MedicamentoLogRequest) => Observable<unknown>>(),
+    cambiarEstadoMedicamento: vi.fn<(id: number) => Observable<unknown>>(),
   };
   const popUp = {
     confirmarToast: vi.fn<() => Promise<boolean>>(),
@@ -42,6 +43,8 @@ describe('Medicamentos', () => {
     servicioMedicamento.actualizarMedicamentoLog.mockReturnValue(of(null));
     servicioMedicamento.crearMedicamentoLog.mockReset();
     servicioMedicamento.crearMedicamentoLog.mockReturnValue(of(null));
+    servicioMedicamento.cambiarEstadoMedicamento.mockReset();
+    servicioMedicamento.cambiarEstadoMedicamento.mockReturnValue(of(null));
     popUp.exito.mockReset();
     popUp.confirmarToast.mockReset();
     popUp.confirmarToast.mockResolvedValue(true);
@@ -453,6 +456,49 @@ describe('Medicamentos', () => {
     interruptor.click();
     await fixture.whenStable();
     expect(cambiarEstado).toHaveBeenCalledWith(medicamento.id);
+  });
+
+  it('pide confirmacion antes de cambiar el estado del medicamento', async () => {
+    const medicamento: MedicamentoLogResponse = {
+      id: 1,
+      nombre: 'Medicamento de prueba',
+      dosis: 500,
+      marca: 'Fabricante',
+      presentacion: 'Tableta',
+      viaAdministracion: 'Oral',
+      unidadMedida: 'mg',
+      estado: true,
+    };
+    component.medicamentos = [medicamento];
+
+    await component.cambiarEstadoMed(medicamento.id);
+
+    expect(popUp.confirmarToast).toHaveBeenCalledWith(
+      '¿Está seguro de cambiar el estado del medicamento?',
+    );
+    expect(servicioMedicamento.cambiarEstadoMedicamento).toHaveBeenCalledWith(medicamento.id);
+    expect(medicamento.estado).toBe(false);
+  });
+
+  it('no cambia el estado si se cancela la confirmacion', async () => {
+    const medicamento: MedicamentoLogResponse = {
+      id: 1,
+      nombre: 'Medicamento de prueba',
+      dosis: 500,
+      marca: 'Fabricante',
+      presentacion: 'Tableta',
+      viaAdministracion: 'Oral',
+      unidadMedida: 'mg',
+      estado: true,
+    };
+    component.medicamentos = [medicamento];
+    popUp.confirmarToast.mockResolvedValueOnce(false);
+
+    await component.cambiarEstadoMed(medicamento.id);
+
+    expect(servicioMedicamento.cambiarEstadoMedicamento).not.toHaveBeenCalled();
+    expect(medicamento.estado).toBe(true);
+    expect(component.procesando).toBe(false);
   });
 
   it('muestra dos inputs y cuatro selects del formulario de medicamentos', () => {

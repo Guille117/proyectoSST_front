@@ -165,6 +165,7 @@ export class Inventario implements OnInit {
   abrirModalBaja(item: InventarioResponse): void {
     this.modalService.open(ModalBajaLote, {
       title: 'Eliminar lote',
+      modalClass: 'modal-ancho',
       lote: item,
       onGuardado: () => this.listarInventario(),
     });
@@ -190,6 +191,23 @@ export class Inventario implements OnInit {
     if (!anio || !mes || !dia || mes < 1 || mes > 12) return fecha;
 
     return `${this.meses[mes - 1]} ${dia}, ${anio}`;
+  }
+
+  resumirTexto(texto: string | null | undefined, maxCaracteres = 34): string {
+    const limpio = texto?.trim();
+    if (!limpio) return '—';
+    if (limpio.length <= maxCaracteres) return limpio;
+
+    const recorte = limpio.slice(0, maxCaracteres).trimEnd();
+    const ultimoEspacio = recorte.lastIndexOf(' ');
+    const base = ultimoEspacio > 0 ? recorte.slice(0, ultimoEspacio) : recorte;
+
+    return `${base}...`;
+  }
+
+  esTextoTruncado(texto: string | null | undefined, maxCaracteres = 34): boolean {
+    const limpio = texto?.trim();
+    return !!limpio && limpio.length > maxCaracteres;
   }
 
   esFechaVencida(fecha: string | null): boolean {

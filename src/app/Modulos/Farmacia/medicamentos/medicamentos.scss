@@ -11,6 +11,11 @@
   grid-template-columns: minmax(0, 1.9fr) minmax(280px, 1.1fr);
   gap: 32px;
   align-items: start;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 
   > * {
     min-width: 0;

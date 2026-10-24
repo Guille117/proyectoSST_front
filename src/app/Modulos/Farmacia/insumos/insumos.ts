@@ -322,6 +322,23 @@ export class Insumos implements OnInit {
   }
 
   // ==================== HELPERS ====================
+  resumirTexto(texto: string | null | undefined, maxCaracteres = 34): string {
+    const limpio = texto?.trim();
+    if (!limpio) return '—';
+    if (limpio.length <= maxCaracteres) return limpio;
+
+    const recorte = limpio.slice(0, maxCaracteres).trimEnd();
+    const ultimoEspacio = recorte.lastIndexOf(' ');
+    const base = ultimoEspacio > 0 ? recorte.slice(0, ultimoEspacio) : recorte;
+
+    return `${base}...`;
+  }
+
+  esTextoTruncado(texto: string | null | undefined, maxCaracteres = 34): boolean {
+    const limpio = texto?.trim();
+    return !!limpio && limpio.length > maxCaracteres;
+  }
+
   private crearInsumoVacio(): InsumoRequest {
     return {
       nombre: '',

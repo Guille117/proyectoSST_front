@@ -1,3 +1,7 @@
+@use '../../Medica/panel-seccion';
+@use '../../Medica/indicaciones/comun';
+@use '../../Medica/indicaciones/medicamentos';
+
 :host {
   display: block;
 }
@@ -29,11 +33,15 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
+  max-height: calc(100vh - var(--heightTopBar) - 120px);
   padding: 24px;
+  overflow: hidden;
   border: 1px solid #e8ebf3;
   border-radius: 24px;
   background: #fff;
-  box-shadow: 0 8px 24px rgba(29, 43, 70, 0.06);
+  box-shadow:
+    0 18px 40px rgba(15, 23, 42, 0.14),
+    0 4px 12px rgba(15, 23, 42, 0.08);
 }
 
 .titulo-panel {
@@ -65,7 +73,9 @@
   border-radius: 999px;
   background: #fff;
   color: #5f6a85;
-  font-size: 15px;
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 600;
   cursor: pointer;
   transition:
     background-color 0.2s ease,
@@ -111,8 +121,12 @@
 /* ==================== LISTA DE SOLICITUDES ==================== */
 .lista-solicitudes {
   display: flex;
+  flex: 1 1 auto;
   flex-direction: column;
   gap: 12px;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .solicitud {
@@ -145,7 +159,7 @@
 
 .solicitud-codigo {
   color: #14213d;
-  font-size: 0.95rem;
+  font-size: 1rem;
   font-weight: 700;
 }
 
@@ -154,7 +168,8 @@
   min-width: 0;
   overflow: hidden;
   color: #1f2937;
-  font-size: 0.95rem;
+  font-size: 1rem;
+  font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -165,7 +180,8 @@
   gap: 12px;
   margin-top: 8px;
   color: #667085;
-  font-size: 0.85rem;
+  font-size: 0.95rem;
+  font-weight: 600;
 }
 
 .solicitud-fecha {
@@ -179,6 +195,7 @@
 /* ==================== DETALLE DE LA SOLICITUD ==================== */
 .detalle-encabezado {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
@@ -196,7 +213,7 @@
   border-radius: 999px;
   background: #e8f1ff;
   color: #0d6efd;
-  font-size: 0.85rem;
+  font-size: 0.95rem;
   font-weight: 700;
   white-space: nowrap;
 }
@@ -214,7 +231,7 @@
   & .option {
     padding: 0 18px;
     padding-bottom: 6px;
-    font-weight: 500;
+    font-weight: 600;
     white-space: nowrap;
 
     &:hover {
@@ -256,7 +273,8 @@
   gap: 6px 16px;
   margin: 6px 0 0;
   color: #667085;
-  font-size: 0.85rem;
+  font-size: 0.95rem;
+  font-weight: 600;
 
   span {
     display: inline-flex;
@@ -269,7 +287,8 @@
   margin: 0;
   padding: 16px;
   color: #667085;
-  font-size: 0.95rem;
+  font-size: 1rem;
+  font-weight: 600;
   text-align: center;
 }
 
@@ -308,7 +327,8 @@
   p {
     margin: 0;
     color: #334f8f;
-    font-size: 0.9rem;
+    font-size: 0.98rem;
+    font-weight: 600;
     line-height: 1.35;
   }
 }
@@ -317,9 +337,12 @@
 /* Usa los estilos globales de tabla (src/styles/tableStyle.scss) sin
    sobrescribir tipografía ni encabezados; solo se agrega scroll y ancho mínimo. */
 .tabla-detalle {
+  flex: 1 1 auto;
   width: 100%;
-  overflow-x: auto;
+  min-height: 0;
   margin-top: 12px;
+  overflow: auto;
+  overscroll-behavior: contain;
 
   .table {
     min-width: 940px;
@@ -330,7 +353,7 @@
   display: inline-block;
   padding: 4px 10px;
   border-radius: 8px;
-  font-size: 0.72rem;
+  font-size: 0.9rem;
   font-weight: 700;
   letter-spacing: 0.04em;
 }
@@ -349,8 +372,8 @@
   display: block;
   margin-top: 2px;
   color: #8a94a6;
-  font-size: 0.72rem;
-  font-weight: 500;
+  font-size: 0.9rem;
+  font-weight: 600;
 }
 
 .lote-select {
@@ -361,7 +384,8 @@
   border-radius: 10px;
   background: #fff;
   color: #101828;
-  font-size: 0.9rem;
+  font-size: 1rem;
+  font-weight: 600;
   font-family: inherit;
   cursor: pointer;
   outline: none;
@@ -385,7 +409,8 @@
   border-radius: 10px;
   background: #fff;
   color: #101828;
-  font-size: 0.9rem;
+  font-size: 1rem;
+  font-weight: 600;
   font-family: inherit;
   text-align: center;
   outline: none;
@@ -402,8 +427,8 @@
   gap: 6px;
   padding: 5px 12px;
   border-radius: 999px;
-  font-size: 0.85rem;
-  font-weight: 600;
+  font-size: 0.95rem;
+  font-weight: 700;
   white-space: nowrap;
 }
 
@@ -439,9 +464,370 @@
   }
 }
 
+.botones-solicitudes {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 4px;
+
+  .btn {
+    margin-bottom: 0;
+    padding: 8px 28px;
+  }
+}
+
+/* ==================== GENERAR SALIDA ==================== */
+/* Mismo apartado de recursos de Procedimientos Médicos dentro del detalle. */
+.generacion-recursos {
+  width: 100%;
+  max-height: calc(100vh - var(--heightTopBar) - 120px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  justify-self: stretch;
+  border: 1px solid #e8ebf3;
+  border-radius: 24px;
+  box-shadow:
+    0 18px 40px rgba(15, 23, 42, 0.14),
+    0 4px 12px rgba(15, 23, 42, 0.08);
+}
+
+.panel-bloqueado {
+  pointer-events: none;
+  opacity: 0.6;
+  filter: grayscale(0.2);
+}
+
+.generacion-paciente {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  max-width: 460px;
+  margin-bottom: 0;
+
+  label {
+    color: #14213d;
+    font-size: 1rem;
+    font-weight: 600;
+  }
+
+  .paciente-select {
+    flex: 0 1 320px;
+    width: auto;
+    max-width: 320px;
+    min-width: 0;
+  }
+}
+
+.generacion-recursos-cuerpo {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 0.8fr);
+  min-height: 0;
+}
+
+.generacion-recursos-seleccion {
+  min-width: 0;
+  padding-right: 1.5rem;
+}
+
+.generacion-recursos-agregados {
+  min-width: 0;
+  min-height: 220px;
+  padding-left: 1.5rem;
+  border-left: 1px solid #dfe7f3;
+}
+
+.generacion-recursos-agregados .generacion-paciente {
+  justify-content: flex-start;
+  margin-bottom: 1rem;
+}
+
+.generacion-panel-acciones {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e2e8f0;
+
+  .btn {
+    margin-bottom: 0;
+  }
+}
+
+/* ==================== RECURSOS DE LA SALIDA ==================== */
+.recursos-cabecera {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.recursos-cabecera .panel-titulo {
+  margin: 0;
+}
+
+.recursos-cabecera app-tab-switch {
+  flex: 0 0 auto;
+  width: max-content;
+  max-width: 100%;
+}
+
+.recursos-buscador {
+  margin-top: 1.25rem;
+}
+
+.recursos-resultados {
+  margin-top: 1rem;
+}
+
+.recursos-resultados .tabla-container {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.recursos-resultados table {
+  min-width: 340px;
+}
+
+.recursos-ayuda {
+  color: #5b6b85;
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.recurso-seleccionado {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+  padding: 1rem;
+  border: 1px solid #cfdcee;
+  border-radius: 14px;
+  background: #f7fafd;
+}
+
+.generacion-recurso-campos {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.recurso-seleccionado_tipo,
+.recurso-item_tipo {
+  align-self: flex-start;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #e8f1ff;
+  color: var(--azulSecundario);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.recurso-item_tipo {
+  margin-right: 0.35rem;
+}
+
+.recurso-seleccionado_nombre {
+  margin: 0;
+  color: var(--azulPrincipal);
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.recurso-seleccionado_disponible {
+  margin: 0;
+  color: #5b6b85;
+  font-size: 0.9rem;
+}
+
+.recurso-seleccionado_ayuda {
+  color: #5b6b85;
+  font-size: 0.85rem;
+}
+
+.recurso-acciones {
+  gap: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+.recursos-subtitulo {
+  margin: 0 0 0.75rem;
+  color: var(--azulSecundario);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.recursos-items {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.recurso-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid #dfe7f3;
+  border-radius: 12px;
+  background: #f7fafd;
+}
+
+.recurso-item_nombre {
+  min-width: 0;
+  color: #101828;
+  font-size: 0.92rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.recurso-quitar {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  place-items: center;
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  border-radius: 50%;
+  background: #fff;
+  color: #ed1a0f;
+  font-size: 13px;
+  cursor: pointer;
+  transition:
+    color 0.2s ease,
+    background-color 0.2s ease;
+
+  &:hover {
+    color: #fff;
+    background: #ed1a0f;
+  }
+
+  &:focus-visible {
+    outline: 2px solid #ed1a0f;
+    outline-offset: 2px;
+  }
+}
+
+.generacion-recurso-item {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+}
+
+.generacion-recurso-detalle {
+  display: flex;
+  grid-column: 1 / -1;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  color: #14213d;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+/* ==================== HISTORIAL ==================== */
+.historial-lista {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 20px;
+  min-height: 0;
+  margin-top: 12px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.historial-grupo {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.historial-fecha {
+  margin: 0;
+  color: #14213d;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.historial-item {
+  padding: 12px 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  background: #fff;
+}
+
+.historial-detalle {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+
+  p {
+    margin: 0;
+    color: #1f2937;
+    font-size: 1rem;
+    font-weight: 600;
+  }
+}
+
+.historial-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  color: #667085;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
 /* ==================== RESPONSIVE ==================== */
+@media (max-width: 1100px) {
+  .generacion-recursos-cuerpo {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .generacion-recursos-seleccion {
+    padding-right: 0;
+  }
+
+  .generacion-recursos-agregados {
+    min-height: 180px;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    padding-left: 0;
+    border-top: 1px solid #dfe7f3;
+    border-left: 0;
+  }
+}
+
 @media (max-width: 900px) {
   .trabajoArea {
+    grid-template-columns: minmax(0, 1fr);
+    max-height: calc(100vh - var(--heightTopBar) - 120px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .panel-solicitudes,
+  .panel-detalle {
+    max-height: none;
+  }
+
+  .generacion-recursos {
+    width: 100%;
+    max-width: none;
+    justify-self: stretch;
+  }
+}
+
+@media (max-width: 700px) {
+  .generacion-recurso-campos {
     grid-template-columns: minmax(0, 1fr);
   }
 }

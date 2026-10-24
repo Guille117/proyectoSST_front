@@ -12,6 +12,8 @@ export class Paginacion {
   @Input() cantidadMostrar = 0;
   /** Texto que se intercala con el recuento de registros; vacío cuando la pantalla no lo precisa. */
   @Input() textoAlterno = '';
+  /** Muestra primero el texto alterno y después el recuento de registros. */
+  @Input() alternoPrimero = false;
   @Output() paginaCambiada = new EventEmitter<number>();
 
   get mostrando(): number {

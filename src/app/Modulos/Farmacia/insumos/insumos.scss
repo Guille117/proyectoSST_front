@@ -11,6 +11,11 @@
   grid-template-columns: minmax(0, 1.9fr) minmax(280px, 1.1fr);
   gap: 32px;
   align-items: start;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 
   > * {
     min-width: 0;
@@ -68,6 +73,46 @@ app-tab-switch:focus-visible {
 .tabla-container {
   width: 100%;
   overflow-x: auto;
+}
+
+// texto resumido con tooltip del contenido completo
+.texto-truncado {
+  position: relative;
+  display: inline-block;
+  border-bottom: 1px dotted rgba(148, 163, 184, 0.8);
+  cursor: help;
+  outline: none;
+
+  &::after {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    z-index: 20;
+    width: max-content;
+    max-width: 260px;
+    padding: 8px 10px;
+    content: attr(data-tooltip);
+    color: #fff;
+    background: #0b1739;
+    border-radius: 8px;
+    box-shadow: 0 8px 20px rgba(11, 23, 57, 0.25);
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.35;
+    white-space: normal;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition:
+      opacity 0.15s ease,
+      visibility 0.15s ease;
+  }
+
+  &:hover::after,
+  &:focus-visible::after {
+    opacity: 1;
+    visibility: visible;
+  }
 }
 
 .table {

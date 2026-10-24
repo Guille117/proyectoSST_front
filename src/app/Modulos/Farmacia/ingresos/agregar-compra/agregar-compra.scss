@@ -4,8 +4,17 @@
 
 .areaTrabajo-container {
     width: 100%;
-	
+    padding-bottom: 100px;
 }
+
+.trabajoArea {
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
 .trabajoArea2{
     display: grid;
 	grid-template-columns: minmax(0, 1.4fr) minmax(0, 0.8fr);
@@ -85,9 +94,27 @@ app-tab-switch {
   }
 }
 
+.acciones-lote {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.acciones-lote .iconEditar {
+  width: 32px;
+  height: 32px;
+  font-size: 15px;
+}
+
 /* Registros no seleccionados mientras hay una selección activa */
 tr.fila-bloqueada {
   pointer-events: none;
+}
+
+.table tbody tr.selected-row,
+.table tbody tr.selected-row td {
+  font-style: normal;
 }
 
 tr.fila-bloqueada td {
@@ -103,9 +130,11 @@ tr.fila-bloqueada td {
 
 .fila{
     display: flex;
+    flex-wrap: wrap;
     gap: 20px;
     & > * {
-        flex: 1;
+        flex: 0 0 calc(50% - 10px);
+        max-width: calc(50% - 10px);
     }
 }
 
@@ -117,16 +146,23 @@ tr.fila-bloqueada td {
 }
 
 .indicador-pasos {
-  grid-column: 1 / -1;
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: var(--widthNavBar);
+  z-index: 10;
   display: flex;
+  align-items: center;
   justify-content: center;
-  width: 100%;
-  margin-top: 1.5rem;
+  width: auto;
+  margin: 0;
+  padding: 1rem 0 2rem;
+  background: var(--colorFondoPrincipal);
 }
 
 .paso2{
     display: grid;
-	grid-template-columns: minmax(0, 1.5fr) minmax(0, 0.7fr);
+	grid-template-columns: minmax(0, 1.65fr) minmax(0, 0.6fr);
 	gap: 1rem;
 	align-items: stretch;
 }
@@ -186,6 +222,39 @@ tr.fila-bloqueada td {
   }
 }
 
+/* Pulso tenue para indicar que el paso 2 ya está disponible */
+.paso-compra.paso-disponible {
+  animation: pasoDisponible 2.2s ease-in-out infinite;
+}
+
+@keyframes pasoDisponible {
+  0%,
+  100% {
+    border-color: #d8dee8;
+    background-color: #f8f9fb;
+    color: #7d8795;
+    box-shadow: 0 0 0 0 rgba(22, 116, 200, 0);
+    transform: scale(1);
+  }
+
+  50% {
+    border-color: #1674c8;
+    background-color: #d7e9ff;
+    color: #0d5fae;
+    box-shadow: 0 0 0 6px rgba(22, 116, 200, 0.14);
+    transform: scale(1.03);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .paso-compra.paso-disponible {
+    animation: none;
+    border-color: #1674c8;
+    background-color: #d7e9ff;
+    color: #0d5fae;
+  }
+}
+
 /* Contador de productos agregados: caja con el número encima, al lado de los pasos */
 .contador-productos {
   position: relative;
@@ -217,6 +286,15 @@ tr.fila-bloqueada td {
   font-size: 0.75rem;
   font-weight: 700;
   line-height: 1;
+}
+
+/* Botón para volver a la pantalla principal de ingresos, junto al paso 1 */
+.boton-regresar {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-right: 1.5rem;
+  margin-bottom: 0;
 }
 
 .numero-paso {
@@ -345,4 +423,11 @@ tr.fila-bloqueada td {
   margin: 0 0 8px;
   color: #5f6a85;
   font-size: 12px;
+}
+
+@media (max-width: 640px) {
+  .fila > * {
+    flex: 1 1 100%;
+    max-width: 100%;
+  }
 }

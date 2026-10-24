@@ -12,6 +12,7 @@ import { FormsModule } from '@angular/forms';
 import { TimeoutError, finalize } from 'rxjs';
 import { ModalService } from '../../../modal-principal/modal-service';
 import { PopUps } from '../../../shared/popUps/popUpsService';
+import { TabSwitch } from '../../../shared/tab-switch/tab-switch';
 import { VisorArchivos } from '../../../shared/visor-archivos/visor-archivos';
 import { ArchivoVisor } from '../../../shared/visor-archivos/visor-archivos.interfaz';
 import { ModalMasDetalle } from '../modalesFarmacia/modal-mas-detalle/modal-mas-detalle';
@@ -29,7 +30,7 @@ type CriterioBusqueda = 'codigo' | 'proveedorId' | 'fecha';
 
 @Component({
   selector: 'app-ingresos',
-  imports: [AgregarCompra, FormsModule, DecimalPipe],
+  imports: [AgregarCompra, FormsModule, DecimalPipe, TabSwitch],
   templateUrl: './ingresos.html',
   styleUrl: './ingresos.scss',
 })
@@ -49,6 +50,7 @@ export class Ingresos implements OnInit {
   compras: resumenCompraResponse[] = [];
   cargandoCompras = false;
   errorCompras = '';
+  mostrarActivos = true;
 
   proveedores: proveedorResponse[] = [];
   cargandoProveedores = false;
@@ -101,6 +103,23 @@ export class Ingresos implements OnInit {
     return `${this.meses[mes - 1]} ${dia}, ${anio}`;
   }
 
+  resumirTexto(texto: string | null | undefined, maxCaracteres = 34): string {
+    const limpio = texto?.trim();
+    if (!limpio) return '—';
+    if (limpio.length <= maxCaracteres) return limpio;
+
+    const recorte = limpio.slice(0, maxCaracteres).trimEnd();
+    const ultimoEspacio = recorte.lastIndexOf(' ');
+    const base = ultimoEspacio > 0 ? recorte.slice(0, ultimoEspacio) : recorte;
+
+    return `${base}...`;
+  }
+
+  esTextoTruncado(texto: string | null | undefined, maxCaracteres = 34): boolean {
+    const limpio = texto?.trim();
+    return !!limpio && limpio.length > maxCaracteres;
+  }
+
   ngOnInit(): void {
     this.listarProveedores();
     this.listarCompras();
@@ -111,7 +130,7 @@ export class Ingresos implements OnInit {
     const filtros = this.filtrosAplicados;
     const solicitud = filtros
       ? this.servicioCompra.buscarComprasResumen(filtros)
-      : this.servicioCompra.listarComprasResumen();
+      : this.servicioCompra.listarComprasResumen(this.mostrarActivos);
     const mensajeError = filtros
       ? 'No se pudo realizar la búsqueda de compras. Intente nuevamente.'
       : this.mensajeErrorCompras;
@@ -161,8 +180,18 @@ export class Ingresos implements OnInit {
     this.cdr.markForCheck();
   }
 
+  cambiarFiltroEstado(activos: boolean): void {
+    if (this.mostrarActivos === activos) return;
+
+    this.mostrarActivos = activos;
+    if (this.filtrosAplicados) {
+      this.filtrosAplicados = { ...this.filtrosAplicados, activos };
+    }
+    this.listarCompras();
+  }
+
   private obtenerFiltrosBusqueda(): resumenCompraFiltros {
-    const filtros: resumenCompraFiltros = { activos: true };
+    const filtros: resumenCompraFiltros = { activos: this.mostrarActivos };
 
     switch (this.criterioBusqueda) {
       case 'codigo': {

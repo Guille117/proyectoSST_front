@@ -164,11 +164,13 @@
           [errorMessage]="'Formato telefónico invalido'"
         >
           <input
-            type="text"
+            type="tel"
+            inputmode="numeric"
             id="telefono"
             name="telefono"
             placeholder="Ej: 12345678"
-            [(ngModel)]="proveedor.telefono"
+            [ngModel]="proveedor.telefono"
+            (input)="proveedor.telefono = filtrarDigitos($event, 8)"
             [pattern]="telefonoPattern"
             [disabled]="operacionPendiente"
             maxlength="8"

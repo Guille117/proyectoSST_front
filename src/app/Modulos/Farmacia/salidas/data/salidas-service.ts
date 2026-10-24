@@ -6,6 +6,8 @@ import {
   DevolucionSalidaRequest,
   EntregaSalidaRequest,
   EstadoSolicitudSalida,
+  HistorialMovimiento,
+  SalidaDirectaRequest,
   SolicitudSalida,
   SolicitudSalidaResumen,
 } from './salidasInterfaz';
@@ -51,6 +53,20 @@ export class SalidasService {
   devolver(id: number, request: DevolucionSalidaRequest): Observable<SolicitudSalida> {
     return this.http
       .post<SolicitudSalida>(`${this.apiUrl}/${id}/devoluciones`, request)
+      .pipe(timeout(TIEMPO_ESPERA_MS));
+  }
+
+  /** Registra una salida directa de Farmacia ligada al episodio. */
+  crearDirecta(request: SalidaDirectaRequest): Observable<SolicitudSalida> {
+    return this.http
+      .post<SolicitudSalida>(`${environment.apiUrl}/salidasDirectas`, request)
+      .pipe(timeout(TIEMPO_ESPERA_MS));
+  }
+
+  /** Movimientos históricos de una salida. */
+  historial(id: number): Observable<HistorialMovimiento[]> {
+    return this.http
+      .get<HistorialMovimiento[]>(`${this.apiUrl}/${id}/historial`)
       .pipe(timeout(TIEMPO_ESPERA_MS));
   }
 }

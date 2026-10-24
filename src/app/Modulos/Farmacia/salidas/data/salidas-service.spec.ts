@@ -82,4 +82,27 @@ describe('SalidasService', () => {
     expect(peticion.request.body).toEqual(request);
     peticion.flush({});
   });
+
+  it('registra una salida directa con POST', () => {
+    const request = {
+      episodioId: 10,
+      usuarioId: 1,
+      lineas: [{ tipo: 'MEDICAMENTO' as const, referenciaId: 4, cantidad: 3, loteId: 20 }],
+    };
+
+    service.crearDirecta(request).subscribe();
+
+    const peticion = httpTesting.expectOne(`${environment.apiUrl}/salidasDirectas`);
+    expect(peticion.request.method).toBe('POST');
+    expect(peticion.request.body).toEqual(request);
+    peticion.flush({});
+  });
+
+  it('obtiene el historial de una salida', () => {
+    service.historial(3).subscribe();
+
+    const peticion = httpTesting.expectOne(`${apiUrl}/3/historial`);
+    expect(peticion.request.method).toBe('GET');
+    peticion.flush([]);
+  });
 });

@@ -26,6 +26,10 @@ dialog {
   }
 }
 
+dialog.modal-ancho {
+  width: min(960px, calc(100vw - 32px));
+}
+
 dialog.open,
 dialog[open] {
   animation: modalIn 0.5s ease forwards;

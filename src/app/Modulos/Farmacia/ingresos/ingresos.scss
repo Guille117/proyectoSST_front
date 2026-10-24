@@ -1,5 +1,6 @@
 .seccionSuperior {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 16px;
     margin-bottom: 20px;
@@ -14,7 +15,9 @@
 .botones-container{
     width: auto;
     display: flex;
-    margin: 0;
+    align-items: center;
+    gap: 16px;
+    margin: 0 0 0 auto;
     & > * { // selecciona los elementos hijos directos del contenedor
         flex: 0 0 auto;
         margin-bottom: 0;
@@ -26,6 +29,11 @@
     grid-template-columns: minmax(0, 1.4fr) minmax(280px, 1.6fr);
     gap: 32px;
     align-items: start;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
 
     > * {
         min-width: 0;
@@ -43,25 +51,73 @@
             background: #f5f9ff;
         }
     }
+
+    tbody tr.selected-row,
+    tbody tr.selected-row td {
+        font-style: normal;
+    }
+}
+
+// texto resumido con tooltip del contenido completo
+.texto-truncado {
+    position: relative;
+    display: inline-block;
+    border-bottom: 1px dotted rgba(148, 163, 184, 0.8);
+    cursor: help;
+    outline: none;
+
+    &::after {
+        position: absolute;
+        top: calc(100% + 6px);
+        left: 0;
+        z-index: 20;
+        width: max-content;
+        max-width: 260px;
+        padding: 8px 10px;
+        content: attr(data-tooltip);
+        color: #fff;
+        background: #0b1739;
+        border-radius: 8px;
+        box-shadow: 0 8px 20px rgba(11, 23, 57, 0.25);
+        font-size: 13px;
+        font-weight: 500;
+        line-height: 1.35;
+        white-space: normal;
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+        transition:
+            opacity 0.15s ease,
+            visibility 0.15s ease;
+    }
+
+    &:hover::after,
+    &:focus-visible::after {
+        opacity: 1;
+        visibility: visible;
+    }
 }
 
 
 .detalle-compra{
     --ancho: 1;
-    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
 }
 
 .detalle-card{
     background: #fff;
-    border: 1px solid #e8ebf3;
+    border: 1px solid #dce3ee;
+    border-bottom: 3px solid #cbd5e1;
     border-radius: 24px;
     padding: 24px;
-    box-shadow: 0 8px 24px rgba(29, 43, 70, 0.06);
+    box-shadow:
+        0 10px 24px rgba(29, 43, 70, 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 0.9);
 }
 
 .detalle-card h6{
     margin: 0 0 8px;
-    font-size: 0.85rem;
+    font-size: 0.95rem;
+    font-weight: 700;
     color: #5f6a85;
     letter-spacing: 0.03em;
     text-transform: uppercase;
@@ -69,7 +125,15 @@
 
 .detalle-card h3{
     margin: 0 0 20px;
-    font-size: 1.45rem;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #111827;
+}
+
+.row h4{
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 600;
     color: #111827;
 }
 
@@ -79,15 +143,21 @@
     margin: 0 0 20px;
 }
 
+.detalle-card table tbody td{
+    font-size: 1rem;
+    font-weight: 500;
+}
+
 .label{
     margin: 0 0 4px;
-    font-size: 0.8rem;
-    color: #6b7280;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #5f6a85;
 }
 
 .value{
     margin: 0;
-    font-size: 0.95rem;
+    font-size: 1.05rem;
     color: #111827;
     font-weight: 600;
 }
@@ -129,6 +199,8 @@
     min-height: 220px;
     padding: 24px;
     color: #5f6a85;
+    font-size: 1rem;
+    font-weight: 500;
     text-align: center;
 }
 

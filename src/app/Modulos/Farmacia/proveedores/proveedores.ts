@@ -299,6 +299,13 @@ export class Proveedores implements OnInit, OnDestroy {
     return !this.proveedor.email || this.emailPattern.test(this.proveedor.email);
   }
 
+  filtrarDigitos(event: Event, longitud: number): string {
+    const input = event.target as HTMLInputElement;
+    const valorFiltrado = input.value.replace(/\D/g, '').slice(0, longitud);
+    input.value = valorFiltrado;
+    return valorFiltrado;
+  }
+
   esNitValido(): boolean {
     const nit = this.proveedor.nit ?? '';
     const nitRegex = /^(?:CF|[0-9]{7,8}-[0-9Kk])$/i;
@@ -339,7 +346,12 @@ export class Proveedores implements OnInit, OnDestroy {
   }
 
   private obtenerDatosProveedor(prov: proveedorRequest): proveedorRequest {
-    return { nombre: prov.nombre, nit: prov.nit, telefono: prov.telefono, email: prov.email };
+    return {
+      nombre: (prov.nombre ?? '').trim(),
+      nit: (prov.nit ?? '').trim().toUpperCase(),
+      telefono: (prov.telefono ?? '').trim(),
+      email: (prov.email ?? '').trim(),
+    };
   }
 
   // ------------ LIMPIAR FORMULARIO ------------

@@ -34,13 +34,16 @@ export class ServicioCompra {
 
   eliminarCompra(id: number): Observable<void> {
     return this.http
-      .patch<void>(`${this.apiUrl}/${id}`, null)
+      .delete<void>(`${this.apiUrl}/${id}`)
       .pipe(timeout(TIEMPO_ESPERA_MS));
   }
 
-  listarComprasResumen(): Observable<resumenCompraResponse[]> {
+  listarComprasResumen(activos?: boolean): Observable<resumenCompraResponse[]> {
+    const params =
+      activos === undefined ? undefined : new HttpParams().set('activos', activos);
+
     return this.http
-      .get<resumenCompraResponse[]>(`${this.apiUrl}/resumen`)
+      .get<resumenCompraResponse[]>(`${this.apiUrl}/resumen`, { params })
       .pipe(timeout(TIEMPO_ESPERA_MS));
   }
 

@@ -132,11 +132,11 @@ describe('ServicioCompra', () => {
     peticion.flush([]);
   });
 
-  it('elimina la compra con PATCH en /compras/{id}', () => {
+  it('elimina la compra con DELETE en /compras/{id}', () => {
     service.eliminarCompra(1).subscribe();
 
     const peticion = httpTesting.expectOne(`${apiUrl}/1`);
-    expect(peticion.request.method).toBe('PATCH');
+    expect(peticion.request.method).toBe('DELETE');
     peticion.flush(null);
   });
 

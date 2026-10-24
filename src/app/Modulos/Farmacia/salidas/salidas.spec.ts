@@ -5,6 +5,9 @@ import { Salidas } from './salidas';
 import { SalidasService } from './data/salidas-service';
 import { CatalogoService } from '../../Catalogos/data/serviceCatalogo';
 import { AuthService } from '../../Auth/data/auth-service';
+import { PacienteService } from '../../Pacientes/paciente/data/paciente-service';
+import { ProcedimientoMedicoService } from '../../Medica/procedimiento-medico/data/procedimiento-medico-service';
+import { ServicioInventario } from '../inventario/data/servicio-inventario';
 import { PopUps } from '../../../shared/popUps/popUpsService';
 
 describe('Salidas', () => {
@@ -15,6 +18,7 @@ describe('Salidas', () => {
     id: 1,
     codigo: 'SOL-00001',
     paciente: 'Ana López',
+    solicitante: 'Dra. María Pérez',
     tipoAtencion: 'EMERGENCIA',
     procedimiento: 'Sutura',
     fecha: '2026-10-19T10:00:00',
@@ -28,6 +32,7 @@ describe('Salidas', () => {
     id: 1,
     codigo: 'SOL-00001',
     paciente: 'Ana López',
+    solicitante: 'Dra. María Pérez',
     tipoAtencion: 'EMERGENCIA',
     procedimiento: 'Sutura',
     fecha: '2026-10-19T10:00:00',
@@ -83,10 +88,24 @@ describe('Salidas', () => {
     obtener: vi.fn(),
     entregar: vi.fn(),
     devolver: vi.fn(),
+    crearDirecta: vi.fn(),
+    historial: vi.fn(),
   };
 
   const catalogoService = {
     listar: vi.fn(),
+  };
+
+  const pacienteService = {
+    listarPacientes: vi.fn(() => of([])),
+  };
+
+  const inventarioService = {
+    listarInventario: vi.fn((_filtros?: { tipo?: string }) => of([] as never[])),
+  };
+
+  const procedimientoService = {
+    buscarRecursos: vi.fn((_tipo?: string, _nombre?: string) => of([] as never[])),
   };
 
   const authService = {
@@ -106,6 +125,8 @@ describe('Salidas', () => {
     salidasService.obtener.mockReturnValue(of(detallePendiente));
     salidasService.entregar.mockReturnValue(of(detalleConEntrega));
     salidasService.devolver.mockReturnValue(of(detalleConEntrega));
+    salidasService.crearDirecta.mockReturnValue(of(detalleConEntrega));
+    salidasService.historial.mockReturnValue(of([]));
     catalogoService.listar.mockReturnValue(of([{ id: 7, nombre: 'Empaque dañado' }]));
 
     await TestBed.configureTestingModule({
@@ -114,6 +135,9 @@ describe('Salidas', () => {
         { provide: SalidasService, useValue: salidasService },
         { provide: CatalogoService, useValue: catalogoService },
         { provide: AuthService, useValue: authService },
+        { provide: PacienteService, useValue: pacienteService },
+        { provide: ServicioInventario, useValue: inventarioService },
+        { provide: ProcedimientoMedicoService, useValue: procedimientoService },
         { provide: PopUps, useValue: popUps },
       ],
     }).compileComponents();
@@ -216,11 +240,169 @@ describe('Salidas', () => {
     component.cargarDetalle(1);
     fixture.detectChanges();
 
-    component.solicitudSeleccionada!.detalles[0].cantidadDevolver = 3;
+    const detalle = component.solicitudSeleccionada!.detalles[0];
+    detalle.cantidadDevolver = 3;
+    detalle.motivoBajaId = null;
 
     component.devolver();
 
     expect(salidasService.devolver).not.toHaveBeenCalled();
     expect(popUps.advertencia).toHaveBeenCalled();
+  });
+
+  it('preselecciona el primer motivo y habilita la devolución con la cantidad', () => {
+    salidasService.obtener.mockReturnValue(of(detalleConEntrega));
+    component.cargarDetalle(1);
+
+    const detalle = component.solicitudSeleccionada!.detalles[0];
+    detalle.cantidadDevolver = 3;
+
+    expect(detalle.motivoBajaId).toBe(7);
+    expect(component.puedeGuardarDevolucion).toBe(true);
+  });
+
+  it('abre la generación de salida y carga pacientes y lotes', () => {
+    pacienteService.listarPacientes.mockReturnValue(
+      of([{ pacienteId: 1, nombreCompleto: 'Ana López', episodioId: 10 } as never]),
+    );
+    inventarioService.listarInventario.mockImplementation((filtros?: { tipo?: string }) =>
+      of(
+        filtros?.tipo === 'medicamento'
+          ? ([
+              {
+                id: 20,
+                tipo: 'MEDICAMENTO',
+                idItem: 4,
+                codigoLote: 'LOTE-20',
+                disponible: 5,
+                estado: true,
+                fechaVencimiento: '2027-01-01',
+              },
+            ] as never[])
+          : ([] as never[]),
+      ),
+    );
+
+    component.abrirGeneracionSalida();
+    fixture.detectChanges();
+
+    expect(component.generandoSalida()).toBe(true);
+    expect(pacienteService.listarPacientes).toHaveBeenCalled();
+    expect(inventarioService.listarInventario).toHaveBeenCalledWith({
+      tipo: 'medicamento',
+      activos: true,
+    });
+    expect(inventarioService.listarInventario).toHaveBeenCalledWith({
+      tipo: 'insumo',
+      activos: true,
+    });
+    expect(fixture.nativeElement.textContent).toContain('Generar salida');
+    expect(fixture.nativeElement.textContent).toContain('Recursos');
+  });
+
+  it('registra la salida directa con el paciente y el lote elegido', () => {
+    pacienteService.listarPacientes.mockReturnValue(
+      of([{ pacienteId: 1, nombreCompleto: 'Ana López', episodioId: 10 } as never]),
+    );
+    inventarioService.listarInventario.mockImplementation((filtros?: { tipo?: string }) =>
+      of(
+        filtros?.tipo === 'medicamento'
+          ? ([
+              {
+                id: 20,
+                tipo: 'MEDICAMENTO',
+                idItem: 4,
+                codigoLote: 'LOTE-20',
+                disponible: 5,
+                estado: true,
+                fechaVencimiento: '2027-01-01',
+              },
+            ] as never[])
+          : ([] as never[]),
+      ),
+    );
+    procedimientoService.buscarRecursos.mockReturnValue(
+      of([{ id: 4, nombre: 'Amoxicilina', disponible: 10 }] as never[]),
+    );
+
+    component.abrirGeneracionSalida();
+    component.pacienteSeleccionadoId = 1;
+    component.buscarRecursos();
+    component.seleccionarRecurso({ id: 4, nombre: 'Amoxicilina', disponible: 10 });
+    component.cantidadRecurso = 5;
+    component.agregarRecurso();
+
+    component.generarSalida();
+
+    expect(salidasService.crearDirecta).toHaveBeenCalledWith({
+      episodioId: 10,
+      usuarioId: 1,
+      lineas: [{ tipo: 'MEDICAMENTO', referenciaId: 4, cantidad: 5, loteId: 20 }],
+    });
+  });
+
+  it('permite borrar la cantidad sin rellenarla con el máximo', () => {
+    pacienteService.listarPacientes.mockReturnValue(
+      of([{ pacienteId: 1, nombreCompleto: 'Ana López', episodioId: 10 } as never]),
+    );
+    inventarioService.listarInventario.mockImplementation((filtros?: { tipo?: string }) =>
+      of(
+        filtros?.tipo === 'medicamento'
+          ? ([
+              {
+                id: 20,
+                tipo: 'MEDICAMENTO',
+                idItem: 4,
+                codigoLote: 'LOTE-20',
+                disponible: 5,
+                estado: true,
+                fechaVencimiento: '2027-01-01',
+              },
+            ] as never[])
+          : ([] as never[]),
+      ),
+    );
+    procedimientoService.buscarRecursos.mockReturnValue(
+      of([{ id: 4, nombre: 'Amoxicilina', disponible: 10 }] as never[]),
+    );
+
+    component.abrirGeneracionSalida();
+    component.buscarRecursos();
+    component.seleccionarRecurso({ id: 4, nombre: 'Amoxicilina', disponible: 10 });
+
+    component.cantidadRecurso = null;
+    component.ajustarCantidadRecurso();
+
+    expect(component.cantidadRecurso).toBeNull();
+    expect(component.puedeAgregarRecurso).toBe(false);
+  });
+
+  it('carga y muestra el historial de la salida seleccionada', () => {
+    salidasService.historial.mockReturnValue(
+      of([
+        {
+          id: 5,
+          fechaHora: '2026-10-19T11:00:00',
+          tipoMovimiento: 'ENTREGA' as const,
+          tipo: 'MEDICAMENTO' as const,
+          producto: 'Amoxicilina',
+          lote: 'LOTE-20',
+          cantidad: 5,
+          condicion: null,
+          motivoBaja: null,
+          usuario: 'Carlos Méndez',
+          observacion: null,
+        },
+      ]),
+    );
+
+    component.seleccionarHistorial();
+    fixture.detectChanges();
+
+    expect(salidasService.historial).toHaveBeenCalledWith(1);
+    expect(component.historial.length).toBe(1);
+    expect(fixture.nativeElement.textContent).toContain(
+      'Se entregó 5 de Amoxicilina (LOTE-20)',
+    );
   });
 });

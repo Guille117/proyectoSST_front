@@ -1,9 +1,17 @@
 <div class="contenido">
-    <div class="texto">
+    <div
+        class="texto"
+        [class.texto--alterno-primero]="alternoPrimero && !!textoAlterno"
+    >
         @if (textoAlterno) {
             <!-- El recuento y el texto alterno comparten el sitio y se van turnando -->
-            <span class="texto-alterno">{{ textoMostrando }}</span>
-            <span class="texto-alterno texto-alterno--intercalado">{{ textoAlterno }}</span>
+            @if (alternoPrimero) {
+                <span class="texto-alterno texto-alterno--intercalado">{{ textoAlterno }}</span>
+                <span class="texto-alterno">{{ textoMostrando }}</span>
+            } @else {
+                <span class="texto-alterno">{{ textoMostrando }}</span>
+                <span class="texto-alterno texto-alterno--intercalado">{{ textoAlterno }}</span>
+            }
         } @else {
             {{ textoMostrando }}
         }

@@ -151,7 +151,13 @@
         novalidate
         (ngSubmit)="actualizar ? actualizarMedicamento(medicamentoForm) : guardarMedicamento(medicamentoForm)"
       >
-        <app-campo-validado label="Nombre" fieldId="nombreMedicamento">
+        <app-campo-validado
+          label="Nombre"
+          fieldId="nombreMedicamento"
+          [required]="true"
+          [showError]="!!nombreCtrl.touched && !medicamento.nombre.trim()"
+          errorMessage="Debe ingresar un nombre"
+        >
           <input
             id="nombreMedicamento"
             name="nombre"
@@ -160,11 +166,18 @@
             required
             [disabled]="procesando"
             [(ngModel)]="medicamento.nombre"
+            #nombreCtrl="ngModel"
           />
         </app-campo-validado>
 
         <div class="fila-concentracion">
-          <app-campo-validado label="Concentración" fieldId="concentracionMedicamento">
+          <app-campo-validado
+            label="Concentración"
+            fieldId="concentracionMedicamento"
+            [required]="true"
+            [showError]="!!concentracionCtrl.touched && !(medicamento.dosis > 0)"
+            errorMessage="Ingrese una concentración mayor a 0"
+          >
             <input
               id="concentracionMedicamento"
               name="concentracion"
@@ -175,16 +188,24 @@
               required
               [disabled]="procesando"
               [(ngModel)]="medicamento.dosis"
+              #concentracionCtrl="ngModel"
             />
           </app-campo-validado>
 
-          <app-campo-validado label="Unidad de medida" fieldId="unidadMedidaMedicamento">
+          <app-campo-validado
+            label="Unidad de medida"
+            fieldId="unidadMedidaMedicamento"
+            [required]="true"
+            [showError]="!!unidadCtrl.touched && medicamento.unidadMedidaId <= 0"
+            errorMessage="Seleccione una unidad de medida"
+          >
             <select
               id="unidadMedidaMedicamento"
               name="unidadMedida"
               required
               [disabled]="procesando"
               [(ngModel)]="medicamento.unidadMedidaId"
+              #unidadCtrl="ngModel"
             >
               <option [ngValue]="0">Seleccionar...</option>
               @for (unidad of unidadesMedida; track unidad.id) {
@@ -195,13 +216,20 @@
         </div>
 
         <div class="fila-concentracion">
-          <app-campo-validado label="Vía de administración" fieldId="viaAdministracionMedicamento">
+          <app-campo-validado
+            label="Vía de administración"
+            fieldId="viaAdministracionMedicamento"
+            [required]="true"
+            [showError]="!!viaCtrl.touched && medicamento.viaAdminId <= 0"
+            errorMessage="Seleccione una vía de administración"
+          >
             <select
               id="viaAdministracionMedicamento"
               name="viaAdministracion"
               required
               [disabled]="procesando"
               [(ngModel)]="medicamento.viaAdminId"
+              #viaCtrl="ngModel"
             >
               <option [ngValue]="0">Seleccionar...</option>
               @for (via of viasAdmin; track via.id) {
@@ -209,13 +237,20 @@
               }
             </select>
           </app-campo-validado>
-          <app-campo-validado label="Presentación" fieldId="presentacionMedicamento">
+          <app-campo-validado
+            label="Presentación"
+            fieldId="presentacionMedicamento"
+            [required]="true"
+            [showError]="!!presentacionCtrl.touched && medicamento.presentacionId <= 0"
+            errorMessage="Seleccione una presentación"
+          >
             <select
               id="presentacionMedicamento"
               name="presentacion"
               required
               [disabled]="procesando"
               [(ngModel)]="medicamento.presentacionId"
+              #presentacionCtrl="ngModel"
             >
               <option [ngValue]="0">Seleccionar...</option>
               @for (presentacion of presentaciones; track presentacion.id) {
@@ -225,13 +260,20 @@
           </app-campo-validado>
         </div>
 
-        <app-campo-validado label="Fabricante" fieldId="fabricanteMedicamento">
+        <app-campo-validado
+          label="Fabricante"
+          fieldId="fabricanteMedicamento"
+          [required]="true"
+          [showError]="!!fabricanteCtrl.touched && medicamento.marcaId <= 0"
+          errorMessage="Seleccione un fabricante"
+        >
           <select
             id="fabricanteMedicamento"
             name="fabricante"
             required
             [disabled]="procesando"
             [(ngModel)]="medicamento.marcaId"
+            #fabricanteCtrl="ngModel"
           >
             <option [ngValue]="0">Seleccionar...</option>
             @for (fabricante of fabricantes; track fabricante.id) {

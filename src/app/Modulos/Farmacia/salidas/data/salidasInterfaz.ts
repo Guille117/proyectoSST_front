@@ -59,6 +59,7 @@ export interface DetalleSolicitudSalida {
 
 /** Solicitud con su detalle completo. */
 export interface SolicitudSalida extends SolicitudSalidaBase {
+  solicitante: string;
   detalles: DetalleSolicitudSalida[];
 }
 
@@ -85,4 +86,34 @@ export interface DevolucionLineaRequest {
 export interface DevolucionSalidaRequest {
   usuarioId: number;
   lineas: DevolucionLineaRequest[];
+}
+
+/** Línea de una salida directa: producto, lote elegido y cantidad que sale del inventario. */
+export interface SalidaDirectaLineaRequest {
+  tipo: TipoRecursoSalida;
+  referenciaId: number;
+  cantidad: number;
+  loteId: number;
+}
+
+/** Salida directa de Farmacia, ligada al episodio y sin procedimiento médico. */
+export interface SalidaDirectaRequest {
+  episodioId: number;
+  usuarioId: number;
+  lineas: SalidaDirectaLineaRequest[];
+}
+
+/** Movimiento histórico de una salida: entrega o devolución. */
+export interface HistorialMovimiento {
+  id: number;
+  fechaHora: string;
+  tipoMovimiento: 'ENTREGA' | 'DEVOLUCION';
+  tipo: TipoRecursoSalida;
+  producto: string;
+  lote: string;
+  cantidad: number;
+  condicion: CondicionDevolucion | null;
+  motivoBaja: string | null;
+  usuario: string;
+  observacion: string | null;
 }

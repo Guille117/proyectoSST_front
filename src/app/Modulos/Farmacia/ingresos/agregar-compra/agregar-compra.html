@@ -70,6 +70,12 @@
                     {{ isMedicamento ? 'Cargando medicamentos...' : 'Cargando insumos...' }}
                     </td>
                 </tr>
+                } @else if (!busquedaRealizada) {
+                <tr>
+                    <td [attr.colspan]="isMedicamento ? 7 : 4" class="celda_centrada">
+                    Busque un producto
+                    </td>
+                </tr>
                 } @else if (isMedicamento) {
                     @for (med of medicamentos | slice:(paginaActual - 1) * cantidadMostrar:paginaActual * cantidadMostrar; track med.id) {
                     <tr
@@ -141,6 +147,7 @@
                     }
                 }
             </tbody>
+            @if (busquedaRealizada) {
             <tfoot>
                 <tr>
                 <td [attr.colspan]="isMedicamento ? 7 : 4">
@@ -153,12 +160,15 @@
                     [paginaActual]="paginaActual"
                     [totalregistros]="totalRegistros"
                     [cantidadMostrar]="cantidadMostrar"
+                    [textoAlterno]="textoAlternoPaginacion"
+                    [alternoPrimero]="true"
                     (paginaCambiada)="cambiarPagina($event)"
                     ></app-paginacion>
                     </div>
                 </td>
                 </tr>
             </tfoot>
+            }
             </table>
         </div>
         </section>
@@ -166,12 +176,18 @@
         <!-- ==================== FORMULARIO ==================== -->
         <section class="formulario formulario-container" aria-labelledby="tituloMedicamento">
         <h3 id="tituloMedicamento" class="titulo-formulario">
-        {{ nombreProductoSeleccionado ? 'Lote de ' + nombreProductoSeleccionado : 'Seleccione un producto de la lista' }}
+        Agregar detalle de lote
         </h3>
         
             <form #medicamentoForm="ngForm" novalidate (ngSubmit)="agregarLote(medicamentoForm)">
                 <div class="fila">
-                    <app-campo-validado label="Lote" fieldId="nombreMedicamento" [required]="true">
+                    <app-campo-validado
+                        label="Lote"
+                        fieldId="nombreMedicamento"
+                        [required]="true"
+                        [showError]="!!loteCtrl.touched && !codigoLote.trim()"
+                        errorMessage="Ingrese el código del lote"
+                    >
                     <input
                         id="nombreMedicamento"
                         name="nombre"
@@ -179,10 +195,17 @@
                         placeholder="Lote del medicamento"
                         [(ngModel)]="codigoLote"
                         required
+                        #loteCtrl="ngModel"
                     />
                     </app-campo-validado>
 
-                    <app-campo-validado label="Fecha de vencimiento" fieldId="concentracionMedicamento" [required]="isMedicamento">
+                    <app-campo-validado
+                        label="Fecha de vencimiento"
+                        fieldId="concentracionMedicamento"
+                        [required]="isMedicamento"
+                        [showError]="!!fechaCtrl.touched && isMedicamento && !fechaVencimiento"
+                        errorMessage="Seleccione la fecha de vencimiento"
+                    >
                         <input
                         id="concentracionMedicamento"
                         name="concentracion"
@@ -190,12 +213,19 @@
                         placeholder="Fecha de vencimiento"
                         [required]="isMedicamento"
                         [(ngModel)]="fechaVencimiento"
+                        #fechaCtrl="ngModel"
                         />
                     </app-campo-validado>
                 </div>
 
                 <div class="fila">
-                    <app-campo-validado label="Precio compra" fieldId="precioCompraMedicamento" [required]="true">
+                    <app-campo-validado
+                        label="Precio compra"
+                        fieldId="precioCompraMedicamento"
+                        [required]="true"
+                        [showError]="!!precioCompraCtrl.touched && precioCompra === null"
+                        errorMessage="Ingrese el precio de compra"
+                    >
                     <input
                         id="precioCompraMedicamento"
                         name="precioCompra"
@@ -203,10 +233,17 @@
                         placeholder="Precio de compra"
                         [(ngModel)]="precioCompra"
                         required
+                        #precioCompraCtrl="ngModel"
                     />
                     </app-campo-validado>
 
-                    <app-campo-validado label="Precio venta" fieldId="precioVentaMedicamento" [required]="true">
+                    <app-campo-validado
+                        label="Precio venta"
+                        fieldId="precioVentaMedicamento"
+                        [required]="true"
+                        [showError]="!!precioVentaCtrl.touched && precioVenta === null"
+                        errorMessage="Ingrese el precio de venta"
+                    >
                         <input
                         id="precioVentaMedicamento"
                         name="precioVenta"
@@ -214,13 +251,20 @@
                         placeholder="Precio de venta"
                         [(ngModel)]="precioVenta"
                         required
+                        #precioVentaCtrl="ngModel"
                         />
                     </app-campo-validado>
 
                 </div>
 
                 <div class="fila">
-                    <app-campo-validado label="Cantidad" fieldId="cantidadMedicamento" [required]="true">
+                    <app-campo-validado
+                        label="Cantidad"
+                        fieldId="cantidadMedicamento"
+                        [required]="true"
+                        [showError]="!!cantidadCtrl.touched && (cantidad ?? 0) <= 0"
+                        errorMessage="Ingrese una cantidad mayor a 0"
+                    >
                     <input
                         id="cantidadMedicamento"
                         name="cantidad"
@@ -228,6 +272,7 @@
                         placeholder="Cantidad"
                         [(ngModel)]="cantidad"
                         required
+                        #cantidadCtrl="ngModel"
                     />
                     </app-campo-validado>
                 </div>
@@ -237,12 +282,12 @@
             <button
                 type="button"
                 class="btn _cancelar"
-                (click)="cancelar.emit()"
+                (click)="cancelarPaso1(medicamentoForm)"
             >
                 Cancelar
             </button>
                 <button type="submit" class="btn _guardar" [disabled]="medicamentoForm.invalid">
-                Agregar productos
+                {{ editandoLote ? 'Actualizar lote' : 'Agregar productos' }}
                 </button>
             </div> 
         </form>
@@ -258,11 +303,11 @@
                         <th>No.</th>
                         <th>Producto</th>
                         <th>Lote</th>
-                        <th>Fecha de vencimiento</th>
+                        <th>Vencimiento</th>
                         <th>Precio compra</th>
                         <th>Precio venta</th>
                         <th>Cantidad</th>
-                        <th>Eliminar</th>
+                        <th class="celda_centrada">Acciones</th>
                         <th>Subtotal</th>
                     </tr>
                 </thead>
@@ -285,15 +330,26 @@
                         <td class="celda_centrada">Q{{ lote.precioVenta | number: '1.2-2' }}</td>
                         <td class="celda_centrada">{{ lote.cantidad }}</td>
                         <td class="celda_centrada">
-                            <button
-                                type="button"
-                                class="iconQuitar"
-                                title="Eliminar lote"
-                                aria-label="Eliminar el lote {{ lote.codigoLote }}"
-                                (click)="eliminarLote($index)"
-                            >
-                                <i class="bi bi-trash3" aria-hidden="true"></i>
-                            </button>
+                            <div class="acciones-lote">
+                                <button
+                                    type="button"
+                                    class="iconEditar"
+                                    title="Actualizar lote"
+                                    aria-label="Actualizar el lote {{ lote.codigoLote }}"
+                                    (click)="editarLote($index)"
+                                >
+                                    <i class="bi bi-pencil-square" aria-hidden="true"></i>
+                                </button>
+                                <button
+                                    type="button"
+                                    class="iconQuitar"
+                                    title="Eliminar lote"
+                                    aria-label="Eliminar el lote {{ lote.codigoLote }}"
+                                    (click)="eliminarLote($index)"
+                                >
+                                    <i class="bi bi-trash3" aria-hidden="true"></i>
+                                </button>
+                            </div>
                         </td>
                         <td class="celda_centrada">
                             Q{{ lote.cantidad * lote.precioCompra | number: '1.2-2' }}
@@ -381,7 +437,11 @@
 
                 <!-- ==================== BOTONES ==================== -->
                 <div class="botones">
-                    <button type="button" class="btn _cancelar" (click)="cancelar.emit()">
+                    <button
+                        type="button"
+                        class="btn _cancelar"
+                        (click)="limpiarFormularioCompra(compraForm, comprobanteInput)"
+                    >
                         Cancelar
                     </button>
                     <button
@@ -401,6 +461,11 @@
     }
 
     <nav class="indicador-pasos" aria-label="Progreso de la compra">
+        <button type="button" class="btn _cancelar boton-regresar" (click)="cancelar.emit()">
+            <i class="bi bi-arrow-left" aria-hidden="true"></i>
+            Ingresos
+        </button>
+
         <ol class="pasos-compra">
             <li>
                 <button
@@ -418,6 +483,7 @@
                     type="button"
                     class="paso-compra"
                     [class.activo]="!isCargandoProducto"
+                    [class.paso-disponible]="isCargandoProducto && lotes.length > 0"
                     [attr.aria-current]="!isCargandoProducto ? 'step' : null"
                     [attr.aria-disabled]="lotes.length === 0 ? 'true' : null"
                     (click)="avanzarAlPaso2()"

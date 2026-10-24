@@ -69,6 +69,14 @@
         </div>
 
         <div class="botones-container">
+          <app-tab-switch
+            op1="Activos"
+            op2="Eliminados"
+            role="group"
+            aria-label="Filtrar compras por estado"
+            [mostrarActivos]="mostrarActivos"
+            (opcionCambiada)="cambiarFiltroEstado($event)"
+          ></app-tab-switch>
           <button class="btn _principal" (click)="abrirModalCompra()">Registrar compra</button>
         </div>
       </div>
@@ -106,7 +114,17 @@
                 (keydown.enter)="seleccionarCompra(compra.id)"
               >
                 <td class="celda_centrada">{{ compra.codigo }}</td>
-                <td class="celda_izquierda">{{ compra.proveedor }}</td>
+                <td class="celda_izquierda">
+                  <span
+                    [class.texto-truncado]="esTextoTruncado(compra.proveedor)"
+                    [attr.data-tooltip]="
+                      esTextoTruncado(compra.proveedor) ? compra.proveedor : null
+                    "
+                    [attr.tabindex]="esTextoTruncado(compra.proveedor) ? 0 : null"
+                  >
+                    {{ resumirTexto(compra.proveedor) }}
+                  </span>
+                </td>
                 <td class="celda_centrada">{{ formatearFecha(compra.fecha) }}</td>
                 <td class="celda_centrada">{{ compra.cantidadProductos }}</td>
                 <td class="celda_centrada">Q {{ compra.total | number: '1.2-2' }}</td>

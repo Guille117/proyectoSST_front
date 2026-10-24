@@ -127,8 +127,13 @@ describe('AgregarCompra', () => {
   });
 
   /** Formulario presente en el DOM: el del paso 1 o el del paso 2 según el estado actual. */
-  const formularioVisible = (): NgForm =>
-    fixture.debugElement.query(By.directive(NgForm)).injector.get(NgForm);
+  const formularioVisible = (): NgForm => {
+    const selector = fixture.nativeElement.querySelector('.trabajoArea2 form')
+      ? '.trabajoArea2 form'
+      : '.paso2 form';
+
+    return fixture.debugElement.query(By.css(selector)).injector.get(NgForm);
+  };
 
   /** Escribe los campos del lote por `name` en el formulario del paso 1 y actualiza la vista. */
   const escribirLote = (valores: Record<string, string>): void => {
@@ -293,8 +298,25 @@ describe('AgregarCompra', () => {
     ).toBeNull();
   });
 
-  it('carga los medicamentos activos al iniciar', () => {
-    expect(servicioMedicamento.traerMedicamentoLog).toHaveBeenCalledWith(true);
+  it('inicia sin productos y muestra la indicacion de buscar', () => {
+    expect(servicioMedicamento.traerMedicamentoLog).not.toHaveBeenCalled();
+    expect(fixture.nativeElement.querySelector('tbody').textContent).toContain(
+      'Busque un producto',
+    );
+    expect(fixture.nativeElement.querySelector('app-paginacion')).toBeNull();
+  });
+
+  it('muestra la paginacion y la ayuda para seleccionar despues de buscar', async () => {
+    servicioMedicamento.buscarMedicamentoLog.mockReturnValueOnce(of([medicamento]));
+    component.textoBusqueda = 'amox';
+    component.buscarProductos();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const paginacion: HTMLElement = fixture.nativeElement.querySelector('app-paginacion');
+    expect(paginacion).not.toBeNull();
+    expect(paginacion.textContent).toContain('Seleccione un medicamento');
+    expect(paginacion.textContent).toContain('Mostrando 1 de 1 resultados');
   });
 
   it('muestra los medicamentos activos en la tabla', async () => {
@@ -322,11 +344,12 @@ describe('AgregarCompra', () => {
     });
   });
 
-  it('omite el filtro de nombre cuando la búsqueda está vacía', () => {
+  it('lista los productos activos cuando la busqueda esta vacia', () => {
     component.textoBusqueda = '   ';
     component.buscarProductos();
 
-    expect(servicioMedicamento.buscarMedicamentoLog).toHaveBeenCalledWith({ activo: true });
+    expect(servicioMedicamento.traerMedicamentoLog).toHaveBeenCalledWith(true);
+    expect(servicioMedicamento.buscarMedicamentoLog).not.toHaveBeenCalled();
   });
 
   it('permite buscar medicamentos pulsando Enter', async () => {
@@ -350,7 +373,10 @@ describe('AgregarCompra', () => {
     await fixture.whenStable();
 
     expect(component.isMedicamento).toBe(false);
-    expect(servicioInsumos.listarInsumos).toHaveBeenCalledWith(true);
+    expect(servicioInsumos.listarInsumos).not.toHaveBeenCalled();
+    expect(fixture.nativeElement.querySelector('tbody').textContent).toContain(
+      'Busque un producto',
+    );
 
     const input: HTMLInputElement = fixture.nativeElement.querySelector('.buscador input');
     input.value = 'guante';
@@ -495,6 +521,7 @@ describe('AgregarCompra', () => {
     const originales = component.medicamentos;
     servicioMedicamento.buscarMedicamentoLog.mockReturnValueOnce(throwError(() => error));
 
+    component.textoBusqueda = 'amox';
     component.buscarProductos();
 
     expect(component.medicamentos).toBe(originales);
@@ -731,16 +758,16 @@ describe('AgregarCompra', () => {
 
   // ==================== PASO 2: PRODUCTOS AGREGADOS, TOTAL Y PROVEEDORES ====================
 
-  it('muestra el nombre del producto seleccionado en el título del formulario del paso 1', () => {
+  it('muestra el titulo Agregar detalle de lote en el formulario del paso 1', () => {
     cargarMedicamentos();
 
     const titulo: HTMLElement = fixture.nativeElement.querySelector('#tituloMedicamento');
-    expect(titulo.textContent).toContain('Seleccione un producto de la lista');
+    expect(titulo.textContent).toContain('Agregar detalle de lote');
 
     component.seleccionarProducto(medicamento.id);
     fixture.detectChanges();
 
-    expect(titulo.textContent).toContain('Lote de Amoxicilina');
+    expect(titulo.textContent).toContain('Agregar detalle de lote');
   });
 
   it('carga los proveedores activos y los ofrece en el select del paso 2', async () => {
@@ -811,6 +838,111 @@ describe('AgregarCompra', () => {
     expect(celdas[8]).toBe('Q200.00');
     expect(component.totalCompra).toBe(200);
     expect(fixture.nativeElement.querySelector('.formulario').textContent).toContain('Q200.00');
+  });
+
+  it('muestra las columnas Vencimiento y Acciones en el paso 2', () => {
+    cargarMedicamentos();
+    component.seleccionarProducto(medicamento.id);
+    escribirLote(loteCompleto);
+    component.agregarLote(formularioVisible());
+    component.avanzarAlPaso2();
+    fixture.detectChanges();
+
+    const encabezados = Array.from(
+      fixture.nativeElement.querySelectorAll('thead th') as NodeListOf<HTMLElement>,
+    ).map((th) => th.textContent?.trim());
+
+    expect(encabezados).toContain('Vencimiento');
+    expect(encabezados).toContain('Acciones');
+    expect(encabezados).not.toContain('Eliminar');
+  });
+
+  it('actualiza un lote desde el paso 2 y vuelve a la lista', async () => {
+    cargarMedicamentos();
+    component.seleccionarProducto(medicamento.id);
+    escribirLote(loteCompleto);
+    component.agregarLote(formularioVisible());
+    component.avanzarAlPaso2();
+    fixture.detectChanges();
+
+    const editar: HTMLButtonElement = fixture.nativeElement.querySelector(
+      'tbody button.iconEditar',
+    );
+    expect(editar).toBeTruthy();
+    editar.click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(component.isCargandoProducto).toBe(true);
+    expect(component.indiceLoteEdicion).toBe(0);
+    expect(component.codigoLote).toBe('LOTE-001');
+    expect(component.cantidad).toBe(20);
+    expect(fixture.nativeElement.querySelector('tbody .selected-row')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('tbody .selected-row').textContent).toContain(
+      'Amoxicilina',
+    );
+
+    escribirLote({ ...loteCompleto, cantidad: '25', precioCompra: '12' });
+    expect(component.cantidad).toBe(25);
+    expect(component.precioCompra).toBe(12);
+    component.agregarLote(formularioVisible());
+    fixture.detectChanges();
+
+    expect(component.isCargandoProducto).toBe(false);
+    expect(component.indiceLoteEdicion).toBeNull();
+    expect(component.lotes).toHaveLength(1);
+    expect(component.lotes[0]).toMatchObject({
+      codigoLote: 'LOTE-001',
+      cantidad: 25,
+      precioCompra: 12,
+      precioVenta: 15,
+    });
+    expect(component.totalCompra).toBe(300);
+  });
+
+  it('cancela la edicion del lote y vuelve al paso 2 sin cambios', async () => {
+    cargarMedicamentos();
+    component.seleccionarProducto(medicamento.id);
+    escribirLote(loteCompleto);
+    component.agregarLote(formularioVisible());
+    component.avanzarAlPaso2();
+    fixture.detectChanges();
+
+    component.editarLote(0);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    escribirLote({ ...loteCompleto, cantidad: '99' });
+
+    component.cancelarPaso1(formularioVisible());
+    fixture.detectChanges();
+
+    expect(component.isCargandoProducto).toBe(false);
+    expect(component.indiceLoteEdicion).toBeNull();
+    expect(component.lotes).toEqual([loteVista]);
+  });
+
+  it('indica en la tabla el producto al editar un lote de una compra existente', async () => {
+    servicioMedicamento.buscarMedicamentoLog.mockReturnValueOnce(of([medicamento]));
+    const editFixture = crearFixtureEdicion();
+    editFixture.detectChanges();
+    await editFixture.whenStable();
+
+    const editar: HTMLButtonElement = editFixture.nativeElement.querySelector(
+      'tbody button.iconEditar',
+    );
+    expect(editar).toBeTruthy();
+    editar.click();
+    editFixture.detectChanges();
+    await editFixture.whenStable();
+
+    const seleccionada: HTMLElement = editFixture.nativeElement.querySelector(
+      'tbody .selected-row',
+    );
+    expect(editFixture.componentInstance.isCargandoProducto).toBe(true);
+    expect(seleccionada).not.toBeNull();
+    expect(seleccionada.textContent).toContain('Amoxicilina');
+
+    editFixture.destroy();
   });
 
   it('recalcula el total al quitar un lote de la lista sin salir del paso 2', () => {

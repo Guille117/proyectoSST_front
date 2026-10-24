@@ -2,6 +2,11 @@
     width: 100%;
 }
 
+.principal > .subMenuNav {
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+}
+
 
 .contenido{
     margin-top: 30px;
