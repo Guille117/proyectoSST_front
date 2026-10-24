@@ -10,6 +10,7 @@ import { PrincipalCatalogo } from './Modulos/Catalogos/principal-catalogo/princi
 import { rutasCatalogo } from './Modulos/Catalogos/rutasCatalogo';
 import { PrincipalPacientes } from './Modulos/Pacientes/principal-pacientes/principal-pacientes';
 import { rutasPaciente } from './Modulos/Pacientes/rutasPaciente';
+import { Expediente } from './Modulos/Pacientes/expediente/expediente';
 import { PrincipalMedica } from './Modulos/Medica/principal-medica/principal-medica';
 import { rutasMedica } from './Modulos/Medica/rutas-medica';
 import { PrincipalEnfermeria } from './Modulos/Enfermeria/principal-enfermeria/principal-enfermeria';
@@ -27,6 +28,7 @@ export const routes: Routes = [
       { path: 'usuarios', component: PrincipalUsuarios, children: rutasUsuarios },
       { path: 'catalogos', component: PrincipalCatalogo, children: rutasCatalogo },
       { path: 'pacientes', component: PrincipalPacientes, children: rutasPaciente },
+      { path: 'expediente/:pacienteId', component: Expediente },
       { path: 'medica', component: PrincipalMedica, children: rutasMedica },
       { path: 'enfermeria', component: PrincipalEnfermeria, children: rutasEnfermeria },
     ],

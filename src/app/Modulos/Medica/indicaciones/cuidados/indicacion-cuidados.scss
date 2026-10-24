@@ -26,6 +26,11 @@
   grid-column: span 2;
 }
 
+/* Las observaciones ocupan la fila completa bajo la fecha de inicio y la duración. */
+.indicacion-campo--completo {
+  grid-column: 1 / -1;
+}
+
 .indicacion-meta-toggle {
   margin-left: auto;
 }

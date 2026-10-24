@@ -63,66 +63,60 @@
         </p>
 
         @if (!soloLectura) {
-        <!-- Parte del cuerpo evaluada: una sola lista desplegable con las regiones del catálogo -->
-        <div class="parte-cuerpo-campo">
-          <label class="parte-cuerpo-label" for="parteCuerpoExamen">Parte del cuerpo</label>
+          <!-- Parte del cuerpo evaluada: una sola lista desplegable con las regiones del catálogo -->
+          <div class="parte-cuerpo-campo">
+            <label class="parte-cuerpo-label" for="parteCuerpoExamen">Parte del cuerpo</label>
 
-          <select
-            id="parteCuerpoExamen"
-            name="parteCuerpoExamen"
-            class="parte-cuerpo-select"
-            [disabled]="cargando || guardando || eliminando"
-            [ngModel]="parteSeleccionadaId"
-            (ngModelChange)="seleccionarParteCuerpo($event)"
-          >
-            @for (parte of partesCuerpo; track parte.id) {
-              <option [ngValue]="parte.id">{{ parte.nombre }}</option>
-            }
-            @if (!partesCuerpo.length) {
-              <option [ngValue]="null">Sin partes del cuerpo disponibles</option>
-            }
-          </select>
-        </div>
-
-        <!-- Captura de hallazgos: el cuadro arranca vacío y se llena solo al editar una tarjeta -->
-        <form class="hallazgo-form" (ngSubmit)="guardarHallazgo()">
-          <label class="hallazgo-label" for="hallazgoActual">Hallazgos</label>
-
-          <textarea
-            id="hallazgoActual"
-            name="hallazgoActual"
-            class="hallazgo-campo"
-            [(ngModel)]="hallazgoActual"
-            [readonly]="cargando || guardando || eliminando"
-            [attr.aria-readonly]="cargando || guardando || eliminando"
-            [maxlength]="maxCaracteres"
-            placeholder="Describe los hallazgos encontrados en la parte del cuerpo seleccionada..."
-          ></textarea>
-
-          <span class="contador-caracteres">{{ hallazgoActual.length }}/{{ maxCaracteres }}</span>
-
-          <!-- Acciones del cuadro: "Guardar" se habilita solo cuando hay un cambio que registrar -->
-          <div class="acciones-formulario hallazgo-acciones">
-            <button
-              type="button"
-              class="btn _cancelar"
+            <select
+              id="parteCuerpoExamen"
+              name="parteCuerpoExamen"
+              class="parte-cuerpo-select"
               [disabled]="cargando || guardando || eliminando"
-              (click)="cancelarCaptura()"
+              [ngModel]="parteSeleccionadaId"
+              (ngModelChange)="seleccionarParteCuerpo($event)"
             >
-              Cancelar
-            </button>
-            <button type="submit" class="btn _guardar" [disabled]="!puedeGuardar">Guardar</button>
+              @for (parte of partesCuerpo; track parte.id) {
+                <option [ngValue]="parte.id">{{ parte.nombre }}</option>
+              }
+              @if (!partesCuerpo.length) {
+                <option [ngValue]="null">Sin partes del cuerpo disponibles</option>
+              }
+            </select>
           </div>
-        </form>
+
+          <!-- Captura de hallazgos: el cuadro arranca vacío y se llena solo al editar una tarjeta -->
+          <form class="hallazgo-form" (ngSubmit)="guardarHallazgo()">
+            <label class="hallazgo-label" for="hallazgoActual">Hallazgos</label>
+
+            <textarea
+              id="hallazgoActual"
+              name="hallazgoActual"
+              class="hallazgo-campo"
+              [(ngModel)]="hallazgoActual"
+              [readonly]="cargando || guardando || eliminando"
+              [attr.aria-readonly]="cargando || guardando || eliminando"
+              [maxlength]="maxCaracteres"
+              placeholder="Describe los hallazgos encontrados en la parte del cuerpo seleccionada..."
+            ></textarea>
+
+            <span class="contador-caracteres">{{ hallazgoActual.length }}/{{ maxCaracteres }}</span>
+
+            <!-- Acciones del cuadro: "Guardar" se habilita solo cuando hay un cambio que registrar -->
+            <div class="acciones-formulario hallazgo-acciones">
+              <button
+                type="button"
+                class="btn _cancelar"
+                [disabled]="cargando || guardando || eliminando"
+                (click)="cancelarCaptura()"
+              >
+                Cancelar
+              </button>
+              <button type="submit" class="btn _guardar" [disabled]="!puedeGuardar">Guardar</button>
+            </div>
+          </form>
         }
       </section>
     }
-  }
-
-  <!-- Datos del paciente: en las secciones de historia clínica y diagnóstico el bloque se muestra
-       siempre desplegado, pegado al borde derecho de la pantalla -->
-  @if (seccionConDatosPaciente) {
-    <app-datos-paciente></app-datos-paciente>
   }
 
   <!-- Hallazgos registrados: solo el examen físico los registra -->
@@ -130,7 +124,8 @@
     <section class="panel panel-hallazgos">
       <h3 class="panel-titulo">Hallazgos registrados</h3>
 
-      @for (hallazgo of hallazgos; track hallazgo.id) {
+      <div class="hallazgos-lista">
+        @for (hallazgo of hallazgos; track hallazgo.id) {
         <article
           class="hallazgo-card"
           [class.hallazgo-card--menu-abierto]="menuHallazgoAbierto === hallazgo.id"
@@ -142,17 +137,17 @@
 
             <!-- Menú de opciones de la tarjeta: editar o eliminar el hallazgo -->
             @if (!soloLectura) {
-            <button
-              type="button"
-              class="hallazgo-menu-trigger"
-              title="Más opciones"
-              aria-haspopup="menu"
-              [attr.aria-label]="'Más opciones para el hallazgo de ' + hallazgo.parteCuerpo"
-              [attr.aria-expanded]="menuHallazgoAbierto === hallazgo.id"
-              (click)="alternarMenuHallazgo(hallazgo.id)"
-            >
-              <i class="bi bi-three-dots-vertical" aria-hidden="true"></i>
-            </button>
+              <button
+                type="button"
+                class="hallazgo-menu-trigger"
+                title="Más opciones"
+                aria-haspopup="menu"
+                [attr.aria-label]="'Más opciones para el hallazgo de ' + hallazgo.parteCuerpo"
+                [attr.aria-expanded]="menuHallazgoAbierto === hallazgo.id"
+                (click)="alternarMenuHallazgo(hallazgo.id)"
+              >
+                <i class="bi bi-three-dots-vertical" aria-hidden="true"></i>
+              </button>
             }
           </header>
 
@@ -236,10 +231,11 @@
         </div>
       }
 
-      <!-- Estado vacío -->
-      @if (!cargando && hallazgos.length === 0) {
-        <p class="hallazgos-vacio">Aún no hay hallazgos registrados para el paciente.</p>
-      }
+        <!-- Estado vacío -->
+        @if (!cargando && hallazgos.length === 0) {
+          <p class="hallazgos-vacio">Aún no hay hallazgos registrados para el paciente.</p>
+        }
+      </div>
     </section>
   }
 </div>

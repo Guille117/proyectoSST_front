@@ -3,10 +3,14 @@ import { signal } from '@angular/core';
 import { of } from 'rxjs';
 import { ModalAgregarPaciente } from './modal-agregar-paciente/modal-agregar-paciente';
 import { Paciente } from './paciente';
+import { ConsumoEpisodioService } from './data/consumo-service';
+import { ConsumoEpisodio } from './data/consumoInterfaz';
 import { DocumentoEpisodioService } from './data/documento-episodio-service';
+import { DocumentoTratamientoPdfService } from './data/documento-tratamiento-pdf-service';
 import { DocumentoEpisodio } from './data/documentoInterfaz';
 import { PacienteDetalle, PacienteResumido } from './data/pacienteInterfaz';
 import { PacienteService } from './data/paciente-service';
+import { UsuarioService } from '../../Usuarios/usu/data/usuario-service';
 import { AuthService } from '../../Auth/data/auth-service';
 import { LoginResponse } from '../../Auth/data/authInterfaz';
 import { ModalService } from '../../../modal-principal/modal-service';
@@ -31,6 +35,15 @@ describe('Paciente', () => {
     telefono: '12345678',
     tipoTratamiento: 'HOSPITALIZACION',
     estado: true,
+  };
+
+  const pacienteEgresado: PacienteResumido = {
+    ...paciente,
+    pacienteId: 2,
+    codigoExpediente: 'EXP-002',
+    episodioId: null,
+    ultimoEpisodioId: 202,
+    nombreCompleto: 'Luis Ramírez',
   };
 
   const detalle: PacienteDetalle = {
@@ -79,6 +92,24 @@ describe('Paciente', () => {
     enfermedades: [{ id: 1, nombre: 'Diabetes' }],
   };
 
+  const medicamento = {
+    clave: 'MEDICAMENTO-0',
+    nombre: 'Paracetamol',
+    cantidad: '500 mg',
+    frecuencia: 'Cada 8 horas',
+    duracion: '3 días',
+    observaciones: '—',
+  };
+
+  const cuidado = {
+    clave: 'CUIDADO-0',
+    nombre: 'Curaciones',
+    cantidad: '—',
+    frecuencia: 'Cada 24 horas',
+    duracion: '5 días',
+    observaciones: '—',
+  };
+
   const archivo = new File(['contenido'], 'documento.pdf', { type: 'application/pdf' });
 
   const documento: DocumentoEpisodio = {
@@ -111,6 +142,41 @@ describe('Paciente', () => {
     subirDocumento: vi.fn(() => of([documento])),
   };
 
+  const consumo: ConsumoEpisodio = {
+    episodioId: 101,
+    items: [
+      {
+        tipo: 'Medicamento',
+        nombre: 'Paracetamol',
+        detalle: null,
+        cantidad: 8,
+        unidad: 'unidad(es)',
+        precioUnitario: 1.5,
+        subtotal: 12,
+      },
+      {
+        tipo: 'Cama',
+        nombre: 'Cama A-106',
+        detalle: 'Habitación 101 · Hospitalización',
+        cantidad: 2,
+        unidad: 'días',
+        precioUnitario: 250,
+        subtotal: 500,
+      },
+    ],
+    total: 512,
+  };
+
+  const servicioConsumo = { obtenerConsumo: vi.fn(() => of(consumo)) };
+
+  const servicioPdf = { generar: vi.fn(() => Promise.resolve()) };
+
+  const usuarioService = {
+    getMedicos: vi.fn(() =>
+      of([{ id: 5, nombreCompleto: 'Dr. Juan Pérez', especialidad: 'Medicina general' }]),
+    ),
+  };
+
   const modalService = { open: vi.fn(), close: vi.fn() };
 
   const popUps = {
@@ -138,6 +204,9 @@ describe('Paciente', () => {
     servicioPaciente.obtenerPaciente.mockReturnValue(of(detalle));
     servicioDocumento.listarDocumentos.mockReturnValue(of([documento]));
     servicioDocumento.subirDocumento.mockReturnValue(of([documento]));
+    usuarioService.getMedicos.mockReturnValue(
+      of([{ id: 5, nombreCompleto: 'Dr. Juan Pérez', especialidad: 'Medicina general' }]),
+    );
     archivoService.procesar.mockReturnValue({ seleccionado: archivoSeleccionado, mensaje: null });
 
     await TestBed.configureTestingModule({
@@ -145,6 +214,9 @@ describe('Paciente', () => {
       providers: [
         { provide: PacienteService, useValue: servicioPaciente },
         { provide: DocumentoEpisodioService, useValue: servicioDocumento },
+        { provide: ConsumoEpisodioService, useValue: servicioConsumo },
+        { provide: DocumentoTratamientoPdfService, useValue: servicioPdf },
+        { provide: UsuarioService, useValue: usuarioService },
         { provide: ModalService, useValue: modalService },
         { provide: PopUps, useValue: popUps },
         { provide: ArchivoService, useValue: archivoService },
@@ -170,6 +242,27 @@ describe('Paciente', () => {
     expect(component.documentos).toEqual([documento]);
     expect(servicioPaciente.obtenerPaciente).toHaveBeenCalledWith(1);
     expect(servicioDocumento.listarDocumentos).toHaveBeenCalledWith(101);
+  });
+
+  it('separa a los pacientes activos de los egresados en las pestañas', async () => {
+    servicioPaciente.listarPacientes.mockReturnValue(of([paciente, pacienteEgresado]));
+
+    await render();
+
+    const filasActivas = fixture.nativeElement.querySelectorAll(
+      '.tabla-pacientes tbody tr',
+    ) as NodeListOf<HTMLElement>;
+    expect(filasActivas.length).toBe(1);
+    expect(filasActivas[0].textContent).toContain('EXP-001');
+
+    component.cambiarFiltroPacientes(false);
+    fixture.detectChanges();
+
+    const filasEgresados = fixture.nativeElement.querySelectorAll(
+      '.tabla-pacientes tbody tr',
+    ) as NodeListOf<HTMLElement>;
+    expect(filasEgresados.length).toBe(1);
+    expect(filasEgresados[0].textContent).toContain('EXP-002');
   });
 
   it('lista las alergias y enfermedades diagnosticadas del paciente', async () => {
@@ -262,5 +355,78 @@ describe('Paciente', () => {
 
     expect(popUps.advertencia).toHaveBeenCalledWith('Formato no permitido.');
     expect(servicioDocumento.subirDocumento).not.toHaveBeenCalled();
+  });
+
+  it('muestra los títulos de tratamiento sin la cantidad', async () => {
+    await render();
+    component.documentacionAbierta = true;
+    component.medicamentosAlta = [medicamento];
+    component.cuidadosAlta = [cuidado];
+    fixture.componentRef.changeDetectorRef.detectChanges();
+
+    const subtitulos = Array.from(
+      fixture.nativeElement.querySelectorAll('.doc-subtitulo') as NodeListOf<HTMLElement>,
+    ).map((elemento) => elemento.textContent?.trim());
+
+    expect(subtitulos).toEqual(['Medicamentos', 'Cuidados']);
+  });
+
+  it('deshabilita la generación cuando no hay tratamientos', async () => {
+    await render();
+    component.documentacionAbierta = true;
+    fixture.componentRef.changeDetectorRef.detectChanges();
+
+    const boton = fixture.nativeElement.querySelector(
+      '.doc-acciones-documento button',
+    ) as HTMLButtonElement;
+
+    expect(boton.disabled).toBe(true);
+  });
+
+  it('carga y muestra el detalle de consumo con su total', async () => {
+    await render();
+    component.documentacionAbierta = true;
+    fixture.componentRef.changeDetectorRef.detectChanges();
+
+    component.seleccionarSeccionDocumentacion('consumo');
+    await fixture.whenStable();
+    fixture.componentRef.changeDetectorRef.detectChanges();
+
+    expect(servicioConsumo.obtenerConsumo).toHaveBeenCalledWith(101);
+
+    const filas = fixture.nativeElement.querySelectorAll('.doc-tabla tbody tr');
+    expect(filas.length).toBe(2);
+    expect(fixture.nativeElement.textContent).toContain('Q 512.00');
+  });
+
+  it('genera el documento con los datos del paciente, los tratamientos y el médico', async () => {
+    await render();
+    component.documentacionAbierta = true;
+    component.medicamentosAlta = [medicamento];
+    component.cuidadosAlta = [cuidado];
+    fixture.componentRef.changeDetectorRef.detectChanges();
+
+    const boton = fixture.nativeElement.querySelector(
+      '.doc-acciones-documento button',
+    ) as HTMLButtonElement;
+    boton.click();
+    await fixture.whenStable();
+
+    expect(usuarioService.getMedicos).toHaveBeenCalled();
+    expect(servicioPdf.generar).toHaveBeenCalledWith({
+      paciente: {
+        nombre: 'Ana López',
+        cui: '1234567890123',
+        sexo: 'Femenino',
+        edad: '36 años',
+        direccion: 'Casa',
+      },
+      medicamentos: [medicamento],
+      cuidados: [cuidado],
+      medico: {
+        nombre: 'Dr. Juan Pérez',
+        especialidad: 'Medicina general',
+      },
+    });
   });
 });

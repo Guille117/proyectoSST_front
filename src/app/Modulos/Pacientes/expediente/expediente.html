@@ -1,0 +1,83 @@
+<div class="expediente">
+  <header class="expediente-cabecera">
+    <button type="button" class="btn _cancelar" (click)="volver()">Volver</button>
+
+    <div class="expediente-paciente">
+      <h1>{{ paciente?.nombreCompleto || 'Expediente clínico' }}</h1>
+      @if (paciente) {
+        <p>
+          <span>Expediente: {{ paciente.codigoExpediente || '—' }}</span>
+          @if (paciente.cui) {
+            <span>CUI: {{ paciente.cui }}</span>
+          }
+          <span>{{ paciente.edad ?? '—' }} años</span>
+          <span>{{ sexoLegible(paciente.sexo) }}</span>
+        </p>
+      }
+    </div>
+  </header>
+
+  @if (cargando) {
+    <div class="expediente-estado">
+      <i class="bi bi-hourglass-split" aria-hidden="true"></i>
+      <p>Cargando expediente...</p>
+    </div>
+  } @else if (error) {
+    <div class="expediente-estado expediente-estado--error" role="alert">
+      <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
+      <p>{{ error }}</p>
+      <button type="button" class="btn _cancelar" (click)="recargar()">Reintentar</button>
+    </div>
+  } @else {
+    <div class="expediente-layout">
+      <aside class="expediente-episodios" aria-labelledby="tituloEpisodios">
+        <h2 id="tituloEpisodios">Episodios</h2>
+
+        @if (episodios.length) {
+          <div class="episodios-lista">
+            @for (episodio of episodios; track episodio.episodioId) {
+              <button
+                type="button"
+                class="episodio-item"
+                [class.episodio-item--activo]="esSeleccionado(episodio)"
+                [attr.aria-pressed]="esSeleccionado(episodio)"
+                (click)="seleccionarEpisodio(episodio)"
+              >
+                <span class="episodio-item-tipo">
+                  {{ tipoAtencionLegible(episodio.tipoAtencion) }}
+                </span>
+                <span class="episodio-item-fechas">
+                  {{ fecha(episodio.fechaHoraIngreso) }} —
+                  {{ episodio.fechaHoraEgreso ? fecha(episodio.fechaHoraEgreso) : 'En curso' }}
+                </span>
+                <span class="episodio-item-medico">
+                  {{ episodio.medicoNombre || 'Médico no registrado' }}
+                </span>
+                <span
+                  class="episodio-item-estado"
+                  [class.episodio-item-estado--cerrado]="!episodio.activo"
+                >
+                  {{ episodio.activo ? 'Activo' : 'Cerrado' }}
+                </span>
+              </button>
+            }
+          </div>
+        } @else {
+          <p class="expediente-vacio">El paciente no tiene episodios registrados.</p>
+        }
+      </aside>
+
+      <section class="expediente-detalle" aria-label="Resumen del episodio">
+        @if (episodioSeleccionado; as episodio) {
+          <app-resumen-episodio
+            [episodioId]="episodio.episodioId"
+            [paciente]="paciente"
+            [episodio]="episodio"
+          ></app-resumen-episodio>
+        } @else {
+          <p class="expediente-vacio">Seleccione un episodio para consultar el expediente.</p>
+        }
+      </section>
+    </div>
+  }
+</div>

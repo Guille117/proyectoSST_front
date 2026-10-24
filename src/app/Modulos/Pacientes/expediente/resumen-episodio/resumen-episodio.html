@@ -1,0 +1,586 @@
+@if (cargando) {
+  <div class="resumen-estado-carga">
+    <i class="bi bi-hourglass-split" aria-hidden="true"></i>
+    <p>Cargando resumen del episodio...</p>
+  </div>
+} @else if (error) {
+  <div class="resumen-estado-carga resumen-estado-carga--error" role="alert">
+    <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
+    <p>{{ error }}</p>
+    <button type="button" class="btn _cancelar" (click)="recargar()">Reintentar</button>
+  </div>
+} @else {
+  <div class="resumen">
+    <header class="resumen-cabecera">
+      <div class="resumen-identidad">
+        <h2>{{ paciente?.nombreCompleto || 'Paciente' }}</h2>
+        <p class="resumen-meta">
+          <span>Expediente: {{ paciente?.codigoExpediente || '—' }}</span>
+          @if (paciente?.cui) {
+            <span>CUI: {{ paciente?.cui }}</span>
+          }
+          <span>{{ paciente?.edad ?? '—' }} años</span>
+          <span>{{ sexoLegible(paciente?.sexo) }}</span>
+        </p>
+        <p class="resumen-meta">
+          <span>{{ tipoAtencionLegible(episodio?.tipoAtencion ?? paciente?.tipoAtencion) }}</span>
+          <span>Ingreso: {{ fechaHoraIngreso() }}</span>
+          <span>Egreso: {{ fechaHoraEgreso() }}</span>
+        </p>
+        <p class="resumen-meta">
+          <span>Médico: {{ episodio?.medicoNombre || paciente?.medicoNombre || '—' }}</span>
+          @if (paciente?.camaCodigo) {
+            <span>Cama: {{ paciente?.camaCodigo }}</span>
+          }
+        </p>
+        @if (paciente?.descripcion) {
+          <p class="resumen-motivo">Motivo: {{ paciente?.descripcion }}</p>
+        }
+        <p class="resumen-motivo">
+          Alergias: {{ textoLista(paciente?.alergias ?? []) }} · Enfermedades:
+          {{ textoLista(paciente?.enfermedades ?? []) }}
+        </p>
+      </div>
+
+      <span class="resumen-estado" [class.resumen-estado--cerrado]="episodio?.activo === false">
+        {{ episodio?.activo === false ? 'Episodio cerrado' : 'Episodio en curso' }}
+      </span>
+    </header>
+
+    @if (seccionesConError.length) {
+      <div class="resumen-aviso" role="status">
+        <i class="bi bi-info-circle" aria-hidden="true"></i>
+        <p>No se pudieron cargar: {{ seccionesConError.join(', ') }}.</p>
+      </div>
+    }
+
+    <!-- ==================== INFORMACIÓN MÉDICA ==================== -->
+    <section class="resumen-bloque resumen-bloque--medica" aria-labelledby="tituloMedica">
+      <header class="resumen-bloque-cabecera">
+        <i class="bi bi-heart-pulse" aria-hidden="true"></i>
+        <div>
+          <h3 id="tituloMedica">Información médica</h3>
+          <p>Evaluación, diagnóstico, evolución, indicaciones, procedimientos y alta.</p>
+        </div>
+      </header>
+
+      <section class="resumen-subseccion" aria-labelledby="tituloHistoria">
+        <h4 id="tituloHistoria">Historia clínica</h4>
+        @if (historiaClinica.length) {
+          <div class="resumen-lista">
+            @for (item of historiaClinica; track item.id) {
+              <article class="resumen-card">
+                <p>{{ item.descripcion }}</p>
+                <small>{{ fechaHora(item.fecha) }} · {{ item.usuarioNombre }}</small>
+              </article>
+            }
+          </div>
+        } @else {
+          <p class="resumen-vacio">Sin registros de historia clínica.</p>
+        }
+      </section>
+
+      <section class="resumen-subseccion" aria-labelledby="tituloExamenFisico">
+        <h4 id="tituloExamenFisico">Examen físico</h4>
+        @if (examenFisico.length) {
+          <div class="resumen-lista">
+            @for (item of examenFisico; track item.id) {
+              <article class="resumen-card">
+                <strong>{{ item.parteCuerpoNombre }}</strong>
+                <p>{{ item.descripcion }}</p>
+                <small>{{ fechaHora(item.fecha) }} · {{ item.usuarioNombre }}</small>
+              </article>
+            }
+          </div>
+        } @else {
+          <p class="resumen-vacio">Sin registros de examen físico.</p>
+        }
+      </section>
+
+      <section class="resumen-subseccion" aria-labelledby="tituloDiagnosticos">
+        <h4 id="tituloDiagnosticos">Diagnósticos</h4>
+        @if (diagnosticos.length) {
+          <div class="resumen-lista">
+            @for (item of diagnosticos; track item.id) {
+              <article class="resumen-card">
+                <strong>{{ tipoDiagnosticoLegible(item.tipoDiagnostico) }}</strong>
+                <p>{{ item.descripcion }}</p>
+                <small>{{ fechaHora(item.fecha) }} · {{ item.usuarioNombre }}</small>
+              </article>
+            }
+          </div>
+        } @else {
+          <p class="resumen-vacio">Sin diagnósticos registrados.</p>
+        }
+      </section>
+
+      <section class="resumen-subseccion" aria-labelledby="tituloEvoluciones">
+        <h4 id="tituloEvoluciones">Evolución médica</h4>
+        @if (evoluciones.length) {
+          <div class="resumen-lista">
+            @for (item of evoluciones; track item.id) {
+              <article class="resumen-card">
+                <strong>Evolución clínica</strong>
+                <p>{{ item.evolucionClinica }}</p>
+                <strong>Plan médico</strong>
+                <p>{{ item.planMedico }}</p>
+                <small>{{ fechaHora(item.fecha) }} · {{ item.usuarioNombre }}</small>
+              </article>
+            }
+          </div>
+        } @else {
+          <p class="resumen-vacio">Sin evoluciones registradas.</p>
+        }
+      </section>
+
+      <section class="resumen-subseccion" aria-labelledby="tituloIndicaciones">
+        <h4 id="tituloIndicaciones">Indicaciones médicas</h4>
+
+        <h5>Medicamentos</h5>
+        @if (medicamentos.length) {
+          <div class="resumen-tabla-container">
+            <table class="resumen-tabla" aria-label="Medicamentos indicados">
+              <thead>
+                <tr>
+                  <th>Medicamento</th>
+                  <th>Presentación</th>
+                  <th class="resumen-numero">Cantidad</th>
+                  <th>Frecuencia</th>
+                  <th>Duración</th>
+                  <th>Inicio</th>
+                  <th>Estado</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (item of medicamentos; track item.id) {
+                  <tr>
+                    <td>{{ textoMedicamento(item) }}</td>
+                    <td>{{ item.presentacion || '—' }}</td>
+                    <td class="resumen-numero">{{ item.cantidad }}</td>
+                    <td>{{ textoFrecuencia(item.frecuencia) }}</td>
+                    <td>{{ textoDuracion(item.tipoDuracion, item.duracion) }}</td>
+                    <td>{{ fecha(item.fechaInicio) }}</td>
+                    <td>{{ etiqueta(item.estado) }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        } @else {
+          <p class="resumen-vacio">Sin medicamentos indicados.</p>
+        }
+
+        <h5>Cuidados</h5>
+        @if (cuidados.length) {
+          <div class="resumen-tabla-container">
+            <table class="resumen-tabla" aria-label="Cuidados indicados">
+              <thead>
+                <tr>
+                  <th>Cuidado</th>
+                  <th>Frecuencia</th>
+                  <th>Duración</th>
+                  <th>Inicio</th>
+                  <th>Estado</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (item of cuidados; track item.id) {
+                  <tr>
+                    <td>{{ item.nombreCuidado }}</td>
+                    <td>{{ textoFrecuencia(item.frecuencia) }}</td>
+                    <td>{{ textoDuracion(item.tipoDuracion, item.duracion) }}</td>
+                    <td>{{ fecha(item.fechaInicio) }}</td>
+                    <td>{{ etiqueta(item.estado) }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        } @else {
+          <p class="resumen-vacio">Sin cuidados indicados.</p>
+        }
+
+        <h5>Exámenes</h5>
+        @if (examenes.length) {
+          <div class="resumen-tabla-container">
+            <table class="resumen-tabla" aria-label="Exámenes indicados">
+              <thead>
+                <tr>
+                  <th>Examen</th>
+                  <th>Observación</th>
+                  <th>Archivos</th>
+                  <th>Fecha</th>
+                  <th>Estado</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (item of examenes; track item.id) {
+                  <tr>
+                    <td>{{ item.nombreExamen }}</td>
+                    <td>{{ item.observacion || '—' }}</td>
+                    <td>{{ textoArchivos(item) }}</td>
+                    <td>{{ fecha(item.fecha) }}</td>
+                    <td>{{ etiqueta(item.estado) }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        } @else {
+          <p class="resumen-vacio">Sin exámenes indicados.</p>
+        }
+      </section>
+
+      <section class="resumen-subseccion" aria-labelledby="tituloProcedimientos">
+        <h4 id="tituloProcedimientos">Procedimientos médicos</h4>
+        @if (procedimientos.length) {
+          <div class="resumen-tabla-container">
+            <table class="resumen-tabla" aria-label="Procedimientos médicos">
+              <thead>
+                <tr>
+                  <th>Tipo</th>
+                  <th>Descripción</th>
+                  <th>Resultado</th>
+                  <th>Inicio</th>
+                  <th>Fin</th>
+                  <th>Recursos</th>
+                  <th>Estado</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (item of procedimientos; track item.id) {
+                  <tr>
+                    <td>{{ item.tipoProcedimientoNombre }}</td>
+                    <td>{{ item.descripcion }}</td>
+                    <td>{{ item.resultado || '—' }}</td>
+                    <td>{{ fechaHora(item.inicio) }}</td>
+                    <td>{{ fechaHora(item.fin) }}</td>
+                    <td>{{ textoRecursos(item.recursos) }}</td>
+                    <td>{{ etiqueta(item.estado) }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        } @else {
+          <p class="resumen-vacio">Sin procedimientos registrados.</p>
+        }
+      </section>
+
+      <section class="resumen-subseccion" aria-labelledby="tituloAlta">
+        <h4 id="tituloAlta">Alta médica</h4>
+        @if (alta; as altaVigente) {
+          <article class="resumen-card resumen-card--alta">
+            <p>
+              <strong>{{ tipoAltaLegible(altaVigente.tipoAlta) }}</strong>
+            </p>
+            <p><strong>Diagnóstico de egreso:</strong> {{ altaVigente.diagnosticoEgreso }}</p>
+            <p>
+              <strong>Condición de egreso:</strong> {{ altaVigente.condicionEgresoNombre || '—' }}
+            </p>
+            <p><strong>Observación:</strong> {{ altaVigente.observacionEgreso || '—' }}</p>
+            <p><strong>Fecha de egreso:</strong> {{ fechaHora(altaVigente.fechaHoraEgreso) }}</p>
+            @if (altaVigente.motivoRetiro) {
+              <p><strong>Motivo de retiro:</strong> {{ altaVigente.motivoRetiro }}</p>
+            }
+            @if (altaVigente.institucionNombre) {
+              <p><strong>Institución:</strong> {{ altaVigente.institucionNombre }}</p>
+            }
+            @if (altaVigente.motivoReferencia) {
+              <p><strong>Motivo de referencia:</strong> {{ altaVigente.motivoReferencia }}</p>
+            }
+            @if (altaVigente.indicacionesTraslado) {
+              <p>
+                <strong>Indicaciones de traslado:</strong> {{ altaVigente.indicacionesTraslado }}
+              </p>
+            }
+
+            <h5>Tratamiento del alta</h5>
+            @if (altaVigente.tratamientos.length) {
+              <div class="resumen-tabla-container">
+                <table class="resumen-tabla" aria-label="Tratamiento del alta">
+                  <thead>
+                    <tr>
+                      <th>Tipo</th>
+                      <th>Nombre</th>
+                      <th class="resumen-numero">Cantidad</th>
+                      <th>Frecuencia</th>
+                      <th>Duración</th>
+                      <th>Observaciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (tratamiento of altaVigente.tratamientos; track $index) {
+                      <tr>
+                        <td>{{ etiqueta(tratamiento.tipo) }}</td>
+                        <td>{{ tratamiento.nombre }}</td>
+                        <td class="resumen-numero">
+                          {{ tratamiento.cantidad ?? '—' }}
+                          {{ tratamiento.unidadMedida || '' }}
+                        </td>
+                        <td>{{ textoFrecuencia(tratamiento.frecuencia) }}</td>
+                        <td>{{ textoDuracion(tratamiento.duracionTipo, tratamiento.duracion) }}</td>
+                        <td>{{ tratamiento.observaciones || '—' }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            } @else {
+              <p class="resumen-vacio">Sin tratamiento registrado en el alta.</p>
+            }
+          </article>
+        } @else {
+          <p class="resumen-vacio">Sin alta médica vigente.</p>
+        }
+      </section>
+    </section>
+
+    <!-- ==================== ENFERMERÍA ==================== -->
+    <section class="resumen-bloque resumen-bloque--enfermeria" aria-labelledby="tituloEnfermeria">
+      <header class="resumen-bloque-cabecera">
+        <i class="bi bi-clipboard2-pulse" aria-hidden="true"></i>
+        <div>
+          <h3 id="tituloEnfermeria">Enfermería</h3>
+          <p>Monitoreo, notas y registros de tratamientos realizados durante el episodio.</p>
+        </div>
+      </header>
+
+      <section class="resumen-subseccion" aria-labelledby="tituloSignos">
+        <h4 id="tituloSignos">Signos vitales</h4>
+        @if (signosVitales.length) {
+          <div class="resumen-tabla-container">
+            <table class="resumen-tabla" aria-label="Signos vitales">
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th>PA (mmHg)</th>
+                  <th>FC (lpm)</th>
+                  <th>FR (rpm)</th>
+                  <th>Temp. (°C)</th>
+                  <th>SpO₂ (%)</th>
+                  <th>Observación</th>
+                  <th>Usuario</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (item of signosVitales; track item.id) {
+                  <tr>
+                    <td>{{ fechaHora(item.fecha) }}</td>
+                    <td>{{ item.sistolica }}/{{ item.diastolica }}</td>
+                    <td>{{ item.frecuenciaCardiaca }}</td>
+                    <td>{{ item.frecuenciaRespiratoria }}</td>
+                    <td>{{ item.temperatura }}</td>
+                    <td>{{ item.saturacion }}</td>
+                    <td>{{ item.observacion || '—' }}</td>
+                    <td>{{ item.usuarioNombre }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        } @else {
+          <p class="resumen-vacio">Sin signos vitales registrados.</p>
+        }
+      </section>
+
+      <section class="resumen-subseccion" aria-labelledby="tituloGlucosa">
+        <h4 id="tituloGlucosa">Glucosa</h4>
+        @if (glucosa.length) {
+          <div class="resumen-tabla-container">
+            <table class="resumen-tabla" aria-label="Glucosa">
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th>Glucosa</th>
+                  <th>Tipo</th>
+                  <th>Observación</th>
+                  <th>Usuario</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (item of glucosa; track item.id) {
+                  <tr>
+                    <td>{{ fechaHora(item.fecha) }}</td>
+                    <td>{{ item.glucosa }}</td>
+                    <td>{{ tipoMedicionLegible(item.tipo) }}</td>
+                    <td>{{ item.observacion || '—' }}</td>
+                    <td>{{ item.usuarioNombre }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        } @else {
+          <p class="resumen-vacio">Sin registros de glucosa.</p>
+        }
+      </section>
+
+      <section class="resumen-subseccion" aria-labelledby="tituloControl">
+        <h4 id="tituloControl">Control hídrico</h4>
+        @if (controlHidrico.length) {
+          <div class="resumen-tabla-container">
+            <table class="resumen-tabla" aria-label="Control hídrico">
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th>Tipo</th>
+                  <th>Vía</th>
+                  <th>Cantidad</th>
+                  <th>Descripción</th>
+                  <th>Usuario</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (item of controlHidrico; track item.id) {
+                  <tr>
+                    <td>{{ fechaHora(item.fecha) }}</td>
+                    <td>{{ etiqueta(item.tipo) }}</td>
+                    <td>{{ item.via }}</td>
+                    <td>{{ item.cantidad }}</td>
+                    <td>{{ item.descripcion }}</td>
+                    <td>{{ item.usuarioNombre }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        } @else {
+          <p class="resumen-vacio">Sin registros de control hídrico.</p>
+        }
+      </section>
+
+      <section class="resumen-subseccion" aria-labelledby="tituloNotas">
+        <h4 id="tituloNotas">Notas de enfermería</h4>
+        @if (notas.length) {
+          <div class="resumen-lista">
+            @for (item of notas; track item.id) {
+              <article class="resumen-card">
+                <p>{{ item.texto }}</p>
+                <small>{{ fechaHora(item.fecha) }} · {{ item.usuarioNombre }}</small>
+              </article>
+            }
+          </div>
+        } @else {
+          <p class="resumen-vacio">Sin notas de enfermería.</p>
+        }
+      </section>
+
+      <section class="resumen-subseccion" aria-labelledby="tituloAplicaciones">
+        <h4 id="tituloAplicaciones">Aplicaciones de medicamentos</h4>
+        @if (aplicaciones.length) {
+          <div class="resumen-tabla-container">
+            <table class="resumen-tabla" aria-label="Aplicaciones de medicamentos">
+              <thead>
+                <tr>
+                  <th>Programada</th>
+                  <th>Estado</th>
+                  <th class="resumen-numero">Cantidad</th>
+                  <th>Observación</th>
+                  <th>Registrada</th>
+                  <th>Usuario</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (item of aplicaciones; track item.id) {
+                  <tr>
+                    <td>{{ fechaHora(item.fechaHoraProgramada) }}</td>
+                    <td>{{ etiqueta(item.estado) }}</td>
+                    <td class="resumen-numero">{{ item.cantidad ?? '—' }}</td>
+                    <td>{{ item.observacion || '—' }}</td>
+                    <td>{{ fechaHora(item.fechaRegistro) }}</td>
+                    <td>{{ item.usuarioNombre }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        } @else {
+          <p class="resumen-vacio">Sin aplicaciones de medicamentos.</p>
+        }
+      </section>
+
+      <section class="resumen-subseccion" aria-labelledby="tituloEjecuciones">
+        <h4 id="tituloEjecuciones">Ejecuciones de cuidados</h4>
+        @if (ejecuciones.length) {
+          <div class="resumen-tabla-container">
+            <table class="resumen-tabla" aria-label="Ejecuciones de cuidados">
+              <thead>
+                <tr>
+                  <th>Programada</th>
+                  <th>Estado</th>
+                  <th>Observación</th>
+                  <th>Registrada</th>
+                  <th>Usuario</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (item of ejecuciones; track item.id) {
+                  <tr>
+                    <td>{{ fechaHora(item.fechaHoraProgramada) }}</td>
+                    <td>{{ etiqueta(item.estado) }}</td>
+                    <td>{{ item.observacion || '—' }}</td>
+                    <td>{{ fechaHora(item.fechaRegistro) }}</td>
+                    <td>{{ item.usuarioNombre }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        } @else {
+          <p class="resumen-vacio">Sin ejecuciones de cuidados.</p>
+        }
+      </section>
+    </section>
+
+    <!-- ==================== CONSUMO Y ESTANCIA ==================== -->
+    <section class="resumen-bloque resumen-bloque--consumo" aria-labelledby="tituloConsumo">
+      <header class="resumen-bloque-cabecera">
+        <i class="bi bi-receipt" aria-hidden="true"></i>
+        <div>
+          <h3 id="tituloConsumo">Consumo y estancia</h3>
+          <p>Productos entregados y días de cama utilizados en el episodio.</p>
+        </div>
+      </header>
+
+      @if (consumo && consumo.items.length) {
+        <div class="resumen-tabla-container">
+          <table class="resumen-tabla" aria-label="Consumo y estancia">
+            <thead>
+              <tr>
+                <th>Tipo</th>
+                <th>Concepto</th>
+                <th>Detalle</th>
+                <th class="resumen-numero">Cantidad</th>
+                <th class="resumen-numero">Precio unitario</th>
+                <th class="resumen-numero">Subtotal</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (item of consumo.items; track $index) {
+                <tr>
+                  <td>{{ item.tipo }}</td>
+                  <td>{{ item.nombre }}</td>
+                  <td>{{ item.detalle || '—' }}</td>
+                  <td class="resumen-numero">{{ item.cantidad }} {{ item.unidad }}</td>
+                  <td class="resumen-numero">Q {{ item.precioUnitario | number: '1.2-2' }}</td>
+                  <td class="resumen-numero">Q {{ item.subtotal | number: '1.2-2' }}</td>
+                </tr>
+              }
+            </tbody>
+            <tfoot>
+              <tr>
+                <td colspan="5" class="resumen-total-etiqueta">Total</td>
+                <td class="resumen-numero resumen-total-valor">
+                  Q {{ consumo.total | number: '1.2-2' }}
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      } @else {
+        <p class="resumen-vacio">Sin consumos registrados en el episodio.</p>
+      }
+    </section>
+  </div>
+}

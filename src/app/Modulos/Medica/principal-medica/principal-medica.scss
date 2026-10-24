@@ -1,4 +1,23 @@
 /* ==================== MÓDULO MÉDICO (CONTENEDOR) ==================== */
+/* La pantalla del episodio ocupa el alto disponible del área de trabajo sin desbordar la ventana. */
+:host {
+  display: block;
+  height: 100%;
+  min-height: 0;
+}
+
+.principal {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.contenido {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
 /* El submenú del módulo comparte estilo con el resto de módulos (subMenuStyle); aquí solo se añade
    la acción que cierra el episodio en curso. */
 .subMenuNav .btn.cerrar-episodio {

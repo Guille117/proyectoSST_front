@@ -15,9 +15,10 @@ export interface AplicacionProgramada {
   fechaHora: Date;
 }
 
-/** Registro de Enfermería con la fecha programada que ya fue atendida. */
+/** Registro de Enfermería con la fecha programada y la fecha real en que se atendió. */
 export interface RegistroProgramado {
   fechaHoraProgramada: string;
+  fechaRegistro?: string;
 }
 
 const MS_HORA = 60 * 60 * 1000;
@@ -61,17 +62,16 @@ export function calcularAplicaciones(
   }));
 }
 
-/** Indica si las aplicaciones vencidas ya tienen registro. */
+/** Indica si todas las aplicaciones programadas ya tienen registro. */
 export function estadoTratamiento(
   tratamiento: ProgramacionTratamiento,
   registros: RegistroProgramado[],
-  ahora: Date = new Date(),
+  _ahora: Date = new Date(),
 ): 'pendiente' | 'realizada' {
-  const vencidas = calcularAplicaciones(tratamiento, ahora).filter(
-    (aplicacion) => aplicacion.fechaHora.getTime() <= ahora.getTime(),
-  );
+  if (tratamiento.duracionTipo === 'indefinida') return 'pendiente';
 
-  if (!vencidas.length) return 'pendiente';
+  const programadas = calcularAplicaciones(tratamiento);
+  if (!programadas.length) return 'pendiente';
 
   const registradas = new Set(
     registros
@@ -79,15 +79,15 @@ export function estadoTratamiento(
       .filter((clave) => !Number.isNaN(clave)),
   );
 
-  return vencidas.every((aplicacion) => registradas.has(claveMinuto(aplicacion.fechaHora)))
+  return programadas.every((aplicacion) => registradas.has(claveMinuto(aplicacion.fechaHora)))
     ? 'realizada'
     : 'pendiente';
 }
 
-/** Fecha de la última aplicación registrada, o null si no hay registros. */
+/** Fecha real de la última aplicación registrada, o null si no hay registros. */
 export function ultimaAplicacionRegistrada(registros: RegistroProgramado[]): Date | null {
   const fechas = registros
-    .map((registro) => new Date(registro.fechaHoraProgramada))
+    .map((registro) => new Date(registro.fechaRegistro ?? registro.fechaHoraProgramada))
     .filter((fecha) => !Number.isNaN(fecha.getTime()));
 
   if (!fechas.length) return null;
@@ -95,9 +95,10 @@ export function ultimaAplicacionRegistrada(registros: RegistroProgramado[]): Dat
   return new Date(Math.max(...fechas.map((fecha) => fecha.getTime())));
 }
 
-/** Próxima aplicación programada a partir de ahora, o null si ya no hay. */
+/** Primera aplicación pendiente, o null si ya no hay. */
 export function proximaAplicacion(
   tratamiento: ProgramacionTratamiento,
+  registros: RegistroProgramado[] = [],
   ahora: Date = new Date(),
 ): Date | null {
   const inicio = new Date(tratamiento.fechaInicio);
@@ -110,18 +111,29 @@ export function proximaAplicacion(
   }
 
   const paso = tratamiento.frecuencia * MS_HORA;
+  const registradas = new Set(
+    registros
+      .map((registro) => claveMinuto(new Date(registro.fechaHoraProgramada)))
+      .filter((clave) => !Number.isNaN(clave)),
+  );
+  const estaRegistrada = (fecha: Date): boolean => registradas.has(claveMinuto(fecha));
 
   if (tratamiento.duracionTipo === 'unica') {
-    return inicio.getTime() > ahora.getTime() ? inicio : null;
+    return estaRegistrada(inicio) ? null : inicio;
   }
 
   if (tratamiento.duracionTipo === 'dias') {
     return (
       calcularAplicaciones(tratamiento).find(
-        (aplicacion) => aplicacion.fechaHora.getTime() > ahora.getTime(),
+        (aplicacion) => !estaRegistrada(aplicacion.fechaHora),
       )?.fechaHora ?? null
     );
   }
+
+  const pendiente = calcularAplicaciones(tratamiento, ahora).find(
+    (aplicacion) => !estaRegistrada(aplicacion.fechaHora),
+  );
+  if (pendiente) return pendiente.fechaHora;
 
   if (inicio.getTime() > ahora.getTime()) return inicio;
 
@@ -137,7 +149,8 @@ function totalAplicaciones(tratamiento: ProgramacionTratamiento): number {
   const horas = (tratamiento.duracionCantidad ?? 0) * 24;
   if (horas <= 0) return 0;
 
-  return Math.max(1, Math.ceil(horas / tratamiento.frecuencia));
+  // El tratamiento incluye la aplicación de inicio y la de cierre del último día
+  return Math.max(1, Math.floor(horas / tratamiento.frecuencia) + 1);
 }
 
 /** Clave de minuto para comparar fechas programadas sin depender de los segundos. */

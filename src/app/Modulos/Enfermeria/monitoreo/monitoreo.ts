@@ -304,6 +304,7 @@ export class Monitoreo implements OnInit, OnDestroy {
   /** El formulario se puede guardar cuando todas las constantes tienen valor. */
   get puedeGuardar(): boolean {
     return (
+      !this.soloLectura &&
       !this.guardando &&
       this.sistolica !== null &&
       this.diastolica !== null &&
@@ -317,6 +318,7 @@ export class Monitoreo implements OnInit, OnDestroy {
   /** El registro hídrico se puede guardar con la vía, la cantidad y la descripción. */
   get puedeGuardarHidrico(): boolean {
     return (
+      !this.soloLectura &&
       !this.guardando &&
       this.viaHidrica !== '' &&
       this.cantidadHidrica !== null &&
@@ -328,6 +330,7 @@ export class Monitoreo implements OnInit, OnDestroy {
   /** El registro de glucosa se puede guardar con la medición y el tipo. */
   get puedeGuardarGlucosa(): boolean {
     return (
+      !this.soloLectura &&
       !this.guardando &&
       this.glucosa !== null &&
       this.glucosa > 0 &&
@@ -397,6 +400,8 @@ export class Monitoreo implements OnInit, OnDestroy {
   // ------------------- CAPTURA Y EDICIÓN DE SIGNOS VITALES -------------------
   /** Carga en el formulario la toma elegida para corregirla. */
   editarRegistro(registro: RegistroSignosVista): void {
+    if (this.soloLectura) return;
+
     this.registroEnEdicion = registro.id;
     this.sistolica = registro.sistolica;
     this.diastolica = registro.diastolica;
@@ -454,7 +459,7 @@ export class Monitoreo implements OnInit, OnDestroy {
 
   /** Elimina la toma del backend. */
   eliminarRegistro(registro: RegistroSignosVista): void {
-    if (this.eliminando) return;
+    if (this.soloLectura || this.eliminando) return;
 
     this.eliminando = true;
     this.cdr.markForCheck();
@@ -505,6 +510,8 @@ export class Monitoreo implements OnInit, OnDestroy {
 
   /** Carga en el formulario el registro hídrico elegido para corregirlo. */
   editarRegistroHidrico(registro: RegistroHidricoVista): void {
+    if (this.soloLectura) return;
+
     this.registroHidricoEnEdicion = registro.id;
     this.tipoHidrico = registro.tipo;
     this.viaHidrica = registro.via;
@@ -557,7 +564,7 @@ export class Monitoreo implements OnInit, OnDestroy {
 
   /** Marca el registro hídrico como eliminado en el backend. */
   eliminarRegistroHidrico(registro: RegistroHidricoVista): void {
-    if (this.eliminando) return;
+    if (this.soloLectura || this.eliminando) return;
 
     this.eliminando = true;
     this.cdr.markForCheck();
@@ -595,6 +602,8 @@ export class Monitoreo implements OnInit, OnDestroy {
   // ------------------- CAPTURA Y EDICIÓN DE GLUCOSA -------------------
   /** Carga en el formulario el registro de glucosa elegido para corregirlo. */
   editarRegistroGlucosa(registro: RegistroGlucosaVista): void {
+    if (this.soloLectura) return;
+
     this.registroGlucosaEnEdicion = registro.id;
     this.glucosa = registro.glucosa;
     this.tipoGlucosa = registro.tipo;
@@ -644,7 +653,7 @@ export class Monitoreo implements OnInit, OnDestroy {
 
   /** Elimina el registro de glucosa del backend. */
   eliminarRegistroGlucosa(registro: RegistroGlucosaVista): void {
-    if (this.eliminando) return;
+    if (this.soloLectura || this.eliminando) return;
 
     this.eliminando = true;
     this.cdr.markForCheck();
@@ -742,6 +751,8 @@ export class Monitoreo implements OnInit, OnDestroy {
   // ------------------- MENÚ DE LA TARJETA -------------------
   /** Muestra u oculta el menú de opciones de la tarjeta pulsada. */
   alternarMenuRegistro(id: number): void {
+    if (this.soloLectura) return;
+
     this.menuRegistroAbierto = this.menuRegistroAbierto === id ? null : id;
   }
 
@@ -752,6 +763,8 @@ export class Monitoreo implements OnInit, OnDestroy {
 
   /** Muestra u oculta el menú de opciones de la tarjeta hídrica pulsada. */
   alternarMenuHidrico(id: number): void {
+    if (this.soloLectura) return;
+
     this.menuHidricoAbierto = this.menuHidricoAbierto === id ? null : id;
   }
 
@@ -762,6 +775,8 @@ export class Monitoreo implements OnInit, OnDestroy {
 
   /** Muestra u oculta el menú de opciones de la tarjeta de glucosa pulsada. */
   alternarMenuGlucosa(id: number): void {
+    if (this.soloLectura) return;
+
     this.menuGlucosaAbierto = this.menuGlucosaAbierto === id ? null : id;
   }
 

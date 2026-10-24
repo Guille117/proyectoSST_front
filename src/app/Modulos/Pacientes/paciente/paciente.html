@@ -1,4 +1,228 @@
 <!-- Listado de pacientes a la izquierda y detalle del paciente seleccionado a la derecha. -->
+@if (documentacionAbierta) {
+    <div class="documentacion">
+        <section class="doc-secciones" aria-labelledby="tituloDocumentacion">
+            <div class="doc-secciones-cabecera">
+                <h2 id="tituloDocumentacion">Documentación</h2>
+                <button type="button" class="btn _cancelar" (click)="cerrarDocumentacion()">
+                    Volver
+                </button>
+            </div>
+
+            <div class="doc-paciente">
+                <span class="doc-paciente-nombre">{{ pacienteSeleccionado?.nombreCompleto }}</span>
+                <span class="doc-paciente-expediente">
+                    Expediente: {{ pacienteSeleccionado?.codigoExpediente || '—' }}
+                </span>
+            </div>
+
+            <div class="doc-opciones" role="group" aria-label="Secciones de documentación">
+                @for (seccion of seccionesDocumentacion; track seccion.id) {
+                    <button
+                        type="button"
+                        class="doc-opcion"
+                        [class.doc-opcion--activa]="seccionDocumentacion === seccion.id"
+                        [attr.aria-pressed]="seccionDocumentacion === seccion.id"
+                        (click)="seleccionarSeccionDocumentacion(seccion.id)"
+                    >
+                        <i class="bi {{ seccion.icono }}" aria-hidden="true"></i>
+                        <span>{{ seccion.titulo }}</span>
+                    </button>
+                }
+            </div>
+        </section>
+
+        <section class="doc-contenido" [attr.aria-label]="seccionDocumentacionActual.titulo">
+            <header class="doc-contenido-cabecera">
+                <h2>{{ seccionDocumentacionActual.titulo }}</h2>
+                <p>{{ seccionDocumentacionActual.descripcion }}</p>
+            </header>
+
+            @if (seccionDocumentacion === 'tratamiento') {
+                @if (cargandoTratamientos) {
+                    <div class="doc-contenido-vacio">
+                        <i class="bi bi-hourglass-split" aria-hidden="true"></i>
+                        <p>Cargando tratamientos del alta...</p>
+                    </div>
+                } @else if (errorTratamientos) {
+                    <div class="doc-contenido-vacio doc-contenido-vacio--error">
+                        <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
+                        <p>{{ errorTratamientos }}</p>
+                        <button type="button" class="btn _cancelar" (click)="recargarTratamientosAlta()">
+                            Reintentar
+                        </button>
+                    </div>
+                } @else if (!medicamentosAlta.length && !cuidadosAlta.length) {
+                    <div class="doc-contenido-vacio">
+                        <i class="bi bi-file-earmark-text" aria-hidden="true"></i>
+                        <p>No hay tratamientos registrados en el alta de este paciente.</p>
+                    </div>
+                } @else {
+                    @if (medicamentosAlta.length) {
+                        <section class="doc-grupo" aria-labelledby="tituloMedicamentosAlta">
+                            <h3 class="doc-subtitulo" id="tituloMedicamentosAlta">
+                                Medicamentos
+                            </h3>
+
+                            <div class="doc-tabla-container">
+                                <table class="doc-tabla" aria-label="Medicamentos del alta">
+                                    <thead>
+                                        <tr>
+                                            <th>Medicamento</th>
+                                            <th>Cantidad</th>
+                                            <th>Frecuencia</th>
+                                            <th>Duración</th>
+                                            <th>Observaciones</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @for (tratamiento of medicamentosAlta; track tratamiento.clave) {
+                                            <tr>
+                                                <td>{{ tratamiento.nombre }}</td>
+                                                <td>{{ tratamiento.cantidad }}</td>
+                                                <td>{{ tratamiento.frecuencia }}</td>
+                                                <td>{{ tratamiento.duracion }}</td>
+                                                <td>{{ tratamiento.observaciones }}</td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </section>
+                    }
+
+                    @if (cuidadosAlta.length) {
+                        <section class="doc-grupo" aria-labelledby="tituloCuidadosAlta">
+                            <h3 class="doc-subtitulo" id="tituloCuidadosAlta">
+                                Cuidados
+                            </h3>
+
+                            <div class="doc-tabla-container">
+                                <table class="doc-tabla" aria-label="Cuidados del alta">
+                                    <thead>
+                                        <tr>
+                                            <th>Cuidado</th>
+                                            <th>Frecuencia</th>
+                                            <th>Duración</th>
+                                            <th>Observaciones</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @for (tratamiento of cuidadosAlta; track tratamiento.clave) {
+                                            <tr>
+                                                <td>{{ tratamiento.nombre }}</td>
+                                                <td>{{ tratamiento.frecuencia }}</td>
+                                                <td>{{ tratamiento.duracion }}</td>
+                                                <td>{{ tratamiento.observaciones }}</td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </section>
+                    }
+                }
+
+                <div class="doc-acciones-documento">
+                    <button
+                        type="button"
+                        class="btn _principal"
+                        [disabled]="
+                            generandoDocumento ||
+                            cargandoTratamientos ||
+                            (!medicamentosAlta.length && !cuidadosAlta.length)
+                        "
+                        (click)="generarDocumento()"
+                    >
+                        <i class="bi bi-file-earmark-pdf" aria-hidden="true"></i>
+                        {{ generandoDocumento ? 'Generando documento...' : 'Generar documento' }}
+                    </button>
+                </div>
+            } @else if (seccionDocumentacion === 'consumo') {
+                @if (cargandoConsumo) {
+                    <div class="doc-contenido-vacio">
+                        <i class="bi bi-hourglass-split" aria-hidden="true"></i>
+                        <p>Cargando detalle de consumo...</p>
+                    </div>
+                } @else if (errorConsumo) {
+                    <div class="doc-contenido-vacio doc-contenido-vacio--error">
+                        <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
+                        <p>{{ errorConsumo }}</p>
+                        <button type="button" class="btn _cancelar" (click)="recargarConsumo()">
+                            Reintentar
+                        </button>
+                    </div>
+                } @else if (!consumo || consumo.items.length === 0) {
+                    <div class="doc-contenido-vacio">
+                        <i class="bi bi-receipt" aria-hidden="true"></i>
+                        <p>No hay consumos registrados para este episodio.</p>
+                    </div>
+                } @else {
+                    <section class="doc-grupo">
+                        <div class="doc-tabla-container">
+                            <table class="doc-tabla" aria-label="Detalle de consumo">
+                                <thead>
+                                    <tr>
+                                        <th>Tipo</th>
+                                        <th>Concepto</th>
+                                        <th>Detalle</th>
+                                        <th class="doc-celda-numero">Cantidad</th>
+                                        <th class="doc-celda-numero">Precio unitario</th>
+                                        <th class="doc-celda-numero">Subtotal</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @for (item of consumo.items; track $index) {
+                                        <tr>
+                                            <td>{{ item.tipo }}</td>
+                                            <td>{{ item.nombre }}</td>
+                                            <td>{{ item.detalle || '—' }}</td>
+                                            <td class="doc-celda-numero">
+                                                {{ item.cantidad }} {{ item.unidad }}
+                                            </td>
+                                            <td class="doc-celda-numero">
+                                                Q {{ item.precioUnitario | number: '1.2-2' }}
+                                            </td>
+                                            <td class="doc-celda-numero">
+                                                Q {{ item.subtotal | number: '1.2-2' }}
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                                <tfoot>
+                                    <tr>
+                                        <td colspan="5" class="doc-total-etiqueta">Total</td>
+                                        <td class="doc-celda-numero doc-total-valor">
+                                            Q {{ consumo.total | number: '1.2-2' }}
+                                        </td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </section>
+                }
+            } @else if (seccionDocumentacion === 'resumen') {
+                @if (episodioIdDocumentacion; as episodioId) {
+                    <app-resumen-episodio
+                        [episodioId]="episodioId"
+                        [paciente]="detalle"
+                        [episodio]="episodioDocumentacion"
+                    ></app-resumen-episodio>
+                } @else {
+                    <div class="doc-contenido-vacio">
+                        <i class="bi bi-file-earmark-text" aria-hidden="true"></i>
+                        <p>El paciente no tiene un episodio para mostrar.</p>
+                    </div>
+                }
+            } @else {
+                <div class="doc-contenido-vacio">
+                    <i class="bi bi-file-earmark-text" aria-hidden="true"></i>
+                    <p>El contenido de esta sección se mostrará aquí.</p>
+                </div>
+            }
+        </section>
+    </div>
+} @else {
 <div class="contenedorPrincipal">
     <div class="izquierda">
         <div class="seccionSuperior">
@@ -12,7 +236,12 @@
             </div>
 
             <div class="switchContainer">
-                <app-tab-switch [op1]="'Paciente'" [op2]="'Egresado'"></app-tab-switch>
+                <app-tab-switch
+                    [op1]="'Paciente'"
+                    [op2]="'Egresado'"
+                    [mostrarActivos]="mostrarPacientes"
+                    (opcionCambiada)="cambiarFiltroPacientes($event)"
+                ></app-tab-switch>
             </div>
 
             <button type="button" class="btn _principal" (click)="abrirModalAgregar()">Agregar paciente</button>
@@ -50,7 +279,7 @@
                         <td colspan="5">
                             <app-paginacion
                                 [paginaActual]="paginaActual"
-                                [totalregistros]="pacientes.length"
+                                [totalregistros]="pacientesFiltrados.length"
                                 [cantidadMostrar]="cantidadMostrar"
                                 (paginaCambiada)="actualizarPagina($event)"
                             ></app-paginacion>
@@ -78,8 +307,8 @@
                     </p>
                 </div>
 
-                <span class="estado" [class.estado--inactivo]="!paciente.estado">
-                    {{ paciente.estado ? 'Activo' : 'Inactivo' }}
+                <span class="estado" [class.estado--alta]="estaEnAlta">
+                    {{ estaEnAlta ? 'Alta' : 'Activo' }}
                 </span>
             </div>
 
@@ -242,6 +471,14 @@
                     <button type="button" class="btn _editar" (click)="abrirModalEditar()">
                         Editar paciente
                     </button>
+                    <button
+                        type="button"
+                        class="btn _principal"
+                        title="Documentación del paciente"
+                        (click)="abrirDocumentacion()"
+                    >
+                        Documentación
+                    </button>
                 </div>
             }
         } @else {
@@ -249,3 +486,4 @@
         }
     </div>
 </div>
+}

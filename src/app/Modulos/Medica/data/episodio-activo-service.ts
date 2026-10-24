@@ -6,6 +6,9 @@ const CLAVE_EPISODIO = 'medica_episodio_id';
 /** Clave con la que se recuerda que el episodio abierto solo se puede consultar. */
 const CLAVE_SOLO_LECTURA = 'medica_episodio_solo_lectura';
 
+/** Clave con la que se conserva el paciente del episodio activo. */
+const CLAVE_PACIENTE = 'medica_paciente_id';
+
 /**
  * Episodio clínico activo del módulo Médico: lo guarda la selección del paciente y lo conserva
  * hasta que se cierra el episodio. Se persiste en localStorage para que las pantallas del episodio
@@ -17,9 +20,13 @@ const CLAVE_SOLO_LECTURA = 'medica_episodio_solo_lectura';
 export class EpisodioActivoService {
   private readonly episodioGuardado = signal<number | null>(this.leerEpisodio());
   private readonly soloLecturaGuardado = signal<boolean>(this.leerSoloLectura());
+  private readonly pacienteGuardado = signal<number | null>(this.leerPaciente());
 
   /** Episodio activo; null cuando no se ha abierto ninguno. */
   readonly episodioId = this.episodioGuardado.asReadonly();
+
+  /** Paciente del episodio activo; null cuando no se ha abierto ninguno. */
+  readonly pacienteId = this.pacienteGuardado.asReadonly();
 
   /**
    * Guarda el episodio activo; un id inválido limpia el episodio en curso. Los episodios cerrados
@@ -42,6 +49,18 @@ export class EpisodioActivoService {
     }
   }
 
+  /** Guarda el paciente del episodio activo; un id inválido lo olvida. */
+  guardarPaciente(pacienteId: number | null): void {
+    if (pacienteId === null || !Number.isInteger(pacienteId) || pacienteId <= 0) {
+      this.pacienteGuardado.set(null);
+      localStorage.removeItem(CLAVE_PACIENTE);
+      return;
+    }
+
+    this.pacienteGuardado.set(pacienteId);
+    localStorage.setItem(CLAVE_PACIENTE, String(pacienteId));
+  }
+
   /** El episodio abierto es un historial cerrado: solo se puede consultar. */
   esSoloLectura(): boolean {
     return this.soloLecturaGuardado();
@@ -52,12 +71,14 @@ export class EpisodioActivoService {
     return this.episodioGuardado();
   }
 
-  /** Cierra el episodio activo y olvida su identificador. */
+  /** Cierra el episodio activo y olvida sus identificadores. */
   limpiar(): void {
     this.episodioGuardado.set(null);
     this.soloLecturaGuardado.set(false);
+    this.pacienteGuardado.set(null);
     localStorage.removeItem(CLAVE_EPISODIO);
     localStorage.removeItem(CLAVE_SOLO_LECTURA);
+    localStorage.removeItem(CLAVE_PACIENTE);
   }
 
   /** Recupera el episodio guardado, descartando valores que no sean ids válidos. */
@@ -67,6 +88,15 @@ export class EpisodioActivoService {
 
     const episodioId = Number(guardado);
     return Number.isInteger(episodioId) && episodioId > 0 ? episodioId : null;
+  }
+
+  /** Recupera el paciente guardado, descartando valores que no sean ids válidos. */
+  private leerPaciente(): number | null {
+    const guardado = localStorage.getItem(CLAVE_PACIENTE);
+    if (!guardado) return null;
+
+    const pacienteId = Number(guardado);
+    return Number.isInteger(pacienteId) && pacienteId > 0 ? pacienteId : null;
   }
 
   /** Recupera el modo de solo lectura guardado; sin episodio no se considera activo. */

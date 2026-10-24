@@ -15,6 +15,7 @@ import { VisorArchivos } from '../../../shared/visor-archivos/visor-archivos';
 import { ArchivoVisor } from '../../../shared/visor-archivos/visor-archivos.interfaz';
 import { ModalService } from '../../../modal-principal/modal-service';
 import { AuthService } from '../../Auth/data/auth-service';
+import { DatosPaciente } from '../../Medica/datos-paciente/datos-paciente';
 import { EpisodioActivoService } from '../../Medica/data/episodio-activo-service';
 import { IndicacionCuidadoService } from '../../Medica/indicaciones/cuidados/data/cuidado-service';
 import { CuidadoResponse } from '../../Medica/indicaciones/cuidados/data/cuidadoInterfaz';
@@ -37,6 +38,7 @@ import {
 } from '../data/registrosEnfermeriaInterfaz';
 import { RegistrosEnfermeriaService } from '../data/registrosEnfermeriaService';
 import {
+  AplicacionProgramada,
   calcularAplicaciones,
   estadoTratamiento,
   ProgramacionTratamiento,
@@ -118,6 +120,13 @@ interface AplicacionProgramadaVista {
   registro: AplicacionMedicamentoVista | null;
 }
 
+/** Hora programada pendiente que el usuario puede elegir para registrar la administración. */
+interface HoraAdministracionVista {
+  numero: number;
+  valor: string;
+  etiqueta: string;
+}
+
 /** Indicación cuyas aplicaciones registradas se muestran en la tabla de la tarjeta. */
 interface IndicacionConAplicaciones {
   id: number;
@@ -177,7 +186,7 @@ interface MedicamentoSolicitadoVista {
  */
 @Component({
   selector: 'app-tratamientos',
-  imports: [FormsModule],
+  imports: [FormsModule, DatosPaciente],
   templateUrl: './tratamientos.html',
   styleUrl: './tratamientos.scss',
 })
@@ -200,6 +209,12 @@ export class Tratamientos implements OnInit, OnDestroy {
   /** Input oculto con el que se cargan los archivos del examen. */
   @ViewChild('inputArchivosExamen') private inputArchivosExamen?: ElementRef<HTMLInputElement>;
 
+  /** La ficha con los datos del paciente está desplegada; la abre su pestaña lateral. */
+  pacienteAbierto = false;
+
+  /** El cuerpo de la ficha del paciente está desplegado; el chevron de su encabezado lo pliega. */
+  datosPacienteVisibles = true;
+
   /** Sección del rail que se muestra en el área central. */
   seccionActiva: SeccionTratamiento = 'medicamentos';
 
@@ -213,6 +228,11 @@ export class Tratamientos implements OnInit, OnDestroy {
   estadoAdministracion: EstadoAdministracion = '';
   cantidadAdministrada: number | null = null;
   observacionAdministracion = '';
+  /** Hora programada elegida para la nueva administración. */
+  horaAdministracion = '';
+
+  /** Observación que se muestra al pasar el puntero por una aplicación registrada. */
+  observacionPopup: { texto: string; x: number; y: number } | null = null;
 
   /** Opciones del desplegable del estado de la administración. */
   readonly estadosAdministracion: EstadoAdministracionVista[] = [
@@ -245,7 +265,11 @@ export class Tratamientos implements OnInit, OnDestroy {
   sinEpisodioActivo = false;
   guardandoAdministracion = false;
   eliminandoAplicacion = false;
+  confirmandoAccion = false;
   subiendoArchivosExamen = false;
+
+  /** Indicación seleccionada en el listado; recibe la próxima administración o ejecución. */
+  private indicacionSeleccionadaId: number | null = null;
 
   /** Medicamento cuyo historial de aplicaciones está desplegado; null si ninguno. */
   private indicacionAplicacionesAbierta: number | null = null;
@@ -340,6 +364,11 @@ export class Tratamientos implements OnInit, OnDestroy {
     return this.estadoAdministracion === 'noAdministrado';
   }
 
+  /** Al marcar la administración como no realizada se descarta la cantidad. */
+  alCambiarEstadoAdministracion(estado: EstadoAdministracion): void {
+    if (estado === 'noAdministrado') this.cantidadAdministrada = null;
+  }
+
   /** Opciones visibles del estado según la sección activa. */
   get opcionesEstadoRegistro(): EstadoAdministracionVista[] {
     return this.seccionActiva === 'cuidados'
@@ -352,7 +381,10 @@ export class Tratamientos implements OnInit, OnDestroy {
 
   /** El formulario de administración se puede guardar con sus campos obligatorios. */
   get puedeGuardarAdministracion(): boolean {
-    if (this.guardandoAdministracion || this.estadoAdministracion === '') return false;
+    if (this.soloLectura || this.guardandoAdministracion || this.estadoAdministracion === '') {
+      return false;
+    }
+    if (!this.aplicacionEnEdicion && !this.horaAdministracion) return false;
     if (this.seccionActiva !== 'medicamentos') return true;
     if (this.aplicacionEnEdicion) return true;
     if (this.estadoAdministracion === 'noAdministrado') return true;
@@ -376,37 +408,37 @@ export class Tratamientos implements OnInit, OnDestroy {
     return 'Historial';
   }
 
-  /** Nombre de la indicación abierta que recibirá el próximo registro. */
-  get indicacionParaRegistrar(): string | null {
-    const id = this.indicacionAplicacionesAbierta;
+  /** Indica si la indicación está seleccionada en el listado. */
+  estaSeleccionada(id: number): boolean {
+    return this.indicacionSeleccionadaId === id;
+  }
+
+  /** Horas programadas pendientes de la indicación seleccionada. */
+  get horasAdministracion(): HoraAdministracionVista[] {
+    const indicacion = this.indicacionSeleccionada;
+    if (!indicacion) return [];
+
+    return this.programadasParaAdministrar(indicacion)
+      .filter((aplicacion) => !this.aplicacionRegistrada(indicacion, aplicacion.fechaHora))
+      .map((aplicacion) => ({
+        numero: aplicacion.numero,
+        valor: this.aIsoLocal(aplicacion.fechaHora),
+        etiqueta: this.formatearFechaHora(aplicacion.fechaHora),
+      }));
+  }
+
+  private get indicacionSeleccionada(): IndicacionConProgramacion | null {
+    const id = this.indicacionSeleccionadaId;
     if (id === null) return null;
 
-    if (this.seccionActiva === 'medicamentos') {
-      return this.medicamentos.find((indicacion) => indicacion.id === id)?.nombre ?? null;
-    }
-    if (this.seccionActiva === 'cuidados') {
-      return this.cuidados.find((indicacion) => indicacion.id === id)?.nombre ?? null;
-    }
+    const lista: IndicacionConProgramacion[] =
+      this.seccionActiva === 'medicamentos'
+        ? this.medicamentos
+        : this.seccionActiva === 'cuidados'
+          ? this.cuidados
+          : [];
 
-    return null;
-  }
-
-  /** Medicamentos visibles: si hay un historial abierto, solo se muestra su tarjeta. */
-  get medicamentosVisibles(): MedicamentoIndicadoVista[] {
-    const abierto = this.indicacionAplicacionesAbierta;
-
-    return abierto === null
-      ? this.medicamentosFiltrados
-      : this.medicamentosFiltrados.filter((indicacion) => indicacion.id === abierto);
-  }
-
-  /** Cuidados visibles: si hay un historial abierto, solo se muestra su tarjeta. */
-  get cuidadosVisibles(): CuidadoIndicadoVista[] {
-    const abierto = this.indicacionAplicacionesAbierta;
-
-    return abierto === null
-      ? this.cuidadosFiltrados
-      : this.cuidadosFiltrados.filter((indicacion) => indicacion.id === abierto);
+    return lista.find((indicacion) => indicacion.id === id) ?? null;
   }
 
   /** Máximo que se puede agregar del medicamento seleccionado. */
@@ -424,6 +456,7 @@ export class Tratamientos implements OnInit, OnDestroy {
   /** Se puede agregar el medicamento seleccionado con la cantidad indicada. */
   get puedeAgregarMedicamento(): boolean {
     return (
+      !this.soloLectura &&
       !this.cargandoMedicamentos &&
       !this.enviandoSolicitud &&
       this.medicamentoSeleccionado !== null &&
@@ -442,6 +475,7 @@ export class Tratamientos implements OnInit, OnDestroy {
   /** La solicitud se puede enviar con al menos un medicamento y un tipo disponible. */
   get puedeEnviarSolicitud(): boolean {
     return (
+      !this.soloLectura &&
       !this.enviandoSolicitud &&
       !this.cargandoTiposSolicitud &&
       this.medicamentosSolicitados.length > 0 &&
@@ -477,6 +511,7 @@ export class Tratamientos implements OnInit, OnDestroy {
       this.cuidados = [];
       this.cargandoIndicaciones = false;
       this.errorCargaIndicaciones = false;
+      this.asegurarIndicacionSeleccionada();
       this.cdr.markForCheck();
       return;
     }
@@ -513,6 +548,7 @@ export class Tratamientos implements OnInit, OnDestroy {
             this.aCuidadoVista(indicacion, ejecuciones.get(indicacion.id) ?? []),
           );
           this.examenes = datos.examenes.map((examen) => this.aExamenVista(examen));
+          this.asegurarIndicacionSeleccionada();
         },
         error: (error) => {
           if (this.destruido) return;
@@ -521,6 +557,7 @@ export class Tratamientos implements OnInit, OnDestroy {
           this.examenes = [];
           this.cuidados = [];
           this.errorCargaIndicaciones = true;
+          this.asegurarIndicacionSeleccionada();
           this.mostrarError(error, 'No se pudieron cargar las indicaciones.');
         },
       });
@@ -553,6 +590,8 @@ export class Tratamientos implements OnInit, OnDestroy {
   // ------------------- SOLICITUD DE MEDICAMENTO -------------------
   /** Abre la solicitud de medicamento a farmacia con las dos secciones de la pantalla. */
   abrirSolicitudMedicamento(): void {
+    if (this.soloLectura) return;
+
     this.solicitandoMedicamento = true;
     this.indicacionAplicacionesAbierta = null;
     this.limpiarSolicitudMedicamento();
@@ -577,13 +616,20 @@ export class Tratamientos implements OnInit, OnDestroy {
     this.peticionSolicitud?.unsubscribe();
     this.peticionSolicitud = this.servicioProcedimientos
       .getTiposProcedimiento()
-      .pipe(finalize(() => (this.cargandoTiposSolicitud = false)))
+      .pipe(
+        finalize(() => {
+          this.cargandoTiposSolicitud = false;
+          if (!this.destruido) this.cdr.markForCheck();
+        }),
+      )
       .subscribe({
         next: (tipos) => {
           this.tiposSolicitud = tipos.filter((tipo) => tipo.estado !== false);
+          if (!this.destruido) this.cdr.markForCheck();
         },
         error: (error) => {
           this.tiposSolicitud = [];
+          if (!this.destruido) this.cdr.markForCheck();
           this.mostrarError(error, 'No se pudieron cargar los tipos de solicitud.');
         },
       });
@@ -600,13 +646,20 @@ export class Tratamientos implements OnInit, OnDestroy {
     this.medicamentosEncontrados = [];
     this.servicioProcedimientos
       .buscarRecursos('MEDICAMENTO', this.textoBusquedaMedicamento)
-      .pipe(finalize(() => (this.cargandoMedicamentos = false)))
+      .pipe(
+        finalize(() => {
+          this.cargandoMedicamentos = false;
+          if (!this.destruido) this.cdr.markForCheck();
+        }),
+      )
       .subscribe({
         next: (medicamentos) => {
           this.medicamentosEncontrados = medicamentos;
+          if (!this.destruido) this.cdr.markForCheck();
         },
         error: (error) => {
           this.medicamentosEncontrados = [];
+          if (!this.destruido) this.cdr.markForCheck();
           this.mostrarError(error, 'No se pudo buscar medicamentos en farmacia.');
         },
       });
@@ -672,7 +725,7 @@ export class Tratamientos implements OnInit, OnDestroy {
 
   /** Envía a farmacia la solicitud con los medicamentos agregados. */
   enviarSolicitudMedicamento(): void {
-    if (this.enviandoSolicitud) return;
+    if (this.soloLectura || this.enviandoSolicitud) return;
 
     const tipo = this.tipoSolicitudMedicamento;
     const episodioId = this.episodioActivo.obtener();
@@ -721,14 +774,21 @@ export class Tratamientos implements OnInit, OnDestroy {
     this.peticionSolicitud?.unsubscribe();
     this.peticionSolicitud = this.servicioProcedimientos
       .crearProcedimiento(request)
-      .pipe(finalize(() => (this.enviandoSolicitud = false)))
+      .pipe(
+        finalize(() => {
+          this.enviandoSolicitud = false;
+          if (!this.destruido) this.cdr.markForCheck();
+        }),
+      )
       .subscribe({
         next: () => {
           this.popUps.exito('Solicitud de medicamento enviada a farmacia.');
           this.limpiarSolicitudMedicamento();
           this.solicitandoMedicamento = false;
+          if (!this.destruido) this.cdr.markForCheck();
         },
         error: (error) => {
+          if (!this.destruido) this.cdr.markForCheck();
           this.mostrarError(error, 'No se pudo enviar la solicitud de medicamento.');
         },
       });
@@ -843,16 +903,42 @@ export class Tratamientos implements OnInit, OnDestroy {
     return 'application/octet-stream';
   }
 
+  // ------------------- FICHA DEL PACIENTE -------------------
+  /**
+   * Abre o cierra la ficha del paciente. Al desplegarla se muestra también su cuerpo para que el
+   * usuario vea los datos completos de contexto.
+   */
+  cambiarFichaPaciente(abierto: boolean): void {
+    this.pacienteAbierto = abierto;
+
+    if (abierto) {
+      this.datosPacienteVisibles = true;
+    }
+  }
+
   // ------------------- NAVEGACIÓN Y FILTROS -------------------
+  /** Selecciona la indicación que recibirá la administración o ejecución. */
+  seleccionarIndicacion(id: number): void {
+    this.indicacionSeleccionadaId = id;
+    this.actualizarHoraAdministracion(true);
+
+    if (this.aplicacionEnEdicion) {
+      this.limpiarFormularioAdministracion();
+    }
+  }
+
   /** Muestra la sección pulsada del rail y cierra el historial desplegado. */
   seleccionarSeccion(id: SeccionTratamiento): void {
     this.seccionActiva = id;
     this.indicacionAplicacionesAbierta = null;
+    this.indicacionSeleccionadaId = null;
     this.solicitandoMedicamento = false;
 
     if (this.aplicacionEnEdicion) {
       this.limpiarFormularioAdministracion();
     }
+
+    this.asegurarIndicacionSeleccionada();
   }
 
   /** Muestra las indicaciones del estado elegido y cierra el historial desplegado. */
@@ -863,6 +949,8 @@ export class Tratamientos implements OnInit, OnDestroy {
     if (this.aplicacionEnEdicion) {
       this.limpiarFormularioAdministracion();
     }
+
+    this.asegurarIndicacionSeleccionada();
   }
 
   // ------------------- ADMINISTRACIÓN Y EJECUCIÓN -------------------
@@ -871,7 +959,9 @@ export class Tratamientos implements OnInit, OnDestroy {
     this.estadoAdministracion = '';
     this.cantidadAdministrada = null;
     this.observacionAdministracion = '';
+    this.horaAdministracion = '';
     this.aplicacionEnEdicion = null;
+    this.actualizarHoraAdministracion();
   }
 
   /** Guarda la administración o ejecución contra el backend. */
@@ -896,10 +986,15 @@ export class Tratamientos implements OnInit, OnDestroy {
       this.estadoAdministracion === 'noAdministrado' ? 'noAdministrado' : 'administrado';
     const observacion = this.observacionAdministracion.trim() || null;
     const edicion = this.aplicacionEnEdicion;
-    const indicacionId = edicion?.indicacionId ?? this.indicacionAplicacionesAbierta;
+    const indicacionId = edicion?.indicacionId ?? this.indicacionSeleccionadaId;
 
     if (indicacionId === null) {
-      this.popUps.advertencia('Abra una indicación para registrar la administración.');
+      this.popUps.advertencia('Seleccione una indicación para registrar la administración.');
+      return;
+    }
+
+    if (!edicion && !this.horaAdministracion) {
+      this.popUps.advertencia('Seleccione la fecha y hora de la administración.');
       return;
     }
 
@@ -914,9 +1009,7 @@ export class Tratamientos implements OnInit, OnDestroy {
         return;
       }
 
-      const fechaHoraProgramada = edicion
-        ? edicion.fechaHoraProgramada
-        : this.aIsoLocal(this.siguientePendiente(indicacion) ?? new Date());
+      const fechaHoraProgramada = edicion?.fechaHoraProgramada ?? this.horaAdministracion;
       const request = {
         indicacionMedicamentoId: indicacion.id,
         fechaHoraProgramada,
@@ -951,9 +1044,7 @@ export class Tratamientos implements OnInit, OnDestroy {
         return;
       }
 
-      const fechaHoraProgramada = edicion
-        ? edicion.fechaHoraProgramada
-        : this.aIsoLocal(this.siguientePendiente(cuidado) ?? new Date());
+      const fechaHoraProgramada = edicion?.fechaHoraProgramada ?? this.horaAdministracion;
       const request = {
         cuidadoId: cuidado.id,
         fechaHoraProgramada,
@@ -998,6 +1089,39 @@ export class Tratamientos implements OnInit, OnDestroy {
     return this.indicacionAplicacionesAbierta === id;
   }
 
+  /** Muestra la observación de la aplicación junto al puntero. */
+  mostrarObservacion(evento: MouseEvent, observacion: string | null | undefined): void {
+    const texto = observacion?.trim();
+    if (!texto) {
+      this.observacionPopup = null;
+      return;
+    }
+
+    this.observacionPopup = { texto, ...this.posicionObservacion(evento) };
+  }
+
+  /** Mantiene el popup junto al puntero mientras recorre la fila. */
+  moverObservacion(evento: MouseEvent): void {
+    if (!this.observacionPopup) return;
+
+    this.observacionPopup = { ...this.observacionPopup, ...this.posicionObservacion(evento) };
+  }
+
+  /** Oculta la observación al salir de la fila. */
+  ocultarObservacion(): void {
+    this.observacionPopup = null;
+  }
+
+  private posicionObservacion(evento: MouseEvent): { x: number; y: number } {
+    const margen = 14;
+    const ancho = 320;
+
+    return {
+      x: Math.min(evento.clientX + margen, Math.max(8, window.innerWidth - ancho - 8)),
+      y: evento.clientY + margen,
+    };
+  }
+
   /** Despliega u oculta el historial de aplicaciones de una indicación. */
   alternarAplicaciones(id: number): void {
     this.indicacionAplicacionesAbierta = this.indicacionAplicacionesAbierta === id ? null : id;
@@ -1007,11 +1131,73 @@ export class Tratamientos implements OnInit, OnDestroy {
     }
   }
 
-  /** Carga en el formulario la aplicación elegida para editarla. */
-  editarAplicacion(
+  /** Genera las horas que puede elegir el usuario para la indicación seleccionada. */
+  private programadasParaAdministrar(indicacion: IndicacionConProgramacion): AplicacionProgramada[] {
+    const programacion = this.programacionDeVista(indicacion);
+
+    return indicacion.duracionTipo === 'indefinida'
+      ? calcularAplicaciones(programacion, new Date())
+      : calcularAplicaciones(programacion);
+  }
+
+  /** Indica si una hora programada ya tiene un registro de Enfermería. */
+  private aplicacionRegistrada(indicacion: IndicacionConProgramacion, fecha: Date): boolean {
+    return indicacion.aplicaciones.some((registro) =>
+      this.mismaFecha(registro.fechaHoraProgramada, fecha),
+    );
+  }
+
+  /** Elige la primera hora pendiente de la indicación seleccionada. */
+  private actualizarHoraAdministracion(forzar = false): void {
+    const horas = this.horasAdministracion;
+    if (!forzar && horas.some((hora) => hora.valor === this.horaAdministracion)) return;
+
+    this.horaAdministracion = horas[0]?.valor ?? '';
+  }
+
+  /** Selecciona la primera indicación del listado cuando la actual deja de estar visible. */
+  private asegurarIndicacionSeleccionada(): void {
+    const lista: { id: number }[] =
+      this.seccionActiva === 'medicamentos'
+        ? this.medicamentosFiltrados
+        : this.seccionActiva === 'cuidados'
+          ? this.cuidadosFiltrados
+          : [];
+
+    if (!lista.some((indicacion) => indicacion.id === this.indicacionSeleccionadaId)) {
+      this.indicacionSeleccionadaId = lista[0]?.id ?? null;
+      this.actualizarHoraAdministracion(true);
+      return;
+    }
+
+    this.actualizarHoraAdministracion();
+  }
+
+  /** Confirma y carga en el formulario la aplicación elegida para editarla. */
+  async editarAplicacion(
     indicacion: IndicacionConAplicaciones,
     aplicacion: AplicacionMedicamentoVista,
-  ): void {
+  ): Promise<void> {
+    if (
+      this.soloLectura ||
+      this.eliminandoAplicacion ||
+      this.guardandoAdministracion ||
+      this.confirmandoAccion
+    ) {
+      return;
+    }
+
+    this.confirmandoAccion = true;
+    this.cdr.markForCheck();
+    const confirmado = await this.popUps
+      .confirmarToast(`¿Está seguro de editar el registro No. ${aplicacion.numero}?`)
+      .catch(() => false);
+    this.confirmandoAccion = false;
+    this.cdr.markForCheck();
+
+    if (!confirmado || this.destruido) return;
+
+    this.indicacionSeleccionadaId = indicacion.id;
     this.aplicacionEnEdicion = {
       seccion: this.seccionActiva,
       indicacionId: indicacion.id,
@@ -1021,14 +1207,32 @@ export class Tratamientos implements OnInit, OnDestroy {
     this.estadoAdministracion = aplicacion.estado;
     this.cantidadAdministrada = aplicacion.cantidad;
     this.observacionAdministracion = aplicacion.observacion;
+    this.cdr.markForCheck();
   }
 
-  /** Elimina la aplicación del historial contra el backend. */
-  eliminarAplicacion(
+  /** Confirma y elimina la aplicación del historial contra el backend. */
+  async eliminarAplicacion(
     indicacion: IndicacionConAplicaciones,
     aplicacion: AplicacionMedicamentoVista,
-  ): void {
-    if (this.eliminandoAplicacion) return;
+  ): Promise<void> {
+    if (
+      this.soloLectura ||
+      this.eliminandoAplicacion ||
+      this.guardandoAdministracion ||
+      this.confirmandoAccion
+    ) {
+      return;
+    }
+
+    this.confirmandoAccion = true;
+    this.cdr.markForCheck();
+    const confirmado = await this.popUps
+      .confirmarToast(`¿Está seguro de eliminar el registro No. ${aplicacion.numero}?`)
+      .catch(() => false);
+    this.confirmandoAccion = false;
+    this.cdr.markForCheck();
+
+    if (!confirmado || this.destruido) return;
 
     this.eliminandoAplicacion = true;
     this.cdr.markForCheck();
@@ -1180,8 +1384,13 @@ export class Tratamientos implements OnInit, OnDestroy {
       duracionTipo: this.aDuracionVista(respuesta.tipoDuracion),
       duracionCantidad: respuesta.duracion,
       medicamentoLibre: respuesta.medicamentoLibre !== null,
-      ultimaAplicacion: ultimaAplicacionRegistrada(registros),
-      proximaAplicacion: proximaAplicacion(programacion),
+      ultimaAplicacion: ultimaAplicacionRegistrada(
+        aplicaciones.map((aplicacion) => ({
+          fechaHoraProgramada: aplicacion.fechaHoraProgramada,
+          fechaRegistro: aplicacion.fechaRegistro,
+        })),
+      ),
+      proximaAplicacion: proximaAplicacion(programacion, registros),
       aplicaciones: registros,
     };
   }
@@ -1209,8 +1418,13 @@ export class Tratamientos implements OnInit, OnDestroy {
       frecuencia: respuesta.frecuencia,
       duracionTipo: this.aDuracionVista(respuesta.tipoDuracion),
       duracionCantidad: respuesta.duracion,
-      ultimaAplicacion: ultimaAplicacionRegistrada(registros),
-      proximaAplicacion: proximaAplicacion(programacion),
+      ultimaAplicacion: ultimaAplicacionRegistrada(
+        ejecuciones.map((ejecucion) => ({
+          fechaHoraProgramada: ejecucion.fechaHoraProgramada,
+          fechaRegistro: ejecucion.fechaRegistro,
+        })),
+      ),
+      proximaAplicacion: proximaAplicacion(programacion, registros),
       aplicaciones: registros,
     };
   }
@@ -1294,24 +1508,6 @@ export class Tratamientos implements OnInit, OnDestroy {
     if (tipo === 'DOSIS_UNICA') return 'unica';
     if (tipo === 'TIEMPO_INDEFINIDO') return 'indefinida';
     return 'dias';
-  }
-
-  /** Primera aplicación sin registro, o null si ya están todas. */
-  private siguientePendiente(indicacion: IndicacionConProgramacion): Date | null {
-    const programacion = this.programacionDeVista(indicacion);
-    const programadas =
-      indicacion.duracionTipo === 'indefinida'
-        ? calcularAplicaciones(programacion, new Date())
-        : calcularAplicaciones(programacion);
-
-    return (
-      programadas.find(
-        (aplicacion) =>
-          !indicacion.aplicaciones.some((registro) =>
-            this.mismaFecha(registro.fechaHoraProgramada, aplicacion.fechaHora),
-          ),
-      )?.fechaHora ?? null
-    );
   }
 
   /** Compara dos fechas por minuto para emparejar la programación con los registros. */

@@ -43,6 +43,12 @@
   overflow: hidden;
 }
 
+/* El formulario de registro se muestra completo, sin scroll interno; los botones quedan a la vista */
+.contenido-procedimiento--registro {
+  max-height: none;
+  overflow: visible;
+}
+
 /* El formulario no lleva margen superior: el panel ya separa su contenido del borde */
 .contenido-procedimiento .indicacion-form {
   margin-top: 0;
@@ -163,6 +169,7 @@
 
 .recurso-item_tipo {
   margin-right: 0.35rem;
+  font-size: 0.85rem;
 }
 
 .recurso-seleccionado_nombre {
@@ -230,14 +237,14 @@
 .recurso-item_nombre {
   min-width: 0;
   color: #101828;
-  font-size: 0.92rem;
+  font-size: 1rem;
   font-weight: 600;
   overflow-wrap: anywhere;
 }
 
 .recurso-item_cantidad {
   color: var(--azulPrincipal);
-  font-size: 0.95rem;
+  font-size: 1rem;
   font-weight: 700;
 }
 
@@ -251,7 +258,7 @@
   border-radius: 50%;
   background: #fff;
   color: #ed1a0f;
-  font-size: 13px;
+  font-size: 15px;
   cursor: pointer;
   transition:
     color 0.2s ease,
@@ -280,11 +287,13 @@
   align-items: center;
   gap: 1rem;
   margin: 0;
-  color: #5b6b85;
-  font-size: 0.92rem;
+  color: #334155;
+  font-size: 1rem;
+  font-weight: 500;
 
   i {
     color: var(--azulSecundario);
+    font-size: 1.1rem;
   }
 
   span {
@@ -298,15 +307,23 @@
 .procedimiento-detalle_texto {
   margin: 0;
   color: #1f2f45;
-  font-size: 1rem;
-  line-height: 1.5;
+  font-size: 1.06rem;
+  font-weight: 500;
+  line-height: 1.55;
 }
 
 .procedimiento-detalle_subtitulo {
-  margin: 0.75rem 0 0;
+  margin: 0.85rem 0 0;
   color: var(--azulSecundario);
-  font-size: 1rem;
+  font-size: 1.08rem;
   font-weight: 700;
+}
+
+/* El estado vacío del panel también se lee con el mismo tamaño del detalle */
+.panel-recursos .indicacion-vacio {
+  color: #475569;
+  font-size: 1rem;
+  font-weight: 500;
 }
 
 /* ==================== RESPONSIVIDAD ==================== */

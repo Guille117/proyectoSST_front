@@ -303,18 +303,18 @@
         </div>
 
         <!-- Acciones del formulario: constancia a la izquierda y acciones del registro a la derecha -->
-        @if (!soloLectura) {
+        @if (!soloLectura || puedeAnularAlta) {
         <div class="acciones-formulario egreso-acciones">
-          @if (esRetiroVoluntario || altaExistente) {
+          @if ((!soloLectura && esRetiroVoluntario) || puedeAnularAlta) {
             <div class="egreso-acciones-grupo egreso-acciones-grupo--izquierda">
-              @if (esRetiroVoluntario) {
+              @if (!soloLectura && esRetiroVoluntario) {
                 <!-- Acción pendiente: generará la constancia del retiro voluntario -->
                 <button type="button" class="btn _azulsecundario">
                   Generar constancia de retiro
                 </button>
               }
 
-              @if (altaExistente) {
+              @if (puedeAnularAlta) {
                 <button
                   type="button"
                   class="btn _eliminar"
@@ -327,6 +327,7 @@
             </div>
           }
 
+          @if (!soloLectura) {
           <div class="egreso-acciones-grupo">
             <button
               type="button"
@@ -348,6 +349,7 @@
 
             <button type="submit" class="btn _guardar" [disabled]="!puedeGuardar">Guardar</button>
           </div>
+          }
         </div>
         }
         </form>

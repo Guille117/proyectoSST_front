@@ -41,7 +41,7 @@
       </div>
     </div>
 
-    <!-- Fecha y hora de inicio del cuidado -->
+    <!-- Fecha de inicio, duración y tipo de duración: la vigencia del cuidado en una sola fila -->
     <div class="indicacion-fila">
       <div class="indicacion-campo">
         <label class="indicacion-etiqueta" for="fechaInicioCuidado">
@@ -56,10 +56,7 @@
           [(ngModel)]="fechaInicioCuidado"
         />
       </div>
-    </div>
 
-    <!-- Duración, tipo de duración y observaciones: misma fila del registro de medicamentos -->
-    <div class="indicacion-fila">
       <div class="indicacion-campo">
         <label class="indicacion-etiqueta" for="duracionCuidado">
           Duración
@@ -97,8 +94,11 @@
           }
         </select>
       </div>
+    </div>
 
-      <div class="indicacion-campo">
+    <!-- Observaciones del cuidado: ocupan su propia fila completa -->
+    <div class="indicacion-fila">
+      <div class="indicacion-campo indicacion-campo--completo">
         <label class="indicacion-etiqueta" for="observacionesCuidado">Observaciones</label>
         <textarea
           class="indicacion-input indicacion-textarea"
@@ -234,35 +234,41 @@
                   <table class="registros-tabla" aria-label="Registros de Enfermería">
                     <thead>
                       <tr>
-                        <th>No.</th>
                         <th>Programada</th>
                         <th>Registrada</th>
-                        <th>Estado</th>
+                        <th class="registros-tabla_estado celda_centrada">Estado</th>
                         <th>Enfermera</th>
-                        <th>Observación</th>
                       </tr>
                     </thead>
                     <tbody>
                       @for (registro of registrosDe(cuidado.id); track registro.id) {
-                        <tr>
-                          <td>{{ registro.numero }}</td>
+                        <tr
+                          (mouseenter)="mostrarObservacion($event, registro.observacion)"
+                          (mousemove)="moverObservacion($event)"
+                          (mouseleave)="ocultarObservacion()"
+                        >
                           <td>{{ registro.fechaHoraProgramada }}</td>
                           <td>{{ registro.fechaRegistro }}</td>
-                          <td
-                            [class.registro-positivo]="registro.esPositivo"
-                            [class.registro-negativo]="!registro.esPositivo"
-                          >
-                            {{ registro.estado }}
+                          <td class="registros-tabla_estado celda_centrada">
+                            <i
+                              class="bi"
+                              [class.bi-check-circle-fill]="registro.esPositivo"
+                              [class.bi-x-circle-fill]="!registro.esPositivo"
+                              [class.registro-positivo]="registro.esPositivo"
+                              [class.registro-negativo]="!registro.esPositivo"
+                              role="img"
+                              [attr.aria-label]="registro.estado"
+                              [attr.title]="registro.estado"
+                            ></i>
                           </td>
                           <td>{{ registro.usuario }}</td>
-                          <td>{{ registro.observacion || '---' }}</td>
                         </tr>
                       }
                     </tbody>
                   </table>
                 </div>
               } @else {
-                <p class="indicacion-vacio">La enfermera aún no ha registrado ejecuciones.</p>
+                <p class="indicacion-vacio">Enfermería no ha registrado ejecuciones.</p>
               }
             </div>
           }
@@ -312,3 +318,14 @@
     }
   </div>
 </section>
+
+@if (observacionPopup; as popup) {
+  <div
+    class="observacion-popup"
+    role="tooltip"
+    [style.left.px]="popup.x"
+    [style.top.px]="popup.y"
+  >
+    <strong>Observación:</strong> {{ popup.texto }}
+  </div>
+}

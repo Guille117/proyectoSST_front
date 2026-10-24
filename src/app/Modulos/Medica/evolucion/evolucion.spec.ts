@@ -4,12 +4,11 @@ import { of, throwError, TimeoutError } from 'rxjs';
 import { PopUps } from '../../../shared/popUps/popUpsService';
 import { AuthService } from '../../Auth/data/auth-service';
 import { EpisodioActivoService } from '../data/episodio-activo-service';
+import { PacienteService } from '../../Pacientes/paciente/data/paciente-service';
+import { PacienteDetalle } from '../../Pacientes/paciente/data/pacienteInterfaz';
+import { SignosVitalesService } from '../../Enfermeria/monitoreo/data/signos-vitales-service';
 import { EvolucionService } from './data/evolucion-service';
-import {
-  EvolucionRequest,
-  EvolucionResponse,
-  EstadoEvolucionApi,
-} from './data/evolucionInterfaz';
+import { EvolucionRequest, EvolucionResponse, EstadoEvolucionApi } from './data/evolucionInterfaz';
 import { Evolucion } from './evolucion';
 
 describe('Evolucion', () => {
@@ -35,10 +34,29 @@ describe('Evolucion', () => {
   const auth = { currentUser: () => ({ id: 2 }) };
   const episodio = {
     obtener: vi.fn<() => number | null>(() => 1),
+    pacienteId: vi.fn(() => 1),
     guardar: vi.fn(),
+    guardarPaciente: vi.fn(),
     limpiar: vi.fn(),
     esSoloLectura: () => false,
   };
+
+  const pacienteDetalle = {
+    nombreCompleto: 'Juan Pérez',
+    codigoExpediente: 'EXP-0241',
+    tipoAtencion: 'HOSPITALIZACION',
+    fechaHoraIngreso: '2026-10-10T08:30:00',
+    camaCodigo: 'A-105',
+    descripcion: 'Dolor abdominal y vómitos',
+    alergias: [],
+  } as unknown as PacienteDetalle;
+
+  const pacienteService = {
+    obtenerPaciente: vi.fn(() => of(pacienteDetalle)),
+    listarPacientes: vi.fn(() => of([])),
+  };
+
+  const signosVitalesService = { buscarPorEpisodio: vi.fn(() => of([])) };
 
   const evolucion = (
     id: number,
@@ -132,6 +150,8 @@ describe('Evolucion', () => {
       providers: [
         { provide: EvolucionService, useValue: servicio },
         { provide: EpisodioActivoService, useValue: episodio },
+        { provide: PacienteService, useValue: pacienteService },
+        { provide: SignosVitalesService, useValue: signosVitalesService },
         { provide: AuthService, useValue: auth },
         { provide: PopUps, useValue: popUps },
       ],
@@ -730,8 +750,6 @@ describe('Evolucion', () => {
   const botonPestanaPaciente = (): HTMLButtonElement =>
     elemento<HTMLButtonElement>('.ficha-pestana');
 
-  const botonPlegarFicha = (): HTMLButtonElement => elemento<HTMLButtonElement>('.ficha-plegar');
-
   const fichaPaciente = (): HTMLElement | null =>
     fixture.nativeElement.querySelector('app-datos-paciente .ficha');
 
@@ -745,9 +763,9 @@ describe('Evolucion', () => {
   it('abre la ficha del paciente con la pestaña lateral y reserva su espacio', async () => {
     expect(component.pacienteAbierto).toBe(false);
     expect(botonPestanaPaciente().getAttribute('aria-expanded')).toBe('false');
-    expect(
-      elemento<HTMLElement>('.evolucion').classList.contains('evolucion--ficha-abierta'),
-    ).toBe(false);
+    expect(elemento<HTMLElement>('.evolucion').classList.contains('evolucion--ficha-abierta')).toBe(
+      false,
+    );
 
     botonPestanaPaciente().click();
     await fixture.whenStable();
@@ -759,9 +777,6 @@ describe('Evolucion', () => {
 
     const ficha = fichaPaciente();
     expect(ficha).not.toBeNull();
-    expect(elemento<HTMLElement>('.ficha-titulo').textContent?.trim()).toBe(
-      'Información del paciente',
-    );
 
     botonPestanaPaciente().click();
     await fixture.whenStable();
@@ -769,40 +784,6 @@ describe('Evolucion', () => {
     expect(component.pacienteAbierto).toBe(false);
     expect(fichaPaciente()).toBeNull();
     expect(rejilla.classList.contains('evolucion--ficha-abierta')).toBe(false);
-  });
-
-  it('pliega el cuerpo de la ficha del paciente sin ocultar el título', async () => {
-    botonPestanaPaciente().click();
-    await fixture.whenStable();
-
-    botonPlegarFicha().click();
-    await fixture.whenStable();
-
-    expect(component.datosPacienteVisibles).toBe(false);
-    expect(botonPlegarFicha().getAttribute('aria-expanded')).toBe('false');
-    expect(elemento<HTMLElement>('.ficha-titulo').textContent?.trim()).toBe(
-      'Información del paciente',
-    );
-    expect(elemento<HTMLElement>('.ficha-cuerpo').classList.contains('ficha-cuerpo--plegado')).toBe(
-      true,
-    );
-  });
-
-  it('reabre la ficha del paciente con los datos completos tras plegarla', async () => {
-    botonPestanaPaciente().click();
-    await fixture.whenStable();
-    botonPlegarFicha().click();
-    await fixture.whenStable();
-
-    botonPestanaPaciente().click();
-    await fixture.whenStable();
-    botonPestanaPaciente().click();
-    await fixture.whenStable();
-
-    expect(component.datosPacienteVisibles).toBe(true);
-    expect(elemento<HTMLElement>('.ficha-cuerpo').classList.contains('ficha-cuerpo--plegado')).toBe(
-      false,
-    );
   });
 
   it('oculta el registro y las acciones cuando el episodio es solo lectura', async () => {

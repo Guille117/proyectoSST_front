@@ -157,6 +157,10 @@ export class ProcedimientoMedico implements OnInit, OnDestroy {
       this.filtroProcedimiento = 'realizados';
     }
 
+    // El formulario arranca con la fecha y hora actuales; el usuario puede cambiarlas.
+    this.inicio = this.fechaHoraActualLocal();
+    this.fin = this.fechaHoraActualLocal();
+
     this.cargarTiposProcedimiento();
     this.cargarProcedimientos();
   }
@@ -786,14 +790,25 @@ export class ProcedimientoMedico implements OnInit, OnDestroy {
     return texto.length === 16 ? `${texto}:00` : texto;
   }
 
-  /** Deja el formulario listo para un procedimiento nuevo. */
+  /** Deja el formulario listo para un procedimiento nuevo, con las fechas actuales. */
   private limpiarFormulario(): void {
     this.tipoProcedimiento = null;
     this.descripcion = '';
     this.resultado = '';
-    this.inicio = '';
-    this.fin = '';
+    this.inicio = this.fechaHoraActualLocal();
+    this.fin = this.fechaHoraActualLocal();
     this.procedimientoEnEdicion = null;
+  }
+
+  /** Fecha y hora actuales en el formato que espera el input datetime-local. */
+  private fechaHoraActualLocal(): string {
+    const ahora = new Date();
+    const dosDigitos = (valor: number): string => `${valor}`.padStart(2, '0');
+
+    return (
+      `${ahora.getFullYear()}-${dosDigitos(ahora.getMonth() + 1)}-${dosDigitos(ahora.getDate())}` +
+      `T${dosDigitos(ahora.getHours())}:${dosDigitos(ahora.getMinutes())}`
+    );
   }
 
   /** Limpia la búsqueda y la lista de recursos del procedimiento actual. */

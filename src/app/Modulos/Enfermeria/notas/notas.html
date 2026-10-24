@@ -1,9 +1,21 @@
 <!-- Notas de enfermería: editor de la nota e historial de notas registradas -->
-<div class="notas">
+<div class="notas" [class.notas--ficha-abierta]="pacienteAbierto">
+  <!-- Datos del paciente: bloque compartido con el módulo Médico, pegado al borde derecho -->
+  <app-datos-paciente
+    [plegable]="true"
+    [abierto]="pacienteAbierto"
+    (abiertoCambia)="cambiarFichaPaciente($event)"
+    [cuerpoVisible]="datosPacienteVisibles"
+    (cuerpoVisibleCambia)="datosPacienteVisibles = $event"
+  ></app-datos-paciente>
+
   <!-- Editor de la nota -->
   <section class="panel panel-editor" aria-labelledby="tituloEditorNotas">
     <h3 class="panel-titulo notas-titulo" id="tituloEditorNotas">{{ tituloEditor }}</h3>
 
+    @if (soloLectura) {
+      <p class="notas-vacio">El episodio está cerrado. Solo se puede consultar.</p>
+    } @else {
     <form class="nota-form" (ngSubmit)="guardarNota()">
       <textarea
         class="nota-textarea"
@@ -22,6 +34,7 @@
         <button type="submit" class="btn _guardar" [disabled]="!puedeGuardar">Guardar</button>
       </div>
     </form>
+    }
   </section>
 
   <!-- Historial de notas -->
@@ -46,17 +59,19 @@
           <header class="indicacion-encabezado">
             <span class="indicacion-nombre">Nota de enfermería</span>
 
-            <button
-              type="button"
-              class="indicacion-menu-trigger"
-              title="Más opciones"
-              aria-haspopup="menu"
-              [attr.aria-label]="'Más opciones para la nota de las ' + nota.hora"
-              [attr.aria-expanded]="menuNotaAbierta === nota.id"
-              (click)="alternarMenuNota(nota.id)"
-            >
-              <i class="bi bi-three-dots-vertical" aria-hidden="true"></i>
-            </button>
+            @if (!soloLectura) {
+              <button
+                type="button"
+                class="indicacion-menu-trigger"
+                title="Más opciones"
+                aria-haspopup="menu"
+                [attr.aria-label]="'Más opciones para la nota de las ' + nota.hora"
+                [attr.aria-expanded]="menuNotaAbierta === nota.id"
+                (click)="alternarMenuNota(nota.id)"
+              >
+                <i class="bi bi-three-dots-vertical" aria-hidden="true"></i>
+              </button>
+            }
           </header>
 
           <p class="indicacion-observaciones">{{ nota.texto }}</p>
@@ -68,7 +83,7 @@
           </footer>
 
           <!-- Menú de opciones de la nota -->
-          @if (menuNotaAbierta === nota.id) {
+          @if (menuNotaAbierta === nota.id && !soloLectura) {
             <div
               class="indicacion-menu"
               role="menu"

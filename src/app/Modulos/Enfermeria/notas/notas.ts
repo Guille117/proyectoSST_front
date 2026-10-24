@@ -9,6 +9,7 @@ import { FormsModule } from '@angular/forms';
 import { finalize, Subscription, TimeoutError } from 'rxjs';
 import { PopUps } from '../../../shared/popUps/popUpsService';
 import { AuthService } from '../../Auth/data/auth-service';
+import { DatosPaciente } from '../../Medica/datos-paciente/datos-paciente';
 import { EpisodioActivoService } from '../../Medica/data/episodio-activo-service';
 import {
   NotaEnfermeriaRequest,
@@ -31,7 +32,7 @@ interface NotaEnfermeriaVista {
  */
 @Component({
   selector: 'app-notas-enfermeria',
-  imports: [FormsModule],
+  imports: [FormsModule, DatosPaciente],
   templateUrl: './notas.html',
   styleUrl: './notas.scss',
   host: {
@@ -48,6 +49,12 @@ export class Notas implements OnInit, OnDestroy {
   private peticionLista?: Subscription;
   private peticionAccion?: Subscription;
   private destruido = false;
+
+  /** La ficha con los datos del paciente está desplegada; la abre su pestaña lateral. */
+  pacienteAbierto = false;
+
+  /** El cuerpo de la ficha del paciente está desplegado; el chevron de su encabezado lo pliega. */
+  datosPacienteVisibles = true;
 
   /** Texto que se está capturando en el editor. */
   textoNota = '';
@@ -78,6 +85,18 @@ export class Notas implements OnInit, OnDestroy {
     this.peticionAccion?.unsubscribe();
   }
 
+  /**
+   * Abre o cierra la ficha del paciente. Al desplegarla se muestra también su cuerpo para que el
+   * usuario vea los datos completos de contexto.
+   */
+  cambiarFichaPaciente(abierto: boolean): void {
+    this.pacienteAbierto = abierto;
+
+    if (abierto) {
+      this.datosPacienteVisibles = true;
+    }
+  }
+
   /** El episodio es un historial cerrado: se consulta, pero no se registran cambios. */
   get soloLectura(): boolean {
     return this.episodioActivo.esSoloLectura();
@@ -85,7 +104,7 @@ export class Notas implements OnInit, OnDestroy {
 
   /** El editor puede guardar cuando la nota tiene texto. */
   get puedeGuardar(): boolean {
-    return !this.guardando && this.textoNota.trim().length > 0;
+    return !this.soloLectura && !this.guardando && this.textoNota.trim().length > 0;
   }
 
   /** Título del editor según se registre una nota nueva o se edite una existente. */
@@ -191,7 +210,7 @@ export class Notas implements OnInit, OnDestroy {
 
   /** Carga en el editor la nota elegida para corregirla. */
   editarNota(nota: NotaEnfermeriaVista): void {
-    if (this.guardando || this.eliminando) return;
+    if (this.soloLectura || this.guardando || this.eliminando) return;
 
     this.notaEnEdicion = nota.id;
     this.textoNota = nota.texto;
@@ -200,7 +219,7 @@ export class Notas implements OnInit, OnDestroy {
 
   /** Elimina la nota del backend. */
   eliminarNota(nota: NotaEnfermeriaVista): void {
-    if (this.eliminando) return;
+    if (this.soloLectura || this.eliminando) return;
 
     this.eliminando = true;
     this.cdr.markForCheck();
@@ -233,6 +252,8 @@ export class Notas implements OnInit, OnDestroy {
 
   /** Muestra u oculta el menú de opciones de la nota pulsada. */
   alternarMenuNota(id: number): void {
+    if (this.soloLectura) return;
+
     this.menuNotaAbierta = this.menuNotaAbierta === id ? null : id;
   }
 

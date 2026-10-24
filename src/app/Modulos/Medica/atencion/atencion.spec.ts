@@ -4,7 +4,9 @@ import { of, Subject, throwError } from 'rxjs';
 
 import { Atencion } from './atencion';
 import { PacienteService } from '../../Pacientes/paciente/data/paciente-service';
-import { PacienteResumido } from '../../Pacientes/paciente/data/pacienteInterfaz';
+import { PacienteDetalle, PacienteResumido } from '../../Pacientes/paciente/data/pacienteInterfaz';
+import { SignosVitalesService } from '../../Enfermeria/monitoreo/data/signos-vitales-service';
+import { SignosVitalesResponse } from '../../Enfermeria/monitoreo/data/signosVitalesInterfaz';
 import { AltaService } from '../alta/data/alta-service';
 import { EpisodioActivoService } from '../data/episodio-activo-service';
 import { PopUps } from '../../../shared/popUps/popUpsService';
@@ -83,6 +85,79 @@ describe('Atencion', () => {
     estado: true,
   };
 
+  const detallePaciente: PacienteDetalle = {
+    pacienteId: 1,
+    codigoExpediente: 'EXP-001',
+    nombreCompleto: 'Juan Pérez',
+    nombres: 'Juan',
+    apellidos: 'Pérez',
+    cui: '1234567890123',
+    fechaNacimiento: '1981-01-01',
+    edad: 45,
+    sexo: 'MASCULINO',
+    telefono: '70000001',
+    email: null,
+    estadoCivil: 'CASADO',
+    direccion: 'Casa',
+    ocupacion: 'Comerciante',
+    estado: true,
+    episodioId: 101,
+    tipoAtencion: 'HOSPITALIZACION',
+    descripcion: 'Gastroenteritis aguda',
+    fechaHoraIngreso: '2026-10-10T08:30:00',
+    medicoId: 5,
+    medicoNombre: 'Dr. Juan Pérez',
+    camaId: 70,
+    camaCodigo: 'A-105',
+    responsable: {
+      id: 40,
+      cui: '9876543210123',
+      nombres: 'Rosa',
+      apellidos: 'Pérez',
+      fechaNacimiento: '1970-01-01',
+      sexo: 'FEMENINO',
+      telefono: '87654321',
+      parentescoId: 7,
+      parentescoNombre: 'Madre',
+      direccion: 'Casa',
+    },
+    referencia: null,
+    alergias: [{ id: 2, nombre: 'Penicilina' }],
+    enfermedades: [{ id: 1, nombre: 'Diabetes' }],
+  };
+
+  const detalleDe = (pacienteId: number): PacienteDetalle => {
+    const resumen = pacientes.find((item) => item.pacienteId === pacienteId);
+
+    return {
+      ...detallePaciente,
+      pacienteId,
+      codigoExpediente: resumen?.codigoExpediente ?? detallePaciente.codigoExpediente,
+      nombreCompleto: resumen?.nombreCompleto ?? detallePaciente.nombreCompleto,
+      sexo: resumen?.sexo ?? detallePaciente.sexo,
+      episodioId: resumen?.episodioId ?? detallePaciente.episodioId,
+      tipoAtencion: resumen?.tipoTratamiento ?? detallePaciente.tipoAtencion,
+      camaCodigo: resumen?.tipoTratamiento === 'EMERGENCIA' ? null : detallePaciente.camaCodigo,
+      medicoNombre: pacienteId === 1 ? 'Dr. Juan Pérez' : 'Dr. Carlos Ruiz',
+    };
+  };
+
+  const signoVital: SignosVitalesResponse = {
+    id: 1,
+    sistolica: 120,
+    diastolica: 80,
+    frecuenciaCardiaca: 82,
+    frecuenciaRespiratoria: 18,
+    temperatura: 37.2,
+    saturacion: 97,
+    observacion: null,
+    episodioId: 101,
+    usuarioId: 5,
+    usuarioNombre: 'Enf. Ana López',
+    fecha: '2026-10-10T09:00:00',
+    eliminado: false,
+  };
+
   const altaReciente = {
     altaId: 1,
     tipoAlta: 'INDICACION_MEDICA',
@@ -107,10 +182,15 @@ describe('Atencion', () => {
     edad: 61,
   };
 
-  const servicio = { listarPacientes: vi.fn() };
+  const servicio = {
+    listarPacientes: vi.fn(),
+    obtenerPaciente: vi.fn((pacienteId: number) => of(detalleDe(pacienteId))),
+  };
+  const servicioSignos = { buscarPorEpisodio: vi.fn(() => of([signoVital])) };
   const servicioAltas = { recientes: vi.fn(() => of([altaReciente])) };
   const episodioActivo = {
     guardar: vi.fn(),
+    guardarPaciente: vi.fn(),
     limpiar: vi.fn(),
     obtener: vi.fn(),
     esSoloLectura: () => false,
@@ -127,12 +207,15 @@ describe('Atencion', () => {
     vi.resetAllMocks();
     respuesta = new Subject<PacienteResumido[]>();
     servicio.listarPacientes.mockReturnValue(respuesta.asObservable());
+    servicio.obtenerPaciente.mockImplementation((pacienteId: number) => of(detalleDe(pacienteId)));
+    servicioSignos.buscarPorEpisodio.mockReturnValue(of([signoVital]));
     servicioAltas.recientes.mockReturnValue(of([altaReciente]));
 
     await TestBed.configureTestingModule({
       imports: [Atencion],
       providers: [
         { provide: PacienteService, useValue: servicio },
+        { provide: SignosVitalesService, useValue: servicioSignos },
         { provide: AltaService, useValue: servicioAltas },
         { provide: EpisodioActivoService, useValue: episodioActivo },
         { provide: PopUps, useValue: popUps },
@@ -211,6 +294,44 @@ describe('Atencion', () => {
     expect(pantalla).toContain('Últimos signos vitales');
   });
 
+  it('carga el detalle real del paciente y sus últimos signos vitales', async () => {
+    await render();
+
+    expect(servicio.obtenerPaciente).toHaveBeenCalledWith(1);
+    expect(servicioSignos.buscarPorEpisodio).toHaveBeenCalledWith(101);
+
+    const pantalla: string = fixture.nativeElement.textContent;
+    expect(pantalla).toContain('Dr. Juan Pérez');
+    expect(pantalla).toContain('A-105');
+    expect(pantalla).toContain('Gastroenteritis aguda');
+    expect(pantalla).toContain('Penicilina');
+    expect(pantalla).toContain('Diabetes');
+    expect(pantalla).toContain('120/80');
+    expect(pantalla).toContain('82');
+    expect(pantalla).toContain('37.2');
+    expect(pantalla).toContain('97');
+  });
+
+  it('avisa si falla el detalle y ofrece reintentar', async () => {
+    const registrado = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    servicio.obtenerPaciente.mockReturnValue(throwError(() => new Error('fallo del servidor')));
+
+    await render();
+
+    expect(fixture.nativeElement.textContent).toContain('fallo del servidor');
+    const reintentar = elemento<HTMLButtonElement>('.aviso-error .btns');
+    expect(reintentar).not.toBeNull();
+
+    servicio.obtenerPaciente.mockImplementation((pacienteId: number) => of(detalleDe(pacienteId)));
+    reintentar.click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(servicio.obtenerPaciente).toHaveBeenCalledTimes(2);
+    expect(fixture.nativeElement.textContent).toContain('Dr. Juan Pérez');
+    expect(registrado).toHaveBeenCalled();
+  });
+
   it('lista los pacientes recibidos y titula los filtros sin contadores', async () => {
     await render();
 
@@ -265,7 +386,7 @@ describe('Atencion', () => {
     expect(pantalla).toContain('Alta médica');
     expect(pantalla).toContain('Mejorado');
     expect(pantalla).toContain('Control en 7 días');
-    expect(elemento<HTMLElement>('.seleccionado-acciones ._guardar')?.textContent).toContain(
+    expect(elemento<HTMLElement>('.acciones ._guardar')?.textContent).toContain(
       'Abrir último episodio',
     );
 
@@ -306,12 +427,10 @@ describe('Atencion', () => {
 
     expect(tarjetas().length).toBe(1);
     expect(fixture.nativeElement.textContent).toContain('EXP-005');
-    expect(elemento<HTMLElement>('.seleccionado-acciones')?.textContent).toContain(
-      'Abrir último episodio',
-    );
+    expect(elemento<HTMLElement>('.acciones')?.textContent).toContain('Abrir último episodio');
 
     const navegar = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
-    elemento<HTMLButtonElement>('.seleccionado-acciones ._guardar').click();
+    elemento<HTMLButtonElement>('.acciones ._guardar').click();
     await fixture.whenStable();
 
     expect(episodioActivo.guardar).toHaveBeenCalledWith(201, true);
@@ -328,7 +447,7 @@ describe('Atencion', () => {
     // La emergencia no muestra destino: ni box en la tarjeta ni dato de cama en el detalle
     expect(fixture.nativeElement.textContent).not.toContain('Box');
     expect(elementos<HTMLElement>('.paciente-ubicacion').length).toBe(2);
-    expect(elementos<HTMLElement>('.seleccionado-datos .dato').length).toBe(2);
+    expect(elementos<HTMLElement>('.bloque-atencion .dato').length).toBe(3);
   });
 
   it('busca pacientes por el nombre escrito en el buscador', async () => {
@@ -352,6 +471,16 @@ describe('Atencion', () => {
 
     expect(episodioActivo.guardar).toHaveBeenCalledWith(101);
     expect(navegar).toHaveBeenCalledWith(['/medica', 'evaluacion']);
+  });
+
+  it('abre el expediente del paciente seleccionado', async () => {
+    await render();
+
+    const navegar = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+
+    component.abrirExpediente();
+
+    expect(navegar).toHaveBeenCalledWith(['/expediente', 1]);
   });
 
   // La pantalla sigue la referencia de diseño: los pacientes se reparten en una matriz de tarjetas
@@ -437,13 +566,13 @@ describe('Atencion', () => {
 
     // Emergencia: ni box en la tarjeta ni dato de cama en el detalle
     expect(dibujadas[1].querySelector('.paciente-ubicacion')).toBeNull();
-    expect(elementos<HTMLElement>('.seleccionado-datos .dato').length).toBe(3);
+    expect(elementos<HTMLElement>('.bloque-atencion .dato').length).toBe(4);
 
     dibujadas[1].click();
     fixture.detectChanges();
 
-    expect(elementos<HTMLElement>('.seleccionado-datos .dato').length).toBe(2);
-    expect(elemento<HTMLElement>('.seleccionado-datos').textContent).not.toContain('Cama');
+    expect(elementos<HTMLElement>('.bloque-atencion .dato').length).toBe(3);
+    expect(elemento<HTMLElement>('.bloque-atencion').textContent).not.toContain('Cama');
     expect(elementos<HTMLElement>('.paciente-ubicacion').length).toBe(2);
   });
 
@@ -460,70 +589,31 @@ describe('Atencion', () => {
     expect(base).toContain('color:var(--azulSecundario)');
   });
 
-  it('presenta el detalle del paciente en bloques y con los datos en columnas', async () => {
+  it('presenta el detalle con la estructura del módulo de pacientes', async () => {
     await render();
 
-    // La identificación del paciente va en un bloque destacado con su nombre y su expediente
-    const cabecera = elemento<HTMLElement>('.seleccionado-cabecera');
-    expect(getComputedStyle(cabecera).backgroundColor).toBe('rgb(238, 245, 255)');
-    expect(cabecera.querySelector('.seleccionado-nombre')?.textContent).toContain('Juan Pérez');
-    expect(cabecera.querySelector('.atencion-estado')).toBeNull();
-    expect(cabecera.querySelector('.seleccionado-meta')?.textContent).toContain(
-      'EXP-001 | 45 años | Masculino',
+    const identidad = elemento<HTMLElement>('.panel-seleccionado .paciente');
+    expect(identidad.querySelector('h2')?.textContent).toContain('Juan Pérez');
+    expect(identidad.querySelector('.paciente-meta')?.textContent).toContain(
+      'EXP-001|45 años|Masculino',
     );
+    expect(identidad.querySelector('.estado')?.textContent).toContain('Activo');
 
-    // Los datos de la atención van en una rejilla de columnas que se ajusta al número de datos, con el
-    // rótulo sobre el valor
-    const datos = elemento<HTMLElement>('.seleccionado-datos');
-    expect(getComputedStyle(datos).display).toBe('grid');
-    expect(estilos()).toContain('grid-template-columns:repeat(auto-fit,minmax(96px,1fr))');
-    expect(elementos<HTMLElement>('.dato').length).toBe(3);
-    expect(getComputedStyle(elemento<HTMLElement>('.dato')).flexDirection).toBe('column');
-
-    // Los cuatro signos vitales comparten un recuadro, con la unidad bajo el valor
-    const vitales = elemento<HTMLElement>('.seleccionado-vitales');
-    expect(getComputedStyle(vitales).gridTemplateColumns).toContain('repeat(4');
-    expect(vitales.querySelectorAll('.vital').length).toBe(4);
-    expect(getComputedStyle(elemento<HTMLElement>('.vital-unidad')).display).toBe('block');
-
-    // El diagnóstico y la alergia se distinguen por el color de su bloque
-    expect(
-      getComputedStyle(elemento<HTMLElement>('.seleccionado-diagnostico')).backgroundColor,
-    ).toBe('rgb(238, 245, 255)');
-    expect(getComputedStyle(elemento<HTMLElement>('.seleccionado-alergias')).backgroundColor).toBe(
-      'rgba(34, 197, 94, 0.14)',
-    );
-
-    // Los encabezados de cada bloque se separan del contenido con una línea
-    expect(
-      getComputedStyle(elemento<HTMLElement>('.seleccionado-subtitulo')).borderBottomWidth,
-    ).toBe('1px');
-    expect(elemento<HTMLElement>('#tituloSeleccionado').textContent).toContain(
-      'Información del paciente seleccionado',
-    );
+    expect(elementos<HTMLElement>('.bloques-paralelos').length).toBe(2);
+    expect(elementos<HTMLElement>('.bloque--responsable').length).toBe(2);
+    expect(elemento<HTMLElement>('.motivo-visita')?.textContent).toContain('Gastroenteritis aguda');
+    expect(elemento<HTMLElement>('.bloque-alergias')?.textContent).toContain('Penicilina');
+    expect(elemento<HTMLElement>('.bloque-enfermedades')?.textContent).toContain('Diabetes');
+    expect(elemento<HTMLElement>('.signos-datos')?.textContent).toContain('120/80');
   });
 
-  it('deja las acciones del paciente a lo ancho del panel, con la flecha al final', async () => {
+  it('deja las acciones del paciente alineadas a la derecha', async () => {
     await render();
 
-    expect(getComputedStyle(elemento<HTMLElement>('.seleccionado-acciones')).flexDirection).toBe(
-      'column',
-    );
-
-    const principal = elemento<HTMLButtonElement>('.seleccionado-acciones ._principal');
-    expect(principal.textContent).toContain('Abrir episodio');
-    expect(getComputedStyle(principal).width).toBe('100%');
-    expect(getComputedStyle(principal).height).toBe('46px');
-
-    const flecha = principal.querySelector('i') as HTMLElement;
-    expect(flecha.classList.contains('bi-arrow-right')).toBe(true);
-    expect(getComputedStyle(flecha).position).toBe('absolute');
-    expect(getComputedStyle(flecha).right).toBe('16px');
-
-    // El expediente queda como segunda acción del panel
-    expect(elemento<HTMLButtonElement>('.seleccionado-acciones ._cancelar').textContent).toContain(
-      'Abrir expediente',
-    );
+    const acciones = elemento<HTMLElement>('.acciones');
+    expect(acciones).not.toBeNull();
+    expect(acciones.textContent).toContain('Abrir expediente');
+    expect(acciones.textContent).toContain('Abrir episodio actual');
   });
 
   it('avisa del fallo y ofrece reintentar sin dejar la pantalla vacía', async () => {

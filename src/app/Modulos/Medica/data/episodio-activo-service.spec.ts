@@ -40,4 +40,16 @@ describe('EpisodioActivoService', () => {
     expect(servicio.obtener()).toBeNull();
     expect(servicio.esSoloLectura()).toBe(false);
   });
+
+  it('guarda y olvida el paciente del episodio activo', () => {
+    const servicio = new EpisodioActivoService();
+
+    servicio.guardarPaciente(7);
+
+    expect(servicio.pacienteId()).toBe(7);
+
+    servicio.limpiar();
+
+    expect(servicio.pacienteId()).toBeNull();
+  });
 });

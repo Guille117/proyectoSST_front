@@ -423,6 +423,44 @@ select.indicacion-input {
   text-align: center;
 }
 
+/* ==================== REGISTROS DE ENFERMERÍA ==================== */
+/* La tabla de registros no se comporta como un control clicable */
+.registros-tabla {
+  cursor: default;
+}
+
+.registros-tabla_estado {
+  width: 70px;
+}
+
+.registros-tabla_estado i {
+  font-size: 1.1rem;
+}
+
+.registros-tabla_estado .bi-check-circle-fill {
+  color: #15803d;
+}
+
+.registros-tabla_estado .bi-x-circle-fill {
+  color: #b42318;
+}
+
+/* Observación del registro que acompaña al puntero */
+.observacion-popup {
+  position: fixed;
+  z-index: 1200;
+  max-width: min(320px, calc(100vw - 2rem));
+  padding: 0.55rem 0.7rem;
+  border-radius: 8px;
+  background: #101828;
+  color: #fff;
+  font-size: 0.85rem;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.25);
+  pointer-events: none;
+}
+
 /* ==================== RESPONSIVIDAD ==================== */
 @media (max-width: 900px) {
   .indicacion-fila,

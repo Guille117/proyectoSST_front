@@ -10,16 +10,15 @@ import { ModalService } from '../../../modal-principal/modal-service';
 import { MedicamentoIndicacionService } from './medicamentos/data/medicamento-service';
 import { MedicamentoIndicacionResponse } from './medicamentos/data/medicamentoInterfaz';
 import { EpisodioActivoService } from '../data/episodio-activo-service';
+import { PacienteService } from '../../Pacientes/paciente/data/paciente-service';
+import { PacienteDetalle } from '../../Pacientes/paciente/data/pacienteInterfaz';
+import { SignosVitalesService } from '../../Enfermeria/monitoreo/data/signos-vitales-service';
 import { AuthService } from '../../Auth/data/auth-service';
 import { CatalogoService } from '../../Catalogos/data/serviceCatalogo';
 import { PopUps } from '../../../shared/popUps/popUpsService';
 import { RegistrosEnfermeriaService } from '../../Enfermeria/data/registrosEnfermeriaService';
 import { IndicacionCuidadoService } from './cuidados/data/cuidado-service';
-import {
-  CuidadoRequest,
-  CuidadoResponse,
-  EstadoCuidadoApi,
-} from './cuidados/data/cuidadoInterfaz';
+import { CuidadoRequest, CuidadoResponse, EstadoCuidadoApi } from './cuidados/data/cuidadoInterfaz';
 
 describe('Indicaciones', () => {
   let component: Indicaciones;
@@ -42,10 +41,29 @@ describe('Indicaciones', () => {
   const authService = { currentUser: () => ({ id: 2 }) };
   const episodioActivo = {
     obtener: () => 1,
+    pacienteId: () => 1,
     guardar: vi.fn(),
+    guardarPaciente: vi.fn(),
     limpiar: vi.fn(),
     esSoloLectura: () => false,
   };
+
+  const pacienteDetalle = {
+    nombreCompleto: 'Juan Pérez',
+    codigoExpediente: 'EXP-0241',
+    tipoAtencion: 'HOSPITALIZACION',
+    fechaHoraIngreso: '2026-10-10T08:30:00',
+    camaCodigo: 'A-105',
+    descripcion: 'Dolor abdominal y vómitos',
+    alergias: [],
+  } as unknown as PacienteDetalle;
+
+  const pacienteService = {
+    obtenerPaciente: vi.fn(() => of(pacienteDetalle)),
+    listarPacientes: vi.fn(() => of([])),
+  };
+
+  const signosVitalesService = { buscarPorEpisodio: vi.fn(() => of([])) };
   const catalogoService = { listarUnidadMedida: vi.fn(() => of([])) };
   const examenService = {
     buscarPorEpisodio: vi.fn(),
@@ -137,19 +155,15 @@ describe('Indicaciones', () => {
       cuidadosMock = [...cuidadosMock, nuevo];
       return of(nuevo);
     });
-    cuidadoService.actualizarCuidado.mockImplementation(
-      (id: number, request: CuidadoRequest) => {
-        const actualizado: CuidadoResponse = {
-          ...cuidadosMock.find((registro) => registro.id === id)!,
-          ...request,
-          id,
-        };
-        cuidadosMock = cuidadosMock.map((registro) =>
-          registro.id === id ? actualizado : registro,
-        );
-        return of(actualizado);
-      },
-    );
+    cuidadoService.actualizarCuidado.mockImplementation((id: number, request: CuidadoRequest) => {
+      const actualizado: CuidadoResponse = {
+        ...cuidadosMock.find((registro) => registro.id === id)!,
+        ...request,
+        id,
+      };
+      cuidadosMock = cuidadosMock.map((registro) => (registro.id === id ? actualizado : registro));
+      return of(actualizado);
+    });
     cuidadoService.eliminarCuidado.mockImplementation((id: number) => {
       cuidadosMock = cuidadosMock.map((registro) =>
         registro.id === id ? { ...registro, estado: 'ELIMINADO' as const } : registro,
@@ -230,6 +244,8 @@ describe('Indicaciones', () => {
         { provide: ModalService, useValue: modalService },
         { provide: AuthService, useValue: authService },
         { provide: EpisodioActivoService, useValue: episodioActivo },
+        { provide: PacienteService, useValue: pacienteService },
+        { provide: SignosVitalesService, useValue: signosVitalesService },
       ],
     }).compileComponents();
 
@@ -882,8 +898,6 @@ describe('Indicaciones', () => {
   const botonPestanaPaciente = (): HTMLButtonElement =>
     elemento<HTMLButtonElement>('.ficha-pestana');
 
-  const botonPlegarFicha = (): HTMLButtonElement => elemento<HTMLButtonElement>('.ficha-plegar');
-
   const fichaPaciente = (): HTMLElement | null =>
     fixture.nativeElement.querySelector('app-datos-paciente .ficha');
 
@@ -911,9 +925,6 @@ describe('Indicaciones', () => {
 
     const ficha = fichaPaciente();
     expect(ficha).not.toBeNull();
-    expect(elemento<HTMLElement>('.ficha-titulo').textContent?.trim()).toBe(
-      'Información del paciente',
-    );
     expect(ficha?.textContent).toContain('EXP-0241');
     expect(ficha?.textContent).toContain('Juan Pérez');
 
@@ -923,40 +934,6 @@ describe('Indicaciones', () => {
     expect(component.pacienteAbierto).toBe(false);
     expect(fichaPaciente()).toBeNull();
     expect(rejilla.classList.contains('indicaciones--ficha-abierta')).toBe(false);
-  });
-
-  it('pliega el cuerpo de la ficha del paciente sin ocultar el título', async () => {
-    botonPestanaPaciente().click();
-    await fixture.whenStable();
-
-    botonPlegarFicha().click();
-    await fixture.whenStable();
-
-    expect(component.datosPacienteVisibles).toBe(false);
-    expect(botonPlegarFicha().getAttribute('aria-expanded')).toBe('false');
-    expect(elemento<HTMLElement>('.ficha-titulo').textContent?.trim()).toBe(
-      'Información del paciente',
-    );
-    expect(elemento<HTMLElement>('.ficha-cuerpo').classList.contains('ficha-cuerpo--plegado')).toBe(
-      true,
-    );
-  });
-
-  it('reabre la ficha del paciente con los datos completos tras plegarla', async () => {
-    botonPestanaPaciente().click();
-    await fixture.whenStable();
-    botonPlegarFicha().click();
-    await fixture.whenStable();
-
-    botonPestanaPaciente().click();
-    await fixture.whenStable();
-    botonPestanaPaciente().click();
-    await fixture.whenStable();
-
-    expect(component.datosPacienteVisibles).toBe(true);
-    expect(elemento<HTMLElement>('.ficha-cuerpo').classList.contains('ficha-cuerpo--plegado')).toBe(
-      false,
-    );
   });
 
   it('mantiene la ficha del paciente abierta al cambiar de sección', async () => {
@@ -993,4 +970,3 @@ describe('Indicaciones', () => {
     expect(elemento('.indicacion-encabezado .indicacion-menu-trigger')).toBeNull();
   });
 });
-

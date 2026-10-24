@@ -1,5 +1,18 @@
 <!-- Tratamientos: rail de secciones, listado de indicaciones por estado y panel lateral -->
-<div class="tratamientos" [class.tratamientos--solicitud]="solicitandoMedicamento">
+<div
+  class="tratamientos"
+  [class.tratamientos--solicitud]="solicitandoMedicamento"
+  [class.tratamientos--ficha-abierta]="pacienteAbierto"
+>
+  <!-- Datos del paciente: bloque compartido con el módulo Médico, pegado al borde derecho -->
+  <app-datos-paciente
+    [plegable]="true"
+    [abierto]="pacienteAbierto"
+    (abiertoCambia)="cambiarFichaPaciente($event)"
+    [cuerpoVisible]="datosPacienteVisibles"
+    (cuerpoVisibleCambia)="datosPacienteVisibles = $event"
+  ></app-datos-paciente>
+
   <!-- Rail de secciones: medicamentos, exámenes y cuidados -->
   <section class="panel panel-secciones">
     <h3 class="panel-titulo">Tratamientos</h3>
@@ -246,7 +259,7 @@
         {{ seccionActual.titulo }} indicados
       </h3>
 
-      @if (seccionActiva === 'medicamentos' || seccionActiva === 'cuidados') {
+      @if (!soloLectura && (seccionActiva === 'medicamentos' || seccionActiva === 'cuidados')) {
         <button
           type="button"
           class="btn _principal tratamientos-solicitar"
@@ -281,11 +294,14 @@
     <div class="indicados-lista">
       @switch (seccionActiva) {
         @case ('medicamentos') {
-          @for (indicacion of medicamentosVisibles; track indicacion.id) {
+          @for (indicacion of medicamentosFiltrados; track indicacion.id) {
             <article
               class="indicacion-card indicacion-card--tratamiento"
               [class.indicacion-card--naranja]="indicacion.estado === 'pendiente'"
               [class.indicacion-card--verde]="indicacion.estado === 'realizada'"
+              [class.indicacion-card--seleccionada]="estaSeleccionada(indicacion.id)"
+              [attr.aria-current]="estaSeleccionada(indicacion.id) ? 'true' : null"
+              (click)="seleccionarIndicacion(indicacion.id)"
             >
               <div class="indicacion-contenido">
                 <!-- Lado izquierdo: medicamento, indicación y observación -->
@@ -293,6 +309,12 @@
                   <header class="indicacion-encabezado">
                     <div class="indicacion-nombre-grupo">
                       <span class="indicacion-nombre">{{ indicacion.nombre }}</span>
+                      @if (estaSeleccionada(indicacion.id)) {
+                        <span class="indicacion-badge-seleccionada">
+                          <i class="bi bi-check-circle-fill" aria-hidden="true"></i>
+                          Seleccionado
+                        </span>
+                      }
                       @if (indicacion.medicamentoLibre) {
                         <span class="indicacion-badge-no-registrado">
                           Medicamento no registrado
@@ -361,7 +383,7 @@
                       ? 'Ocultar aplicaciones'
                       : 'Mostrar aplicaciones'
                   "
-                  (click)="alternarAplicaciones(indicacion.id)"
+                  (click)="seleccionarIndicacion(indicacion.id); alternarAplicaciones(indicacion.id)"
                 >
                   <i
                     class="bi"
@@ -384,48 +406,64 @@
                       <th class="aplicaciones-tabla_numero" scope="col">No.</th>
                       <th class="aplicaciones-tabla_fecha" scope="col">Fecha programada</th>
                       <th class="aplicaciones-tabla_fecha" scope="col">Fecha de registro</th>
-                      <th scope="col">Estado</th>
+                      <th class="aplicaciones-tabla_estado celda_centrada" scope="col">Estado</th>
                       <th class="aplicaciones-tabla_usuario" scope="col">Usuario</th>
-                      <th scope="col">Observación</th>
-                      <th class="aplicaciones-tabla_acciones" scope="col">Acciones</th>
+                      @if (!soloLectura) {
+                        <th class="aplicaciones-tabla_acciones" scope="col">Acciones</th>
+                      }
                     </tr>
                   </thead>
 
                   <tbody>
                     @for (aplicacion of aplicacionesProgramadas(indicacion); track aplicacion.numero) {
-                      <tr>
+                      <tr
+                        (mouseenter)="mostrarObservacion($event, aplicacion.registro?.observacion)"
+                        (mousemove)="moverObservacion($event)"
+                        (mouseleave)="ocultarObservacion()"
+                      >
                         <td class="aplicaciones-tabla_numero">{{ aplicacion.numero }}</td>
                         <td class="aplicaciones-tabla_fecha">{{ aplicacion.fechaHora }}</td>
 
                         @if (aplicacion.registro; as registro) {
                           <td class="aplicaciones-tabla_fecha">{{ registro.fechaRegistro }}</td>
-                          <td>{{ textoEstadoRegistro(registro.estado) }}</td>
-                          <td>{{ registro.usuario }}</td>
-                          <td>{{ registro.observacion || '---' }}</td>
-                          <td class="aplicaciones-tabla_acciones">
-                            <div class="aplicaciones-acciones">
-                              <button
-                                type="button"
-                                class="aplicaciones-accion aplicaciones-accion--editar"
-                                title="Editar aplicación"
-                                [attr.aria-label]="'Editar la aplicación ' + aplicacion.numero"
-                                (click)="editarAplicacion(indicacion, registro)"
-                              >
-                                <i class="bi bi-pencil-square" aria-hidden="true"></i>
-                              </button>
-                              <button
-                                type="button"
-                                class="aplicaciones-accion aplicaciones-accion--eliminar"
-                                title="Eliminar aplicación"
-                                [attr.aria-label]="'Eliminar la aplicación ' + aplicacion.numero"
-                                (click)="eliminarAplicacion(indicacion, registro)"
-                              >
-                                <i class="bi bi-trash3" aria-hidden="true"></i>
-                              </button>
-                            </div>
+                          <td class="aplicaciones-tabla_estado celda_centrada">
+                            <i
+                              class="bi"
+                              [class.bi-check-circle-fill]="registro.estado === 'administrado'"
+                              [class.bi-x-circle-fill]="registro.estado !== 'administrado'"
+                              [class.registro-positivo]="registro.estado === 'administrado'"
+                              [class.registro-negativo]="registro.estado !== 'administrado'"
+                              role="img"
+                              [attr.aria-label]="textoEstadoRegistro(registro.estado)"
+                              [attr.title]="textoEstadoRegistro(registro.estado)"
+                            ></i>
                           </td>
+                          <td>{{ registro.usuario }}</td>
+                          @if (!soloLectura) {
+                            <td class="aplicaciones-tabla_acciones">
+                              <div class="aplicaciones-acciones">
+                                <button
+                                  type="button"
+                                  class="aplicaciones-accion aplicaciones-accion--editar"
+                                  title="Editar aplicación"
+                                  [attr.aria-label]="'Editar la aplicación ' + aplicacion.numero"
+                                  (click)="editarAplicacion(indicacion, registro)"
+                                >
+                                  <i class="bi bi-pencil-square" aria-hidden="true"></i>
+                                </button>
+                                <button
+                                  type="button"
+                                  class="aplicaciones-accion aplicaciones-accion--eliminar"
+                                  title="Eliminar aplicación"
+                                  [attr.aria-label]="'Eliminar la aplicación ' + aplicacion.numero"
+                                  (click)="eliminarAplicacion(indicacion, registro)"
+                                >
+                                  <i class="bi bi-trash3" aria-hidden="true"></i>
+                                </button>
+                              </div>
+                            </td>
+                          }
                         } @else {
-                          <td class="aplicaciones-tabla_pendiente">---</td>
                           <td class="aplicaciones-tabla_pendiente">---</td>
                           <td class="aplicaciones-tabla_pendiente">---</td>
                           <td class="aplicaciones-tabla_pendiente">---</td>
@@ -492,17 +530,28 @@
         }
 
         @case ('cuidados') {
-          @for (indicacion of cuidadosVisibles; track indicacion.id) {
+          @for (indicacion of cuidadosFiltrados; track indicacion.id) {
             <article
               class="indicacion-card indicacion-card--tratamiento"
               [class.indicacion-card--naranja]="indicacion.estado === 'pendiente'"
               [class.indicacion-card--verde]="indicacion.estado === 'realizada'"
+              [class.indicacion-card--seleccionada]="estaSeleccionada(indicacion.id)"
+              [attr.aria-current]="estaSeleccionada(indicacion.id) ? 'true' : null"
+              (click)="seleccionarIndicacion(indicacion.id)"
             >
               <div class="indicacion-contenido">
                 <!-- Lado izquierdo: cuidado, indicación y observación -->
                 <div class="indicacion-detalle">
                   <header class="indicacion-encabezado">
-                    <span class="indicacion-nombre">{{ indicacion.nombre }}</span>
+                    <div class="indicacion-nombre-grupo">
+                      <span class="indicacion-nombre">{{ indicacion.nombre }}</span>
+                      @if (estaSeleccionada(indicacion.id)) {
+                        <span class="indicacion-badge-seleccionada">
+                          <i class="bi bi-check-circle-fill" aria-hidden="true"></i>
+                          Seleccionado
+                        </span>
+                      }
+                    </div>
                   </header>
 
                   <ul class="indicacion-badges">
@@ -563,7 +612,7 @@
                       ? 'Ocultar aplicaciones'
                       : 'Mostrar aplicaciones'
                   "
-                  (click)="alternarAplicaciones(indicacion.id)"
+                  (click)="seleccionarIndicacion(indicacion.id); alternarAplicaciones(indicacion.id)"
                 >
                   <i
                     class="bi"
@@ -586,48 +635,64 @@
                       <th class="aplicaciones-tabla_numero" scope="col">No.</th>
                       <th class="aplicaciones-tabla_fecha" scope="col">Fecha programada</th>
                       <th class="aplicaciones-tabla_fecha" scope="col">Fecha de registro</th>
-                      <th scope="col">Estado</th>
+                      <th class="aplicaciones-tabla_estado celda_centrada" scope="col">Estado</th>
                       <th class="aplicaciones-tabla_usuario" scope="col">Usuario</th>
-                      <th scope="col">Observación</th>
-                      <th class="aplicaciones-tabla_acciones" scope="col">Acciones</th>
+                      @if (!soloLectura) {
+                        <th class="aplicaciones-tabla_acciones" scope="col">Acciones</th>
+                      }
                     </tr>
                   </thead>
 
                   <tbody>
                     @for (aplicacion of aplicacionesProgramadas(indicacion); track aplicacion.numero) {
-                      <tr>
+                      <tr
+                        (mouseenter)="mostrarObservacion($event, aplicacion.registro?.observacion)"
+                        (mousemove)="moverObservacion($event)"
+                        (mouseleave)="ocultarObservacion()"
+                      >
                         <td class="aplicaciones-tabla_numero">{{ aplicacion.numero }}</td>
                         <td class="aplicaciones-tabla_fecha">{{ aplicacion.fechaHora }}</td>
 
                         @if (aplicacion.registro; as registro) {
                           <td class="aplicaciones-tabla_fecha">{{ registro.fechaRegistro }}</td>
-                          <td>{{ textoEstadoRegistro(registro.estado) }}</td>
-                          <td>{{ registro.usuario }}</td>
-                          <td>{{ registro.observacion || '---' }}</td>
-                          <td class="aplicaciones-tabla_acciones">
-                            <div class="aplicaciones-acciones">
-                              <button
-                                type="button"
-                                class="aplicaciones-accion aplicaciones-accion--editar"
-                                title="Editar aplicación"
-                                [attr.aria-label]="'Editar la aplicación ' + aplicacion.numero"
-                                (click)="editarAplicacion(indicacion, registro)"
-                              >
-                                <i class="bi bi-pencil-square" aria-hidden="true"></i>
-                              </button>
-                              <button
-                                type="button"
-                                class="aplicaciones-accion aplicaciones-accion--eliminar"
-                                title="Eliminar aplicación"
-                                [attr.aria-label]="'Eliminar la aplicación ' + aplicacion.numero"
-                                (click)="eliminarAplicacion(indicacion, registro)"
-                              >
-                                <i class="bi bi-trash3" aria-hidden="true"></i>
-                              </button>
-                            </div>
+                          <td class="aplicaciones-tabla_estado celda_centrada">
+                            <i
+                              class="bi"
+                              [class.bi-check-circle-fill]="registro.estado === 'administrado'"
+                              [class.bi-x-circle-fill]="registro.estado !== 'administrado'"
+                              [class.registro-positivo]="registro.estado === 'administrado'"
+                              [class.registro-negativo]="registro.estado !== 'administrado'"
+                              role="img"
+                              [attr.aria-label]="textoEstadoRegistro(registro.estado)"
+                              [attr.title]="textoEstadoRegistro(registro.estado)"
+                            ></i>
                           </td>
+                          <td>{{ registro.usuario }}</td>
+                          @if (!soloLectura) {
+                            <td class="aplicaciones-tabla_acciones">
+                              <div class="aplicaciones-acciones">
+                                <button
+                                  type="button"
+                                  class="aplicaciones-accion aplicaciones-accion--editar"
+                                  title="Editar aplicación"
+                                  [attr.aria-label]="'Editar la aplicación ' + aplicacion.numero"
+                                  (click)="editarAplicacion(indicacion, registro)"
+                                >
+                                  <i class="bi bi-pencil-square" aria-hidden="true"></i>
+                                </button>
+                                <button
+                                  type="button"
+                                  class="aplicaciones-accion aplicaciones-accion--eliminar"
+                                  title="Eliminar aplicación"
+                                  [attr.aria-label]="'Eliminar la aplicación ' + aplicacion.numero"
+                                  (click)="eliminarAplicacion(indicacion, registro)"
+                                >
+                                  <i class="bi bi-trash3" aria-hidden="true"></i>
+                                </button>
+                              </div>
+                            </td>
+                          }
                         } @else {
-                          <td class="aplicaciones-tabla_pendiente">---</td>
                           <td class="aplicaciones-tabla_pendiente">---</td>
                           <td class="aplicaciones-tabla_pendiente">---</td>
                           <td class="aplicaciones-tabla_pendiente">---</td>
@@ -663,15 +728,38 @@
     </h3>
 
     @if (seccionActiva === 'medicamentos' || seccionActiva === 'cuidados') {
+      @if (soloLectura) {
+        <p class="tratamientos-vacio">El episodio está cerrado. Solo se puede consultar.</p>
+      } @else {
       <form class="administracion-form" (ngSubmit)="guardarAdministracion()">
         @if (!editandoAplicacion) {
-          <p class="tratamientos-vacio">
-            @if (indicacionParaRegistrar; as nombre) {
-              Registrando en: <strong>{{ nombre }}</strong>
-            } @else {
-              Abra una tarjeta del listado para elegir la indicación.
+          <div class="administracion-campo">
+            <label class="administracion-etiqueta" for="horaAdministracion">
+              {{
+                seccionActiva === 'cuidados'
+                  ? 'Fecha y hora de realización'
+                  : 'Fecha y hora de administración'
+              }}<span class="administracion-obligatorio" aria-hidden="true">*</span>
+            </label>
+            <select
+              class="administracion-input"
+              id="horaAdministracion"
+              name="horaAdministracion"
+              aria-required="true"
+              [(ngModel)]="horaAdministracion"
+            >
+              <option value="">Seleccionar...</option>
+              @for (hora of horasAdministracion; track hora.valor) {
+                <option [value]="hora.valor">{{ hora.numero }}. {{ hora.etiqueta }}</option>
+              }
+            </select>
+
+            @if (!horasAdministracion.length) {
+              <span class="administracion-ayuda">
+                No hay horas programadas pendientes para esta indicación.
+              </span>
             }
-          </p>
+          </div>
         }
 
         <!-- Estado de la administración -->
@@ -685,6 +773,7 @@
             name="estadoAdministracion"
             aria-required="true"
             [(ngModel)]="estadoAdministracion"
+            (ngModelChange)="alCambiarEstadoAdministracion($event)"
           >
             <option value="">Seleccionar...</option>
             @for (estado of opcionesEstadoRegistro; track estado.id) {
@@ -709,8 +798,9 @@
               min="1"
               step="1"
               inputmode="numeric"
-              placeholder="Ej. 1"
+              [placeholder]="esNoAdministrado ? 'No aplica' : 'Ej. 1'"
               [attr.aria-required]="!esNoAdministrado"
+              [disabled]="esNoAdministrado"
               [(ngModel)]="cantidadAdministrada"
             />
           </div>
@@ -743,8 +833,20 @@
           </button>
         </div>
       </form>
+      }
     } @else {
       <p class="tratamientos-vacio">Aún no hay registros para mostrar.</p>
     }
   </section>
+
+  @if (observacionPopup; as popup) {
+    <div
+      class="observacion-popup"
+      role="tooltip"
+      [style.left.px]="popup.x"
+      [style.top.px]="popup.y"
+    >
+      <strong>Observación:</strong> {{ popup.texto }}
+    </div>
+  }
 </div>

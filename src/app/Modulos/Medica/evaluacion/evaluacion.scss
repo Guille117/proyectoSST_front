@@ -1,4 +1,12 @@
 /* ==================== CONTENEDOR (SECCIONES / EXAMEN / HALLAZGOS) ==================== */
+/* La pantalla ocupa exactamente el alto disponible: los paneles se ajustan y nunca empujan el
+   documento para provocar el scroll del navegador. */
+:host {
+  display: block;
+  height: 100%;
+  min-height: 0;
+}
+
 /* Rejilla del área de trabajo. Las áreas con nombre fijan el orden visual de los paneles
    (secciones, examen, hallazgos) y cada pista flexible lleva mínimo 0 para que la rejilla
    pueda encogerse sin desbordar. */
@@ -9,10 +17,15 @@
   display: grid;
   grid-template-columns: auto minmax(0, 1.7fr) minmax(290px, 1fr);
   grid-template-areas: 'secciones examen hallazgos';
+  grid-template-rows: minmax(0, 1fr);
   gap: 1.25rem;
   box-sizing: border-box;
   width: 100%;
+  height: 100%;
+  min-height: 0;
   padding: 1.5rem;
+  overflow: hidden;
+  align-items: start;
 }
 
 /* Bloque de datos abierto: las secciones se reducen al carril de iconos (64px) y se reserva a la
@@ -48,6 +61,8 @@
    título y las tarjetas queden arrimados al borde del área de trabajo. */
 .panel-secciones {
   grid-area: secciones;
+  max-height: 100%;
+  overflow-y: auto;
   border: 0;
   background: transparent;
   box-shadow: none;
@@ -55,13 +70,27 @@
 }
 
 /* El contenido de la sección activa (examen físico, historia clínica o diagnóstico) ocupa el área
-   central de la rejilla (ver grid-template-areas) */
+   central de la rejilla (ver grid-template-areas) y se desplaza por dentro si lo necesita */
 .panel-seccion {
   grid-area: examen;
+  max-height: 100%;
+  overflow-y: auto;
 }
 
+/* Panel de hallazgos: el título queda fijo y las tarjetas se desplazan dentro del panel */
 .panel-hallazgos {
   grid-area: hallazgos;
+  display: flex;
+  flex-direction: column;
+  max-height: 100%;
+  overflow: hidden;
+}
+
+.hallazgos-lista {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 8px 10px 8px 6px;
+  overflow-y: auto;
 }
 
 .panel-titulo {
@@ -242,17 +271,26 @@
 }
 
 /* ==================== HALLAZGOS REGISTRADOS ==================== */
-/* Tarjeta del hallazgo: mismo lenguaje de la tarjeta de indicaciones médicas (borde, radio y
-   sombra), con un acento de color a la izquierda. */
+/* Tarjeta del hallazgo: fondo y borde con acento verde, sombra teñida y pastilla para la parte
+   del cuerpo. Es un acabado visual; la interacción no cambia. */
 .hallazgo-card {
   position: relative;
   margin-bottom: 1rem;
-  padding: 1rem 1.1rem;
-  border: 1px solid #dfe7f3;
-  border-left: 4px solid #22c55e;
-  border-radius: 12px;
-  background: #fff;
-  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
+  padding: 1.05rem 1.15rem;
+  border: 1px solid #d7eee1;
+  border-left: 6px solid #22c55e;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #ffffff 0%, #f6fcf9 55%, #eafaf1 100%);
+  box-shadow: 0 6px 18px rgba(34, 197, 94, 0.12);
+  transition:
+    box-shadow 0.2s ease,
+    transform 0.2s ease,
+    border-color 0.2s ease;
+
+  &:hover {
+    box-shadow: 0 10px 24px rgba(34, 197, 94, 0.18);
+    transform: translateY(-2px);
+  }
 
   &:last-child {
     margin-bottom: 0;
@@ -265,8 +303,39 @@
 
   /* Tarjeta cuyos datos están cargados en el formulario para corregirlos */
   &.hallazgo-card--edicion {
+    border-color: #fde5b8;
     border-left-color: #f59e0b;
-    background: #fffbf2;
+    background: linear-gradient(135deg, #ffffff 0%, #fffaf1 55%, #fff1d9 100%);
+    box-shadow: 0 6px 18px rgba(245, 158, 11, 0.16);
+
+    &:hover {
+      box-shadow: 0 10px 24px rgba(245, 158, 11, 0.22);
+    }
+
+    .hallazgo-nombre {
+      background: linear-gradient(135deg, #d97706, #f59e0b);
+      color: #fff;
+      box-shadow: 0 3px 8px rgba(245, 158, 11, 0.28);
+    }
+
+    .hallazgo-meta {
+      border-top-color: #f8e3bd;
+
+      i {
+        color: #d97706;
+      }
+    }
+
+    .hallazgo-menu-trigger {
+      color: #b45309;
+      border-color: rgba(245, 158, 11, 0.3);
+
+      &:hover,
+      &:focus-visible {
+        color: #b45309;
+        border-color: rgba(245, 158, 11, 0.55);
+      }
+    }
   }
 }
 
@@ -278,10 +347,17 @@
   margin-bottom: 12px;
 }
 
+/* La parte del cuerpo se lee como una pastilla verde con más presencia */
 .hallazgo-nombre {
-  color: var(--azulPrincipal);
-  font-size: 1.05rem;
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 14px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #159f4a, #34d399);
+  color: #fff;
+  font-size: 0.98rem;
   font-weight: 700;
+  box-shadow: 0 3px 8px rgba(22, 163, 74, 0.28);
 }
 
 .hallazgo-descripcion {
@@ -297,7 +373,7 @@
   gap: 1rem;
   margin-top: 1rem;
   padding-top: 0.85rem;
-  border-top: 1px solid #e4ebf5;
+  border-top: 1px solid #d9f0e3;
   color: #33445e;
   font-size: 0.95rem;
 
@@ -308,7 +384,7 @@
   }
 
   i {
-    color: var(--azulSecundario);
+    color: #16a34a;
     font-size: 1.05rem;
   }
 }
@@ -322,21 +398,23 @@
   height: 28px;
   padding: 0;
   place-items: center;
-  color: #52627f;
-  background: transparent;
-  border: 0;
+  color: #15803d;
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid rgba(34, 197, 94, 0.22);
   border-radius: 50%;
   font-size: 22px;
   line-height: 1;
   cursor: pointer;
   transition:
     color 0.2s ease,
-    background 0.2s ease;
+    background 0.2s ease,
+    border-color 0.2s ease;
 
   &:hover,
   &:focus-visible {
-    color: #1e293b;
-    background: #eef4ff;
+    color: #15803d;
+    background: #fff;
+    border-color: rgba(34, 197, 94, 0.45);
   }
 
   &:focus-visible {
@@ -497,17 +575,23 @@
     grid-template-areas:
       'secciones examen'
       'hallazgos hallazgos';
+    grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
   }
 
   /* Sin panel de hallazgos solo queda la fila de las secciones y el área central */
   .evaluacion--sin-hallazgos {
     grid-template-areas: 'secciones examen';
+    grid-template-rows: minmax(0, 1fr);
   }
 }
 
 @media (max-width: 900px) {
   /* Una sola columna: cada bloque en su propia fila. El bloque de datos conserva el ancho de su
      pestaña para que esta siga siendo visible y se apoye en el borde izquierdo de la pantalla. */
+  :host {
+    height: auto;
+  }
+
   .evaluacion {
     --ficha-ancho: calc(100% - 40px);
 
@@ -516,7 +600,24 @@
       'secciones'
       'examen'
       'hallazgos';
+    grid-template-rows: none;
+    height: auto;
+    overflow: visible;
     padding: 1rem;
+  }
+
+  /* En una sola columna la página desplaza el contenido; los paneles no necesitan
+     un desplazamiento interno */
+  .panel-secciones,
+  .panel-seccion,
+  .panel-hallazgos {
+    max-height: none;
+    overflow: visible;
+  }
+
+  .hallazgos-lista {
+    padding-right: 0;
+    overflow-y: visible;
   }
 
   /* Los bloques cubren casi toda la pantalla, así que no hace falta reservarles espacio extra */

@@ -118,6 +118,11 @@ tbody tr.selected-row td {
 		color: #64748b;
 	}
 
+	.estado--alta {
+		background: #fff4e5;
+		color: #b45309;
+	}
+
 	.bloque {
 		display: flex;
 		flex-direction: column;
@@ -365,10 +370,261 @@ tbody tr.selected-row td {
 	}
 }
 
+/* ==================== DOCUMENTACIÓN ==================== */
+/* La vista ocupa el área del listado y del detalle: secciones a la izquierda y contenido a la
+   derecha. */
+.documentacion {
+	display: grid;
+	grid-template-columns: minmax(230px, 300px) minmax(0, 1fr);
+	gap: 55px;
+	box-sizing: border-box;
+	width: 100%;
+	margin-top: 25px;
+}
+
+.doc-secciones,
+.doc-contenido {
+	box-sizing: border-box;
+	border: 2px solid var(--colorBorde);
+	border-radius: 18px;
+	background: #fff;
+	box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.doc-secciones {
+	align-self: start;
+	padding: 18px;
+}
+
+.doc-secciones-cabecera {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+
+	h2 {
+		margin: 0;
+		color: var(--azulPrincipal);
+		font-size: 1.35rem;
+		font-weight: 700;
+	}
+}
+
+.doc-paciente {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	margin: 8px 0 16px;
+	overflow-wrap: anywhere;
+}
+
+.doc-paciente-nombre {
+	color: var(--azulPrincipal);
+	font-size: 1.1rem;
+	font-weight: 700;
+	line-height: 1.25;
+}
+
+.doc-paciente-expediente {
+	color: #64748b;
+	font-size: 0.85rem;
+}
+
+.doc-opciones {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+
+.doc-opcion {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	width: 100%;
+	padding: 12px 14px;
+	border: 1px solid #dbe4f0;
+	border-radius: 12px;
+	background: #fff;
+	color: #334155;
+	font-family: inherit;
+	font-size: 1rem;
+	font-weight: 600;
+	text-align: left;
+	cursor: pointer;
+	transition:
+		border-color 0.2s ease,
+		background-color 0.2s ease,
+		color 0.2s ease;
+
+	i {
+		color: var(--azulSecundario);
+		font-size: 1.15rem;
+	}
+
+	&:hover,
+	&:focus-visible {
+		border-color: var(--azulSecundario);
+		background: #f2f7ff;
+	}
+
+	&:focus-visible {
+		outline: 2px solid var(--azulSecundario);
+		outline-offset: 2px;
+	}
+}
+
+.doc-opcion--activa {
+	border-color: var(--azulSecundario);
+	background: #eef5ff;
+	color: var(--azulPrincipal);
+}
+
+.doc-contenido {
+	display: flex;
+	flex-direction: column;
+	min-height: calc(100vh - 260px);
+	padding: 24px;
+}
+
+.doc-contenido-cabecera {
+	h2 {
+		margin: 0;
+		color: var(--azulPrincipal);
+		font-size: 1.5rem;
+		font-weight: 700;
+	}
+
+	p {
+		margin: 6px 0 0;
+		color: #64748b;
+		font-size: 1rem;
+	}
+}
+
+.doc-contenido-vacio {
+	display: flex;
+	flex: 1;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 10px;
+	margin-top: 20px;
+	border: 1px dashed var(--colorBorde);
+	border-radius: 14px;
+	color: #94a3b8;
+	text-align: center;
+
+	i {
+		font-size: 2rem;
+	}
+
+	p {
+		margin: 0;
+		font-size: 0.95rem;
+	}
+}
+
+.doc-contenido-vacio--error {
+	border-color: #fecaca;
+	background: #fffafa;
+	color: #b42318;
+}
+
+.doc-grupo {
+	margin-top: 20px;
+}
+
+/* El botón de generar queda alineado al borde inferior derecho del panel de contenido. */
+.doc-acciones-documento {
+	display: flex;
+	justify-content: flex-end;
+	margin-top: auto;
+	padding-top: 20px;
+
+	.btn {
+		display: inline-flex;
+		align-items: center;
+		gap: 8px;
+		margin-bottom: 0;
+	}
+}
+
+.doc-subtitulo {
+	margin: 0 0 10px;
+	color: var(--azulPrincipal);
+	font-size: 1.15rem;
+	font-weight: 700;
+}
+
+.doc-tabla-container {
+	overflow-x: auto;
+}
+
+.doc-tabla {
+	width: 100%;
+	border: 1px solid #e4ebf5;
+	border-collapse: separate;
+	border-spacing: 0;
+	border-radius: 12px;
+	background: #fff;
+	box-shadow: none;
+	overflow: hidden;
+}
+
+.doc-tabla th,
+.doc-tabla td {
+	padding: 10px 12px;
+	border-bottom: 1px solid #eef2f8;
+	color: #334155;
+	font-size: 0.92rem;
+	font-weight: 400;
+	line-height: 1.4;
+	text-align: left;
+	vertical-align: top;
+	overflow-wrap: anywhere;
+}
+
+.doc-tabla thead th {
+	background: #f8fafc;
+	color: #475569;
+	font-size: 0.88rem;
+	font-weight: 600;
+}
+
+.doc-tabla tbody tr:last-child td {
+	border-bottom: 0;
+}
+
+.doc-celda-numero {
+	text-align: right;
+	white-space: nowrap;
+}
+
+.doc-tabla tfoot td {
+	border-top: 2px solid #e4ebf5;
+	background: #f8fafc;
+	color: var(--azulPrincipal);
+	font-weight: 700;
+}
+
+.doc-total-valor {
+	font-size: 1.05rem;
+}
+
+
 @media (max-width: 900px) {
 	.contenedorPrincipal {
 		grid-template-columns: 1fr;
 		gap: 24px;
+	}
+
+	.documentacion {
+		grid-template-columns: 1fr;
+		gap: 24px;
+	}
+
+	.doc-contenido {
+		min-height: 320px;
 	}
 
 	.derecha {

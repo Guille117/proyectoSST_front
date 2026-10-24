@@ -3,6 +3,9 @@
    activa y panel lateral con el formulario de administración o el historial. Cada pista flexible
    lleva mínimo 0 para que la rejilla pueda encogerse sin desbordar. */
 .tratamientos {
+  /* Ancho del bloque de datos del paciente: lo comparten el propio bloque y su pestaña */
+  --ficha-ancho: 340px;
+
   display: grid;
   grid-template-columns: auto minmax(0, 1.4fr) minmax(300px, 0.7fr);
   grid-template-areas: 'secciones indicaciones lateral';
@@ -16,6 +19,16 @@
      inferior: relleno del área de trabajo, título del módulo, submenú, relleno de la pantalla y un
      margen de seguridad para la barra de desplazamiento. */
   --alto-fuera-de-tratamientos: 16rem;
+}
+
+/* El bloque de datos del paciente se dibuja fijo; no participa de la rejilla. */
+app-datos-paciente {
+  display: contents;
+}
+
+/* Ficha del paciente abierta: la rejilla le reserva a la derecha el ancho del bloque compartido. */
+.tratamientos--ficha-abierta {
+  padding-right: calc(var(--ficha-ancho) + 1.5rem);
 }
 
 /* ==================== PANELES ==================== */
@@ -164,10 +177,22 @@ select.administracion-input {
   cursor: pointer;
 }
 
+.administracion-input:disabled {
+  background: #f1f5f9;
+  color: #94a3b8;
+  cursor: not-allowed;
+}
+
 .administracion-textarea {
   min-height: 96px;
   line-height: 1.5;
   resize: vertical;
+}
+
+.administracion-ayuda {
+  color: #5b6b85;
+  font-size: 0.85rem;
+  line-height: 1.4;
 }
 
 .administracion-acciones {
@@ -263,7 +288,31 @@ select.administracion-input {
   /* Card de medicamentos: conserva la línea naranja del diseño en cualquier estado */
   &.indicacion-card--tratamiento {
     border-left-color: #ff921c;
+    cursor: pointer;
   }
+
+  /* Tarjeta elegida para registrar la administración o ejecución */
+  &.indicacion-card--seleccionada {
+    outline: 2px solid rgba(59, 130, 246, 0.35);
+    outline-offset: 1px;
+    background: #f6faff;
+    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.1);
+  }
+}
+
+/* Aviso visual de la tarjeta que recibe la próxima administración o ejecución */
+.indicacion-badge-seleccionada {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #e6f0ff;
+  color: var(--azulSecundario);
+  font-size: 0.85rem;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
 }
 
 .indicacion-encabezado {
@@ -564,7 +613,47 @@ select.administracion-input {
 
 .aplicaciones-tabla_acciones {
   width: 80px;
+  text-align: center;
   white-space: nowrap;
+}
+
+.aplicaciones-tabla_estado {
+  width: 60px;
+  text-align: center;
+}
+
+.aplicaciones-tabla_estado i {
+  font-size: 1.1rem;
+}
+
+.aplicaciones-tabla_estado .bi-check-circle-fill {
+  color: #15803d;
+}
+
+.aplicaciones-tabla_estado .bi-x-circle-fill {
+  color: #b42318;
+}
+
+/* El historial no se comporta como un control clicable */
+.aplicaciones-historial,
+.aplicaciones-tabla {
+  cursor: default;
+}
+
+/* Observación de la aplicación que acompaña al puntero */
+.observacion-popup {
+  position: fixed;
+  z-index: 1200;
+  max-width: min(320px, calc(100vw - 2rem));
+  padding: 0.55rem 0.7rem;
+  border-radius: 8px;
+  background: #101828;
+  color: #fff;
+  font-size: 0.85rem;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.25);
+  pointer-events: none;
 }
 
 /* Celdas de las aplicaciones que todavía no tienen registro */
@@ -578,6 +667,7 @@ select.administracion-input {
 .aplicaciones-acciones {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 4px;
 }
 
@@ -721,6 +811,10 @@ select.administracion-input {
       'indicaciones'
       'lateral';
     padding: 1rem;
+  }
+
+  .tratamientos--ficha-abierta {
+    padding-right: 1rem;
   }
 }
 
@@ -871,6 +965,15 @@ select.administracion-input {
 
 .solicitud-medicamento_resultados .columna-numero {
   width: 60px;
+}
+
+/* Pie de la tabla de resultados: con aire suficiente para no quedar pegado al borde redondeado. */
+.solicitud-medicamento_resultados tfoot td {
+  padding: 0.75rem 1rem;
+  border-top: 1px solid #e2e8f0;
+  background: #f8fafc;
+  font-size: 0.9rem;
+  text-align: center;
 }
 
 .solicitud-medicamento_fila {

@@ -1,6 +1,9 @@
 /* ==================== CONTENEDOR (EDITOR / HISTORIAL) ==================== */
 /* Editor de la nota a la izquierda e historial de notas a la derecha. */
 .notas {
+  /* Ancho del bloque de datos del paciente: lo comparten el propio bloque y su pestaña */
+  --ficha-ancho: 340px;
+
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 1.25rem;
@@ -10,6 +13,16 @@
 
   /* Alto que ocupan la ventana y el marco de la pantalla fuera de los paneles. */
   --alto-fuera-de-notas: 16rem;
+}
+
+/* El bloque de datos del paciente se dibuja fijo; no participa de la rejilla. */
+app-datos-paciente {
+  display: contents;
+}
+
+/* Ficha del paciente abierta: la rejilla le reserva a la derecha el ancho del bloque compartido. */
+.notas--ficha-abierta {
+  padding-right: calc(var(--ficha-ancho) + 1.5rem);
 }
 
 /* ==================== PANELES ==================== */
@@ -285,6 +298,10 @@
   .notas {
     grid-template-columns: minmax(0, 1fr);
     padding: 1rem;
+  }
+
+  .notas--ficha-abierta {
+    padding-right: 1rem;
   }
 
   .panel-editor,

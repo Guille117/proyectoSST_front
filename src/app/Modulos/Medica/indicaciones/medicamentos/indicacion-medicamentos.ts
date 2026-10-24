@@ -159,6 +159,9 @@ export class IndicacionMedicamentos implements OnInit, OnDestroy {
   /** Tarjeta cuyos registros de Enfermería están desplegados; null si ninguno. */
   registrosIndicacionAbierta: number | null = null;
 
+  /** Observación que se muestra al pasar el puntero por un registro. */
+  observacionPopup: { texto: string; x: number; y: number } | null = null;
+
   /** Aplicaciones de Enfermería cargadas por indicación. */
   private readonly registrosPorIndicacion = new Map<number, AplicacionMedicamentoVista[]>();
 
@@ -461,6 +464,14 @@ export class IndicacionMedicamentos implements OnInit, OnDestroy {
       .join(' ');
   }
 
+  /** Concentración del medicamento para la tabla de resultados: «500 mg». */
+  concentracionMedicamento(opcion: MedicamentoCatalogoResponse): string {
+    const dosis = opcion.dosis > 0 ? `${opcion.dosis}` : '';
+    const unidad = opcion.unidadMedida?.trim() ?? '';
+
+    return [dosis, unidad].filter(Boolean).join(' ');
+  }
+
   /** Busca el medicamento escrito en el catálogo de farmacia y muestra la tabla de resultados. */
   buscarMedicamento(): void {
     if (this.destruido || this.cargandoCatalogo) return;
@@ -576,6 +587,8 @@ export class IndicacionMedicamentos implements OnInit, OnDestroy {
 
   /** Despliega u oculta los registros de Enfermería de la indicación. */
   alternarRegistros(indicacion: IndicacionMedicamentoVista): void {
+    this.ocultarObservacion();
+
     if (this.registrosIndicacionAbierta === indicacion.id) {
       this.registrosIndicacionAbierta = null;
       return;
@@ -583,6 +596,39 @@ export class IndicacionMedicamentos implements OnInit, OnDestroy {
 
     this.registrosIndicacionAbierta = indicacion.id;
     this.cargarRegistros(indicacion.id);
+  }
+
+  /** Muestra la observación del registro junto al puntero. */
+  mostrarObservacion(evento: MouseEvent, observacion: string | null | undefined): void {
+    const texto = observacion?.trim();
+    if (!texto) {
+      this.observacionPopup = null;
+      return;
+    }
+
+    this.observacionPopup = { texto, ...this.posicionObservacion(evento) };
+  }
+
+  /** Mantiene el popup junto al puntero mientras recorre la fila. */
+  moverObservacion(evento: MouseEvent): void {
+    if (!this.observacionPopup) return;
+
+    this.observacionPopup = { ...this.observacionPopup, ...this.posicionObservacion(evento) };
+  }
+
+  /** Oculta la observación al salir de la fila. */
+  ocultarObservacion(): void {
+    this.observacionPopup = null;
+  }
+
+  private posicionObservacion(evento: MouseEvent): { x: number; y: number } {
+    const margen = 14;
+    const ancho = 320;
+
+    return {
+      x: Math.min(evento.clientX + margen, Math.max(8, window.innerWidth - ancho - 8)),
+      y: evento.clientY + margen,
+    };
   }
 
   /** Registros de Enfermería ya cargados de una indicación. */

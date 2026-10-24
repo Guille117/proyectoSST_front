@@ -1,13 +1,15 @@
 .login-wrapper {
-  min-height: 100vh;
-  width: 100vw;
+  height: 100vh;
+  width: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: safe center;
   background: radial-gradient(circle at center, #112646 0%, #061022 100%);
   padding: 20px;
   box-sizing: border-box;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .login-header {

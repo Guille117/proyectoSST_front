@@ -5,6 +5,11 @@ import { PopUps } from '../../../shared/popUps/popUpsService';
 import { AuthService } from '../../Auth/data/auth-service';
 import { CatalogoService } from '../../Catalogos/data/serviceCatalogo';
 import { EpisodioActivoService } from '../data/episodio-activo-service';
+import { PacienteService } from '../../Pacientes/paciente/data/paciente-service';
+import { PacienteDetalle } from '../../Pacientes/paciente/data/pacienteInterfaz';
+import { SignosVitalesService } from '../../Enfermeria/monitoreo/data/signos-vitales-service';
+import { ProcedimientoMedicoService } from '../procedimiento-medico/data/procedimiento-medico-service';
+import { ProcedimientoMedicoResponse } from '../procedimiento-medico/data/procedimientoMedicoInterfaz';
 import { Alta } from './alta';
 import { AltaResponse } from './data/altaInterfaz';
 import { AltaService } from './data/alta-service';
@@ -18,6 +23,15 @@ describe('Alta', () => {
     { id: 1, nombre: 'IGGS - Sololá', telefono: '', direccion: 'Barrio el carmen' },
   ];
 
+  const formatearFecha = (fecha: Date): string =>
+    `${`${fecha.getDate()}`.padStart(2, '0')}/${`${fecha.getMonth() + 1}`.padStart(
+      2,
+      '0',
+    )}/${fecha.getFullYear()}`;
+
+  const fechaEgreso = new Date(Date.now() - 60 * 60 * 1000);
+  const fechaEgresoTexto = formatearFecha(fechaEgreso);
+
   const altaVigente: AltaResponse = {
     id: 30,
     tipoAlta: 'INDICACION_MEDICA',
@@ -25,7 +39,7 @@ describe('Alta', () => {
     condicionEgresoId: 2,
     condicionEgresoNombre: 'Estable',
     observacionEgreso: 'Observación guardada',
-    fechaHoraEgreso: '2026-10-16T09:30:00',
+    fechaHoraEgreso: fechaEgreso.toISOString(),
     episodioId: 1,
     usuarioId: 2,
     usuarioNombre: 'Carlos Méndez',
@@ -71,16 +85,41 @@ describe('Alta', () => {
     actualizar: vi.fn(),
     anular: vi.fn(),
   };
+  const procedimientoService = {
+    getTiposProcedimiento: vi.fn(),
+    crearProcedimiento: vi.fn(),
+    eliminarProcedimiento: vi.fn(),
+  };
+  const procedimientoCreado = { id: 77 } as ProcedimientoMedicoResponse;
   const catalogoService = {
     listar: vi.fn(),
     listarUnidadMedida: vi.fn(() => of([])),
   };
   const episodioActivo = {
     obtener: vi.fn<() => number | null>(() => 1),
+    pacienteId: vi.fn(() => 1),
     guardar: vi.fn(),
+    guardarPaciente: vi.fn(),
     limpiar: vi.fn(),
     esSoloLectura: () => false,
   };
+
+  const pacienteDetalle = {
+    nombreCompleto: 'Juan Pérez',
+    codigoExpediente: 'EXP-0241',
+    tipoAtencion: 'HOSPITALIZACION',
+    fechaHoraIngreso: '2026-10-10T08:30:00',
+    camaCodigo: 'A-105',
+    descripcion: 'Dolor abdominal y vómitos',
+    alergias: [],
+  } as unknown as PacienteDetalle;
+
+  const pacienteService = {
+    obtenerPaciente: vi.fn(() => of(pacienteDetalle)),
+    listarPacientes: vi.fn(() => of([])),
+  };
+
+  const signosVitalesService = { buscarPorEpisodio: vi.fn(() => of([])) };
   const auth = { currentUser: () => ({ id: 2 }) };
   const popUps = {
     confirmarToast: vi.fn(),
@@ -102,6 +141,11 @@ describe('Alta', () => {
     altaService.crear.mockReturnValue(of(altaVigente));
     altaService.actualizar.mockReturnValue(of(altaVigente));
     altaService.anular.mockReturnValue(of(void 0));
+    procedimientoService.getTiposProcedimiento.mockReturnValue(
+      of([{ id: 5, nombre: 'Solicitud de medicamento a farmacia', estado: true }]),
+    );
+    procedimientoService.crearProcedimiento.mockReturnValue(of(procedimientoCreado));
+    procedimientoService.eliminarProcedimiento.mockReturnValue(of(void 0));
     episodioActivo.obtener.mockReturnValue(1);
     popUps.confirmarToast.mockResolvedValue(true);
 
@@ -109,8 +153,11 @@ describe('Alta', () => {
       imports: [Alta],
       providers: [
         { provide: AltaService, useValue: altaService },
+        { provide: ProcedimientoMedicoService, useValue: procedimientoService },
         { provide: CatalogoService, useValue: catalogoService },
         { provide: EpisodioActivoService, useValue: episodioActivo },
+        { provide: PacienteService, useValue: pacienteService },
+        { provide: SignosVitalesService, useValue: signosVitalesService },
         { provide: AuthService, useValue: auth },
         { provide: PopUps, useValue: popUps },
       ],
@@ -173,8 +220,8 @@ describe('Alta', () => {
     expect(catalogoService.listar).toHaveBeenCalledWith('condicionesEgreso', true);
     expect(catalogoService.listar).toHaveBeenCalledWith('instituciones', true);
 
-    const opciones = [...elementos<HTMLOptionElement>('#condicionEgreso option')].map(
-      (opcion) => opcion.textContent?.trim(),
+    const opciones = [...elementos<HTMLOptionElement>('#condicionEgreso option')].map((opcion) =>
+      opcion.textContent?.trim(),
     );
 
     expect(opciones).toEqual(['Seleccione la condición de egreso', 'Estable']);
@@ -256,8 +303,114 @@ describe('Alta', () => {
         },
       ],
     });
+    expect(procedimientoService.crearProcedimiento).toHaveBeenCalledTimes(1);
+    expect(procedimientoService.crearProcedimiento).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tipoProcedimientoId: 5,
+        episodioId: 1,
+        usuarioId: 2,
+        recursos: [{ tipo: 'MEDICAMENTO', referenciaId: 9, cantidad: 2 }],
+      }),
+    );
     expect(episodioActivo.limpiar).toHaveBeenCalled();
+    expect(popUps.exito).toHaveBeenCalledWith(
+      'Alta registrada exitosamente. Solicitud de medicamento enviada a farmacia.',
+    );
+  });
+
+  it('envía una sola solicitud con todos los medicamentos del tratamiento', async () => {
+    await escribir('#diagnosticoEgreso', 'Nuevo diagnóstico');
+
+    component.registrarMedicamento({
+      nombre: 'Ibuprofeno',
+      medicamentoLogId: 9,
+      medicamentoLibre: '',
+      cantidad: 2,
+      unidadMedida: 'tabletas',
+      frecuencia: 8,
+      duracionTipo: 'dias',
+      duracionCantidad: 7,
+      observaciones: '',
+    });
+    component.registrarMedicamento({
+      nombre: 'Paracetamol',
+      medicamentoLogId: 10,
+      medicamentoLibre: '',
+      cantidad: 3,
+      unidadMedida: 'tabletas',
+      frecuencia: 6,
+      duracionTipo: 'dias',
+      duracionCantidad: 3,
+      observaciones: '',
+    });
+
+    botonGuardar().click();
+    await fixture.whenStable();
+
+    expect(procedimientoService.crearProcedimiento).toHaveBeenCalledTimes(1);
+    expect(procedimientoService.crearProcedimiento).toHaveBeenCalledWith(
+      expect.objectContaining({
+        recursos: [
+          { tipo: 'MEDICAMENTO', referenciaId: 9, cantidad: 2 },
+          { tipo: 'MEDICAMENTO', referenciaId: 10, cantidad: 3 },
+        ],
+      }),
+    );
+  });
+
+  it('guarda el alta aunque falle la solicitud a farmacia', async () => {
+    procedimientoService.crearProcedimiento.mockReturnValue(
+      throwError(() => new Error('Sin existencia')),
+    );
+    await escribir('#diagnosticoEgreso', 'Nuevo diagnóstico');
+
+    component.registrarMedicamento({
+      nombre: 'Ibuprofeno',
+      medicamentoLogId: 9,
+      medicamentoLibre: '',
+      cantidad: 2,
+      unidadMedida: 'tabletas',
+      frecuencia: 8,
+      duracionTipo: 'dias',
+      duracionCantidad: 7,
+      observaciones: '',
+    });
+
+    botonGuardar().click();
+    await fixture.whenStable();
+
+    expect(altaService.crear).toHaveBeenCalled();
+    expect(popUps.errorDesdeBackend).toHaveBeenCalledWith(
+      expect.any(Error),
+      'No se pudo generar la solicitud de medicamento a farmacia.',
+    );
     expect(popUps.exito).toHaveBeenCalledWith('Alta registrada exitosamente.');
+  });
+
+  it('cancela la solicitud si el alta no se puede guardar', async () => {
+    altaService.crear.mockReturnValue(throwError(() => new Error('Fallo el alta')));
+    await escribir('#diagnosticoEgreso', 'Nuevo diagnóstico');
+
+    component.registrarMedicamento({
+      nombre: 'Ibuprofeno',
+      medicamentoLogId: 9,
+      medicamentoLibre: '',
+      cantidad: 2,
+      unidadMedida: 'tabletas',
+      frecuencia: 8,
+      duracionTipo: 'dias',
+      duracionCantidad: 7,
+      observaciones: '',
+    });
+
+    botonGuardar().click();
+    await fixture.whenStable();
+
+    expect(procedimientoService.eliminarProcedimiento).toHaveBeenCalledWith(77);
+    expect(popUps.errorDesdeBackend).toHaveBeenCalledWith(
+      expect.any(Error),
+      'No se pudo guardar el alta. Intente nuevamente.',
+    );
   });
 
   it('guarda un medicamento no registrado en el tratamiento', async () => {
@@ -289,6 +442,8 @@ describe('Alta', () => {
         ],
       }),
     );
+    expect(procedimientoService.crearProcedimiento).not.toHaveBeenCalled();
+    expect(popUps.exito).toHaveBeenCalledWith('Alta registrada exitosamente.');
   });
 
   it('actualiza el alta vigente después de confirmarlo', async () => {
@@ -299,7 +454,7 @@ describe('Alta', () => {
     await fixture.whenStable();
 
     expect(popUps.confirmarToast).toHaveBeenCalledWith(
-      '¿Está seguro de guardar los cambios del alta del 16/10/2026?',
+      `¿Está seguro de guardar los cambios del alta del ${fechaEgresoTexto}?`,
     );
     expect(altaService.actualizar).toHaveBeenCalledWith(
       30,
@@ -331,7 +486,7 @@ describe('Alta', () => {
     await fixture.whenStable();
 
     expect(popUps.confirmarToast).toHaveBeenCalledWith(
-      '¿Está seguro de anular el alta del 16/10/2026?',
+      `¿Está seguro de anular el alta del ${fechaEgresoTexto}?`,
     );
     expect(altaService.anular).toHaveBeenCalledWith(30);
     expect(episodioActivo.guardar).toHaveBeenCalledWith(1);
@@ -356,9 +511,7 @@ describe('Alta', () => {
     await fixture.whenStable();
 
     expect(altaService.crear).not.toHaveBeenCalled();
-    expect(popUps.advertencia).toHaveBeenCalledWith(
-      'El diagnóstico de egreso es obligatorio.',
-    );
+    expect(popUps.advertencia).toHaveBeenCalledWith('El diagnóstico de egreso es obligatorio.');
   });
 
   it('exige el solicitante y el motivo en el retiro voluntario', async () => {
@@ -369,17 +522,13 @@ describe('Alta', () => {
     await fixture.whenStable();
 
     expect(altaService.crear).not.toHaveBeenCalled();
-    expect(popUps.advertencia).toHaveBeenCalledWith(
-      'Seleccione el solicitante del retiro.',
-    );
+    expect(popUps.advertencia).toHaveBeenCalledWith('Seleccione el solicitante del retiro.');
 
     await elegir('#responsableRetiro', 'paciente');
     await component.guardarEgreso();
     await fixture.whenStable();
 
-    expect(popUps.advertencia).toHaveBeenCalledWith(
-      'El motivo del retiro es obligatorio.',
-    );
+    expect(popUps.advertencia).toHaveBeenCalledWith('El motivo del retiro es obligatorio.');
 
     await escribir('#motivoRetiro', 'Decisión de la familia');
     await component.guardarEgreso();
@@ -402,17 +551,13 @@ describe('Alta', () => {
     await fixture.whenStable();
 
     expect(altaService.crear).not.toHaveBeenCalled();
-    expect(popUps.advertencia).toHaveBeenCalledWith(
-      'Seleccione la institución de referencia.',
-    );
+    expect(popUps.advertencia).toHaveBeenCalledWith('Seleccione la institución de referencia.');
 
     await elegir('#institucionReferencia', '1');
     await component.guardarEgreso();
     await fixture.whenStable();
 
-    expect(popUps.advertencia).toHaveBeenCalledWith(
-      'El motivo de referencia es obligatorio.',
-    );
+    expect(popUps.advertencia).toHaveBeenCalledWith('El motivo de referencia es obligatorio.');
 
     await escribir('#motivoReferencia', 'Requiere valoración por especialidad');
     await component.guardarEgreso();
@@ -451,11 +596,30 @@ describe('Alta', () => {
     );
   });
 
-  it('oculta las acciones y deshabilita el registro cuando el episodio es solo lectura', async () => {
+  it('oculta anular cuando pasaron más de 5 horas desde el alta', async () => {
+    episodioActivo.esSoloLectura = () => false;
+    altaService.buscarPorEpisodio.mockReturnValue(
+      of([
+        {
+          ...altaVigente,
+          fechaHoraEgreso: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
+        },
+      ]),
+    );
+
+    component.cargarAlta();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(component.puedeAnularAlta).toBe(false);
+    expect(botonAnular()).toBeNull();
+  });
+
+  it('permite anular dentro de las 5 horas aunque el episodio sea solo lectura', async () => {
     episodioActivo.esSoloLectura = () => true;
     await cargarAltaVigente();
 
-    expect(botonAnular()).toBeNull();
+    expect(botonAnular()).not.toBeNull();
     expect(elemento<HTMLInputElement>('#diagnosticoEgreso').disabled).toBe(true);
   });
 });

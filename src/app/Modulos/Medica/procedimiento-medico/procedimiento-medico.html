@@ -21,10 +21,12 @@
   </section>
 
   <!-- Contenido central: formulario de registro o tarjetas de procedimientos -->
-  <section class="panel contenido-procedimiento">
+  <section
+    class="panel contenido-procedimiento"
+    [class.contenido-procedimiento--registro]="esRegistrar"
+  >
     @if (esRegistrar) {
-      <div class="contenido-scroll">
-        <form class="indicacion-form" (ngSubmit)="registrarProcedimiento()">
+      <form class="indicacion-form" (ngSubmit)="registrarProcedimiento()">
         <div class="indicacion-campo">
           <label class="indicacion-etiqueta" for="tipoProcedimientoMedico">
             Tipo de procedimiento<span class="indicacion-obligatorio" aria-hidden="true">*</span>
@@ -118,7 +120,6 @@
           </button>
         </div>
       </form>
-      </div>
     } @else {
       <h3 class="panel-titulo" id="tituloProcedimientosRealizados">Procedimientos realizados</h3>
 
@@ -407,7 +408,7 @@
     } @else {
       @if (procedimientoActivo; as procedimiento) {
         <h3 class="panel-titulo" id="tituloDetalleProcedimiento">
-          Detalle de {{ procedimiento.tipo }}
+          Procedimiento de {{ procedimiento.tipo }}
         </h3>
 
         <div class="procedimiento-detalle">

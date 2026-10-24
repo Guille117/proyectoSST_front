@@ -12,9 +12,9 @@ export const rutasEnfermeria: Routes = [
     data: {
       rutaEpisodio: ['/enfermeria', 'monitoreo'],
       rutaUltimoEpisodio: ['/enfermeria', 'monitoreo'],
-      mostrarAltas: false,
-      mostrarExpediente: false,
-      mostrarUltimoEpisodio: false,
+      mostrarAltas: true,
+      mostrarExpediente: true,
+      mostrarUltimoEpisodio: true,
     },
   },
   { path: 'monitoreo', component: Monitoreo },

@@ -13,6 +13,7 @@ const TITULOS_MODULO: Record<string, string> = {
   catalogos: 'Gestión de catálogos',
   medica: 'Módulo Médico',
   enfermeria: 'Módulo de Enfermería',
+  expediente: 'Expediente clínico',
 };
 
 @Component({

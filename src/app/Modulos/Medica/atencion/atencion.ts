@@ -1,9 +1,16 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectorRef, Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { finalize, Subscription } from 'rxjs';
+import { finalize, Subscription, TimeoutError } from 'rxjs';
 import { PacienteService } from '../../Pacientes/paciente/data/paciente-service';
-import { PacienteResumido, TipoAtencion } from '../../Pacientes/paciente/data/pacienteInterfaz';
+import {
+  PacienteDetalle,
+  PacienteResumido,
+  TipoAtencion,
+} from '../../Pacientes/paciente/data/pacienteInterfaz';
+import { SignosVitalesService } from '../../Enfermeria/monitoreo/data/signos-vitales-service';
+import { SignosVitalesResponse } from '../../Enfermeria/monitoreo/data/signosVitalesInterfaz';
 import { PopUps } from '../../../shared/popUps/popUpsService';
 import { AltaService } from '../alta/data/alta-service';
 import { AltaRecienteResponse, TipoAltaApi } from '../alta/data/altaInterfaz';
@@ -27,51 +34,36 @@ interface EgresoVista {
   observacion: string;
 }
 
-/** Signo vital que se muestra en el panel del paciente seleccionado. */
-interface SignoVitalVista {
-  etiqueta: string;
-  valor: string;
-  unidad: string;
-}
-
-/** Paciente del listado: datos reales del resumen y detalle temporal mientras no hay contrato. */
+/** Paciente del listado: datos reales del resumen y detalle temporal de la tarjeta. */
 interface PacienteAtencionVista {
+  pacienteId: number | null;
   expediente: string;
   episodioId: number | null;
   ultimoEpisodioId: number | null;
   nombre: string;
   edad: number | null;
   sexo: string;
+  telefono: string;
   estadoAtencion: EstadoAtencion;
   tipoAtencion: TipoAtencion;
   /** Código de la cama o del box según el tipo de atención, sin la etiqueta. */
   ubicacion: string;
   diagnostico: string;
   fechaIngreso: string;
-  alergias: string;
-  signosVitales: SignoVitalVista[];
   /** El paciente viene del listado de altas recientes y su episodio ya está cerrado. */
   esAlta: boolean;
   /** Datos del egreso cuando el paciente viene del listado de altas recientes. */
   egreso: EgresoVista | null;
 }
 
-/** Detalle de la maqueta que acompaña a cada paciente del listado. */
+/** Detalle de la maqueta que acompaña a cada tarjeta del listado. */
 type DetallePacienteMock = Pick<
   PacienteAtencionVista,
-  'edad' | 'sexo' | 'estadoAtencion' | 'ubicacion' | 'diagnostico' | 'fechaIngreso' | 'alergias'
-> & { signosVitales: SignoVitalVista[] };
+  'edad' | 'sexo' | 'estadoAtencion' | 'ubicacion' | 'fechaIngreso'
+>;
 
-// MOCK: detalle temporal de diseño. Se sustituirá por el detalle real del episodio del paciente
-// (edad, sexo, estado, cama, diagnóstico, alergias y signos vitales) en la fase de integración.
-/** Signos vitales de la maqueta que comparten los pacientes sin datos propios. */
-const SIGNOS_VITALES_MOCK: SignoVitalVista[] = [
-  { etiqueta: 'PA', valor: '120/80', unidad: 'mmHg' },
-  { etiqueta: 'FC', valor: '82', unidad: 'lpm' },
-  { etiqueta: 'Temp', valor: '37.2', unidad: '°C' },
-  { etiqueta: 'SpO2', valor: '97', unidad: '%' },
-];
-
+// MOCK: datos temporales de las tarjetas del listado. El panel del paciente usa el detalle real;
+// el resumen del listado no trae edad, cama ni diagnóstico.
 /** Detalle de la maqueta: se reparte por posición entre los pacientes que devuelve el backend. */
 const DETALLES_MOCK: DetallePacienteMock[] = [
   {
@@ -79,40 +71,28 @@ const DETALLES_MOCK: DetallePacienteMock[] = [
     sexo: 'Masculino',
     estadoAtencion: 'en-atencion',
     ubicacion: 'A-105',
-    diagnostico: 'Gastroenteritis aguda',
     fechaIngreso: '10-10-2026',
-    alergias: 'Ninguna conocida',
-    signosVitales: SIGNOS_VITALES_MOCK,
   },
   {
     edad: 32,
     sexo: 'Femenino',
     estadoAtencion: 'en-atencion',
     ubicacion: '2',
-    diagnostico: 'Cólico renal',
     fechaIngreso: '10-10-2026',
-    alergias: 'Ninguna conocida',
-    signosVitales: SIGNOS_VITALES_MOCK,
   },
   {
     edad: 58,
     sexo: 'Masculino',
     estadoAtencion: 'pendiente',
     ubicacion: 'A-106',
-    diagnostico: 'Neumonía adquirida en la comunidad',
     fechaIngreso: '10-10-2026',
-    alergias: 'Penicilina',
-    signosVitales: SIGNOS_VITALES_MOCK,
   },
   {
     edad: 27,
     sexo: 'Femenino',
     estadoAtencion: 'en-observacion',
     ubicacion: 'B-201',
-    diagnostico: 'Postoperatorio de apendicectomía',
     fechaIngreso: '09-10-2026',
-    alergias: 'Ninguna conocida',
-    signosVitales: SIGNOS_VITALES_MOCK,
   },
 ];
 // ------------------- FIN MOCK -------------------
@@ -131,6 +111,7 @@ const DETALLES_MOCK: DetallePacienteMock[] = [
 })
 export class Atencion implements OnInit, OnDestroy {
   private readonly servicioPaciente = inject(PacienteService);
+  private readonly servicioSignos = inject(SignosVitalesService);
   private readonly servicioAltas = inject(AltaService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
@@ -143,16 +124,17 @@ export class Atencion implements OnInit, OnDestroy {
   protected readonly mostrarExpediente = this.route.snapshot.data['mostrarExpediente'] !== false;
   protected readonly mostrarUltimoEpisodio =
     this.route.snapshot.data['mostrarUltimoEpisodio'] !== false;
-  private readonly rutaEpisodio =
-    (this.route.snapshot.data['rutaEpisodio'] as string[] | undefined) ?? ['/medica', 'evaluacion'];
-  private readonly rutaUltimoEpisodio =
-    (this.route.snapshot.data['rutaUltimoEpisodio'] as string[] | undefined) ?? [
-      '/medica',
-      'evaluacion',
-    ];
+  private readonly rutaEpisodio = (this.route.snapshot.data['rutaEpisodio'] as
+    | string[]
+    | undefined) ?? ['/medica', 'evaluacion'];
+  private readonly rutaUltimoEpisodio = (this.route.snapshot.data['rutaUltimoEpisodio'] as
+    | string[]
+    | undefined) ?? ['/medica', 'evaluacion'];
 
   private destruido = false;
   private peticionAltas?: Subscription;
+  private peticionDetalle?: Subscription;
+  private peticionSignos?: Subscription;
 
   // ------------------- ESTADO DE LA VISTA -------------------
   /** Pacientes en atención que devuelve el backend con el detalle temporal de la maqueta. */
@@ -180,6 +162,16 @@ export class Atencion implements OnInit, OnDestroy {
   /** Mientras cargan las altas recientes y cuando falla la consulta. */
   cargandoAltas = false;
   errorAltas = false;
+
+  /** Detalle real del paciente seleccionado y estado de su carga. */
+  detallePaciente: PacienteDetalle | null = null;
+  cargandoDetalle = false;
+  errorDetalle = '';
+
+  /** Signos vitales del episodio seleccionado. */
+  signosVitales: SignosVitalesResponse[] = [];
+  cargandoSignos = false;
+  errorSignos = '';
 
   /** Etiquetas del tipo de atención del paciente. */
   protected readonly etiquetasTipo: Record<TipoAtencion, string> = {
@@ -230,9 +222,84 @@ export class Atencion implements OnInit, OnDestroy {
       : 'No hay pacientes que coincidan con la búsqueda.';
   }
 
+  /** Último registro de signos vitales del episodio, si existe. */
+  get ultimoSignoVital(): SignosVitalesResponse | null {
+    return this.signosVitales[0] ?? null;
+  }
+
   /** Solo las atenciones con hospitalización tienen cama; la emergencia y las altas no muestran destino. */
   protected esHospitalizacion(paciente: PacienteAtencionVista): boolean {
     return paciente.tipoAtencion === 'HOSPITALIZACION' && !paciente.esAlta;
+  }
+
+  /** Sexo del paciente en el texto de la ficha. */
+  protected sexoLegible(sexo: 'MASCULINO' | 'FEMENINO' | null): string {
+    if (sexo === 'MASCULINO') return 'Masculino';
+    if (sexo === 'FEMENINO') return 'Femenino';
+    return '—';
+  }
+
+  /** Teléfono del paciente; prioriza el detalle y recurre al resumen del listado. */
+  protected telefonoPaciente(
+    detalle: PacienteDetalle | null,
+    paciente: PacienteAtencionVista,
+  ): string {
+    return detalle?.telefono?.trim() || paciente.telefono?.trim() || '';
+  }
+
+  /** Tipo de atención del detalle en el texto de la ficha. */
+  protected tipoAtencionLegible(tipo: TipoAtencion | null): string {
+    return tipo ? this.etiquetasTipo[tipo] : '—';
+  }
+
+  /** Fecha y hora del detalle en el formato dd-mm-yyyy • HH:mm. */
+  protected fechaHoraLegible(valor: string | null): string {
+    if (!valor) return '—';
+
+    const [fecha, hora = ''] = valor.split('T');
+    const [anio, mes, dia] = fecha.split('-');
+    if (!anio || !mes || !dia) return valor;
+
+    return `${dia}-${mes}-${anio}${hora ? ` • ${hora.slice(0, 5)}` : ''}`;
+  }
+
+  /** Nombre de la persona responsable del paciente. */
+  protected responsableNombre(detalle: PacienteDetalle | null): string {
+    if (!detalle?.responsable) return 'No registrado';
+
+    const nombre = `${detalle.responsable.nombres} ${detalle.responsable.apellidos}`.trim();
+    return nombre || 'No registrado';
+  }
+
+  /** Teléfono de la persona responsable del paciente. */
+  protected responsableTelefono(detalle: PacienteDetalle | null): string {
+    return detalle?.responsable?.telefono?.trim() || 'No registrado';
+  }
+
+  /** Parte el texto en líneas cortas para que el tooltip nativo no se abra tan ancho. */
+  protected textoTooltip(valor: string | null, porDefecto: string): string {
+    const texto = (valor ?? '').trim() || porDefecto;
+    const limite = 36;
+    const palabras = texto.split(/\s+/);
+    const lineas: string[] = [];
+    let linea = '';
+
+    for (const palabra of palabras) {
+      if (!linea) {
+        linea = palabra;
+        continue;
+      }
+
+      if (`${linea} ${palabra}`.length > limite) {
+        lineas.push(linea);
+        linea = palabra;
+      } else {
+        linea = `${linea} ${palabra}`;
+      }
+    }
+
+    if (linea) lineas.push(linea);
+    return lineas.join('\n');
   }
 
   /** El paciente está seleccionado y su detalle se muestra a la derecha. */
@@ -259,6 +326,20 @@ export class Atencion implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.destruido = true;
     this.peticionAltas?.unsubscribe();
+    this.peticionDetalle?.unsubscribe();
+    this.peticionSignos?.unsubscribe();
+  }
+
+  /** Vuelve a consultar el detalle del paciente seleccionado. */
+  recargarDetalle(): void {
+    this.cargarDetallePaciente(this.pacienteSeleccionado);
+  }
+
+  /** Vuelve a consultar los signos vitales del episodio seleccionado. */
+  recargarSignos(): void {
+    this.cargarSignosVitales(
+      this.detallePaciente?.episodioId ?? this.pacienteSeleccionado?.episodioId ?? null,
+    );
   }
 
   /** Carga los pacientes en atención y deja seleccionado el primero del listado. */
@@ -274,7 +355,9 @@ export class Atencion implements OnInit, OnDestroy {
         this.pacientes = pacientes.map((paciente, posicion) => this.aVista(paciente, posicion));
         this.pacienteSeleccionado = this.pacientesFiltrados[0] ?? null;
         this.episodioActivo.guardar(this.pacienteSeleccionado?.episodioId ?? null);
+        this.episodioActivo.guardarPaciente(this.pacienteSeleccionado?.pacienteId ?? null);
         this.cargando = false;
+        this.cargarDetallePaciente(this.pacienteSeleccionado);
         this.cdr.detectChanges();
       },
       error: (error) => {
@@ -283,6 +366,7 @@ export class Atencion implements OnInit, OnDestroy {
         console.error('Error al listar los pacientes en atención', error);
         this.pacientes = [];
         this.pacienteSeleccionado = null;
+        this.cargarDetallePaciente(null);
         this.cargando = false;
         this.errorCarga = true;
         this.cdr.detectChanges();
@@ -297,6 +381,7 @@ export class Atencion implements OnInit, OnDestroy {
     this.cargandoAltas = true;
     this.errorAltas = false;
     this.pacienteSeleccionado = null;
+    this.cargarDetallePaciente(null);
     this.cdr.markForCheck();
     this.peticionAltas?.unsubscribe();
 
@@ -315,6 +400,7 @@ export class Atencion implements OnInit, OnDestroy {
           this.altasRecientes = altas.map((alta) => this.aVistaAlta(alta));
           if (this.filtroActivo === 'altasRecientes') {
             this.pacienteSeleccionado = this.pacientesFiltrados[0] ?? null;
+            this.cargarDetallePaciente(this.pacienteSeleccionado);
           }
         },
         error: (error) => {
@@ -323,6 +409,7 @@ export class Atencion implements OnInit, OnDestroy {
           console.error('Error al listar las altas recientes', error);
           this.altasRecientes = [];
           this.pacienteSeleccionado = null;
+          this.cargarDetallePaciente(null);
           this.errorAltas = true;
         },
       });
@@ -330,10 +417,14 @@ export class Atencion implements OnInit, OnDestroy {
 
   /** Elige el paciente cuyo detalle muestra el panel de la derecha y guarda su episodio activo. */
   seleccionarPaciente(paciente: PacienteAtencionVista): void {
+    if (this.pacienteSeleccionado?.pacienteId === paciente.pacienteId) return;
+
     this.pacienteSeleccionado = paciente;
     if (!paciente.esAlta) {
       this.episodioActivo.guardar(paciente.episodioId);
+      this.episodioActivo.guardarPaciente(paciente.pacienteId);
     }
+    this.cargarDetallePaciente(paciente);
   }
 
   /** Cambia el filtro del listado y ajusta la selección a lo que queda a la vista. */
@@ -363,8 +454,92 @@ export class Atencion implements OnInit, OnDestroy {
       this.pacienteSeleccionado = visibles[0] ?? null;
       if (this.pacienteSeleccionado && !this.pacienteSeleccionado.esAlta) {
         this.episodioActivo.guardar(this.pacienteSeleccionado.episodioId);
+        this.episodioActivo.guardarPaciente(this.pacienteSeleccionado.pacienteId);
       }
+      this.cargarDetallePaciente(this.pacienteSeleccionado);
     }
+  }
+
+  /**
+   * Carga el detalle real del paciente y, cuando hay episodio, sus signos vitales. Cancela la
+   * consulta anterior para no mostrar datos de un paciente que ya no está seleccionado.
+   */
+  private cargarDetallePaciente(paciente: PacienteAtencionVista | null): void {
+    this.peticionDetalle?.unsubscribe();
+    this.peticionSignos?.unsubscribe();
+    this.detallePaciente = null;
+    this.signosVitales = [];
+    this.errorDetalle = '';
+    this.errorSignos = '';
+
+    if (paciente === null || paciente.pacienteId === null || this.destruido) {
+      this.cargandoDetalle = false;
+      this.cargandoSignos = false;
+      this.cdr.markForCheck();
+      return;
+    }
+
+    const pacienteId = paciente.pacienteId;
+
+    this.cargandoDetalle = true;
+    this.cdr.markForCheck();
+
+    this.peticionDetalle = this.servicioPaciente.obtenerPaciente(pacienteId).subscribe({
+      next: (detalle) => {
+        if (this.destruido || this.pacienteSeleccionado?.pacienteId !== pacienteId) return;
+
+        this.detallePaciente = detalle;
+        this.cargandoDetalle = false;
+        this.cargarSignosVitales(
+          detalle.episodioId ?? paciente.episodioId ?? paciente.ultimoEpisodioId,
+        );
+        this.cdr.detectChanges();
+      },
+      error: (error) => {
+        if (this.destruido || this.pacienteSeleccionado?.pacienteId !== pacienteId) return;
+
+        console.error('Error al cargar el detalle del paciente', error);
+        this.cargandoDetalle = false;
+        this.errorDetalle = this.mensajeError(error, 'No se pudo cargar el detalle del paciente.');
+        this.cdr.detectChanges();
+      },
+    });
+  }
+
+  /** Carga los signos vitales del episodio y deja el más reciente al inicio. */
+  private cargarSignosVitales(episodioId: number | null): void {
+    this.peticionSignos?.unsubscribe();
+    this.signosVitales = [];
+    this.errorSignos = '';
+
+    if (episodioId === null || episodioId <= 0 || this.destruido) {
+      this.cargandoSignos = false;
+      this.cdr.markForCheck();
+      return;
+    }
+
+    this.cargandoSignos = true;
+    this.cdr.markForCheck();
+
+    this.peticionSignos = this.servicioSignos.buscarPorEpisodio(episodioId).subscribe({
+      next: (registros) => {
+        if (this.destruido) return;
+
+        this.signosVitales = [...registros].sort(
+          (a, b) => this.fechaMs(b.fecha) - this.fechaMs(a.fecha),
+        );
+        this.cargandoSignos = false;
+        this.cdr.detectChanges();
+      },
+      error: (error) => {
+        if (this.destruido) return;
+
+        console.error('Error al cargar los signos vitales', error);
+        this.cargandoSignos = false;
+        this.errorSignos = this.mensajeError(error, 'No se pudieron cargar los signos vitales.');
+        this.cdr.detectChanges();
+      },
+    });
   }
 
   /** Abre el episodio del paciente: entra a evaluación clínica y quedan a la vista los submódulos. */
@@ -384,6 +559,7 @@ export class Atencion implements OnInit, OnDestroy {
     }
 
     this.episodioActivo.guardar(this.pacienteSeleccionado.episodioId);
+    this.episodioActivo.guardarPaciente(this.pacienteSeleccionado.pacienteId);
     this.router.navigate(this.rutaEpisodio);
   }
 
@@ -401,12 +577,16 @@ export class Atencion implements OnInit, OnDestroy {
     }
 
     this.episodioActivo.guardar(episodioId, true);
+    this.episodioActivo.guardarPaciente(this.pacienteSeleccionado.pacienteId);
     this.router.navigate(this.rutaUltimoEpisodio);
   }
 
-  // TODO fase 2: abrir el expediente clínico del paciente seleccionado cuando exista esa pantalla.
-  /** Abre el expediente del paciente; todavía sin destino en el módulo. */
-  abrirExpediente(): void {}
+  /** Abre el expediente clínico del paciente seleccionado. */
+  abrirExpediente(): void {
+    const pacienteId = this.pacienteSeleccionado?.pacienteId;
+    if (!pacienteId) return;
+    void this.router.navigate(['/expediente', pacienteId]);
+  }
 
   // ------------------- AUXILIARES -------------------
   /** El paciente pasa el filtro de tipo de atención activo. */
@@ -421,19 +601,19 @@ export class Atencion implements OnInit, OnDestroy {
     const fecha = new Date(alta.fechaHoraEgreso);
 
     return {
+      pacienteId: alta.pacienteId,
       expediente: alta.codigoExpediente ?? '',
       episodioId: null,
       ultimoEpisodioId: alta.episodioId,
       nombre: alta.nombreCompleto,
       edad: alta.edad,
-      sexo: this.textoSexo(alta.sexo),
+      sexo: this.sexoLegible(alta.sexo),
+      telefono: alta.telefono ?? '',
       estadoAtencion: 'alta',
       tipoAtencion: alta.tipoAtencion,
       ubicacion: '',
       diagnostico: alta.diagnosticoEgreso,
       fechaIngreso: this.formatearFecha(fecha),
-      alergias: '',
-      signosVitales: [],
       esAlta: true,
       egreso: {
         tipoAlta: alta.tipoAlta,
@@ -443,13 +623,6 @@ export class Atencion implements OnInit, OnDestroy {
         observacion: alta.observacionEgreso?.trim() || 'Sin observaciones',
       },
     };
-  }
-
-  /** Texto del sexo del paciente para la ficha. */
-  private textoSexo(sexo: AltaRecienteResponse['sexo']): string {
-    if (sexo === 'MASCULINO') return 'Masculino';
-    if (sexo === 'FEMENINO') return 'Femenino';
-    return '—';
   }
 
   /** Fecha de la ficha en el formato dd-mm-yyyy. */
@@ -475,10 +648,14 @@ export class Atencion implements OnInit, OnDestroy {
     const detalle = DETALLES_MOCK[posicion % DETALLES_MOCK.length];
 
     return {
+      pacienteId: paciente.pacienteId,
       expediente: paciente.codigoExpediente,
       episodioId: paciente.episodioId,
       ultimoEpisodioId: paciente.ultimoEpisodioId ?? paciente.episodioId ?? null,
       nombre: paciente.nombreCompleto,
+      telefono: paciente.telefono ?? '',
+      // El resumen del listado no trae diagnóstico: se deja vacío para no inventarlo.
+      diagnostico: '',
       tipoAtencion: paciente.tipoTratamiento,
       esAlta: false,
       egreso: null,
@@ -490,5 +667,37 @@ export class Atencion implements OnInit, OnDestroy {
   private fechaIngresoMs(paciente: PacienteAtencionVista): number {
     const [dia, mes, anio] = paciente.fechaIngreso.split('-');
     return new Date(Number(anio), Number(mes) - 1, Number(dia)).getTime();
+  }
+
+  /** Fecha de un registro clínico en milisegundos; los valores inválidos quedan al final. */
+  private fechaMs(valor: string): number {
+    const fecha = new Date(valor).getTime();
+    return Number.isNaN(fecha) ? 0 : fecha;
+  }
+
+  /** Mensaje legible de un error HTTP, de red o de tiempo de espera. */
+  private mensajeError(error: unknown, porDefecto: string): string {
+    if (error instanceof TimeoutError) {
+      return 'Error de comunicación. El servidor no respondió dentro del tiempo esperado.';
+    }
+
+    if (error instanceof HttpErrorResponse) {
+      const cuerpo = error.error;
+
+      if (cuerpo && typeof cuerpo === 'object' && 'message' in cuerpo) {
+        const mensaje = String((cuerpo as { message?: unknown }).message ?? '').trim();
+        if (mensaje) return mensaje;
+      }
+
+      if (typeof cuerpo === 'string' && cuerpo.trim()) return cuerpo.trim();
+      if (error.status === 0) return 'No se pudo conectar con el servidor.';
+    }
+
+    if (error && typeof error === 'object' && 'message' in error) {
+      const mensaje = String((error as { message?: unknown }).message ?? '').trim();
+      if (mensaje) return mensaje;
+    }
+
+    return porDefecto;
   }
 }
