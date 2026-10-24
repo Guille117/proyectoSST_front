@@ -147,10 +147,10 @@
 					panelClass="panel-medicos"
 				>
 					<mat-select-trigger>
-						{{ enfermedadesSeleccionadas.length ? enfermedadesSeleccionadas.join(', ') : 'Seleccione las enfermedades' }}
+						{{ enfermedadesSeleccionadas.length ? nombresEnfermedadesSeleccionadas : 'Seleccione las enfermedades' }}
 					</mat-select-trigger>
 					@for (enfermedad of enfermedades; track enfermedad.id ?? enfermedad.nombre) {
-						<mat-option [value]="enfermedad.nombre">{{ enfermedad.nombre }}</mat-option>
+						<mat-option [value]="enfermedad.id">{{ enfermedad.nombre }}</mat-option>
 					}
 				</mat-select>
 			</app-campo-validado>
@@ -165,10 +165,10 @@
 					panelClass="panel-medicos"
 				>
 					<mat-select-trigger>
-						{{ alergiasSeleccionadas.length ? alergiasSeleccionadas.join(', ') : 'Seleccione las alergias' }}
+						{{ alergiasSeleccionadas.length ? nombresAlergiasSeleccionadas : 'Seleccione las alergias' }}
 					</mat-select-trigger>
 					@for (alergia of alergias; track alergia.id ?? alergia.nombre) {
-						<mat-option [value]="alergia.nombre">{{ alergia.nombre }}</mat-option>
+						<mat-option [value]="alergia.id">{{ alergia.nombre }}</mat-option>
 					}
 				</mat-select>
 			</app-campo-validado>

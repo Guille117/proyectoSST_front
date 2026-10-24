@@ -146,6 +146,36 @@
                     <p>{{ datos.descripcion || 'No registrado' }}</p>
                 </section>
 
+                <div class="bloques-paralelos">
+                    <section class="bloque bloque-alergias">
+                        <h4>Alergias</h4>
+
+                        @if (datos.alergias.length === 0) {
+                            <p class="dato-vacio">Ninguna registrada</p>
+                        } @else {
+                            <ul class="lista-catalogo">
+                                @for (alergia of datos.alergias; track alergia.id) {
+                                    <li>{{ alergia.nombre }}</li>
+                                }
+                            </ul>
+                        }
+                    </section>
+
+                    <section class="bloque bloque-enfermedades bloque--responsable">
+                        <h4>Enfermedades diagnosticadas</h4>
+
+                        @if (datos.enfermedades.length === 0) {
+                            <p class="dato-vacio">Ninguna registrada</p>
+                        } @else {
+                            <ul class="lista-catalogo">
+                                @for (enfermedad of datos.enfermedades; track enfermedad.id) {
+                                    <li>{{ enfermedad.nombre }}</li>
+                                }
+                            </ul>
+                        }
+                    </section>
+                </div>
+
                 <section class="bloque">
                     <h4>Documentos</h4>
 

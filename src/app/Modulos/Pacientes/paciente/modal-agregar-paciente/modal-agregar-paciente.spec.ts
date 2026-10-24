@@ -67,6 +67,8 @@ describe('ModalAgregarPaciente', () => {
       institucionNombre: 'Centro de salud',
       motivoReferencia: 'Evaluación',
     },
+    alergias: [{ id: 2, nombre: 'Penicilina' }],
+    enfermedades: [{ id: 1, nombre: 'Diabetes' }],
   };
 
   const respuesta: PacienteResponse = {
@@ -216,6 +218,27 @@ describe('ModalAgregarPaciente', () => {
     expect(component.institucionSeleccionada?.id).toBe(8);
     expect(component.motivoReferencia).toBe('Evaluación');
     expect(component.pasos.length).toBe(5);
+  });
+
+  it('precarga y envía las alergias y enfermedades seleccionadas por ID', async () => {
+    await crearEnEdicion(detalle);
+
+    expect(component.alergiasSeleccionadas).toEqual([2]);
+    expect(component.enfermedadesSeleccionadas).toEqual([1]);
+
+    await component.guardarPaciente();
+
+    expect(pacienteService.actualizarPaciente).toHaveBeenCalledWith(
+      20,
+      expect.objectContaining({
+        request: expect.objectContaining({
+          paciente: expect.objectContaining({
+            alergiaIds: [2],
+            enfermedadIds: [1],
+          }),
+        }),
+      }),
+    );
   });
 
   it('guarda la edición con confirmación y envía la cama seleccionada', async () => {

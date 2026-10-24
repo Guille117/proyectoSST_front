@@ -94,8 +94,8 @@ export class ModalAgregarPaciente {
   insituciones: Inter_institucion[] = [];
   enfermedades: Inter_base[] = [];
   alergias: Inter_base[] = [];
-  enfermedadesSeleccionadas: string[] = [];
-  alergiasSeleccionadas: string[] = [];
+  enfermedadesSeleccionadas: number[] = [];
+  alergiasSeleccionadas: number[] = [];
 
   llenarSelects(){
     this.cargarParentescos();
@@ -216,6 +216,8 @@ export class ModalAgregarPaciente {
     this.pacienteForm.estadoCivil = datos.estadoCivil ?? '';
     this.pacienteForm.direccion = datos.direccion ?? '';
     this.pacienteForm.ocupacion = datos.ocupacion ?? '';
+    this.alergiasSeleccionadas = datos.alergias.map((alergia) => alergia.id);
+    this.enfermedadesSeleccionadas = datos.enfermedades.map((enfermedad) => enfermedad.id);
 
     if (datos.tipoAtencion) {
       this.tipoAtencion = datos.tipoAtencion === 'HOSPITALIZACION' ? 'hospitalizacion' : 'emergencia';
@@ -409,6 +411,8 @@ export class ModalAgregarPaciente {
     this.pacienteForm.estadoCivil = detalle.estadoCivil ?? '';
     this.pacienteForm.direccion = detalle.direccion ?? '';
     this.pacienteForm.ocupacion = detalle.ocupacion ?? '';
+    this.alergiasSeleccionadas = detalle.alergias.map((alergia) => alergia.id);
+    this.enfermedadesSeleccionadas = detalle.enfermedades.map((enfermedad) => enfermedad.id);
 
     const responsable = detalle.responsable;
     if (!responsable) {
@@ -594,6 +598,8 @@ export class ModalAgregarPaciente {
       direccion: this.pacienteForm.direccion.trim() || null,
       ocupacion: this.pacienteForm.ocupacion.trim() || null,
       camaId,
+      alergiaIds: [...this.alergiasSeleccionadas],
+      enfermedadIds: [...this.enfermedadesSeleccionadas],
     };
 
     // Un paciente sin episodio activo solo puede actualizar sus datos personales.
@@ -715,6 +721,21 @@ export class ModalAgregarPaciente {
 
   get referenciaTieneDatos(): boolean {
     return Boolean(this.institucionSeleccionada || this.motivoReferencia.trim() || this.archivoReferencia);
+  }
+
+  protected get nombresAlergiasSeleccionadas(): string {
+    return this.nombresSeleccionados(this.alergiasSeleccionadas, this.alergias);
+  }
+
+  protected get nombresEnfermedadesSeleccionadas(): string {
+    return this.nombresSeleccionados(this.enfermedadesSeleccionadas, this.enfermedades);
+  }
+
+  private nombresSeleccionados(ids: number[], catalogo: Inter_base[]): string {
+    return ids
+      .map((id) => catalogo.find((item) => item.id === id)?.nombre)
+      .filter((nombre): nombre is string => Boolean(nombre))
+      .join(', ');
   }
   
   get puedeAvanzarPaso1(): boolean {

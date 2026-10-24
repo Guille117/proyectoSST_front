@@ -75,6 +75,8 @@ describe('Paciente', () => {
       institucionNombre: 'Centro de salud',
       motivoReferencia: 'Evaluación',
     },
+    alergias: [{ id: 2, nombre: 'Penicilina' }],
+    enfermedades: [{ id: 1, nombre: 'Diabetes' }],
   };
 
   const archivo = new File(['contenido'], 'documento.pdf', { type: 'application/pdf' });
@@ -168,6 +170,18 @@ describe('Paciente', () => {
     expect(component.documentos).toEqual([documento]);
     expect(servicioPaciente.obtenerPaciente).toHaveBeenCalledWith(1);
     expect(servicioDocumento.listarDocumentos).toHaveBeenCalledWith(101);
+  });
+
+  it('lista las alergias y enfermedades diagnosticadas del paciente', async () => {
+    await render();
+
+    const alergias = fixture.nativeElement.querySelector('.bloque-alergias') as HTMLElement;
+    const enfermedades = fixture.nativeElement.querySelector(
+      '.bloque-enfermedades',
+    ) as HTMLElement;
+
+    expect(alergias.textContent).toContain('Penicilina');
+    expect(enfermedades.textContent).toContain('Diabetes');
   });
 
   it('muestra el botón ver solo en el tipo que tiene archivos', async () => {

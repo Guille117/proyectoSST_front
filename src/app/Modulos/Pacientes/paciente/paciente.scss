@@ -57,11 +57,13 @@ tbody tr.selected-row td {
 	flex-direction: column;
 	box-sizing: border-box;
 	min-width: 300px;
+	max-height: calc(var(--heightNavBar) - 95px);
 	padding: 16px 18px;
 	border: solid 2px var(--colorBorde);
 	border-radius: 18px;
 	background: #fff;
 	box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+	overflow-y: auto;
 
 	/* Identificación del paciente y estado del mismo */
 	.paciente {
@@ -212,6 +214,30 @@ tbody tr.selected-row td {
 		}
 	}
 
+	.motivo-visita + .bloques-paralelos {
+		margin-top: 20px;
+	}
+
+	/* Catálogos clínicos del paciente: alergias y enfermedades diagnosticadas */
+	.lista-catalogo {
+		margin: 0;
+		padding-left: 18px;
+		color: var(--azulPrincipal);
+		font-size: 1rem;
+		font-weight: 600;
+		line-height: 1.4;
+
+		li + li {
+			margin-top: 4px;
+		}
+	}
+
+	.dato-vacio {
+		margin: 0;
+		color: #64748b;
+		font-size: 0.9rem;
+	}
+
 	/* Listado de documentos con una fila por documento */
 	.documentos {
 		border: 1px solid #e2e8f0;
@@ -347,6 +373,8 @@ tbody tr.selected-row td {
 
 	.derecha {
 		min-width: 0;
+		max-height: none;
+		overflow-y: visible;
 	}
 }
 

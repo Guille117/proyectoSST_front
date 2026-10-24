@@ -23,6 +23,11 @@ export interface PacienteActualizacionMultipartRequest {
   archivoReferencia: File | null;
 }
 
+export interface CatalogoSeleccionado {
+  id: number;
+  nombre: string;
+}
+
 export interface PacienteDatos {
   pacienteId: number | null;
   persona: Omit<PersonaDatos, 'cui'> & { cui: string | null };
@@ -30,6 +35,8 @@ export interface PacienteDatos {
   direccion: string | null;
   ocupacion: string | null;
   camaId: number | null;
+  alergiaIds: number[];
+  enfermedadIds: number[];
 }
 
 export interface EpisodioRequest {
@@ -97,6 +104,8 @@ export interface PacienteDetalle {
   camaCodigo: string | null;
   responsable: ResponsableDetalle | null;
   referencia: ReferenciaDetalle | null;
+  alergias: CatalogoSeleccionado[];
+  enfermedades: CatalogoSeleccionado[];
 }
 
 export interface PacienteResponse {
