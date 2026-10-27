@@ -1,9 +1,10 @@
 import { ChangeDetectorRef, Component, DestroyRef, Input, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatSelectModule } from '@angular/material/select';
-import { concatMap, finalize, tap, Observable, TimeoutError } from 'rxjs';
+import { concatMap, finalize, tap, timeout, Observable, TimeoutError } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CampoValidado } from '../../../../shared/campo-validado/campo-validado';
+import { OpcionOtroComponent, OpcionOtroValor } from '../../../../shared/opcion-otro/opcion-otro';
 import { TabSwitch } from '../../../../shared/tab-switch/tab-switch';
 import { ArchivoService } from '../../../../shared/archivos/archivoService';
 import { PersonaDatos, Sexo } from '../../../Usuarios/usu/data/usuarioInterfaz';
@@ -27,7 +28,7 @@ import { ModalPopUps } from '../../../../shared/popUps/modal-popUpsService';
 
 @Component({
   selector: 'app-modal-agregar-paciente',
-  imports: [CampoValidado, FormsModule, MatSelectModule, TabSwitch],
+  imports: [CampoValidado, FormsModule, MatSelectModule, OpcionOtroComponent, TabSwitch],
   templateUrl: './modal-agregar-paciente.html',
   styleUrl: './modal-agregar-paciente.scss',
 })
@@ -96,6 +97,18 @@ export class ModalAgregarPaciente {
   alergias: Inter_base[] = [];
   enfermedadesSeleccionadas: number[] = [];
   alergiasSeleccionadas: number[] = [];
+
+  readonly opcionOtroId = -1;
+  mostrandoOtroParentesco = false;
+  mostrandoOtroInstitucion = false;
+  mostrandoOtroEnfermedad = false;
+  mostrandoOtroAlergia = false;
+  creandoParentesco = false;
+  creandoInstitucion = false;
+  creandoEnfermedad = false;
+  creandoAlergia = false;
+  private parentescoAnterior: number | null = null;
+  private institucionAnterior: Inter_institucion | null = null;
 
   llenarSelects(){
     this.cargarParentescos();
@@ -196,6 +209,161 @@ export class ModalAgregarPaciente {
       },
       error: (error) => this.popUps.errorDesdeBackend(error, 'No se pudieron cargar las alergias.'),
     });
+  }
+
+  // ----------------------- CREACIÓN DE CATÁLOGOS DESDE EL FORMULARIO -----------------------
+  alElegirParentesco(valor: number | null): void {
+    if (Number(valor) === this.opcionOtroId) {
+      this.parentescoAnterior = this.responsableForm.parentescoId;
+      this.responsableForm.parentescoId = null;
+      this.mostrandoOtroParentesco = true;
+      return;
+    }
+
+    this.responsableForm.parentescoId = valor;
+  }
+
+  crearParentesco(datos: OpcionOtroValor): void {
+    if (this.creandoParentesco) return;
+
+    this.creandoParentesco = true;
+    this.servicioCatalogo
+      .crear<Inter_base>('parentescos', { nombre: datos.nombre })
+      .pipe(
+        timeout(5000),
+        finalize(() => {
+          this.creandoParentesco = false;
+        }),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: (creado) => {
+          if (creado.id == null) return;
+
+          this.parentesco = [...this.parentesco, creado];
+          this.responsableForm.parentescoId = creado.id;
+          this.parentescoSeleccionadoNombre = creado.nombre;
+          this.mostrandoOtroParentesco = false;
+        },
+        error: (error) => this.popUps.errorDesdeBackend(error, 'No se pudo crear el parentesco.'),
+      });
+  }
+
+  cancelarParentesco(): void {
+    this.mostrandoOtroParentesco = false;
+    this.responsableForm.parentescoId = this.parentescoAnterior;
+  }
+
+  alElegirInstitucion(valor: Inter_institucion | number | null): void {
+    if (valor === this.opcionOtroId) {
+      this.institucionAnterior = this.institucionSeleccionada;
+      this.institucionSeleccionada = null;
+      this.mostrandoOtroInstitucion = true;
+      return;
+    }
+
+    this.institucionSeleccionada = valor as Inter_institucion | null;
+  }
+
+  crearInstitucion(datos: OpcionOtroValor): void {
+    if (this.creandoInstitucion) return;
+
+    this.creandoInstitucion = true;
+    this.servicioCatalogo
+      .crear<Inter_institucion>('instituciones', { nombre: datos.nombre } as Inter_institucion)
+      .pipe(
+        timeout(5000),
+        finalize(() => {
+          this.creandoInstitucion = false;
+        }),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: (creada) => {
+          if (creada.id == null) return;
+
+          this.insituciones = [...this.insituciones, creada];
+          this.institucionSeleccionada = creada;
+          this.mostrandoOtroInstitucion = false;
+        },
+        error: (error) => this.popUps.errorDesdeBackend(error, 'No se pudo crear la institución.'),
+      });
+  }
+
+  cancelarInstitucion(): void {
+    this.mostrandoOtroInstitucion = false;
+    this.institucionSeleccionada = this.institucionAnterior;
+    this.institucionAnterior = null;
+  }
+
+  alCambiarEnfermedades(valores: number[]): void {
+    if (!valores?.includes(this.opcionOtroId)) {
+      this.enfermedadesSeleccionadas = valores ?? [];
+      return;
+    }
+
+    this.enfermedadesSeleccionadas = valores.filter((id) => id !== this.opcionOtroId);
+    this.mostrandoOtroEnfermedad = true;
+  }
+
+  crearEnfermedad(datos: OpcionOtroValor): void {
+    if (this.creandoEnfermedad) return;
+
+    this.creandoEnfermedad = true;
+    this.servicioCatalogo
+      .crear<Inter_base>('enfermedades', { nombre: datos.nombre })
+      .pipe(
+        timeout(5000),
+        finalize(() => {
+          this.creandoEnfermedad = false;
+        }),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: (creada) => {
+          if (creada.id == null) return;
+
+          this.enfermedades = [...this.enfermedades, creada];
+          this.enfermedadesSeleccionadas = [...this.enfermedadesSeleccionadas, creada.id];
+          this.mostrandoOtroEnfermedad = false;
+        },
+        error: (error) => this.popUps.errorDesdeBackend(error, 'No se pudo crear la enfermedad.'),
+      });
+  }
+
+  alCambiarAlergias(valores: number[]): void {
+    if (!valores?.includes(this.opcionOtroId)) {
+      this.alergiasSeleccionadas = valores ?? [];
+      return;
+    }
+
+    this.alergiasSeleccionadas = valores.filter((id) => id !== this.opcionOtroId);
+    this.mostrandoOtroAlergia = true;
+  }
+
+  crearAlergia(datos: OpcionOtroValor): void {
+    if (this.creandoAlergia) return;
+
+    this.creandoAlergia = true;
+    this.servicioCatalogo
+      .crear<Inter_base>('alergias', { nombre: datos.nombre })
+      .pipe(
+        timeout(5000),
+        finalize(() => {
+          this.creandoAlergia = false;
+        }),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: (creada) => {
+          if (creada.id == null) return;
+
+          this.alergias = [...this.alergias, creada];
+          this.alergiasSeleccionadas = [...this.alergiasSeleccionadas, creada.id];
+          this.mostrandoOtroAlergia = false;
+        },
+        error: (error) => this.popUps.errorDesdeBackend(error, 'No se pudo crear la alergia.'),
+      });
   }
 
   // ----------------------- PRECARGA DE EDICIÓN -----------------------

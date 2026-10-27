@@ -494,20 +494,31 @@
                       </select>
                     </td>
                     <td class="celda_centrada">
-                      <select
-                        class="lote-select select-motivo"
-                        aria-label="Motivo de devoluciÃ³n"
-                        [disabled]="cargandoMotivos"
-                        [ngModelOptions]="{ standalone: true }"
-                        [(ngModel)]="detalle.motivoBajaId"
-                      >
-                        <option [ngValue]="null">
-                          {{ cargandoMotivos ? 'Cargando...' : 'Seleccionar motivo...' }}
-                        </option>
-                        @for (motivo of motivos; track motivo.id) {
-                          <option [ngValue]="motivo.id">{{ motivo.nombre }}</option>
-                        }
-                      </select>
+                      @if (detalleEditandoMotivo === detalle) {
+                        <app-opcion-otro
+                          [placeholder]="'Escribe el motivo'"
+                          [creando]="creandoMotivo"
+                          (confirmar)="crearMotivo(detalle, $event)"
+                          (cancelar)="cancelarMotivo(detalle)"
+                        ></app-opcion-otro>
+                      } @else {
+                        <select
+                          class="lote-select select-motivo"
+                          aria-label="Motivo de devoluciÃ³n"
+                          [disabled]="cargandoMotivos"
+                          [ngModelOptions]="{ standalone: true }"
+                          [ngModel]="detalle.motivoBajaId"
+                          (ngModelChange)="alElegirMotivo(detalle, $event)"
+                        >
+                          <option [ngValue]="null">
+                            {{ cargandoMotivos ? 'Cargando...' : 'Seleccionar motivo...' }}
+                          </option>
+                          @for (motivo of motivos; track motivo.id) {
+                            <option [ngValue]="motivo.id">{{ motivo.nombre }}</option>
+                          }
+                          <option [ngValue]="opcionOtroId">Otro</option>
+                        </select>
+                      }
                     </td>
                     <td class="celda_centrada">
                       <input

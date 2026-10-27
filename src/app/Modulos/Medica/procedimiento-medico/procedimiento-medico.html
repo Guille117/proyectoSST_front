@@ -32,19 +32,30 @@
             Tipo de procedimiento<span class="indicacion-obligatorio" aria-hidden="true">*</span>
           </label>
 
-          <select
-            class="indicacion-input"
-            id="tipoProcedimientoMedico"
-            name="tipoProcedimiento"
-            aria-required="true"
-            [disabled]="cargandoTipos"
-            [(ngModel)]="tipoProcedimiento"
-          >
-            <option [ngValue]="null" disabled>Seleccionar...</option>
-            @for (tipo of tiposProcedimiento; track tipo.id) {
-              <option [ngValue]="tipo.id">{{ tipo.nombre }}</option>
-            }
-          </select>
+          @if (mostrandoOtroTipo) {
+            <app-opcion-otro
+              [placeholder]="'Escribe el tipo de procedimiento'"
+              [creando]="creandoTipo"
+              (confirmar)="crearTipo($event)"
+              (cancelar)="cancelarTipo()"
+            ></app-opcion-otro>
+          } @else {
+            <select
+              class="indicacion-input"
+              id="tipoProcedimientoMedico"
+              name="tipoProcedimiento"
+              aria-required="true"
+              [disabled]="cargandoTipos"
+              [ngModel]="tipoProcedimiento"
+              (ngModelChange)="alElegirTipo($event)"
+            >
+              <option [ngValue]="null" disabled>Seleccionar...</option>
+              @for (tipo of tiposProcedimiento; track tipo.id) {
+                <option [ngValue]="tipo.id">{{ tipo.nombre }}</option>
+              }
+              <option [ngValue]="opcionOtroId">Otro</option>
+            </select>
+          }
         </div>
 
         <div class="indicacion-campo">

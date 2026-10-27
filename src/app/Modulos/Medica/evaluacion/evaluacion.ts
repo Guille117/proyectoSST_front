@@ -2,6 +2,7 @@ import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { finalize, Subscription, switchMap, tap, TimeoutError } from 'rxjs';
 import { AuthService } from '../../Auth/data/auth-service';
+import { OpcionOtroComponent, OpcionOtroValor } from '../../../shared/opcion-otro/opcion-otro';
 import { PopUps } from '../../../shared/popUps/popUpsService';
 import { DatosPaciente } from '../datos-paciente/datos-paciente';
 import { EpisodioActivoService } from '../data/episodio-activo-service';
@@ -34,7 +35,7 @@ interface HallazgoVista {
 
 @Component({
   selector: 'app-evaluacion',
-  imports: [FormsModule, HistoriaClinica, Diagnostico, DatosPaciente],
+  imports: [FormsModule, OpcionOtroComponent, HistoriaClinica, Diagnostico, DatosPaciente],
   templateUrl: './evaluacion.html',
   styleUrl: './evaluacion.scss',
   host: {
@@ -79,6 +80,11 @@ export class Evaluacion implements OnInit, OnDestroy {
   /** Partes del cuerpo del catálogo: cada una es una región donde se registra un hallazgo. */
   partesCuerpo: ParteCuerpoResponse[] = [];
   parteSeleccionadaId: number | null = null;
+
+  readonly opcionOtroId = -1;
+  mostrandoOtroParte = false;
+  creandoParte = false;
+  private parteAnterior: number | null = null;
 
   /** Hallazgos registrados del episodio, del más reciente al más antiguo. */
   hallazgos: HallazgoVista[] = [];
@@ -331,6 +337,56 @@ export class Evaluacion implements OnInit, OnDestroy {
     if (id === this.parteSeleccionadaId) return;
 
     this.parteSeleccionadaId = id;
+  }
+
+  alElegirParte(valor: number | null): void {
+    if (valor === this.opcionOtroId) {
+      this.parteAnterior = this.parteSeleccionadaId;
+      this.parteSeleccionadaId = null;
+      this.mostrandoOtroParte = true;
+      return;
+    }
+
+    if (valor == null) {
+      this.parteSeleccionadaId = null;
+      return;
+    }
+
+    this.seleccionarParteCuerpo(valor);
+  }
+
+  crearParte(datos: OpcionOtroValor): void {
+    if (this.creandoParte) return;
+
+    this.creandoParte = true;
+    this.examenFisicoService
+      .postParteCuerpo(datos.nombre)
+      .pipe(
+        finalize(() => {
+          this.creandoParte = false;
+          if (!this.destruido) this.cdr.markForCheck();
+        }),
+      )
+      .subscribe({
+        next: (creada) => {
+          if (this.destruido) return;
+
+          this.partesCuerpo = [...this.partesCuerpo, creada];
+          this.parteSeleccionadaId = creada.id;
+          this.mostrandoOtroParte = false;
+          this.cdr.markForCheck();
+        },
+        error: (error) => {
+          if (this.destruido) return;
+
+          this.popUps.errorDesdeBackend(error, 'No se pudo crear la parte del cuerpo.');
+        },
+      });
+  }
+
+  cancelarParte(): void {
+    this.mostrandoOtroParte = false;
+    this.parteSeleccionadaId = this.parteAnterior;
   }
 
   /** Muestra u oculta el menú de opciones de la tarjeta de hallazgo pulsada. */

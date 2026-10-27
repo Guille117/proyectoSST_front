@@ -1,6 +1,7 @@
 import { ChangeDetectorRef, Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { finalize, Subscription, TimeoutError } from 'rxjs';
+import { OpcionOtroComponent, OpcionOtroValor } from '../../../shared/opcion-otro/opcion-otro';
 import { PopUps } from '../../../shared/popUps/popUpsService';
 import { TabSwitch } from '../../../shared/tab-switch/tab-switch';
 import { AuthService } from '../../Auth/data/auth-service';
@@ -73,7 +74,7 @@ interface ProcedimientoVista {
  */
 @Component({
   selector: 'app-procedimiento-medico',
-  imports: [FormsModule, TabSwitch],
+  imports: [FormsModule, OpcionOtroComponent, TabSwitch],
   templateUrl: './procedimiento-medico.html',
   styleUrl: './procedimiento-medico.scss',
   host: {
@@ -102,6 +103,10 @@ export class ProcedimientoMedico implements OnInit, OnDestroy {
 
   /** Campos del formulario de registro. */
   tipoProcedimiento: number | null = null;
+  readonly opcionOtroId = -1;
+  mostrandoOtroTipo = false;
+  creandoTipo = false;
+  private tipoAnterior: number | null = null;
   descripcion = '';
   resultado = '';
   inicio = '';
@@ -314,6 +319,55 @@ export class ProcedimientoMedico implements OnInit, OnDestroy {
           this.mostrarError(error, 'No se pudieron cargar los tipos de procedimiento.');
         },
       });
+  }
+
+  // ------------------- CREACIÓN DE TIPOS DE PROCEDIMIENTO -------------------
+  alElegirTipo(valor: number | null): void {
+    if (valor === this.opcionOtroId) {
+      this.tipoAnterior = this.tipoProcedimiento;
+      this.tipoProcedimiento = null;
+      this.mostrandoOtroTipo = true;
+      return;
+    }
+
+    this.tipoProcedimiento = valor;
+  }
+
+  crearTipo(datos: OpcionOtroValor): void {
+    if (this.creandoTipo) return;
+
+    this.creandoTipo = true;
+    this.servicio
+      .postTipoProcedimiento(datos.nombre)
+      .pipe(
+        finalize(() => {
+          this.creandoTipo = false;
+          if (!this.destruido) this.cdr.markForCheck();
+        }),
+      )
+      .subscribe({
+        next: (creado) => {
+          if (this.destruido) return;
+
+          this.tiposProcedimiento = [
+            ...this.tiposProcedimiento,
+            { id: creado.id, nombre: creado.nombre },
+          ];
+          this.tipoProcedimiento = creado.id;
+          this.mostrandoOtroTipo = false;
+          this.cdr.markForCheck();
+        },
+        error: (error) => {
+          if (this.destruido) return;
+
+          this.mostrarError(error, 'No se pudo crear el tipo de procedimiento.');
+        },
+      });
+  }
+
+  cancelarTipo(): void {
+    this.mostrandoOtroTipo = false;
+    this.tipoProcedimiento = this.tipoAnterior;
   }
 
   /** Carga los procedimientos del episodio activo y conserva la selección indicada. */

@@ -113,7 +113,7 @@ describe('Insumos', () => {
     const detalle: HTMLInputElement = fixture.nativeElement.querySelector('#detalleInsumo');
     expect(detalle.required).toBe(false);
     const fabricante: HTMLSelectElement = fixture.nativeElement.querySelector('#fabricanteInsumo');
-    expect(fabricante.options.length).toBe(1);
+    expect(fabricante.options.length).toBe(2);
     const botones: NodeListOf<HTMLButtonElement> = fixture.nativeElement.querySelectorAll('.botones button');
     expect(Array.from(botones, (boton) => boton.textContent)).toEqual(['Cancelar', 'Guardar']);
     expect(Array.from(botones, (boton) => boton.type)).toEqual(['button', 'submit']);

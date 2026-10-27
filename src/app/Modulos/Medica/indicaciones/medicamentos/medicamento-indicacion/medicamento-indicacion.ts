@@ -12,6 +12,7 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { finalize, Subscription, timeout, TimeoutError } from 'rxjs';
+import { OpcionOtroComponent, OpcionOtroValor } from '../../../../../shared/opcion-otro/opcion-otro';
 import { Paginacion } from '../../../../../shared/paginacion/paginacion';
 import { PopUps } from '../../../../../shared/popUps/popUpsService';
 import { CatalogoService } from '../../../../Catalogos/data/serviceCatalogo';
@@ -77,7 +78,7 @@ export function textoDuracion(medicamento: MedicamentoTratamiento): string {
  */
 @Component({
   selector: 'app-medicamento-indicacion',
-  imports: [FormsModule, Paginacion],
+  imports: [FormsModule, OpcionOtroComponent, Paginacion],
   templateUrl: './medicamento-indicacion.html',
   styleUrl: './medicamento-indicacion.scss',
 })
@@ -88,6 +89,7 @@ export class MedicamentoIndicacion implements OnInit, OnChanges, OnDestroy {
   private readonly cdr = inject(ChangeDetectorRef);
   private peticionUnidades?: Subscription;
   private peticionCatalogo?: Subscription;
+  private destruido = false;
 
   // ------------------- ESTADO DE LA VISTA -------------------
   /** Campos del formulario del medicamento. */
@@ -96,6 +98,10 @@ export class MedicamentoIndicacion implements OnInit, OnChanges, OnDestroy {
   medicamentoLibre = '';
   cantidad: number | null = null;
   unidadMedida = '';
+  readonly opcionOtroId = '__otro__';
+  mostrandoOtroUnidad = false;
+  creandoUnidad = false;
+  private unidadAnterior = '';
   frecuencia: number | null = null;
   duracionTipo: TipoDuracion | '' = '';
   duracionCantidad: number | null = null;
@@ -144,6 +150,7 @@ export class MedicamentoIndicacion implements OnInit, OnChanges, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.destruido = true;
     this.peticionUnidades?.unsubscribe();
     this.peticionCatalogo?.unsubscribe();
   }
@@ -168,6 +175,53 @@ export class MedicamentoIndicacion implements OnInit, OnChanges, OnDestroy {
           // Si falla el catálogo, queda disponible al menos «Gotas».
         },
       });
+  }
+
+  alElegirUnidad(valor: string): void {
+    if (valor === this.opcionOtroId) {
+      this.unidadAnterior = this.unidadMedida;
+      this.unidadMedida = '';
+      this.mostrandoOtroUnidad = true;
+      return;
+    }
+
+    this.unidadMedida = valor;
+  }
+
+  crearUnidad(datos: OpcionOtroValor): void {
+    if (this.creandoUnidad || !datos.abreviatura) return;
+
+    this.creandoUnidad = true;
+    this.catalogoService
+      .guardarUnidadMedida(datos.nombre, datos.abreviatura)
+      .pipe(
+        timeout(TIMEOUT_HTTP_MS),
+        finalize(() => {
+          this.creandoUnidad = false;
+          if (!this.destruido) this.cdr.markForCheck();
+        }),
+      )
+      .subscribe({
+        next: (creada) => {
+          if (this.destruido) return;
+
+          const nombre = creada.nombre?.trim() || datos.nombre;
+          this.unidadesMedida = this.combinarUnidades([...this.unidadesMedida, nombre]);
+          this.unidadMedida = nombre;
+          this.mostrandoOtroUnidad = false;
+          this.cdr.markForCheck();
+        },
+        error: (error) => {
+          if (this.destruido) return;
+
+          this.popUps.errorDesdeBackend(error, 'No se pudo crear la unidad de medida.');
+        },
+      });
+  }
+
+  cancelarUnidad(): void {
+    this.mostrandoOtroUnidad = false;
+    this.unidadMedida = this.unidadAnterior;
   }
 
   /** Une las unidades del catálogo con «Gotas», sin repetir nombres equivalentes. */

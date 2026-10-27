@@ -224,7 +224,7 @@ describe('Alta', () => {
       opcion.textContent?.trim(),
     );
 
-    expect(opciones).toEqual(['Seleccione la condición de egreso', 'Estable']);
+    expect(opciones).toEqual(['Seleccione la condición de egreso', 'Estable', 'Otro']);
   });
 
   it('muestra los campos propios de cada sección', async () => {

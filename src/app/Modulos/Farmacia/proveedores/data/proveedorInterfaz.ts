@@ -10,7 +10,7 @@ export interface proveedorResponse {
 
 export interface proveedorRequest {
   nombre: string;
-  nit: string;
-  telefono: string;
-  email: string;
+  nit?: string;
+  telefono?: string;
+  email?: string;
 }

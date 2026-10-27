@@ -189,32 +189,62 @@
 			<form class="body_container">
 				<div class="subFormulario">
 					<label for="area">Área</label>
-					<select id="area" name="area" [(ngModel)]="camaRequest.areaId" required>
-						<option [ngValue]="0" disabled>Selecciona un área</option>
-						@for (area of areas; track area.id) {
-							<option [ngValue]="area.id">{{ area.nombre }}</option>
-						}
-					</select>
+					@if (mostrandoOtroArea) {
+						<app-opcion-otro
+							[placeholder]="'Escribe el área'"
+							[creando]="creandoArea"
+							(confirmar)="crearArea($event)"
+							(cancelar)="cancelarArea()"
+						></app-opcion-otro>
+					} @else {
+						<select id="area" name="area" [ngModel]="camaRequest.areaId" (ngModelChange)="alElegirArea($event)" required>
+							<option [ngValue]="0" disabled>Selecciona un área</option>
+							@for (area of areas; track area.id) {
+								<option [ngValue]="area.id">{{ area.nombre }}</option>
+							}
+							<option [ngValue]="opcionOtroId">Otro</option>
+						</select>
+					}
 				</div>
 
 				<div class="subFormulario">
 					<label for="tipoCama">Tipo de cama</label>
-					<select id="tipoCama" name="tipoCama" [(ngModel)]="camaRequest.tipoId" required>
-						<option [ngValue]="0" disabled>Selecciona un tipo de cama</option>
-						@for (tipo of tiposCama; track tipo.id) {
-							<option [ngValue]="tipo.id">{{ tipo.nombre }}</option>
-						}
-					</select>
+					@if (mostrandoOtroTipoCama) {
+						<app-opcion-otro
+							[placeholder]="'Escribe el tipo de cama'"
+							[creando]="creandoTipoCama"
+							(confirmar)="crearTipoCama($event)"
+							(cancelar)="cancelarTipoCama()"
+						></app-opcion-otro>
+					} @else {
+						<select id="tipoCama" name="tipoCama" [ngModel]="camaRequest.tipoId" (ngModelChange)="alElegirTipoCama($event)" required>
+							<option [ngValue]="0" disabled>Selecciona un tipo de cama</option>
+							@for (tipo of tiposCama; track tipo.id) {
+								<option [ngValue]="tipo.id">{{ tipo.nombre }}</option>
+							}
+							<option [ngValue]="opcionOtroId">Otro</option>
+						</select>
+					}
 				</div>
 
 				<div class="subFormulario">
 					<label for="habitacion">Habitación</label>
-					<select id="habitacion" name="habitacion" [(ngModel)]="camaRequest.habitacionId" required>
-						<option [ngValue]="0" disabled>Selecciona una habitación</option>
-						@for (habitacion of habitaciones; track habitacion.id) {
-							<option [ngValue]="habitacion.id">{{ habitacion.nombre }}</option>
-						}
-					</select>
+					@if (mostrandoOtroHabitacion) {
+						<app-opcion-otro
+							[placeholder]="'Escribe la habitación'"
+							[creando]="creandoHabitacion"
+							(confirmar)="crearHabitacion($event)"
+							(cancelar)="cancelarHabitacion()"
+						></app-opcion-otro>
+					} @else {
+						<select id="habitacion" name="habitacion" [ngModel]="camaRequest.habitacionId" (ngModelChange)="alElegirHabitacion($event)" required>
+							<option [ngValue]="0" disabled>Selecciona una habitación</option>
+							@for (habitacion of habitaciones; track habitacion.id) {
+								<option [ngValue]="habitacion.id">{{ habitacion.nombre }}</option>
+							}
+							<option [ngValue]="opcionOtroId">Otro</option>
+						</select>
+					}
 				</div>
 
 				<div class="subFormulario">

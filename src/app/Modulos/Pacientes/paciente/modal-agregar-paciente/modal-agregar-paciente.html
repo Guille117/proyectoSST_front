@@ -138,39 +138,61 @@
 	<div class="paso-enfermedades">
 		<div class="fila">
 			<app-campo-validado [label]="'Enfermedades confirmadas'" [fieldId]="'enfermedadesPaciente'">
-				<mat-select
-					[(ngModel)]="enfermedadesSeleccionadas"
-					name="enfermedadesPaciente"
-					multiple
-					[disabled]="guardando"
-					placeholder="Seleccione las enfermedades"
-					panelClass="panel-medicos"
-				>
-					<mat-select-trigger>
-						{{ enfermedadesSeleccionadas.length ? nombresEnfermedadesSeleccionadas : 'Seleccione las enfermedades' }}
-					</mat-select-trigger>
-					@for (enfermedad of enfermedades; track enfermedad.id ?? enfermedad.nombre) {
-						<mat-option [value]="enfermedad.id">{{ enfermedad.nombre }}</mat-option>
-					}
-				</mat-select>
+				@if (mostrandoOtroEnfermedad) {
+					<app-opcion-otro
+						[placeholder]="'Escribe la enfermedad'"
+						[creando]="creandoEnfermedad"
+						(confirmar)="crearEnfermedad($event)"
+						(cancelar)="mostrandoOtroEnfermedad = false"
+					></app-opcion-otro>
+				} @else {
+					<mat-select
+						[ngModel]="enfermedadesSeleccionadas"
+						(ngModelChange)="alCambiarEnfermedades($event)"
+						name="enfermedadesPaciente"
+						multiple
+						[disabled]="guardando"
+						placeholder="Seleccione las enfermedades"
+						panelClass="panel-medicos"
+					>
+						<mat-select-trigger>
+							{{ enfermedadesSeleccionadas.length ? nombresEnfermedadesSeleccionadas : 'Seleccione las enfermedades' }}
+						</mat-select-trigger>
+						@for (enfermedad of enfermedades; track enfermedad.id ?? enfermedad.nombre) {
+							<mat-option [value]="enfermedad.id">{{ enfermedad.nombre }}</mat-option>
+						}
+						<mat-option [value]="opcionOtroId">Otro</mat-option>
+					</mat-select>
+				}
 			</app-campo-validado>
 
 			<app-campo-validado [label]="'Alergias'" [fieldId]="'alergiasPaciente'">
-				<mat-select
-					[(ngModel)]="alergiasSeleccionadas"
-					name="alergiasPaciente"
-					multiple
-					[disabled]="guardando"
-					placeholder="Seleccione las alergias"
-					panelClass="panel-medicos"
-				>
-					<mat-select-trigger>
-						{{ alergiasSeleccionadas.length ? nombresAlergiasSeleccionadas : 'Seleccione las alergias' }}
-					</mat-select-trigger>
-					@for (alergia of alergias; track alergia.id ?? alergia.nombre) {
-						<mat-option [value]="alergia.id">{{ alergia.nombre }}</mat-option>
-					}
-				</mat-select>
+				@if (mostrandoOtroAlergia) {
+					<app-opcion-otro
+						[placeholder]="'Escribe la alergia'"
+						[creando]="creandoAlergia"
+						(confirmar)="crearAlergia($event)"
+						(cancelar)="mostrandoOtroAlergia = false"
+					></app-opcion-otro>
+				} @else {
+					<mat-select
+						[ngModel]="alergiasSeleccionadas"
+						(ngModelChange)="alCambiarAlergias($event)"
+						name="alergiasPaciente"
+						multiple
+						[disabled]="guardando"
+						placeholder="Seleccione las alergias"
+						panelClass="panel-medicos"
+					>
+						<mat-select-trigger>
+							{{ alergiasSeleccionadas.length ? nombresAlergiasSeleccionadas : 'Seleccione las alergias' }}
+						</mat-select-trigger>
+						@for (alergia of alergias; track alergia.id ?? alergia.nombre) {
+							<mat-option [value]="alergia.id">{{ alergia.nombre }}</mat-option>
+						}
+						<mat-option [value]="opcionOtroId">Otro</mat-option>
+					</mat-select>
+				}
 			</app-campo-validado>
 		</div>
 	</div>
@@ -389,48 +411,77 @@
 				>
 			</app-campo-validado>
 
-			<app-campo-validado
-				[label]="'Parentesco'"
-				[fieldId]="'parentescoResponsable'"
-				[required]="responsableCamposRequeridos"
-				[showError]="!!(parentescoResponsableControl.touched && parentescoResponsableControl.invalid)"
-				[errorMessage]="'Debe seleccionar el parentesco del responsable'"
-			>
-				<select id="parentescoResponsable" name="parentescoResponsable" [required]="responsableCamposRequeridos" [(ngModel)]="responsableForm.parentescoId" #parentescoResponsableControl="ngModel" [class.input-invalid]="parentescoResponsableControl.touched && parentescoResponsableControl.invalid">
-					<option [ngValue]="null">Seleccione un parentesco</option>
-					@for (itemParentesco of parentesco; track itemParentesco.id ?? itemParentesco.nombre) {
-						<option [ngValue]="itemParentesco.id">{{ itemParentesco.nombre }}</option>
-					}
-				</select>
-			</app-campo-validado>
+			@if (mostrandoOtroParentesco) {
+				<app-campo-validado
+					[label]="'Parentesco'"
+					[fieldId]="'parentescoOtro'"
+					[required]="responsableCamposRequeridos"
+				>
+					<app-opcion-otro
+						[placeholder]="'Escribe el parentesco'"
+						[creando]="creandoParentesco"
+						(confirmar)="crearParentesco($event)"
+						(cancelar)="cancelarParentesco()"
+					></app-opcion-otro>
+				</app-campo-validado>
+			} @else {
+				<app-campo-validado
+					[label]="'Parentesco'"
+					[fieldId]="'parentescoResponsable'"
+					[required]="responsableCamposRequeridos"
+					[showError]="!!(parentescoResponsableControl.touched && parentescoResponsableControl.invalid)"
+					[errorMessage]="'Debe seleccionar el parentesco del responsable'"
+				>
+					<select id="parentescoResponsable" name="parentescoResponsable" [required]="responsableCamposRequeridos" [ngModel]="responsableForm.parentescoId" (ngModelChange)="alElegirParentesco($event)" #parentescoResponsableControl="ngModel" [class.input-invalid]="parentescoResponsableControl.touched && parentescoResponsableControl.invalid">
+						<option [ngValue]="null">Seleccione un parentesco</option>
+						@for (itemParentesco of parentesco; track itemParentesco.id ?? itemParentesco.nombre) {
+							<option [ngValue]="itemParentesco.id">{{ itemParentesco.nombre }}</option>
+						}
+						<option [ngValue]="opcionOtroId">Otro</option>
+					</select>
+				</app-campo-validado>
+			}
 		</div>
 	</div>
 }
 
 @if (contador === 4) {
 	<div class="paso4">
-		<app-campo-validado [label]="'Institución que refiere'" [fieldId]="'institucionReferencia'" [required]="referenciaTieneDatos" [showError]="!!(institucionReferenciaControl.touched && institucionReferenciaControl.invalid)" [errorMessage]="'Debe seleccionar una institución'">
-			<mat-select
-				[(ngModel)]="institucionSeleccionada"
-				name="institucionSeleccionada"
-				[required]="referenciaTieneDatos"
-				#institucionReferenciaControl="ngModel"
-				[class.input-invalid]="institucionReferenciaControl.touched && institucionReferenciaControl.invalid"
-				placeholder="Seleccione una institución"
-				panelClass="panel-medicos"
-			>
-				<mat-select-trigger>
-					{{ institucionSeleccionada?.nombre ?? 'Seleccione una institución' }}
-				</mat-select-trigger>
-				<mat-option [value]="null">Seleccione una institución</mat-option>
-				@for (institucion of insituciones; track institucion.nombre) {
-					<mat-option [value]="institucion">
-						<strong>{{ institucion.nombre }}</strong>
-						<span class="especialidad-medico"> - {{ institucion.direccion }} - {{ institucion.telefono }}</span>
-					</mat-option>
-				}
-			</mat-select>
-		</app-campo-validado>
+		@if (mostrandoOtroInstitucion) {
+			<app-campo-validado [label]="'Institución que refiere'" [fieldId]="'institucionOtro'" [required]="referenciaTieneDatos">
+				<app-opcion-otro
+					[placeholder]="'Escribe la institución'"
+					[creando]="creandoInstitucion"
+					(confirmar)="crearInstitucion($event)"
+					(cancelar)="cancelarInstitucion()"
+				></app-opcion-otro>
+			</app-campo-validado>
+		} @else {
+			<app-campo-validado [label]="'Institución que refiere'" [fieldId]="'institucionReferencia'" [required]="referenciaTieneDatos" [showError]="!!(institucionReferenciaControl.touched && institucionReferenciaControl.invalid)" [errorMessage]="'Debe seleccionar una institución'">
+				<mat-select
+					[ngModel]="institucionSeleccionada"
+					(ngModelChange)="alElegirInstitucion($event)"
+					name="institucionSeleccionada"
+					[required]="referenciaTieneDatos"
+					#institucionReferenciaControl="ngModel"
+					[class.input-invalid]="institucionReferenciaControl.touched && institucionReferenciaControl.invalid"
+					placeholder="Seleccione una institución"
+					panelClass="panel-medicos"
+				>
+					<mat-select-trigger>
+						{{ institucionSeleccionada?.nombre ?? 'Seleccione una institución' }}
+					</mat-select-trigger>
+					<mat-option [value]="null">Seleccione una institución</mat-option>
+					@for (institucion of insituciones; track institucion.nombre) {
+						<mat-option [value]="institucion">
+							<strong>{{ institucion.nombre }}</strong>
+							<span class="especialidad-medico"> - {{ institucion.direccion }} - {{ institucion.telefono }}</span>
+						</mat-option>
+					}
+					<mat-option [value]="opcionOtroId">Otro</mat-option>
+				</mat-select>
+			</app-campo-validado>
+		}
 
 		<app-campo-validado [label]="'Motivo de la referencia'" [fieldId]="'motivoReferencia'">
 			<textarea

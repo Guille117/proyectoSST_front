@@ -1,6 +1,7 @@
 import { ChangeDetectorRef, Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { finalize, firstValueFrom, Subscription, timeout, TimeoutError } from 'rxjs';
+import { OpcionOtroComponent, OpcionOtroValor } from '../../../shared/opcion-otro/opcion-otro';
 import { TabSwitch } from '../../../shared/tab-switch/tab-switch';
 import { PopUps } from '../../../shared/popUps/popUpsService';
 import { AuthService } from '../../Auth/data/auth-service';
@@ -76,7 +77,7 @@ interface CuidadoEnEdicion {
  */
 @Component({
   selector: 'app-alta',
-  imports: [FormsModule, DatosPaciente, MedicamentoIndicacion, CuidadoIndicacion, TabSwitch],
+  imports: [FormsModule, OpcionOtroComponent, DatosPaciente, MedicamentoIndicacion, CuidadoIndicacion, TabSwitch],
   templateUrl: './alta.html',
   styleUrl: './alta.scss',
 })
@@ -112,6 +113,14 @@ export class Alta implements OnInit, OnDestroy {
   diagnosticoEgreso = '';
   condicionEgreso = '';
   observacionEgreso = '';
+
+  readonly opcionOtroId = '__otro__';
+  mostrandoOtroCondicion = false;
+  mostrandoOtroInstitucion = false;
+  creandoCondicion = false;
+  creandoInstitucion = false;
+  private condicionAnterior = '';
+  private institucionAnterior = '';
 
   /** Campos propios del retiro voluntario. */
   responsableRetiro: ResponsableRetiro = '';
@@ -248,6 +257,105 @@ export class Alta implements OnInit, OnDestroy {
           );
         },
       });
+  }
+
+  // ------------------- CREACIÓN DE CATÁLOGOS DEL ALTA -------------------
+  alElegirCondicion(valor: string): void {
+    if (valor === this.opcionOtroId) {
+      this.condicionAnterior = this.condicionEgreso;
+      this.condicionEgreso = '';
+      this.mostrandoOtroCondicion = true;
+      return;
+    }
+
+    this.condicionEgreso = valor;
+  }
+
+  crearCondicion(datos: OpcionOtroValor): void {
+    if (this.creandoCondicion) return;
+
+    this.creandoCondicion = true;
+    this.catalogoService
+      .crear<CondicionEgresoResponse>(
+        'condicionesEgreso',
+        { nombre: datos.nombre } as CondicionEgresoResponse,
+      )
+      .pipe(
+        timeout(TIMEOUT_HTTP_MS),
+        finalize(() => {
+          this.creandoCondicion = false;
+          if (!this.destruido) this.cdr.markForCheck();
+        }),
+      )
+      .subscribe({
+        next: (creada) => {
+          if (this.destruido) return;
+
+          this.condicionesEgreso = [...this.condicionesEgreso, creada];
+          this.condicionEgreso = String(creada.id);
+          this.mostrandoOtroCondicion = false;
+          this.cdr.markForCheck();
+        },
+        error: (error) => {
+          if (this.destruido) return;
+
+          this.mostrarError(error, 'No se pudo crear la condición de egreso.');
+        },
+      });
+  }
+
+  cancelarCondicion(): void {
+    this.mostrandoOtroCondicion = false;
+    this.condicionEgreso = this.condicionAnterior;
+  }
+
+  alElegirInstitucion(valor: string): void {
+    if (valor === this.opcionOtroId) {
+      this.institucionAnterior = this.institucionReferencia;
+      this.institucionReferencia = '';
+      this.mostrandoOtroInstitucion = true;
+      return;
+    }
+
+    this.institucionReferencia = valor;
+  }
+
+  crearInstitucion(datos: OpcionOtroValor): void {
+    if (this.creandoInstitucion) return;
+
+    this.creandoInstitucion = true;
+    this.catalogoService
+      .crear<Inter_institucion>(
+        'instituciones',
+        { nombre: datos.nombre } as Inter_institucion,
+      )
+      .pipe(
+        timeout(TIMEOUT_HTTP_MS),
+        finalize(() => {
+          this.creandoInstitucion = false;
+          if (!this.destruido) this.cdr.markForCheck();
+        }),
+      )
+      .subscribe({
+        next: (creada) => {
+          if (this.destruido) return;
+
+          this.instituciones = [...this.instituciones, creada];
+          this.institucionReferencia = String(creada.id);
+          this.mostrandoOtroInstitucion = false;
+          this.cdr.markForCheck();
+        },
+        error: (error) => {
+          if (this.destruido) return;
+
+          this.mostrarError(error, 'No se pudo crear la institución.');
+        },
+      });
+  }
+
+  cancelarInstitucion(): void {
+    this.mostrandoOtroInstitucion = false;
+    this.institucionReferencia = this.institucionAnterior;
   }
 
   // ------------------- CARGA DEL ALTA -------------------

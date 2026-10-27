@@ -197,18 +197,29 @@
           fieldId="fabricanteInsumo"
           [required]="true"
         >
-          <select
-            id="fabricanteInsumo"
-            name="fabricante"
-            required
-            [disabled]="procesando"
-            [(ngModel)]="insumo.marcaId"
-          >
-            <option [ngValue]="0">Seleccionar...</option>
-            @for (fabricante of fabricantes; track fabricante.id) {
-              <option [ngValue]="fabricante.id">{{ fabricante.nombre }}</option>
-            }
-          </select>
+          @if (mostrandoOtroMarca) {
+            <app-opcion-otro
+              [placeholder]="'Escribe el fabricante'"
+              [creando]="creandoMarca"
+              (confirmar)="crearMarca($event)"
+              (cancelar)="cancelarMarca()"
+            ></app-opcion-otro>
+          } @else {
+            <select
+              id="fabricanteInsumo"
+              name="fabricante"
+              required
+              [disabled]="procesando"
+              [ngModel]="insumo.marcaId"
+              (ngModelChange)="alElegirMarca($event)"
+            >
+              <option [ngValue]="0">Seleccionar...</option>
+              @for (fabricante of fabricantes; track fabricante.id) {
+                <option [ngValue]="fabricante.id">{{ fabricante.nombre }}</option>
+              }
+              <option [ngValue]="opcionOtroId">Otro</option>
+            </select>
+          }
         </app-campo-validado>
 
         <!-- ==================== BOTONES ==================== -->

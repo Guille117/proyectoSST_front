@@ -103,7 +103,7 @@ describe('Medicamentos', () => {
       ['viaAdministracionMedicamento', '14', 'Oral'],
     ]) {
       const select: HTMLSelectElement = fixture.nativeElement.querySelector(`#${id}`);
-      expect(select.options.length).toBe(2);
+      expect(select.options.length).toBe(3);
       expect(select.options[1].value).toContain(valor);
       expect(select.options[1].textContent).toBe(nombre);
       select.selectedIndex = 1;
@@ -116,7 +116,7 @@ describe('Medicamentos', () => {
       presentacionId: 13,
       viaAdminId: 14,
     });
-    expect(fixture.debugElement.queryAll(By.directive(NgModel)).length).toBe(6);
+    expect(fixture.debugElement.queryAll(By.directive(NgModel)).length).toBe(8);
   });
 
   it('usa los estilos compartidos y Cancelar reinicia el formulario de medicamentos', async () => {
@@ -135,8 +135,8 @@ describe('Medicamentos', () => {
     expect(cancelar.classList.contains('btn')).toBe(true);
     expect(guardar.classList.contains('btn')).toBe(true);
     expect(cancelar.type).toBe('button');
-    expect(guardar.type).toBe('button');
-    expect(fixture.debugElement.queryAll(By.directive(NgModel)).length).toBe(6);
+    expect(guardar.type).toBe('submit');
+    expect(fixture.debugElement.queryAll(By.directive(NgModel)).length).toBe(8);
     cancelar.click();
     await fixture.whenStable();
     expect(nombre.value).toBe('');
@@ -517,9 +517,9 @@ describe('Medicamentos', () => {
       fixture.nativeElement.querySelectorAll('form select');
     expect(selects.length).toBe(4);
     for (const select of selects) {
-      expect(select.options.length).toBe(1);
+      expect(select.options.length).toBe(2);
       expect(select.selectedIndex).toBe(0);
-      expect(select.required).toBe(false);
+      expect(select.required).toBe(true);
     }
   });
 
@@ -555,7 +555,7 @@ describe('Medicamentos', () => {
     await fixture.whenStable();
     expect(component.medicamento.nombre).toBe('Nombre escrito');
     expect(component.medicamento.dosis).toBe(500);
-    expect(fixture.debugElement.queryAll(By.directive(NgModel)).length).toBe(6);
+    expect(fixture.debugElement.queryAll(By.directive(NgModel)).length).toBe(8);
     component.cambiarFiltroActivo(false);
     await fixture.whenStable();
     expect(fixture.nativeElement.querySelector('#concentracionMedicamento')).not.toBeNull();

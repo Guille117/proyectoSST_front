@@ -2,6 +2,7 @@ import { NgClass } from '@angular/common';
 import { ChangeDetectorRef, Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { finalize, forkJoin, Subscription, timeout, TimeoutError } from 'rxjs';
+import { OpcionOtroComponent, OpcionOtroValor } from '../../../shared/opcion-otro/opcion-otro';
 import { PopUps } from '../../../shared/popUps/popUpsService';
 import { TabSwitch } from '../../../shared/tab-switch/tab-switch';
 import { AuthService } from '../../Auth/data/auth-service';
@@ -46,6 +47,7 @@ interface DetalleSalidaVista extends DetalleSolicitudSalida {
   cantidadDevolver: number | null;
   condicion: CondicionDevolucion;
   motivoBajaId: number | null;
+  motivoBajaAnterior?: number | null;
 }
 
 interface SolicitudSalidaVista extends SolicitudSalidaBase {
@@ -76,7 +78,7 @@ interface GrupoHistorial {
  */
 @Component({
   selector: 'app-salidas',
-  imports: [FormsModule, NgClass, TabSwitch],
+  imports: [FormsModule, NgClass, OpcionOtroComponent, TabSwitch],
   templateUrl: './salidas.html',
   styleUrl: './salidas.scss',
 })
@@ -113,6 +115,10 @@ export class Salidas implements OnInit, OnDestroy {
   solicitudes: SolicitudSalidaResumen[] = [];
   solicitudSeleccionada: SolicitudSalidaVista | null = null;
   motivos: Inter_base[] = [];
+
+  readonly opcionOtroId = -1;
+  detalleEditandoMotivo: DetalleSalidaVista | null = null;
+  creandoMotivo = false;
 
   cargandoSolicitudes = false;
   cargandoDetalle = false;
@@ -365,6 +371,55 @@ export class Salidas implements OnInit, OnDestroy {
           this.mostrarError(error, 'No se pudieron cargar los motivos de devolución.');
         },
       });
+  }
+
+  // ------------------- CREACIÓN DE MOTIVOS DE BAJA -------------------
+  alElegirMotivo(detalle: DetalleSalidaVista, valor: number | null): void {
+    if (valor === this.opcionOtroId) {
+      detalle.motivoBajaAnterior = detalle.motivoBajaId;
+      detalle.motivoBajaId = null;
+      this.detalleEditandoMotivo = detalle;
+      return;
+    }
+
+    detalle.motivoBajaId = valor;
+  }
+
+  crearMotivo(detalle: DetalleSalidaVista, datos: OpcionOtroValor): void {
+    if (this.creandoMotivo) return;
+
+    this.creandoMotivo = true;
+    this.catalogoService
+      .crear<Inter_base>('motivoBaja', { nombre: datos.nombre })
+      .pipe(
+        timeout(TIEMPO_ESPERA_MS),
+        finalize(() => {
+          this.creandoMotivo = false;
+          if (!this.destruido) this.cdr.markForCheck();
+        }),
+      )
+      .subscribe({
+        next: (creado) => {
+          if (this.destruido || creado.id == null) return;
+
+          this.motivos = [...this.motivos, creado];
+          detalle.motivoBajaId = creado.id;
+          detalle.motivoBajaAnterior = undefined;
+          this.detalleEditandoMotivo = null;
+          this.cdr.markForCheck();
+        },
+        error: (error) => {
+          if (this.destruido) return;
+
+          this.mostrarError(error, 'No se pudo crear el motivo de baja.');
+        },
+      });
+  }
+
+  cancelarMotivo(detalle: DetalleSalidaVista): void {
+    this.detalleEditandoMotivo = null;
+    detalle.motivoBajaId = detalle.motivoBajaAnterior ?? null;
+    detalle.motivoBajaAnterior = undefined;
   }
 
   // ------------------- ACCIONES DE LA VISTA -------------------

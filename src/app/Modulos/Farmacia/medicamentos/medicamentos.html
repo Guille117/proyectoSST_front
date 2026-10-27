@@ -192,95 +192,164 @@
             />
           </app-campo-validado>
 
-          <app-campo-validado
-            label="Unidad de medida"
-            fieldId="unidadMedidaMedicamento"
-            [required]="true"
-            [showError]="!!unidadCtrl.touched && medicamento.unidadMedidaId <= 0"
-            errorMessage="Seleccione una unidad de medida"
-          >
-            <select
-              id="unidadMedidaMedicamento"
-              name="unidadMedida"
-              required
-              [disabled]="procesando"
-              [(ngModel)]="medicamento.unidadMedidaId"
-              #unidadCtrl="ngModel"
+          @if (mostrandoOtroUnidad) {
+            <app-campo-validado
+              label="Unidad de medida"
+              fieldId="unidadMedidaOtro"
+              [required]="true"
             >
-              <option [ngValue]="0">Seleccionar...</option>
-              @for (unidad of unidadesMedida; track unidad.id) {
-                <option [ngValue]="unidad.id">{{ unidad.nombre }}</option>
-              }
-            </select>
-          </app-campo-validado>
+              <app-opcion-otro
+                [placeholder]="'Escribe la unidad'"
+                [requiereAbreviatura]="true"
+                [creando]="creandoUnidad"
+                (confirmar)="crearUnidad($event)"
+                (cancelar)="cancelarUnidad()"
+              ></app-opcion-otro>
+            </app-campo-validado>
+          } @else {
+            <app-campo-validado
+              label="Unidad de medida"
+              fieldId="unidadMedidaMedicamento"
+              [required]="true"
+              [showError]="!!unidadCtrl.touched && medicamento.unidadMedidaId <= 0"
+              errorMessage="Seleccione una unidad de medida"
+            >
+              <select
+                id="unidadMedidaMedicamento"
+                name="unidadMedida"
+                required
+                [disabled]="procesando"
+                [ngModel]="medicamento.unidadMedidaId"
+                (ngModelChange)="alElegirUnidad($event)"
+                #unidadCtrl="ngModel"
+              >
+                <option [ngValue]="0">Seleccionar...</option>
+                @for (unidad of unidadesMedida; track unidad.id) {
+                  <option [ngValue]="unidad.id">{{ unidad.nombre }}</option>
+                }
+                <option [ngValue]="opcionOtroId">Otro</option>
+              </select>
+            </app-campo-validado>
+          }
         </div>
 
         <div class="fila-concentracion">
-          <app-campo-validado
-            label="Vía de administración"
-            fieldId="viaAdministracionMedicamento"
-            [required]="true"
-            [showError]="!!viaCtrl.touched && medicamento.viaAdminId <= 0"
-            errorMessage="Seleccione una vía de administración"
-          >
-            <select
-              id="viaAdministracionMedicamento"
-              name="viaAdministracion"
-              required
-              [disabled]="procesando"
-              [(ngModel)]="medicamento.viaAdminId"
-              #viaCtrl="ngModel"
+          @if (mostrandoOtroVia) {
+            <app-campo-validado
+              label="Vía de administración"
+              fieldId="viaAdministracionOtro"
+              [required]="true"
             >
-              <option [ngValue]="0">Seleccionar...</option>
-              @for (via of viasAdmin; track via.id) {
-                <option [ngValue]="via.id">{{ via.nombre }}</option>
-              }
-            </select>
-          </app-campo-validado>
-          <app-campo-validado
-            label="Presentación"
-            fieldId="presentacionMedicamento"
-            [required]="true"
-            [showError]="!!presentacionCtrl.touched && medicamento.presentacionId <= 0"
-            errorMessage="Seleccione una presentación"
-          >
-            <select
-              id="presentacionMedicamento"
-              name="presentacion"
-              required
-              [disabled]="procesando"
-              [(ngModel)]="medicamento.presentacionId"
-              #presentacionCtrl="ngModel"
+              <app-opcion-otro
+                [placeholder]="'Escribe la vía de administración'"
+                [creando]="creandoVia"
+                (confirmar)="crearVia($event)"
+                (cancelar)="cancelarVia()"
+              ></app-opcion-otro>
+            </app-campo-validado>
+          } @else {
+            <app-campo-validado
+              label="Vía de administración"
+              fieldId="viaAdministracionMedicamento"
+              [required]="true"
+              [showError]="!!viaCtrl.touched && medicamento.viaAdminId <= 0"
+              errorMessage="Seleccione una vía de administración"
             >
-              <option [ngValue]="0">Seleccionar...</option>
-              @for (presentacion of presentaciones; track presentacion.id) {
-                <option [ngValue]="presentacion.id">{{ presentacion.nombre }}</option>
-              }
-            </select>
-          </app-campo-validado>
+              <select
+                id="viaAdministracionMedicamento"
+                name="viaAdministracion"
+                required
+                [disabled]="procesando"
+                [ngModel]="medicamento.viaAdminId"
+                (ngModelChange)="alElegirVia($event)"
+                #viaCtrl="ngModel"
+              >
+                <option [ngValue]="0">Seleccionar...</option>
+                @for (via of viasAdmin; track via.id) {
+                  <option [ngValue]="via.id">{{ via.nombre }}</option>
+                }
+                <option [ngValue]="opcionOtroId">Otro</option>
+              </select>
+            </app-campo-validado>
+          }
+          @if (mostrandoOtroPresentacion) {
+            <app-campo-validado
+              label="Presentación"
+              fieldId="presentacionOtro"
+              [required]="true"
+            >
+              <app-opcion-otro
+                [placeholder]="'Escribe la presentación'"
+                [creando]="creandoPresentacion"
+                (confirmar)="crearPresentacion($event)"
+                (cancelar)="cancelarPresentacion()"
+              ></app-opcion-otro>
+            </app-campo-validado>
+          } @else {
+            <app-campo-validado
+              label="Presentación"
+              fieldId="presentacionMedicamento"
+              [required]="true"
+              [showError]="!!presentacionCtrl.touched && medicamento.presentacionId <= 0"
+              errorMessage="Seleccione una presentación"
+            >
+              <select
+                id="presentacionMedicamento"
+                name="presentacion"
+                required
+                [disabled]="procesando"
+                [ngModel]="medicamento.presentacionId"
+                (ngModelChange)="alElegirPresentacion($event)"
+                #presentacionCtrl="ngModel"
+              >
+                <option [ngValue]="0">Seleccionar...</option>
+                @for (presentacion of presentaciones; track presentacion.id) {
+                  <option [ngValue]="presentacion.id">{{ presentacion.nombre }}</option>
+                }
+                <option [ngValue]="opcionOtroId">Otro</option>
+              </select>
+            </app-campo-validado>
+          }
         </div>
 
-        <app-campo-validado
-          label="Fabricante"
-          fieldId="fabricanteMedicamento"
-          [required]="true"
-          [showError]="!!fabricanteCtrl.touched && medicamento.marcaId <= 0"
-          errorMessage="Seleccione un fabricante"
-        >
-          <select
-            id="fabricanteMedicamento"
-            name="fabricante"
-            required
-            [disabled]="procesando"
-            [(ngModel)]="medicamento.marcaId"
-            #fabricanteCtrl="ngModel"
+        @if (mostrandoOtroMarca) {
+          <app-campo-validado
+            label="Fabricante"
+            fieldId="fabricanteOtro"
+            [required]="true"
           >
-            <option [ngValue]="0">Seleccionar...</option>
-            @for (fabricante of fabricantes; track fabricante.id) {
-              <option [ngValue]="fabricante.id">{{ fabricante.nombre }}</option>
-            }
-          </select>
-        </app-campo-validado>
+            <app-opcion-otro
+              [placeholder]="'Escribe el fabricante'"
+              [creando]="creandoMarca"
+              (confirmar)="crearMarca($event)"
+              (cancelar)="cancelarMarca()"
+            ></app-opcion-otro>
+          </app-campo-validado>
+        } @else {
+          <app-campo-validado
+            label="Fabricante"
+            fieldId="fabricanteMedicamento"
+            [required]="true"
+            [showError]="!!fabricanteCtrl.touched && medicamento.marcaId <= 0"
+            errorMessage="Seleccione un fabricante"
+          >
+            <select
+              id="fabricanteMedicamento"
+              name="fabricante"
+              required
+              [disabled]="procesando"
+              [ngModel]="medicamento.marcaId"
+              (ngModelChange)="alElegirMarca($event)"
+              #fabricanteCtrl="ngModel"
+            >
+              <option [ngValue]="0">Seleccionar...</option>
+              @for (fabricante of fabricantes; track fabricante.id) {
+                <option [ngValue]="fabricante.id">{{ fabricante.nombre }}</option>
+              }
+              <option [ngValue]="opcionOtroId">Otro</option>
+            </select>
+          </app-campo-validado>
+        }
 
         <!-- ==================== BOTONES ==================== -->
         <div class="botones">

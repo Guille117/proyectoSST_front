@@ -2,6 +2,7 @@ import { NgClass } from '@angular/common';
 import { ChangeDetectorRef, Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { finalize, forkJoin, map, Subscription, timeout, TimeoutError } from 'rxjs';
+import { OpcionOtroComponent, OpcionOtroValor } from '../../../../shared/opcion-otro/opcion-otro';
 import { Paginacion } from '../../../../shared/paginacion/paginacion';
 import { PopUps } from '../../../../shared/popUps/popUpsService';
 import { CatalogoService } from '../../../Catalogos/data/serviceCatalogo';
@@ -84,7 +85,7 @@ interface FiltroIndicacionVista {
  */
 @Component({
   selector: 'app-indicacion-medicamentos',
-  imports: [FormsModule, NgClass, Paginacion],
+  imports: [FormsModule, NgClass, OpcionOtroComponent, Paginacion],
   templateUrl: './indicacion-medicamentos.html',
   styleUrl: './indicacion-medicamentos.scss',
   host: {
@@ -122,6 +123,10 @@ export class IndicacionMedicamentos implements OnInit, OnDestroy {
   medicamentoLibre = '';
   cantidad: number | null = null;
   unidadMedida = '';
+  readonly opcionOtroId = '__otro__';
+  mostrandoOtroUnidad = false;
+  creandoUnidad = false;
+  private unidadAnterior = '';
   frecuencia: number | null = null;
   duracionTipo: TipoDuracion | '' = '';
   duracionCantidad: number | null = null;
@@ -363,6 +368,54 @@ export class IndicacionMedicamentos implements OnInit, OnDestroy {
           this.mostrarError(error, 'No se pudieron cargar las unidades de medida.');
         },
       });
+  }
+
+  alElegirUnidad(valor: string): void {
+    if (valor === this.opcionOtroId) {
+      this.unidadAnterior = this.unidadMedida;
+      this.unidadMedida = '';
+      this.mostrandoOtroUnidad = true;
+      return;
+    }
+
+    this.unidadMedida = valor;
+  }
+
+  crearUnidad(datos: OpcionOtroValor): void {
+    if (this.creandoUnidad || !datos.abreviatura) return;
+
+    this.creandoUnidad = true;
+    this.catalogoService
+      .guardarUnidadMedida(datos.nombre, datos.abreviatura)
+      .pipe(
+        timeout(TIMEOUT_HTTP_MS),
+        finalize(() => {
+          this.creandoUnidad = false;
+          if (!this.destruido) this.cdr.markForCheck();
+        }),
+      )
+      .subscribe({
+        next: (creada) => {
+          if (this.destruido) return;
+
+          const nombre = creada.nombre?.trim() || datos.nombre;
+          this.abreviaturasUnidad.set(nombre, datos.abreviatura ?? '');
+          this.unidadesMedida = this.combinarUnidades([...this.unidadesMedida, nombre]);
+          this.unidadMedida = nombre;
+          this.mostrandoOtroUnidad = false;
+          this.cdr.markForCheck();
+        },
+        error: (error) => {
+          if (this.destruido) return;
+
+          this.popUps.errorDesdeBackend(error, 'No se pudo crear la unidad de medida.');
+        },
+      });
+  }
+
+  cancelarUnidad(): void {
+    this.mostrandoOtroUnidad = false;
+    this.unidadMedida = this.unidadAnterior;
   }
 
   /** Une las unidades del catálogo con «Gotas», sin repetir nombres equivalentes. */

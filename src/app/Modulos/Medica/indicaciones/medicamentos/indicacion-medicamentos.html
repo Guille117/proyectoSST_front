@@ -192,17 +192,29 @@
 
         <div class="indicacion-campo">
           <label class="indicacion-etiqueta" for="unidadMedidaIndicada">Unidad de medida</label>
-          <select
-            class="indicacion-input"
-            id="unidadMedidaIndicada"
-            name="unidadMedida"
-            [(ngModel)]="unidadMedida"
-          >
-            <option value="">Seleccionar...</option>
-            @for (unidad of unidadesMedida; track unidad) {
-              <option [value]="unidad">{{ unidad }}</option>
-            }
-          </select>
+          @if (mostrandoOtroUnidad) {
+            <app-opcion-otro
+              [placeholder]="'Escribe la unidad'"
+              [requiereAbreviatura]="true"
+              [creando]="creandoUnidad"
+              (confirmar)="crearUnidad($event)"
+              (cancelar)="cancelarUnidad()"
+            ></app-opcion-otro>
+          } @else {
+            <select
+              class="indicacion-input"
+              id="unidadMedidaIndicada"
+              name="unidadMedida"
+              [ngModel]="unidadMedida"
+              (ngModelChange)="alElegirUnidad($event)"
+            >
+              <option value="">Seleccionar...</option>
+              @for (unidad of unidadesMedida; track unidad) {
+                <option [value]="unidad">{{ unidad }}</option>
+              }
+              <option [value]="opcionOtroId">Otro</option>
+            </select>
+          }
         </div>
 
         <div class="indicacion-campo">

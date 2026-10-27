@@ -794,6 +794,7 @@ describe('AgregarCompra', () => {
     expect(opciones.map((opcion) => opcion.textContent?.trim())).toEqual([
       'Seleccione un proveedor',
       proveedor.nombre,
+      'Otro',
     ]);
   });
 

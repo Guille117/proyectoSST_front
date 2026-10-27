@@ -9,8 +9,9 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule, NgForm } from '@angular/forms';
-import { finalize, firstValueFrom, forkJoin } from 'rxjs';
+import { finalize, firstValueFrom, forkJoin, timeout } from 'rxjs';
 import { CampoValidado } from '../../../shared/campo-validado/campo-validado';
+import { OpcionOtroComponent, OpcionOtroValor } from '../../../shared/opcion-otro/opcion-otro';
 import { Paginacion } from '../../../shared/paginacion/paginacion';
 import { PopUps } from '../../../shared/popUps/popUpsService';
 import { TabSwitch } from '../../../shared/tab-switch/tab-switch';
@@ -21,7 +22,7 @@ import { ServicioMedicamento } from './data/servicio-medicamento';
 
 @Component({
   selector: 'app-medicamentos',
-  imports: [FormsModule, CampoValidado, TabSwitch, Paginacion, SlicePipe],
+  imports: [FormsModule, CampoValidado, OpcionOtroComponent, TabSwitch, Paginacion, SlicePipe],
   templateUrl: './medicamentos.html',
   styleUrl: './medicamentos.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -46,6 +47,20 @@ export class Medicamentos implements OnInit {
   presentaciones: Inter_base[] = [];
   viasAdmin: Inter_base[] = [];
 
+  readonly opcionOtroId = -1;
+  mostrandoOtroUnidad = false;
+  mostrandoOtroVia = false;
+  mostrandoOtroPresentacion = false;
+  mostrandoOtroMarca = false;
+  creandoUnidad = false;
+  creandoVia = false;
+  creandoPresentacion = false;
+  creandoMarca = false;
+  private unidadAnterior = 0;
+  private viaAnterior = 0;
+  private presentacionAnterior = 0;
+  private marcaAnterior = 0;
+
   llenarSelects(): void {
     forkJoin({
       unidades: this.servicioCatalogos.listar<Inter_unidadMedida>('unidadMedida'),
@@ -66,6 +81,184 @@ export class Medicamentos implements OnInit {
           this.popUp.errorDesdeBackend(err, 'Error al cargar los catálogos.');
         },
       });
+  }
+
+  // ==================== CREACIÓN DE CATÁLOGOS ====================
+  alElegirUnidad(valor: number): void {
+    if (valor === this.opcionOtroId) {
+      this.unidadAnterior = this.medicamento.unidadMedidaId;
+      this.medicamento.unidadMedidaId = 0;
+      this.mostrandoOtroUnidad = true;
+      return;
+    }
+
+    this.medicamento.unidadMedidaId = valor;
+  }
+
+  crearUnidad(datos: OpcionOtroValor): void {
+    if (this.creandoUnidad || !datos.abreviatura) return;
+
+    this.creandoUnidad = true;
+    this.servicioCatalogos
+      .guardarUnidadMedida(datos.nombre, datos.abreviatura)
+      .pipe(
+        timeout(5000),
+        finalize(() => {
+          this.creandoUnidad = false;
+          this.cdr.markForCheck();
+        }),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: (creada) => {
+          const unidad: Inter_unidadMedida = {
+            id: creada.id,
+            nombre: creada.nombre,
+            abreviatura: creada.abreviatura ?? datos.abreviatura ?? '',
+          };
+
+          this.unidadesMedida = [...this.unidadesMedida, unidad];
+          this.medicamento.unidadMedidaId = creada.id;
+          this.mostrandoOtroUnidad = false;
+          this.cdr.markForCheck();
+        },
+        error: (error) => this.popUp.errorDesdeBackend(error, 'No se pudo crear la unidad de medida.'),
+      });
+  }
+
+  cancelarUnidad(): void {
+    this.mostrandoOtroUnidad = false;
+    this.medicamento.unidadMedidaId = this.unidadAnterior;
+  }
+
+  alElegirVia(valor: number): void {
+    if (valor === this.opcionOtroId) {
+      this.viaAnterior = this.medicamento.viaAdminId;
+      this.medicamento.viaAdminId = 0;
+      this.mostrandoOtroVia = true;
+      return;
+    }
+
+    this.medicamento.viaAdminId = valor;
+  }
+
+  crearVia(datos: OpcionOtroValor): void {
+    if (this.creandoVia) return;
+
+    this.creandoVia = true;
+    this.servicioCatalogos
+      .crear<Inter_base>('viaAdmin', { nombre: datos.nombre })
+      .pipe(
+        timeout(5000),
+        finalize(() => {
+          this.creandoVia = false;
+          this.cdr.markForCheck();
+        }),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: (creada) => {
+          if (creada.id == null) return;
+
+          this.viasAdmin = [...this.viasAdmin, creada];
+          this.medicamento.viaAdminId = creada.id;
+          this.mostrandoOtroVia = false;
+          this.cdr.markForCheck();
+        },
+        error: (error) =>
+          this.popUp.errorDesdeBackend(error, 'No se pudo crear la vía de administración.'),
+      });
+  }
+
+  cancelarVia(): void {
+    this.mostrandoOtroVia = false;
+    this.medicamento.viaAdminId = this.viaAnterior;
+  }
+
+  alElegirPresentacion(valor: number): void {
+    if (valor === this.opcionOtroId) {
+      this.presentacionAnterior = this.medicamento.presentacionId;
+      this.medicamento.presentacionId = 0;
+      this.mostrandoOtroPresentacion = true;
+      return;
+    }
+
+    this.medicamento.presentacionId = valor;
+  }
+
+  crearPresentacion(datos: OpcionOtroValor): void {
+    if (this.creandoPresentacion) return;
+
+    this.creandoPresentacion = true;
+    this.servicioCatalogos
+      .crear<Inter_base>('presentacion', { nombre: datos.nombre })
+      .pipe(
+        timeout(5000),
+        finalize(() => {
+          this.creandoPresentacion = false;
+          this.cdr.markForCheck();
+        }),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: (creada) => {
+          if (creada.id == null) return;
+
+          this.presentaciones = [...this.presentaciones, creada];
+          this.medicamento.presentacionId = creada.id;
+          this.mostrandoOtroPresentacion = false;
+          this.cdr.markForCheck();
+        },
+        error: (error) => this.popUp.errorDesdeBackend(error, 'No se pudo crear la presentación.'),
+      });
+  }
+
+  cancelarPresentacion(): void {
+    this.mostrandoOtroPresentacion = false;
+    this.medicamento.presentacionId = this.presentacionAnterior;
+  }
+
+  alElegirMarca(valor: number): void {
+    if (valor === this.opcionOtroId) {
+      this.marcaAnterior = this.medicamento.marcaId;
+      this.medicamento.marcaId = 0;
+      this.mostrandoOtroMarca = true;
+      return;
+    }
+
+    this.medicamento.marcaId = valor;
+  }
+
+  crearMarca(datos: OpcionOtroValor): void {
+    if (this.creandoMarca) return;
+
+    this.creandoMarca = true;
+    this.servicioCatalogos
+      .crear<Inter_base>('marca', { nombre: datos.nombre })
+      .pipe(
+        timeout(5000),
+        finalize(() => {
+          this.creandoMarca = false;
+          this.cdr.markForCheck();
+        }),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: (creada) => {
+          if (creada.id == null) return;
+
+          this.fabricantes = [...this.fabricantes, creada];
+          this.medicamento.marcaId = creada.id;
+          this.mostrandoOtroMarca = false;
+          this.cdr.markForCheck();
+        },
+        error: (error) => this.popUp.errorDesdeBackend(error, 'No se pudo crear el fabricante.'),
+      });
+  }
+
+  cancelarMarca(): void {
+    this.mostrandoOtroMarca = false;
+    this.medicamento.marcaId = this.marcaAnterior;
   }
 
   // ==================== GUARDAR ====================

@@ -11,8 +11,9 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule, NgForm } from '@angular/forms';
-import { TimeoutError, finalize } from 'rxjs';
+import { TimeoutError, finalize, timeout } from 'rxjs';
 import { CampoValidado } from '../../../../shared/campo-validado/campo-validado';
+import { OpcionOtroComponent, OpcionOtroValor } from '../../../../shared/opcion-otro/opcion-otro';
 import { Paginacion } from '../../../../shared/paginacion/paginacion';
 import { PopUps } from '../../../../shared/popUps/popUpsService';
 import { TabSwitch } from '../../../../shared/tab-switch/tab-switch';
@@ -38,7 +39,7 @@ type FiltrosInsumo = { nombre?: string; marcaId?: number; activo?: boolean };
 
 @Component({
   selector: 'app-agregar-compra',
-  imports: [TabSwitch, Paginacion, CampoValidado, FormsModule, SlicePipe, DecimalPipe],
+  imports: [TabSwitch, Paginacion, CampoValidado, OpcionOtroComponent, FormsModule, SlicePipe, DecimalPipe],
   templateUrl: './agregar-compra.html',
   styleUrl: './agregar-compra.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -149,6 +150,48 @@ export class AgregarCompra implements OnInit {
       });
   }
 
+  // ==================== CREACIÓN DE PROVEEDOR ====================
+  alElegirProveedor(valor: number | null): void {
+    if (valor === this.opcionOtroId) {
+      this.proveedorAnterior = this.proveedorSeleccionadoId;
+      this.proveedorSeleccionadoId = null;
+      this.mostrandoOtroProveedor = true;
+      return;
+    }
+
+    this.proveedorSeleccionadoId = valor;
+  }
+
+  crearProveedor(datos: OpcionOtroValor): void {
+    if (this.creandoProveedor) return;
+
+    this.creandoProveedor = true;
+    this.servicioProveedor
+      .postProveedor({ nombre: datos.nombre })
+      .pipe(
+        timeout(5000),
+        finalize(() => {
+          this.creandoProveedor = false;
+          this.cdr.markForCheck();
+        }),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: (creado) => {
+          this.proveedores = [...this.proveedores, creado];
+          this.proveedorSeleccionadoId = creado.id;
+          this.mostrandoOtroProveedor = false;
+          this.cdr.markForCheck();
+        },
+        error: (error) => this.popUp.errorDesdeBackend(error, 'No se pudo crear el proveedor.'),
+      });
+  }
+
+  cancelarProveedor(): void {
+    this.mostrandoOtroProveedor = false;
+    this.proveedorSeleccionadoId = this.proveedorAnterior;
+  }
+
   // ==================== BUSCAR ====================
   buscarProductos(): void {
     if (this.hayProductoSeleccionado) return;
@@ -251,6 +294,10 @@ export class AgregarCompra implements OnInit {
   comprobanteActual: string | null = null;
   proveedores: proveedorResponse[] = [];
   cargandoProveedores = false;
+  readonly opcionOtroId = -1;
+  mostrandoOtroProveedor = false;
+  creandoProveedor = false;
+  private proveedorAnterior: number | null = null;
   private snapshotEdicion = '';
 
   /** Total de la compra: suma de los subtotales (cantidad × precio de compra) de todos los lotes. */

@@ -93,33 +93,50 @@
         />
       </app-campo-validado>
 
-      <app-campo-validado
-        label="Motivo"
-        fieldId="motivoBaja"
-        [required]="true"
-        [showError]="!!(motivoControl.touched && motivoControl.invalid)"
-        [errorMessage]="'Seleccione motivo'"
-      >
-        <select
-          id="motivoBaja"
-          name="motivo"
-          [disabled]="cargandoMotivos"
-          [(ngModel)]="motivoBajaId"
-          #motivoControl="ngModel"
-          [class.input-invalid]="motivoControl.touched && motivoControl.invalid"
-          required
+      @if (mostrandoOtroMotivo) {
+        <app-campo-validado
+          label="Motivo"
+          fieldId="motivoBajaOtro"
+          [required]="true"
         >
-          <option [ngValue]="null">
-            {{ cargandoMotivos ? 'Cargando motivos...' : 'Seleccione un motivo' }}
-          </option>
-          @for (motivo of motivos; track motivo.id) {
-            <option [ngValue]="motivo.id">{{ motivo.nombre }}</option>
+          <app-opcion-otro
+            [placeholder]="'Escribe el motivo'"
+            [creando]="creandoMotivo"
+            (confirmar)="crearMotivo($event)"
+            (cancelar)="cancelarMotivo()"
+          ></app-opcion-otro>
+        </app-campo-validado>
+      } @else {
+        <app-campo-validado
+          label="Motivo"
+          fieldId="motivoBaja"
+          [required]="true"
+          [showError]="!!(motivoControl.touched && motivoControl.invalid)"
+          [errorMessage]="'Seleccione motivo'"
+        >
+          <select
+            id="motivoBaja"
+            name="motivo"
+            [disabled]="cargandoMotivos"
+            [ngModel]="motivoBajaId"
+            (ngModelChange)="alElegirMotivo($event)"
+            #motivoControl="ngModel"
+            [class.input-invalid]="motivoControl.touched && motivoControl.invalid"
+            required
+          >
+            <option [ngValue]="null">
+              {{ cargandoMotivos ? 'Cargando motivos...' : 'Seleccione un motivo' }}
+            </option>
+            @for (motivo of motivos; track motivo.id) {
+              <option [ngValue]="motivo.id">{{ motivo.nombre }}</option>
+            }
+            <option [ngValue]="opcionOtroId">Otro</option>
+          </select>
+          @if (errorMotivos) {
+            <p class="error-motivos" role="alert">{{ errorMotivos }}</p>
           }
-        </select>
-        @if (errorMotivos) {
-          <p class="error-motivos" role="alert">{{ errorMotivos }}</p>
-        }
-      </app-campo-validado>
+        </app-campo-validado>
+      }
     </div>
 
     <app-campo-validado label="Observación" fieldId="observacionBaja">

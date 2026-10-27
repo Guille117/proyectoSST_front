@@ -1,0 +1,127 @@
+:host {
+    display: block;
+    width: 100%;
+}
+
+.opcion-otro {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    width: 100%;
+
+    &__campo {
+        position: relative;
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+
+    &__campo--abreviatura {
+        flex: 0 0 170px;
+    }
+
+    &__entrada {
+        width: 100%;
+        min-height: 44px;
+        padding: 12px 12px 12px 10px;
+        font-family: inherit;
+        font-size: 16px;
+        font-weight: 500;
+        color: #101828;
+        background-color: #ffffff;
+        border: 1px solid #e5a3a3;
+        border-radius: 10px;
+        outline: none;
+        box-sizing: border-box;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+
+        &:focus {
+            border-color: #dc6b6b;
+            box-shadow: 0 0 0 3px rgba(220, 107, 107, 0.16);
+        }
+    }
+
+    &__entrada--con-acciones {
+        padding-right: 76px;
+    }
+
+    &__entrada[readonly] {
+        opacity: 0.65;
+        cursor: not-allowed;
+    }
+
+    &.con-datos &__entrada {
+        border-color: #bbe8c9;
+
+        &:focus {
+            border-color: #4cbf6e;
+            box-shadow: 0 0 0 3px rgba(76, 191, 110, 0.16);
+        }
+    }
+
+    &__acciones {
+        position: absolute;
+        top: 50%;
+        right: 8px;
+        display: flex;
+        align-items: center;
+        gap: 2px;
+        transform: translateY(-50%);
+    }
+
+    &__cancelar,
+    &__check {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        padding: 0;
+        font-size: 18px;
+        line-height: 1;
+        background: transparent;
+        border: none;
+        border-radius: 50%;
+        cursor: pointer;
+        transition: color 0.2s ease, background-color 0.2s ease;
+    }
+
+    &__cancelar {
+        color: #98a2b3;
+
+        &:not(:disabled):hover {
+            color: #101828;
+            background-color: rgba(16, 24, 40, 0.08);
+        }
+
+        &:disabled {
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+    }
+
+    &__check {
+        color: #cbd5e1;
+
+        &:disabled {
+            cursor: not-allowed;
+        }
+
+        &:not(:disabled):hover {
+            background-color: rgba(22, 163, 74, 0.12);
+        }
+
+        .bi-arrow-repeat {
+            animation: opcion-otro-giro 0.8s linear infinite;
+        }
+    }
+
+    &.con-datos &__check {
+        color: #16a34a;
+    }
+}
+
+@keyframes opcion-otro-giro {
+    to {
+        transform: rotate(360deg);
+    }
+}

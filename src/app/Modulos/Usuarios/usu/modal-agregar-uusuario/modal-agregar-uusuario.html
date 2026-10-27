@@ -173,28 +173,46 @@
 @if (contador === 1) {
 <div class="formularioUsuarioPaso2">
     <div class="fila">
-        <app-campo-validado
-        class="etiqueta-input" 
-        [label]="'Puesto'"
-        [fieldId]="'puesto'"
-            [required]="true"
-        [showError]="!!(puesto.touched && puesto.invalid)"
-        [errorMessage]="'Debe seleccionar un puesto'"
-        >
-            <select
-                id="puesto"
-                name="puestoId"
-                required
-                [(ngModel)]="usuarioReq.puestoId"
-                #puesto="ngModel"
-                [class.input-invalid]="puesto.touched && puesto.invalid"
+        @if (mostrandoOtroPuesto) {
+            <app-campo-validado
+                class="etiqueta-input"
+                [label]="'Puesto'"
+                [fieldId]="'puestoOtro'"
+                [required]="true"
             >
-                <option [ngValue]="0" disabled>Seleccione un puesto</option>
-                @for (puesto of puestos; track puesto.id) {
-                    <option [ngValue]="puesto.id">{{ puesto.nombre }}</option>
-                }
-            </select>
-        </app-campo-validado>
+                <app-opcion-otro
+                    [placeholder]="'Escribe el puesto'"
+                    [creando]="creandoPuesto"
+                    (confirmar)="crearPuesto($event)"
+                    (cancelar)="cancelarPuesto()"
+                ></app-opcion-otro>
+            </app-campo-validado>
+        } @else {
+            <app-campo-validado
+                class="etiqueta-input"
+                [label]="'Puesto'"
+                [fieldId]="'puesto'"
+                [required]="true"
+                [showError]="!!(puesto.touched && puesto.invalid)"
+                [errorMessage]="'Debe seleccionar un puesto'"
+            >
+                <select
+                    id="puesto"
+                    name="puestoId"
+                    required
+                    [ngModel]="usuarioReq.puestoId"
+                    (ngModelChange)="alElegirPuesto($event)"
+                    #puesto="ngModel"
+                    [class.input-invalid]="puesto.touched && puesto.invalid"
+                >
+                    <option [ngValue]="0" disabled>Seleccione un puesto</option>
+                    @for (puesto of puestos; track puesto.id) {
+                        <option [ngValue]="puesto.id">{{ puesto.nombre }}</option>
+                    }
+                    <option [ngValue]="opcionOtroId">Otro</option>
+                </select>
+            </app-campo-validado>
+        }
 
         <app-campo-validado
             class="etiqueta-input" 
@@ -222,28 +240,46 @@
 
     @if (esMedico) {
         <div class="fila">
-            <app-campo-validado
-                class="etiqueta-input"
-                [label]="'Especialidad'"
-                [fieldId]="'especialidad'"
-                [required]="true"
-                [showError]="!!(especialidad.touched && especialidad.invalid)"
-                [errorMessage]="'Debe ingresar la especialidad médica'"
-            >
-                <select
-                    id="especialidad"
-                    name="especialidad"
-                    required
-                    [(ngModel)]="usuarioReq.especialidadId"
-                    #especialidad="ngModel"
-                    [class.input-invalid]="especialidad.touched && especialidad.invalid"
+            @if (mostrandoOtroEspecialidad) {
+                <app-campo-validado
+                    class="etiqueta-input"
+                    [label]="'Especialidad'"
+                    [fieldId]="'especialidadOtro'"
+                    [required]="true"
                 >
-                    <option [ngValue]="0" disabled>Seleccione una especialidad</option>
-                    @for (especialidadItem of especialidades; track especialidadItem.id) {
-                        <option [ngValue]="especialidadItem.id">{{ especialidadItem.nombre }}</option>
-                    }
-                </select>
-            </app-campo-validado>
+                    <app-opcion-otro
+                        [placeholder]="'Escribe la especialidad'"
+                        [creando]="creandoEspecialidad"
+                        (confirmar)="crearEspecialidad($event)"
+                        (cancelar)="cancelarEspecialidad()"
+                    ></app-opcion-otro>
+                </app-campo-validado>
+            } @else {
+                <app-campo-validado
+                    class="etiqueta-input"
+                    [label]="'Especialidad'"
+                    [fieldId]="'especialidad'"
+                    [required]="true"
+                    [showError]="!!(especialidad.touched && especialidad.invalid)"
+                    [errorMessage]="'Debe ingresar la especialidad médica'"
+                >
+                    <select
+                        id="especialidad"
+                        name="especialidad"
+                        required
+                        [ngModel]="usuarioReq.especialidadId"
+                        (ngModelChange)="alElegirEspecialidad($event)"
+                        #especialidad="ngModel"
+                        [class.input-invalid]="especialidad.touched && especialidad.invalid"
+                    >
+                        <option [ngValue]="0" disabled>Seleccione una especialidad</option>
+                        @for (especialidadItem of especialidades; track especialidadItem.id) {
+                            <option [ngValue]="especialidadItem.id">{{ especialidadItem.nombre }}</option>
+                        }
+                        <option [ngValue]="opcionOtroId">Otro</option>
+                    </select>
+                </app-campo-validado>
+            }
         </div>
     }
     

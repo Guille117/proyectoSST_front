@@ -8,9 +8,10 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
-import { TimeoutError, finalize } from 'rxjs';
+import { TimeoutError, finalize, timeout } from 'rxjs';
 import { ModalAction, ModalService } from '../../../../modal-principal/modal-service';
 import { CampoValidado } from '../../../../shared/campo-validado/campo-validado';
+import { OpcionOtroComponent, OpcionOtroValor } from '../../../../shared/opcion-otro/opcion-otro';
 import { PopUps } from '../../../../shared/popUps/popUpsService';
 import { AuthService } from '../../../Auth/data/auth-service';
 import { Inter_base } from '../../../Catalogos/data/nombreInterfaz';
@@ -20,7 +21,7 @@ import { ServicioInventario } from '../data/servicio-inventario';
 
 @Component({
   selector: 'app-modal-baja-lote',
-  imports: [FormsModule, CampoValidado],
+  imports: [FormsModule, CampoValidado, OpcionOtroComponent],
   templateUrl: './modal-baja-lote.html',
   styleUrl: './modal-baja-lote.scss',
 })
@@ -44,6 +45,11 @@ export class ModalBajaLote implements OnInit {
   cantidad: number | null = null;
   motivoBajaId: number | null = null;
   observacion = '';
+
+  readonly opcionOtroId = -1;
+  mostrandoOtroMotivo = false;
+  creandoMotivo = false;
+  private motivoAnterior: number | null = null;
 
   private readonly meses = [
     'enero',
@@ -279,5 +285,48 @@ export class ModalBajaLote implements OnInit {
           this.popUps.errorDesdeBackend(error, this.errorMotivos);
         },
       });
+  }
+
+  alElegirMotivo(valor: number | null): void {
+    if (valor === this.opcionOtroId) {
+      this.motivoAnterior = this.motivoBajaId;
+      this.motivoBajaId = null;
+      this.mostrandoOtroMotivo = true;
+      return;
+    }
+
+    this.motivoBajaId = valor;
+  }
+
+  crearMotivo(datos: OpcionOtroValor): void {
+    if (this.creandoMotivo) return;
+
+    this.creandoMotivo = true;
+    this.catalogoService
+      .crear<Inter_base>('motivoBaja', { nombre: datos.nombre })
+      .pipe(
+        timeout(5000),
+        finalize(() => {
+          this.creandoMotivo = false;
+          this.cdr.markForCheck();
+        }),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: (creado) => {
+          if (creado.id == null) return;
+
+          this.motivos = [...this.motivos, creado];
+          this.motivoBajaId = creado.id;
+          this.mostrandoOtroMotivo = false;
+          this.cdr.markForCheck();
+        },
+        error: (error) => this.popUps.errorDesdeBackend(error, 'No se pudo crear el motivo de baja.'),
+      });
+  }
+
+  cancelarMotivo(): void {
+    this.mostrandoOtroMotivo = false;
+    this.motivoBajaId = this.motivoAnterior;
   }
 }

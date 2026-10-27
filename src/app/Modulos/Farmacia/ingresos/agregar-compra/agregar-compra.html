@@ -374,24 +374,35 @@
                 </div>
 
                 <app-campo-validado label="Proveedor" fieldId="proveedorCompra" [required]="true">
-                    <select
-                        id="proveedorCompra"
-                        name="proveedor"
-                        [(ngModel)]="proveedorSeleccionadoId"
-                        required
-                    >
-                        <option [ngValue]="null">
-                            {{ cargandoProveedores ? 'Cargando proveedores...' : 'Seleccione un proveedor' }}
-                        </option>
-                        @for (proveedor of proveedores; track proveedor.id) {
-                            <option [ngValue]="proveedor.id">{{ proveedor.nombre }}</option>
-                        }
-                        @if (proveedorActualNoListado) {
-                            <option [ngValue]="proveedorSeleccionadoId">
-                                {{ compraEdicion?.proveedorNombre }}
+                    @if (mostrandoOtroProveedor) {
+                        <app-opcion-otro
+                            [placeholder]="'Escribe el proveedor'"
+                            [creando]="creandoProveedor"
+                            (confirmar)="crearProveedor($event)"
+                            (cancelar)="cancelarProveedor()"
+                        ></app-opcion-otro>
+                    } @else {
+                        <select
+                            id="proveedorCompra"
+                            name="proveedor"
+                            [ngModel]="proveedorSeleccionadoId"
+                            (ngModelChange)="alElegirProveedor($event)"
+                            required
+                        >
+                            <option [ngValue]="null">
+                                {{ cargandoProveedores ? 'Cargando proveedores...' : 'Seleccione un proveedor' }}
                             </option>
-                        }
-                    </select>
+                            @for (proveedor of proveedores; track proveedor.id) {
+                                <option [ngValue]="proveedor.id">{{ proveedor.nombre }}</option>
+                            }
+                            @if (proveedorActualNoListado) {
+                                <option [ngValue]="proveedorSeleccionadoId">
+                                    {{ compraEdicion?.proveedorNombre }}
+                                </option>
+                            }
+                            <option [ngValue]="opcionOtroId">Otro</option>
+                        </select>
+                    }
                 </app-campo-validado>
 
                 <!-- ==================== COMPROBANTE ==================== -->

@@ -31,6 +31,12 @@ export class ProcedimientoMedicoService {
       .pipe(timeout(TIMEOUT_HTTP_MS));
   }
 
+  postTipoProcedimiento(nombre: string): Observable<TipoProcedimientoResponse> {
+    return this.http
+      .post<TipoProcedimientoResponse>(this.tiposUrl, { nombre })
+      .pipe(timeout(TIMEOUT_HTTP_MS));
+  }
+
   getProcedimientos(episodioId: number): Observable<ProcedimientoMedicoResponse[]> {
     const params = new HttpParams().set('episodioId', episodioId);
     return this.http

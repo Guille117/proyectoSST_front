@@ -1,0 +1,82 @@
+<div class="opcion-otro" [class.con-datos]="completo">
+    <div class="opcion-otro__campo">
+        <input
+            type="text"
+            class="opcion-otro__entrada"
+            [class.opcion-otro__entrada--con-acciones]="!requiereAbreviatura()"
+            [placeholder]="placeholder()"
+            [readOnly]="creando()"
+            [ngModelOptions]="{ standalone: true }"
+            [(ngModel)]="nombre"
+            (keydown.enter)="confirmarOpcion($event)"
+        >
+
+        @if (!requiereAbreviatura()) {
+            <div class="opcion-otro__acciones">
+                <button
+                    type="button"
+                    class="opcion-otro__cancelar"
+                    aria-label="Volver al select"
+                    [disabled]="creando()"
+                    (click)="cancelarOpcion()"
+                >
+                    <i class="bi bi-x-lg"></i>
+                </button>
+                <button
+                    type="button"
+                    class="opcion-otro__check"
+                    aria-label="Confirmar opción"
+                    [attr.aria-busy]="creando()"
+                    [disabled]="!completo || creando()"
+                    (click)="confirmarOpcion()"
+                >
+                    <i
+                        class="bi"
+                        [class.bi-check-circle]="!creando()"
+                        [class.bi-arrow-repeat]="creando()"
+                    ></i>
+                </button>
+            </div>
+        }
+    </div>
+
+    @if (requiereAbreviatura()) {
+        <div class="opcion-otro__campo opcion-otro__campo--abreviatura">
+            <input
+                type="text"
+                class="opcion-otro__entrada opcion-otro__entrada--con-acciones"
+                placeholder="Abreviatura"
+                [readOnly]="creando()"
+                [ngModelOptions]="{ standalone: true }"
+                [(ngModel)]="abreviatura"
+                (keydown.enter)="confirmarOpcion($event)"
+            >
+
+            <div class="opcion-otro__acciones">
+                <button
+                    type="button"
+                    class="opcion-otro__cancelar"
+                    aria-label="Volver al select"
+                    [disabled]="creando()"
+                    (click)="cancelarOpcion()"
+                >
+                    <i class="bi bi-x-lg"></i>
+                </button>
+                <button
+                    type="button"
+                    class="opcion-otro__check"
+                    aria-label="Confirmar opción"
+                    [attr.aria-busy]="creando()"
+                    [disabled]="!completo || creando()"
+                    (click)="confirmarOpcion()"
+                >
+                    <i
+                        class="bi"
+                        [class.bi-check-circle]="!creando()"
+                        [class.bi-arrow-repeat]="creando()"
+                    ></i>
+                </button>
+            </div>
+        </div>
+    }
+</div>

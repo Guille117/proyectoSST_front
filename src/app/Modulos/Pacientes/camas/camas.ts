@@ -1,8 +1,11 @@
-import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, DestroyRef, OnInit, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { finalize, timeout } from 'rxjs';
 import { ServicioCama } from './data/servicioCama';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TabSwitch } from '../../../shared/tab-switch/tab-switch';
+import { OpcionOtroComponent, OpcionOtroValor } from '../../../shared/opcion-otro/opcion-otro';
 import { CatalogoService } from '../../Catalogos/data/serviceCatalogo';
 import { tipoDato2 } from '../../Catalogos/data/nombreInterfaz';
 import { PopUps } from '../../../shared/popUps/popUpsService';
@@ -10,7 +13,7 @@ import { camaRequest, camaResponseSimple, EstadoCama } from './data/interfazCama
 
 @Component({
   selector: 'app-camas',
-  imports: [CommonModule, FormsModule, TabSwitch],
+  imports: [CommonModule, FormsModule, OpcionOtroComponent, TabSwitch],
   templateUrl: './camas.html',
   styleUrl: './camas.scss',
   host: {
@@ -21,6 +24,7 @@ export class Camas implements OnInit {
   private readonly catalogoService = inject(CatalogoService);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly servicioCama = inject(ServicioCama);
+  private readonly destroyRef = inject(DestroyRef);
 EstadoCama = EstadoCama;
 
   constructor(
@@ -30,6 +34,16 @@ EstadoCama = EstadoCama;
   areas: tipoDato2[] = [];
   tiposCama: tipoDato2[] = [];
   habitaciones: tipoDato2[] = [];
+  readonly opcionOtroId = -1;
+  mostrandoOtroArea = false;
+  mostrandoOtroTipoCama = false;
+  mostrandoOtroHabitacion = false;
+  creandoArea = false;
+  creandoTipoCama = false;
+  creandoHabitacion = false;
+  private areaAnterior = 0;
+  private tipoCamaAnterior = 0;
+  private habitacionAnterior = 0;
   mostrarActivos = true;
   filtro = 'codigo';
   busquedaEnfocada = false;
@@ -65,6 +79,124 @@ EstadoCama = EstadoCama;
       this.habitaciones = data;
       this.cdr.detectChanges();
     });
+  }
+
+  // -------------------- CREACIÓN DE CATÁLOGOS --------------------
+  alElegirArea(valor: number): void {
+    if (valor === this.opcionOtroId) {
+      this.areaAnterior = this.camaRequest.areaId;
+      this.camaRequest.areaId = 0;
+      this.mostrandoOtroArea = true;
+      return;
+    }
+
+    this.camaRequest.areaId = valor;
+  }
+
+  crearArea(datos: OpcionOtroValor): void {
+    if (this.creandoArea) return;
+
+    this.creandoArea = true;
+    this.catalogoService
+      .crear2('areas', { nombre: datos.nombre })
+      .pipe(
+        timeout(5000),
+        finalize(() => {
+          this.creandoArea = false;
+        }),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: (creada) => {
+          this.areas = [...this.areas, creada];
+          this.camaRequest.areaId = creada.id;
+          this.mostrandoOtroArea = false;
+        },
+        error: (error) => this.popUp.errorDesdeBackend(error, 'No se pudo crear el área.'),
+      });
+  }
+
+  cancelarArea(): void {
+    this.mostrandoOtroArea = false;
+    this.camaRequest.areaId = this.areaAnterior;
+  }
+
+  alElegirTipoCama(valor: number): void {
+    if (valor === this.opcionOtroId) {
+      this.tipoCamaAnterior = this.camaRequest.tipoId;
+      this.camaRequest.tipoId = 0;
+      this.mostrandoOtroTipoCama = true;
+      return;
+    }
+
+    this.camaRequest.tipoId = valor;
+  }
+
+  crearTipoCama(datos: OpcionOtroValor): void {
+    if (this.creandoTipoCama) return;
+
+    this.creandoTipoCama = true;
+    this.catalogoService
+      .crear2('tiposCama', { nombre: datos.nombre })
+      .pipe(
+        timeout(5000),
+        finalize(() => {
+          this.creandoTipoCama = false;
+        }),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: (creado) => {
+          this.tiposCama = [...this.tiposCama, creado];
+          this.camaRequest.tipoId = creado.id;
+          this.mostrandoOtroTipoCama = false;
+        },
+        error: (error) => this.popUp.errorDesdeBackend(error, 'No se pudo crear el tipo de cama.'),
+      });
+  }
+
+  cancelarTipoCama(): void {
+    this.mostrandoOtroTipoCama = false;
+    this.camaRequest.tipoId = this.tipoCamaAnterior;
+  }
+
+  alElegirHabitacion(valor: number): void {
+    if (valor === this.opcionOtroId) {
+      this.habitacionAnterior = this.camaRequest.habitacionId;
+      this.camaRequest.habitacionId = 0;
+      this.mostrandoOtroHabitacion = true;
+      return;
+    }
+
+    this.camaRequest.habitacionId = valor;
+  }
+
+  crearHabitacion(datos: OpcionOtroValor): void {
+    if (this.creandoHabitacion) return;
+
+    this.creandoHabitacion = true;
+    this.catalogoService
+      .crear2('habitaciones', { nombre: datos.nombre })
+      .pipe(
+        timeout(5000),
+        finalize(() => {
+          this.creandoHabitacion = false;
+        }),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: (creada) => {
+          this.habitaciones = [...this.habitaciones, creada];
+          this.camaRequest.habitacionId = creada.id;
+          this.mostrandoOtroHabitacion = false;
+        },
+        error: (error) => this.popUp.errorDesdeBackend(error, 'No se pudo crear la habitación.'),
+      });
+  }
+
+  cancelarHabitacion(): void {
+    this.mostrandoOtroHabitacion = false;
+    this.camaRequest.habitacionId = this.habitacionAnterior;
   }
 
   //---------------------------------------------------

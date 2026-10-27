@@ -1,7 +1,19 @@
-import { Component, OnInit, OnChanges, SimpleChanges, Input, ChangeDetectorRef } from '@angular/core';
+import {
+  Component,
+  DestroyRef,
+  OnInit,
+  OnChanges,
+  SimpleChanges,
+  Input,
+  ChangeDetectorRef,
+  inject,
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { finalize, timeout } from 'rxjs';
 import { CampoValidado } from "../../../../shared/campo-validado/campo-validado";
+import { OpcionOtroComponent, OpcionOtroValor } from '../../../../shared/opcion-otro/opcion-otro';
 import { PuestoService } from '../data/puesto-service';
 import { UsuarioService } from '../data/usuario-service';
 import { HorarioService } from '../../horarios/data/horario-service';
@@ -14,9 +26,11 @@ import { ModalPopUps } from '../../../../shared/popUps/modal-popUpsService';
 import { Inter_base, Nombre, NombreGet } from '../../../Catalogos/data/nombreInterfaz';
 import { CatalogoService } from '../../../Catalogos/data/serviceCatalogo';
 
+const TIEMPO_ESPERA_MS = 5000;
+
 @Component({
   selector: 'app-modal-agregar-uusuario',
-  imports: [CommonModule, FormsModule, CampoValidado],
+  imports: [CommonModule, FormsModule, CampoValidado, OpcionOtroComponent],
   templateUrl: './modal-agregar-uusuario.html',
   styleUrl: './modal-agregar-uusuario.scss',
 })
@@ -26,6 +40,15 @@ export class ModalAgregarUusuario implements OnInit, OnChanges {
   @Input() onSuccess?: () => void;
 
   contador: number = 0;
+
+  readonly opcionOtroId = -1;
+  mostrandoOtroPuesto = false;
+  mostrandoOtroEspecialidad = false;
+  creandoPuesto = false;
+  creandoEspecialidad = false;
+  private puestoAnterior = 0;
+  private especialidadAnterior = 0;
+  private readonly destroyRef = inject(DestroyRef);
 
   puestos: PuestoResponse[] = [];
   horarios: HorarioResponse[] = [];
@@ -92,6 +115,92 @@ export class ModalAgregarUusuario implements OnInit, OnChanges {
     }
 
     return actions;
+  }
+
+  alElegirPuesto(valor: number): void {
+    if (valor === this.opcionOtroId) {
+      this.puestoAnterior = Number(this.usuarioReq.puestoId ?? 0);
+      this.usuarioReq.puestoId = 0;
+      this.mostrandoOtroPuesto = true;
+      return;
+    }
+
+    this.usuarioReq.puestoId = valor;
+  }
+
+  crearPuesto(datos: OpcionOtroValor): void {
+    if (this.creandoPuesto) {
+      return;
+    }
+
+    this.creandoPuesto = true;
+    this.puestoService
+      .postPuesto(datos.nombre)
+      .pipe(
+        finalize(() => {
+          this.creandoPuesto = false;
+        }),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: (puesto) => {
+          this.puestos = [...this.puestos, puesto];
+          this.usuarioReq.puestoId = puesto.id;
+          this.mostrandoOtroPuesto = false;
+        },
+        error: (error) => this.popUps.errorDesdeBackend(error, 'No se pudo crear el puesto.'),
+      });
+  }
+
+  cancelarPuesto(): void {
+    this.mostrandoOtroPuesto = false;
+    this.usuarioReq.puestoId = this.puestoAnterior;
+  }
+
+  alElegirEspecialidad(valor: number): void {
+    if (valor === this.opcionOtroId) {
+      this.especialidadAnterior = Number(this.usuarioReq.especialidadId ?? 0);
+      this.usuarioReq.especialidadId = 0;
+      this.mostrandoOtroEspecialidad = true;
+      return;
+    }
+
+    this.usuarioReq.especialidadId = valor;
+  }
+
+  crearEspecialidad(datos: OpcionOtroValor): void {
+    if (this.creandoEspecialidad) {
+      return;
+    }
+
+    this.creandoEspecialidad = true;
+    this.servicioCatalogo
+      .crear<Inter_base>('especialidades', { nombre: datos.nombre })
+      .pipe(
+        timeout(TIEMPO_ESPERA_MS),
+        finalize(() => {
+          this.creandoEspecialidad = false;
+        }),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: (especialidad) => {
+          if (especialidad.id == null) {
+            return;
+          }
+
+          this.especialidades = [...this.especialidades, especialidad];
+          this.usuarioReq.especialidadId = especialidad.id;
+          this.mostrandoOtroEspecialidad = false;
+        },
+        error: (error) =>
+          this.popUps.errorDesdeBackend(error, 'No se pudo crear la especialidad.'),
+      });
+  }
+
+  cancelarEspecialidad(): void {
+    this.mostrandoOtroEspecialidad = false;
+    this.usuarioReq.especialidadId = this.especialidadAnterior;
   }
 
   alternarRol(rolId: number): void {

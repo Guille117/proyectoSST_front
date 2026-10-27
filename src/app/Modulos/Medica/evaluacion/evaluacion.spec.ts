@@ -384,7 +384,7 @@ describe('Evaluacion', () => {
   it('lista las partes del cuerpo del catálogo y selecciona la primera', () => {
     const opciones = Array.from(selectParte().options);
 
-    expect(opciones.length).toBe(2);
+    expect(opciones.length).toBe(3);
     expect(opciones[0].textContent?.trim()).toBe('Tórax');
     expect(opciones[1].textContent?.trim()).toBe('Abdomen');
     expect(selectParte().selectedIndex).toBe(0);
@@ -397,7 +397,7 @@ describe('Evaluacion', () => {
 
     expect(component.partesCuerpo.length).toBe(0);
     expect(component.parteSeleccionadaId).toBeNull();
-    expect(selectParte().options.length).toBe(1);
+    expect(selectParte().options.length).toBe(2);
     expect(selectParte().options[0].textContent?.trim()).toBe('Sin partes del cuerpo disponibles');
     expect(botonGuardar().disabled).toBe(true);
     expect(elemento<HTMLElement>('.examen-ayuda').textContent).toContain(

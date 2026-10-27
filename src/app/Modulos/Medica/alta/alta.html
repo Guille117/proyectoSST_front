@@ -127,19 +127,30 @@
             <div class="egreso-campo">
               <label class="egreso-etiqueta" for="condicionEgreso">Condición de egreso</label>
 
-              <select
-                class="egreso-input"
-                id="condicionEgreso"
-                name="condicionEgreso"
-                [disabled]="soloLectura"
-                [(ngModel)]="condicionEgreso"
-              >
-                <option value="" disabled>Seleccione la condición de egreso</option>
+              @if (mostrandoOtroCondicion) {
+                <app-opcion-otro
+                  [placeholder]="'Escribe la condición de egreso'"
+                  [creando]="creandoCondicion"
+                  (confirmar)="crearCondicion($event)"
+                  (cancelar)="cancelarCondicion()"
+                ></app-opcion-otro>
+              } @else {
+                <select
+                  class="egreso-input"
+                  id="condicionEgreso"
+                  name="condicionEgreso"
+                  [disabled]="soloLectura"
+                  [ngModel]="condicionEgreso"
+                  (ngModelChange)="alElegirCondicion($event)"
+                >
+                  <option value="" disabled>Seleccione la condición de egreso</option>
 
-                @for (condicion of condicionesEgreso; track condicion.id) {
-                  <option [value]="condicion.id">{{ condicion.nombre }}</option>
-                }
-              </select>
+                  @for (condicion of condicionesEgreso; track condicion.id) {
+                    <option [value]="condicion.id">{{ condicion.nombre }}</option>
+                  }
+                  <option [value]="opcionOtroId">Otro</option>
+                </select>
+              }
             </div>
 
             <!-- Observación de egreso -->
@@ -248,20 +259,31 @@
                     Institución de referencia<span class="egreso-obligatorio" aria-hidden="true">*</span>
                   </label>
 
-                  <select
-                    class="egreso-input"
-                    id="institucionReferencia"
-                    name="institucionReferencia"
-                    aria-required="true"
-                    [disabled]="soloLectura"
-                    [(ngModel)]="institucionReferencia"
-                  >
-                    <option value="" disabled>Seleccione la institución</option>
+                  @if (mostrandoOtroInstitucion) {
+                    <app-opcion-otro
+                      [placeholder]="'Escribe la institución'"
+                      [creando]="creandoInstitucion"
+                      (confirmar)="crearInstitucion($event)"
+                      (cancelar)="cancelarInstitucion()"
+                    ></app-opcion-otro>
+                  } @else {
+                    <select
+                      class="egreso-input"
+                      id="institucionReferencia"
+                      name="institucionReferencia"
+                      aria-required="true"
+                      [disabled]="soloLectura"
+                      [ngModel]="institucionReferencia"
+                      (ngModelChange)="alElegirInstitucion($event)"
+                    >
+                      <option value="" disabled>Seleccione la institución</option>
 
-                    @for (institucion of instituciones; track $index) {
-                      <option [value]="institucion.id">{{ institucion.nombre }}</option>
-                    }
-                  </select>
+                      @for (institucion of instituciones; track $index) {
+                        <option [value]="institucion.id">{{ institucion.nombre }}</option>
+                      }
+                      <option [value]="opcionOtroId">Otro</option>
+                    </select>
+                  }
                 </div>
 
                 <!-- Motivo de referencia -->

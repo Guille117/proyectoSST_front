@@ -67,21 +67,31 @@
           <div class="parte-cuerpo-campo">
             <label class="parte-cuerpo-label" for="parteCuerpoExamen">Parte del cuerpo</label>
 
-            <select
-              id="parteCuerpoExamen"
-              name="parteCuerpoExamen"
-              class="parte-cuerpo-select"
-              [disabled]="cargando || guardando || eliminando"
-              [ngModel]="parteSeleccionadaId"
-              (ngModelChange)="seleccionarParteCuerpo($event)"
-            >
-              @for (parte of partesCuerpo; track parte.id) {
-                <option [ngValue]="parte.id">{{ parte.nombre }}</option>
-              }
-              @if (!partesCuerpo.length) {
-                <option [ngValue]="null">Sin partes del cuerpo disponibles</option>
-              }
-            </select>
+            @if (mostrandoOtroParte) {
+              <app-opcion-otro
+                [placeholder]="'Escribe la parte del cuerpo'"
+                [creando]="creandoParte"
+                (confirmar)="crearParte($event)"
+                (cancelar)="cancelarParte()"
+              ></app-opcion-otro>
+            } @else {
+              <select
+                id="parteCuerpoExamen"
+                name="parteCuerpoExamen"
+                class="parte-cuerpo-select"
+                [disabled]="cargando || guardando || eliminando"
+                [ngModel]="parteSeleccionadaId"
+                (ngModelChange)="alElegirParte($event)"
+              >
+                @for (parte of partesCuerpo; track parte.id) {
+                  <option [ngValue]="parte.id">{{ parte.nombre }}</option>
+                }
+                @if (!partesCuerpo.length) {
+                  <option [ngValue]="null">Sin partes del cuerpo disponibles</option>
+                }
+                <option [ngValue]="opcionOtroId">Otro</option>
+              </select>
+            }
           </div>
 
           <!-- Captura de hallazgos: el cuadro arranca vacío y se llena solo al editar una tarjeta -->

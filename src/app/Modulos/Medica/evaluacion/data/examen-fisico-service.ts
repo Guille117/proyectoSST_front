@@ -29,6 +29,12 @@ export class ExamenFisicoService {
       .pipe(timeout(TIMEOUT_HTTP_MS));
   }
 
+  postParteCuerpo(nombre: string): Observable<ParteCuerpoResponse> {
+    return this.http
+      .post<ParteCuerpoResponse>(this.apiUrlPartesCuerpo, { nombre })
+      .pipe(timeout(TIMEOUT_HTTP_MS));
+  }
+
   // ------------------- EXAMEN FÍSICO -------------------
   postExamen(examen: ExamenFisicoRequest): Observable<ExamenFisicoResponse> {
     return this.http

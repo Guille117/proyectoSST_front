@@ -9,8 +9,9 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule, NgForm } from '@angular/forms';
-import { finalize, firstValueFrom } from 'rxjs';
+import { finalize, firstValueFrom, timeout } from 'rxjs';
 import { CampoValidado } from '../../../shared/campo-validado/campo-validado';
+import { OpcionOtroComponent, OpcionOtroValor } from '../../../shared/opcion-otro/opcion-otro';
 import { Paginacion } from '../../../shared/paginacion/paginacion';
 import { PopUps } from '../../../shared/popUps/popUpsService';
 import { TabSwitch } from '../../../shared/tab-switch/tab-switch';
@@ -21,7 +22,7 @@ import { ServicioInsumos } from './data/servicio-insumos';
 
 @Component({
   selector: 'app-insumos',
-  imports: [FormsModule, CampoValidado, TabSwitch, Paginacion, SlicePipe],
+  imports: [FormsModule, CampoValidado, OpcionOtroComponent, TabSwitch, Paginacion, SlicePipe],
   templateUrl: './insumos.html',
   styleUrl: './insumos.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -43,6 +44,11 @@ export class Insumos implements OnInit {
   // ==================== LLENADO DE SELECTS ====================
   fabricantes: Inter_base[] = [];
 
+  readonly opcionOtroId = -1;
+  mostrandoOtroMarca = false;
+  creandoMarca = false;
+  private marcaAnterior = 0;
+
   private llenarSelects(): void {
     this.servicioCatalogos
       .listar<Inter_base>('marca')
@@ -56,6 +62,50 @@ export class Insumos implements OnInit {
           this.popUp.errorDesdeBackend(err, 'Error al cargar los fabricantes.');
         },
       });
+  }
+
+  // ==================== CREACIÓN DE CATÁLOGOS ====================
+  alElegirMarca(valor: number): void {
+    if (valor === this.opcionOtroId) {
+      this.marcaAnterior = this.insumo.marcaId;
+      this.insumo.marcaId = 0;
+      this.mostrandoOtroMarca = true;
+      return;
+    }
+
+    this.insumo.marcaId = valor;
+  }
+
+  crearMarca(datos: OpcionOtroValor): void {
+    if (this.creandoMarca) return;
+
+    this.creandoMarca = true;
+    this.servicioCatalogos
+      .crear<Inter_base>('marca', { nombre: datos.nombre })
+      .pipe(
+        timeout(5000),
+        finalize(() => {
+          this.creandoMarca = false;
+          this.cdr.markForCheck();
+        }),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: (creada) => {
+          if (creada.id == null) return;
+
+          this.fabricantes = [...this.fabricantes, creada];
+          this.insumo.marcaId = creada.id;
+          this.mostrandoOtroMarca = false;
+          this.cdr.markForCheck();
+        },
+        error: (error) => this.popUp.errorDesdeBackend(error, 'No se pudo crear el fabricante.'),
+      });
+  }
+
+  cancelarMarca(): void {
+    this.mostrandoOtroMarca = false;
+    this.insumo.marcaId = this.marcaAnterior;
   }
 
   // ==================== GUARDAR ====================
