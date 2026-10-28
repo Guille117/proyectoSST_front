@@ -25,3 +25,15 @@
     outline-offset: 2px;
   }
 }
+
+/* Modo lectura: oculta las acciones de escritura de las pantallas hijas. */
+.contenido.solo-lectura ::ng-deep ._guardar,
+.contenido.solo-lectura ::ng-deep ._editar,
+.contenido.solo-lectura ::ng-deep ._eliminar,
+.contenido.solo-lectura ::ng-deep ._nuevo,
+.contenido.solo-lectura ::ng-deep .iconEditar,
+.contenido.solo-lectura ::ng-deep .iconEliminar,
+.contenido.solo-lectura ::ng-deep .tratamiento-card_accion--editar,
+.contenido.solo-lectura ::ng-deep .tratamiento-card_accion--eliminar {
+  display: none !important;
+}

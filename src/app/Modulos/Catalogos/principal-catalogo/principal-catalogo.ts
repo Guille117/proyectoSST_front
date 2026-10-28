@@ -1,5 +1,6 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { RouterLink, RouterOutlet, RouterLinkActive } from "@angular/router";
+import { PermisosService } from '../../Auth/data/permisos-service';
 
 @Component({
   selector: 'app-principal-catalogo',
@@ -7,4 +8,6 @@ import { RouterLink, RouterOutlet, RouterLinkActive } from "@angular/router";
   templateUrl: './principal-catalogo.html',
   styleUrl: './principal-catalogo.scss',
 })
-export class PrincipalCatalogo {}
+export class PrincipalCatalogo {
+  readonly permisos = inject(PermisosService);
+}

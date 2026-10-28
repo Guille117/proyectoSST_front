@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { TabSwitch } from "../../../shared/tab-switch/tab-switch";
 import { CampoValidado } from "../../../shared/campo-validado/campo-validado";
 import { RolService } from './data/rol-service';
-import { ModuloResponse, RolRequest, RolResponse, PermisoRequest } from './data/rolInterfaz';
+import { ModuloResponse, RolResponse } from './data/rolInterfaz';
 import { PopUps } from '../../../shared/popUps/popUpsService';
 
 @Component({
@@ -14,10 +14,6 @@ import { PopUps } from '../../../shared/popUps/popUpsService';
   styleUrl: './roles.scss',
 })
 export class Roles implements OnInit {
-  isEditing = false;
-  isWatching = true;
-  isCreating = false;
-
   modulos: ModuloResponse[] = [];
   moduloSeleccionado: ModuloResponse | null = null;
   roles: RolResponse[] = [];
@@ -29,6 +25,7 @@ export class Roles implements OnInit {
 
   permisosMap: Map<number, { id?: number; puedeLeer: boolean; puedeCrear: boolean; puedeEditar: boolean; puedeEliminar: boolean }> = new Map();
   private solicitudRoles = 0;
+
   constructor(
     private rolService: RolService,
     private cdr: ChangeDetectorRef,
@@ -44,7 +41,6 @@ export class Roles implements OnInit {
     this.rolService.getModulos().subscribe({
       next: (data) => {
         this.modulos = data ?? [];
-        // selecciona el primero si hay registros
         this.moduloSeleccionado = this.modulos.length > 0 ? this.modulos[0] : null;
         this.cdr.detectChanges();
       }
@@ -112,7 +108,6 @@ export class Roles implements OnInit {
 
   seleccionarRol(rol: RolResponse): void {
     this.rolSeleccionado = rol;
-    this.isEditing = false;
     this.nombreRol = rol.nombre;
     this.permisosMap.clear();
 
@@ -129,26 +124,8 @@ export class Roles implements OnInit {
     }
   }
 
-  activarEdicion(): void {
-    if (this.rolSeleccionado && !this.rolSeleccionado.estado) {
-      return;
-    }
-    this.isEditing = true;
-    this.isWatching = false;
-    this.isCreating = true;
-  }
-
-  cancelarAccion(): void {
-    if (this.rolSeleccionado && this.isEditing) {
-      this.seleccionarRol(this.rolSeleccionado);
-    } else {
-      this.resetearFormulario();
-    }
-  }
-
   resetearFormulario(): void {
     this.rolSeleccionado = null;
-    this.isEditing = false;
     this.nombreRol = '';
     this.permisosMap.clear();
   }
@@ -161,190 +138,10 @@ export class Roles implements OnInit {
     return !!this.permisosMap.get(Number(submoduloId))?.[tipo];
   }
 
-  setPermiso(submoduloId: number, tipo: 'puedeLeer' | 'puedeCrear' | 'puedeEditar' | 'puedeEliminar', event: Event): void {
-    if (this.isFormDisabled) return;
-    const idNum = Number(submoduloId);
-    const checked = (event.target as HTMLInputElement).checked;
-    const actual = this.permisosMap.get(idNum) || {
-      puedeLeer: false,
-      puedeCrear: false,
-      puedeEditar: false,
-      puedeEliminar: false,
-    };
-    actual[tipo] = checked;
-    if (tipo !== 'puedeLeer' && checked) {
-      actual.puedeLeer = true;
-    }
-    if (tipo === 'puedeLeer' && !checked) {
-      actual.puedeCrear = false;
-      actual.puedeEditar = false;
-      actual.puedeEliminar = false;
-    }
-    this.permisosMap.set(idNum, actual);
-  }
-
-  isFormValido(): boolean {
-    return !!this.nombreRol && this.nombreRol.trim().length > 0;
-  }
-
-  hayCambios(): boolean {
-    if (!this.rolSeleccionado) return false;
-
-    if (this.nombreRol.trim() !== (this.rolSeleccionado.nombre || '').trim()) {
-      return true;
-    }
-
-    const permisosOriginales = new Map<number, { puedeLeer: boolean; puedeCrear: boolean; puedeEditar: boolean; puedeEliminar: boolean }>();
-    if (this.rolSeleccionado.permisos) {
-      this.rolSeleccionado.permisos.forEach((p) => {
-        permisosOriginales.set(Number(p.submoduloId), {
-          puedeLeer: !!p.puedeLeer,
-          puedeCrear: !!p.puedeCrear,
-          puedeEditar: !!p.puedeEditar,
-          puedeEliminar: !!p.puedeEliminar,
-        });
-      });
-    }
-
-    const todosSubmoduloIds = new Set<number>([
-      ...permisosOriginales.keys(),
-      ...this.permisosMap.keys(),
-    ]);
-
-    for (const subId of todosSubmoduloIds) {
-      const orig = permisosOriginales.get(subId) || { puedeLeer: false, puedeCrear: false, puedeEditar: false, puedeEliminar: false };
-      const actual = this.permisosMap.get(subId) || { puedeLeer: false, puedeCrear: false, puedeEditar: false, puedeEliminar: false };
-
-      if (
-        orig.puedeLeer !== !!actual.puedeLeer ||
-        orig.puedeCrear !== !!actual.puedeCrear ||
-        orig.puedeEditar !== !!actual.puedeEditar ||
-        orig.puedeEliminar !== !!actual.puedeEliminar
-      ) {
-        return true;
-      }
-    }
-
-    return false;
-  }
-
-  get isFormDisabled(): boolean {
-    return this.rolSeleccionado !== null && !this.isEditing;
-  }
-
   get tituloFormulario(): string {
     if (!this.rolSeleccionado) {
-      return 'Agregar rol';
+      return 'Roles del sistema';
     }
-    return this.isEditing ? 'Editar detalles de rol'+ ' ' + (this.rolSeleccionado?.codigo) : 'Ver detalles de rol'+ ' ' + (this.rolSeleccionado?.codigo);
-  }
-
-  crearRol(): void {
-    if (!this.isFormValido()) return;
-
-    const rolReq: RolRequest = {
-      nombre: this.nombreRol.trim(),
-      estado: true,
-      permisos: this.obtenerPermisos(false),
-    };
-
-    this.rolService.postRol(rolReq).subscribe({
-      next: (res) => {
-        this.popUps.exito('Rol guardado exitosamente');
-        this.recargarRoles(res.id);
-      },
-      error: (err) => {
-        this.popUps.errorDesdeBackend(err, 'Error al guardar el rol');
-      },
-    });
-  }
-
-  async actualizarRol(): Promise<void> {
-    if (!this.rolSeleccionado || !this.isFormValido()) return;
-
-    const confirmado = await this.popUps.confirmarToast('¿Desea actualizar este rol?');
-    if (!confirmado) return;
-
-    const rolReq: RolRequest = {
-      nombre: this.nombreRol.trim(),
-      estado: true,
-      permisos: this.obtenerPermisos(true),
-    };
-
-    const id = this.rolSeleccionado.id;
-    this.rolService.putRol(id, rolReq).subscribe({
-      next: () => {
-        this.popUps.exito('Rol actualizado exitosamente');
-        this.isEditing = false;
-        this.recargarRoles(id);
-      },
-      error: (err) => {
-        this.popUps.errorDesdeBackend(err, 'Error al actualizar el rol');
-      },
-    });
-  }
-
-  private obtenerPermisos(incluirId: boolean): PermisoRequest[] {
-    const permisosMapUnicos = new Map<number, PermisoRequest>();
-
-    this.permisosMap.forEach((perm, rawSubmoduloId) => {
-      const subId = Number(rawSubmoduloId);
-      if (perm.puedeLeer || perm.puedeCrear || perm.puedeEditar || perm.puedeEliminar) {
-        const item: PermisoRequest = {
-          submoduloId: subId,
-          puedeLeer: !!perm.puedeLeer,
-          puedeCrear: !!perm.puedeCrear,
-          puedeEditar: !!perm.puedeEditar,
-          puedeEliminar: !!perm.puedeEliminar,
-        };
-        if (incluirId && perm.id) {
-          item.id = perm.id;
-        }
-        permisosMapUnicos.set(subId, item);
-      }
-    });
-
-    return Array.from(permisosMapUnicos.values());
-  }
-
-  async cambiarEstadoRol(): Promise<void> {
-    if (!this.rolSeleccionado) return;
-
-    const accion = this.rolSeleccionado.estado ? 'desactivar' : 'activar';
-    const confirmado = await this.popUps.confirmarToast(`¿Desea ${accion} este rol?`);
-    if (!confirmado) return;
-
-    this.rolService.cambiarEstado(this.rolSeleccionado.id).subscribe({
-      next: () => {
-        this.popUps.exito(`Rol ${accion === 'desactivar' ? 'desactivado' : 'activado'} exitosamente`);
-        this.recargarRoles();
-      },
-      error: (err) => {
-        this.popUps.errorDesdeBackend(err, `Error al ${accion} el rol`);
-      }
-    });
-  }
-
-  private recargarRoles(idSeleccionar?: number): void {
-    if (this.criterioBusqueda.trim()) {
-      this.buscarRoles();
-    } else {
-      this.cargarRoles(this.mostrarActivos, idSeleccionar);
-    }
-  }
-
-
-    //método para pasar a la vista de formulario
-  prepararGuardar(){
-    this.isEditing = false;
-    this.isWatching = false;
-    this.isCreating = true;
-  }
-
-  //método para pasar a la vista de solo ver
-  prepararVer() {
-    this.isEditing = false;
-    this.isWatching = true;
-    this.isCreating = false;
+    return 'Ver detalles de rol ' + this.rolSeleccionado.codigo;
   }
 }

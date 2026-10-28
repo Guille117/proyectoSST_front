@@ -1,22 +1,28 @@
 <div class="principal">
     <nav class="subMenuNav">
-        <div class="option" routerLink="farmaciaCatalogo" routerLinkActive="active">
-            Farmacia
-        </div>
+        @if (permisos.puedeLeerSubmodulo('CATALOGOS-FARMACIA')) {
+            <div class="option" routerLink="farmaciaCatalogo" routerLinkActive="active">
+                Farmacia
+            </div>
+        }
 
-        <div class="option" routerLink="pacienteCatalogo" routerLinkActive="active">
-            Paciente
-        </div>
-        
-        <div class="option" routerLink="usuariosCatalogo" routerLinkActive="active">
-            Usuarios
-        </div>
+        @if (permisos.puedeLeerSubmodulo('CATALOGOS-PACIENTES')) {
+            <div class="option" routerLink="pacienteCatalogo" routerLinkActive="active">
+                Paciente
+            </div>
+        }
 
-        <div class="option" routerLink="gestionClinicaCatalogo" routerLinkActive="active">
-            Gestión clínica
-        </div>
+        @if (permisos.puedeLeerSubmodulo('CATALOGOS-USUARIOS')) {
+            <div class="option" routerLink="usuariosCatalogo" routerLinkActive="active">
+                Usuarios
+            </div>
+        }
 
-
+        @if (permisos.puedeLeerSubmodulo('CATALOGOS-CLINICA')) {
+            <div class="option" routerLink="gestionClinicaCatalogo" routerLinkActive="active">
+                Gestión clínica
+            </div>
+        }
     </nav>
 
     <div class="contenido">

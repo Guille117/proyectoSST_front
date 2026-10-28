@@ -5,7 +5,7 @@ import { Camas } from "./camas/camas";
 
 export const rutasPaciente: Routes=[
     {path: '', redirectTo: 'pacient', pathMatch: 'full' },
-    { path: 'pacient', component: Paciente },
-    { path: 'gCamas', component: Camas },
+    { path: 'pacient', component: Paciente, data: { submodulo: 'PACIENTES' } },
+    { path: 'gCamas', component: Camas, data: { submodulo: 'CAMAS' } },
 
-] 
+]

@@ -5,6 +5,7 @@ import { of } from 'rxjs';
 import { rutasFarmacia } from '../rutasFarmacia';
 import { ServicioMedicamento } from '../medicamentos/data/servicio-medicamento';
 import { CatalogoService } from '../../Catalogos/data/serviceCatalogo';
+import { PermisosService } from '../../Auth/data/permisos-service';
 
 import { PrincipalFarmacia } from './principal-farmacia';
 
@@ -19,6 +20,7 @@ describe('PrincipalFarmacia', () => {
         provideRouter([{ path: 'farmacia', component: PrincipalFarmacia, children: rutasFarmacia }]),
         { provide: ServicioMedicamento, useValue: { traerMedicamentoLog: () => of([]) } },
         { provide: CatalogoService, useValue: { listar: () => of([]) } },
+        { provide: PermisosService, useValue: { puedeLeerSubmodulo: () => true, puedeLeerModulo: () => true } },
       ],
     }).compileComponents();
 

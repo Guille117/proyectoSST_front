@@ -10,6 +10,7 @@ export const rutasEnfermeria: Routes = [
     path: 'atencion',
     component: Atencion,
     data: {
+      submodulo: 'ENF-ATENCION',
       rutaEpisodio: ['/enfermeria', 'monitoreo'],
       rutaUltimoEpisodio: ['/enfermeria', 'monitoreo'],
       mostrarAltas: true,
@@ -17,7 +18,7 @@ export const rutasEnfermeria: Routes = [
       mostrarUltimoEpisodio: true,
     },
   },
-  { path: 'monitoreo', component: Monitoreo },
-  { path: 'tratamientos', component: Tratamientos },
-  { path: 'notas', component: Notas },
+  { path: 'monitoreo', component: Monitoreo, data: { submodulo: 'ENF-MONITOREO' } },
+  { path: 'tratamientos', component: Tratamientos, data: { submodulo: 'ENF-TRATAMIENTOS' } },
+  { path: 'notas', component: Notas, data: { submodulo: 'ENF-NOTAS' } },
 ];

@@ -1,14 +1,16 @@
 <div class="principal">
     <nav class="subMenuNav">
-        <div class="option" routerLink="usu" routerLinkActive="active">
-            Usuarios
-        </div>
+        @if (permisos.puedeLeerSubmodulo('USUARIOS')) {
+            <div class="option" routerLink="usu" routerLinkActive="active">
+                Usuarios
+            </div>
+        }
 
-
-        <div class="option" routerLink="horarios" routerLinkActive="active">
-            Horarios
-        </div>
-
+        @if (permisos.puedeLeerSubmodulo('HORARIOS')) {
+            <div class="option" routerLink="horarios" routerLinkActive="active">
+                Horarios
+            </div>
+        }
     </nav>
 
     <div class="contenido">

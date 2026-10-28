@@ -1,28 +1,40 @@
 <div class="principal">
     <nav class="subMenuNav">
-        <div class="option" routerLink="inventario" routerLinkActive="active">
-            Inventario
-        </div> 
+        @if (permisos.puedeLeerSubmodulo('INVENTARIO')) {
+            <div class="option" routerLink="inventario" routerLinkActive="active">
+                Inventario
+            </div>
+        }
 
-        <div class="option" routerLink="proveedores" routerLinkActive="active">
-            Proveedores
-        </div>
+        @if (permisos.puedeLeerSubmodulo('PROVEEDORES')) {
+            <div class="option" routerLink="proveedores" routerLinkActive="active">
+                Proveedores
+            </div>
+        }
 
-        <div class="option" routerLink="medicamentos" routerLinkActive="active">
-            Medicamentos
-        </div>
+        @if (permisos.puedeLeerSubmodulo('MEDICAMENTOS')) {
+            <div class="option" routerLink="medicamentos" routerLinkActive="active">
+                Medicamentos
+            </div>
+        }
 
-        <div class="option" routerLink="insumos" routerLinkActive="active">
-            Insumos
-        </div>
+        @if (permisos.puedeLeerSubmodulo('INSUMOS')) {
+            <div class="option" routerLink="insumos" routerLinkActive="active">
+                Insumos
+            </div>
+        }
 
-        <div class="option" routerLink="ingresos" routerLinkActive="active">
-            Ingresos
-        </div>
+        @if (permisos.puedeLeerSubmodulo('COMPRAS')) {
+            <div class="option" routerLink="ingresos" routerLinkActive="active">
+                Ingresos
+            </div>
+        }
 
-        <div class="option" routerLink="salidas" routerLinkActive="active">
-            Salidas 
-        </div>
+        @if (permisos.puedeLeerSubmodulo('SALIDAS')) {
+            <div class="option" routerLink="salidas" routerLinkActive="active">
+                Salidas
+            </div>
+        }
     </nav>
 
     <div class="contenido">

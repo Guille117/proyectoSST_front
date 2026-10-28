@@ -66,10 +66,8 @@
               name="nombre"
               placeholder="Nombre de rol *"
               [(ngModel)]="nombreRol"
-              [disabled]="isFormDisabled"
+              disabled
               required
-              #nombre="ngModel"
-              [class.input-invalid]="nombre.touched && nombre.invalid"
             >
           </app-campo-validado>
 
@@ -106,38 +104,10 @@
                     <div class="submodulo-fila">
                       <span class="submodulo-nombre">{{ submodulo.nombre }}</span>
                       <div class="acciones-permisos">
-                        <input
-                          type="checkbox"
-                          class="permiso"
-                          [checked]="getPermiso(submodulo.id, 'puedeLeer')"
-                          (change)="setPermiso(submodulo.id, 'puedeLeer', $event)"
-                          [disabled]="isFormDisabled"
-                          [aria-label]="'Ver ' + submodulo.nombre"
-                        >
-                        <input
-                          type="checkbox"
-                          class="permiso"
-                          [checked]="getPermiso(submodulo.id, 'puedeCrear')"
-                          (change)="setPermiso(submodulo.id, 'puedeCrear', $event)"
-                          [disabled]="isFormDisabled"
-                          [aria-label]="'Crear ' + submodulo.nombre"
-                        >
-                        <input
-                          type="checkbox"
-                          class="permiso"
-                          [checked]="getPermiso(submodulo.id, 'puedeEditar')"
-                          (change)="setPermiso(submodulo.id, 'puedeEditar', $event)"
-                          [disabled]="isFormDisabled"
-                          [aria-label]="'Editar ' + submodulo.nombre"
-                        >
-                        <input
-                          type="checkbox"
-                          class="permiso"
-                          [checked]="getPermiso(submodulo.id, 'puedeEliminar')"
-                          (change)="setPermiso(submodulo.id, 'puedeEliminar', $event)"
-                          [disabled]="isFormDisabled"
-                          [aria-label]="'Eliminar ' + submodulo.nombre"
-                        >
+                        <input type="checkbox" class="permiso" [checked]="getPermiso(submodulo.id, 'puedeLeer')" disabled [aria-label]="'Ver ' + submodulo.nombre">
+                        <input type="checkbox" class="permiso" [checked]="getPermiso(submodulo.id, 'puedeCrear')" disabled [aria-label]="'Crear ' + submodulo.nombre">
+                        <input type="checkbox" class="permiso" [checked]="getPermiso(submodulo.id, 'puedeEditar')" disabled [aria-label]="'Editar ' + submodulo.nombre">
+                        <input type="checkbox" class="permiso" [checked]="getPermiso(submodulo.id, 'puedeEliminar')" disabled [aria-label]="'Eliminar ' + submodulo.nombre">
                       </div>
                     </div>
                   } @empty {
@@ -148,29 +118,7 @@
             </div>
           </div>
 
-          <div class="acciones-formulario">
-            @if (rolSeleccionado) {
-              @if (isWatching) {
-                <button type="button" class="btn _principal" (click)="cancelarAccion()">Agregar Rol</button>
-                @if (rolSeleccionado.estado) {
-                  <button type="button" class="btn _editar" (click)="activarEdicion()">Editar</button>
-                }
-                <button 
-                  type="button" 
-                  [class]="rolSeleccionado.estado ? 'btn _eliminar' : 'btn _guardar'" 
-                  (click)="cambiarEstadoRol()"
-                >
-                  {{ rolSeleccionado.estado ? 'Desactivar' : 'Activar' }}
-                </button>
-              } @else {
-                <button type="button" class="btn _cancelar" (click)="cancelarAccion(); prepararVer()">Cancelar</button>
-                <button type="button" class="btn _guardar" [disabled]="!isFormValido() || !hayCambios()" (click)="actualizarRol()">Guardar cambios</button>
-              }
-            } @else {
-              <button type="button" class="btn _cancelar" (click)="cancelarAccion()">Cancelar</button>
-              <button type="button" class="btn _guardar" [disabled]="!isFormValido()" (click)="crearRol()">Guardar</button>
-            }
-          </div>
+          <p class="sin-submodulos">Los roles y permisos son definidos por el sistema.</p>
         </form>
       </div>
     </div>

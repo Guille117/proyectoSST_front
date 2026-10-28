@@ -2,24 +2,36 @@
   <!-- La selección del paciente es la pantalla de entrada del módulo: sin submódulos -->
   @if (submenuVisible()) {
     <nav class="subMenuNav">
-      <div class="option" routerLink="evaluacion" routerLinkActive="active">Evaluación clínica</div>
-      <div class="option" routerLink="procedimiento-medico" routerLinkActive="active">
-        Procedimiento médico
-      </div>
-      <div class="option" routerLink="indicaciones" routerLinkActive="active">
-        Indicaciones médicas
-      </div>
-      <div class="option" routerLink="evolucion" routerLinkActive="active">Evolución médica</div>
-      <div class="option" routerLink="alta" routerLinkActive="active">Alta médica</div>
+      @if (permisos.puedeLeerSubmodulo('MED-EVALUACION')) {
+        <div class="option" routerLink="evaluacion" routerLinkActive="active">Evaluación clínica</div>
+      }
+      @if (permisos.puedeLeerSubmodulo('MED-PROCEDIMIENTO')) {
+        <div class="option" routerLink="procedimiento-medico" routerLinkActive="active">
+          Procedimiento médico
+        </div>
+      }
+      @if (permisos.puedeLeerSubmodulo('MED-INDICACIONES')) {
+        <div class="option" routerLink="indicaciones" routerLinkActive="active">
+          Indicaciones médicas
+        </div>
+      }
+      @if (permisos.puedeLeerSubmodulo('MED-EVOLUCION')) {
+        <div class="option" routerLink="evolucion" routerLinkActive="active">Evolución médica</div>
+      }
+      @if (permisos.puedeLeerSubmodulo('MED-ALTA')) {
+        <div class="option" routerLink="alta" routerLinkActive="active">Alta médica</div>
+      }
 
       <!-- Acción del episodio en curso: lo cierra y regresa al listado de pacientes en atención -->
-      <button type="button" class="btn cerrar-episodio" (click)="cerrarEpisodio()">
-        Cerrar episodio
-      </button>
+      @if (permisos.puedeEditarModulo('MEDICA')) {
+        <button type="button" class="btn cerrar-episodio" (click)="cerrarEpisodio()">
+          Cerrar episodio
+        </button>
+      }
     </nav>
   }
 
-  <div class="contenido">
+  <div class="contenido" [class.solo-lectura]="permisos.soloLecturaModulo('MEDICA')">
     <router-outlet></router-outlet>
   </div>
 </div>

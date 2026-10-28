@@ -206,7 +206,7 @@ EstadoCama = EstadoCama;
     tipoId: 0,
     areaId: 0,
   };
-    precio = 0;
+    precio: number | null = 0;
     private camaRequestInicial: camaRequest | null = null;
 
   validarCama(): boolean {
@@ -227,7 +227,7 @@ EstadoCama = EstadoCama;
       return;
     }
 
-    this.servicioCama.crearCama(this.camaRequest).subscribe({
+    this.servicioCama.crearCama({ ...this.camaRequest, precio: this.precio }).subscribe({
       next: () => {
         this.popUp.exito('Cama creada exitosamente');
         this.limpiarFormulario();
@@ -305,9 +305,13 @@ EstadoCama = EstadoCama;
     return this.nombresPacientesPorCama.get(cama.idCama) ?? '';
   }
 
-  /** MOCK: precio por día mientras el backend no expone ese dato. */
-  precioPorDia(_cama: camaResponseSimple): string {
-    return 'Q 150.00';
+  /** Precio por día registrado en la cama; muestra un guion cuando aún no tiene precio. */
+  precioPorDia(cama: camaResponseSimple): string {
+    if (cama.precio == null) {
+      return '—';
+    }
+
+    return `Q ${Number(cama.precio).toFixed(2)}`;
   }
 
   /** Reduce el nombre completo al primer nombre y al primer apellido. */
@@ -382,7 +386,7 @@ EstadoCama = EstadoCama;
       next: (data) => {
         this.camaRequest = data;
         this.camaRequestInicial = { ...data };
-        this.precio = 0;
+        this.precio = data.precio ?? 0;
         this.isEditing = true;
         this.idActualizar = id;
         this.cdr.detectChanges();
@@ -399,7 +403,10 @@ EstadoCama = EstadoCama;
       return;
     }
 
-    this.servicioCama.actualizarCama(this.idActualizar!, this.camaRequest).subscribe({
+    this.servicioCama.actualizarCama(this.idActualizar!, {
+      ...this.camaRequest,
+      precio: this.precio,
+    }).subscribe({
       next: () => {
         this.popUp.exito('Cama actualizada exitosamente');
         this.limpiarFormulario();
@@ -464,10 +471,14 @@ EstadoCama = EstadoCama;
       return true;
     }
 
+    const precioInicial = Number(this.camaRequestInicial.precio ?? 0);
+    const precioActual = Number(this.precio ?? 0);
+
     return (
       this.camaRequest.tipoId !== this.camaRequestInicial.tipoId ||
       this.camaRequest.habitacionId !== this.camaRequestInicial.habitacionId ||
-      this.camaRequest.areaId !== this.camaRequestInicial.areaId
+      this.camaRequest.areaId !== this.camaRequestInicial.areaId ||
+      precioActual !== precioInicial
     );
   }
 }

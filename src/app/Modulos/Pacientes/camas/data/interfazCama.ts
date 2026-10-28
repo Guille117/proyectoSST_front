@@ -4,6 +4,7 @@ export interface camaRequest {
   habitacionId: number;
   tipoId: number;
   areaId: number;
+  precio?: number | null;
 }
 
 export interface camaResponseSimple {
@@ -14,6 +15,7 @@ export interface camaResponseSimple {
   nombreTipoCama: string;
   nombreArea: string;
   activo: boolean;
+  precio?: number | null;
 }
 
 /** Cama ocupada con el nombre del paciente que la ocupa. */

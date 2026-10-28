@@ -5,7 +5,7 @@ import { Usu } from "./usu/usu";
 
 export const rutasUsuarios: Routes=[
     {path: '', redirectTo: 'usu', pathMatch: 'full' },
-    { path: 'usu', component: Usu },
-    { path: 'roles', component: Roles },
-    {path: 'horarios', component: Horarios}
-] 
+    { path: 'usu', component: Usu, data: { submodulo: 'USUARIOS' } },
+    { path: 'roles', component: Roles, data: { submodulo: 'ROLES' } },
+    {path: 'horarios', component: Horarios, data: { submodulo: 'HORARIOS' } }
+]

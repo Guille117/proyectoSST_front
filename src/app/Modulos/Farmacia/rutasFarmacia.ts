@@ -8,12 +8,11 @@ import { Insumos } from "./insumos/insumos"
 
 export const rutasFarmacia: Routes=[
     { path: '', redirectTo: 'inventario', pathMatch: 'full' },
-    {path:"inventario", component: Inventario},
-    {path:"proveedores", component: Proveedores},
-    {path:"ingresos", component: Ingresos},
-    {path:"salidas", component: Salidas},
-    {path:"medicamentos", component: Medicamentos},
-    {path:"insumos", component: Insumos},
-    {path:"productos", redirectTo: "medicamentos", pathMatch: "full"}
-
+    { path: "inventario", component: Inventario, data: { submodulo: 'INVENTARIO' } },
+    { path: "proveedores", component: Proveedores, data: { submodulo: 'PROVEEDORES' } },
+    { path: "ingresos", component: Ingresos, data: { submodulo: 'COMPRAS' } },
+    { path: "salidas", component: Salidas, data: { submodulo: 'SALIDAS' } },
+    { path: "medicamentos", component: Medicamentos, data: { submodulo: 'MEDICAMENTOS' } },
+    { path: "insumos", component: Insumos, data: { submodulo: 'INSUMOS' } },
+    { path: "productos", redirectTo: "medicamentos", pathMatch: "full" }
 ]

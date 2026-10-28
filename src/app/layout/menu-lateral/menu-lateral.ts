@@ -1,5 +1,6 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { RouterOutlet, RouterLinkWithHref, RouterLinkActive } from "@angular/router";
+import { PermisosService } from '../../Modulos/Auth/data/permisos-service';
 
 @Component({
   selector: 'app-menu-lateral',
@@ -7,4 +8,6 @@ import { RouterOutlet, RouterLinkWithHref, RouterLinkActive } from "@angular/rou
   templateUrl: './menu-lateral.html',
   styleUrl: './menu-lateral.scss',
 })
-export class MenuLateral {}
+export class MenuLateral {
+  readonly permisos = inject(PermisosService);
+}

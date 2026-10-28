@@ -1,17 +1,19 @@
 <div class="principal">
     <nav class="subMenuNav">
-        <div class="option" routerLink="pacient" routerLinkActive="active">
-            Pacientes
-        </div>
+        @if (permisos.puedeLeerSubmodulo('PACIENTES')) {
+            <div class="option" routerLink="pacient" routerLinkActive="active">
+                Pacientes
+            </div>
+        }
 
-        <div class="option" routerLink="gCamas" routerLinkActive="active">
-            Gestión de camas
-        </div>
-
+        @if (permisos.puedeLeerSubmodulo('CAMAS')) {
+            <div class="option" routerLink="gCamas" routerLinkActive="active">
+                Gestión de camas
+            </div>
+        }
     </nav>
 
     <div class="contenido">
         <router-outlet></router-outlet>
     </div>
 </div>
-

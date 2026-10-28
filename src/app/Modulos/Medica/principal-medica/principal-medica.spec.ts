@@ -4,6 +4,7 @@ import { provideRouter, Router } from '@angular/router';
 
 import { PrincipalMedica } from './principal-medica';
 import { EpisodioActivoService } from '../data/episodio-activo-service';
+import { PermisosService } from '../../Auth/data/permisos-service';
 
 /** Pantalla de relleno: sustituye a los submódulos para probar la navegación del contenedor. */
 @Component({ selector: 'app-pantalla-prueba', template: '' })
@@ -26,6 +27,15 @@ describe('PrincipalMedica', () => {
       imports: [PrincipalMedica, PantallaPrueba],
       providers: [
         { provide: EpisodioActivoService, useValue: episodioActivo },
+        {
+          provide: PermisosService,
+          useValue: {
+            puedeLeerSubmodulo: () => true,
+            puedeLeerModulo: () => true,
+            puedeEditarModulo: () => true,
+            soloLecturaModulo: () => false,
+          },
+        },
         provideRouter([
           { path: 'medica/atencion', component: PantallaPrueba },
           { path: 'medica/evaluacion', component: PantallaPrueba },

@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthService } from '../data/auth-service';
+import { PermisosService } from '../data/permisos-service';
 import { PopUps } from '../../../shared/popUps/popUpsService';
 
 @Component({
@@ -14,6 +15,7 @@ import { PopUps } from '../../../shared/popUps/popUpsService';
 export class Login {
   readonly passwordMinLength = 8;
   private authService = inject(AuthService);
+  private permisos = inject(PermisosService);
   private router = inject(Router);
   private popUps = inject(PopUps);
   private cdr = inject(ChangeDetectorRef);
@@ -95,7 +97,7 @@ export class Login {
         this.loading = false;
         this.mostrarModalPin = false;
         this.cdr.detectChanges();
-        this.router.navigate(['/usuarios']).then(() => {
+        this.router.navigateByUrl(this.permisos.rutaInicio()).then(() => {
           this.popUps.exito(this.obtenerNombreBienvenida(respuesta), 'Bienvenido al sistema', 3000);
         });
       },
@@ -151,7 +153,7 @@ export class Login {
       next: (respuesta) => {
         this.loading = false;
         this.cdr.detectChanges();
-        this.router.navigate(['/usuarios']).then(() => {
+        this.router.navigateByUrl(this.permisos.rutaInicio()).then(() => {
           this.popUps.exito(this.obtenerNombreBienvenida(respuesta), 'Bienvenido al sistema', 3000);
         });
       },

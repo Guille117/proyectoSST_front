@@ -8,10 +8,10 @@ import { ProcedimientoMedico } from './procedimiento-medico/procedimiento-medico
 
 export const rutasMedica: Routes = [
   { path: '', redirectTo: 'atencion', pathMatch: 'full' },
-  { path: 'atencion', component: Atencion },
-  { path: 'evaluacion', component: Evaluacion },
-  { path: 'procedimiento-medico', component: ProcedimientoMedico },
-  { path: 'evolucion', component: Evolucion },
-  { path: 'indicaciones', component: Indicaciones },
-  { path: 'alta', component: Alta },
+  { path: 'atencion', component: Atencion, data: { submodulo: 'MED-ATENCION' } },
+  { path: 'evaluacion', component: Evaluacion, data: { submodulo: 'MED-EVALUACION' } },
+  { path: 'procedimiento-medico', component: ProcedimientoMedico, data: { submodulo: 'MED-PROCEDIMIENTO' } },
+  { path: 'evolucion', component: Evolucion, data: { submodulo: 'MED-EVOLUCION' } },
+  { path: 'indicaciones', component: Indicaciones, data: { submodulo: 'MED-INDICACIONES' } },
+  { path: 'alta', component: Alta, data: { submodulo: 'MED-ALTA' } },
 ];

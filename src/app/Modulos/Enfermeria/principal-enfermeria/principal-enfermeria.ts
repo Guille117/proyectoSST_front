@@ -2,6 +2,7 @@ import { Component, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { filter } from 'rxjs';
+import { PermisosService } from '../../Auth/data/permisos-service';
 import { EpisodioActivoService } from '../../Medica/data/episodio-activo-service';
 
 /** Rutas del módulo que se muestran sin los submódulos: la raíz y la selección del paciente. */
@@ -14,6 +15,7 @@ const RUTAS_SIN_SUBMENU = ['/enfermeria', '/enfermeria/atencion'];
   styleUrl: './principal-enfermeria.scss',
 })
 export class PrincipalEnfermeria {
+  readonly permisos = inject(PermisosService);
   private readonly router = inject(Router);
   private readonly episodioActivo = inject(EpisodioActivoService);
 
