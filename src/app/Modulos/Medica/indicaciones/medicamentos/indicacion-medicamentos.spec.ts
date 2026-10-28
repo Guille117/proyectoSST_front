@@ -633,10 +633,11 @@ describe('IndicacionMedicamentos', () => {
     await fixture.whenStable();
 
     expect(registrosEnfermeria.buscarAplicacionesPorIndicacion).toHaveBeenCalledWith(30);
-    expect(elemento<HTMLElement>('.indicacion-registros')?.textContent).toContain(
-      'Enf. María López',
-    );
-    expect(elemento<HTMLElement>('.indicacion-registros')?.textContent).toContain('Administrado');
+    const registros = elemento<HTMLElement>('.indicacion-registros');
+    expect(registros?.textContent).toContain('Enf. María López');
+    const estado = registros?.querySelector('td.registros-tabla_estado i');
+    expect(estado?.getAttribute('aria-label')).toBe('Administrado');
+    expect(estado?.getAttribute('title')).toBe('Administrado');
   });
 
   it('avisa cuando no hay un episodio activo', async () => {

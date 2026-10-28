@@ -4,6 +4,7 @@ import { RouterTestingHarness } from '@angular/router/testing';
 import { of } from 'rxjs';
 import { rutasFarmacia } from '../rutasFarmacia';
 import { ServicioMedicamento } from '../medicamentos/data/servicio-medicamento';
+import { ServicioInsumos } from '../insumos/data/servicio-insumos';
 import { CatalogoService } from '../../Catalogos/data/serviceCatalogo';
 import { PermisosService } from '../../Auth/data/permisos-service';
 
@@ -19,6 +20,10 @@ describe('PrincipalFarmacia', () => {
       providers: [
         provideRouter([{ path: 'farmacia', component: PrincipalFarmacia, children: rutasFarmacia }]),
         { provide: ServicioMedicamento, useValue: { traerMedicamentoLog: () => of([]) } },
+        {
+          provide: ServicioInsumos,
+          useValue: { listarInsumos: () => of([]), buscarInsumos: () => of([]) },
+        },
         { provide: CatalogoService, useValue: { listar: () => of([]) } },
         { provide: PermisosService, useValue: { puedeLeerSubmodulo: () => true, puedeLeerModulo: () => true } },
       ],
@@ -48,7 +53,7 @@ describe('PrincipalFarmacia', () => {
   it('navega entre Insumos y Medicamentos usando sus enlaces independientes', async () => {
     const harness = await RouterTestingHarness.create('/farmacia/insumos');
     expect(harness.routeNativeElement?.querySelector('app-insumos h3')?.textContent).toBe('Agregar insumo');
-    expect(harness.routeNativeElement?.querySelectorAll('app-insumos form input, app-insumos form select').length).toBe(2);
+    expect(harness.routeNativeElement?.querySelectorAll('app-insumos form input, app-insumos form select').length).toBe(3);
 
     const medicamentos = Array.from(harness.routeNativeElement!.querySelectorAll<HTMLElement>('.option'))
       .find((opcion) => opcion.textContent?.trim() === 'Medicamentos')!;

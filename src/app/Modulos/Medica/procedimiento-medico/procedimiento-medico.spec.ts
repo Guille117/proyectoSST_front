@@ -153,6 +153,7 @@ describe('ProcedimientoMedico', () => {
     component.tipoProcedimiento = 1;
     component.descripcion = 'Sutura de herida en el antebrazo.';
     component.inicio = '2026-10-19T11:00';
+    component.fin = '';
 
     await component.registrarProcedimiento();
 

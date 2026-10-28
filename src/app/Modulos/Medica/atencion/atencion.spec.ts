@@ -485,30 +485,22 @@ describe('Atencion', () => {
 
   // La pantalla sigue la referencia de diseño: los pacientes se reparten en una matriz de tarjetas
   // cuadradas y el detalle del paciente se lee en bloques de color y columnas de datos.
-  it('coloca las tarjetas en una matriz de tarjetas cuadradas', async () => {
+  it('coloca las tarjetas en una matriz de tres columnas', async () => {
     await render();
 
     const lista = elemento<HTMLElement>('.pacientes-lista');
     expect(getComputedStyle(lista).display).toBe('grid');
-    expect(getComputedStyle(lista).gridTemplateColumns).toContain('auto-fill');
+    expect(getComputedStyle(lista).gridTemplateColumns).toBe('repeat(3, minmax(0, 1fr))');
     expect(getComputedStyle(lista).overflowY).toBe('auto');
 
-    // Las tarjetas comparten la relación de aspecto cuadrada dentro de la matriz: cada tarjeta es una
-    // celda de la rejilla y el componente declara esa relación de aspecto (jsdom no la calcula)
     const dibujadas = tarjetas();
     expect(dibujadas.length).toBe(4);
     dibujadas.forEach((tarjeta) => expect(tarjeta.parentElement).toBe(lista));
 
-    // Cuadradas de verdad: el alto sigue al ancho de la columna y no al de la fila
-    expect(estilos()).toContain('aspect-ratio:1/1');
-    expect(estilos()).toContain('align-self:start');
-
-    // Cuadradas: el ancho de la columna fija el lado, el tope evita que crezca de más y el contenido no
-    // la estira, así que la cuadrícula no deja huecos muertos
-    expect(estilos()).toContain('grid-template-columns:repeat(auto-fill,minmax(220px,1fr))');
-    expect(regla('.paciente-card[')).toContain('max-width:248px');
-    expect(regla('.paciente-card[')).toContain('min-height:0');
-    expect(regla('.paciente-card[')).toContain('justify-content:space-between');
+    expect(regla('.pacientes-lista[')).toContain(
+      'grid-template-columns:repeat(3,minmax(0,1fr))',
+    );
+    expect(regla('.paciente-card[')).toContain('border-left:7pxsolidvar(--acento-card)');
   });
 
   it('acentúa la tarjeta según el tipo de atención y el estado del paciente', async () => {
@@ -520,40 +512,30 @@ describe('Atencion', () => {
     expect(dibujadas[0].classList.contains('paciente-card--activa')).toBe(true);
     expect(dibujadas[0].getAttribute('aria-pressed')).toBe('true');
 
-    // La emergencia y la atención pendiente se distinguen por el acento y por su etiqueta
-    expect(getComputedStyle(dibujadas[1]).borderLeftColor).toBe('rgb(239, 68, 68)');
-    expect(
-      getComputedStyle(elemento<HTMLElement>('.paciente-card--emergencia .paciente-tipo')).color,
-    ).toBe('rgb(220, 38, 38)');
-    expect(getComputedStyle(dibujadas[2]).borderLeftColor).toBe('rgb(245, 158, 11)');
+    // La emergencia y la atención pendiente se distinguen por el acento de la tarjeta
+    expect(dibujadas[1].classList.contains('paciente-card--emergencia')).toBe(true);
+    expect(regla('.paciente-card--emergencia')).toContain('--acento-card:#ef4444');
+    expect(regla('.paciente-tipo[')).toContain('color:var(--acento-card)');
+    expect(dibujadas[2].classList.contains('paciente-card--pendiente')).toBe(true);
+    expect(regla('.paciente-card--pendiente')).toContain('--acento-card:#f59e0b');
 
     // El estado no se repite con una etiqueta: en la tarjeta lo dice el acento del borde
-    expect(dibujadas[2].classList.contains('paciente-card--pendiente')).toBe(true);
     expect(elementos<HTMLElement>('.atencion-estado').length).toBe(0);
   });
 
-  it('muestra en cada tarjeta el nombre, sus datos, el destino y el diagnóstico principal', async () => {
+  it('muestra en cada tarjeta el nombre, sus datos y el destino', async () => {
     await render();
 
     const tarjeta = tarjetas()[0];
     expect(tarjeta.querySelector('.paciente-nombre')?.textContent).toContain('Juan Pérez');
     expect(tarjeta.querySelector('.paciente-meta')?.textContent).toContain(
-      'EXP-001 | 45 años | Masculino',
+      'EXP-001|45 años|Masculino',
     );
     expect(tarjeta.querySelector('.paciente-tipo')?.textContent).toContain('Hospitalización');
     expect(tarjeta.querySelector('.paciente-ubicacion')?.textContent).toContain('Cama A-105');
 
-    // El diagnóstico principal cierra la tarjeta, separado del resto por una línea
-    const diagnostico = elemento<HTMLElement>('.paciente-card .paciente-diagnostico');
-    expect(diagnostico.querySelector('.diagnostico-rotulo')?.textContent).toContain(
-      'Diagnóstico principal',
-    );
-    expect(diagnostico.querySelector('.diagnostico-valor')?.textContent).toContain(
-      'Gastroenteritis aguda',
-    );
-    // El pie va pegado al contenido: sin margen automático no queda un hueco muerto en el centro
-    expect(getComputedStyle(diagnostico).marginTop).not.toBe('auto');
-    expect(getComputedStyle(diagnostico).borderTopWidth).toBe('1px');
+    // El resumen del listado no trae diagnóstico: no se inventa en la tarjeta
+    expect(tarjeta.querySelector('.paciente-diagnostico')).toBeNull();
   });
 
   it('muestra la cama solo en las atenciones con hospitalización', async () => {
@@ -576,17 +558,18 @@ describe('Atencion', () => {
     expect(elementos<HTMLElement>('.paciente-ubicacion').length).toBe(2);
   });
 
-  it('pinta los botones de filtro con el azul secundario del módulo', async () => {
+  it('distingue el filtro activo con el azul secundario y deja el resto neutro', async () => {
     await render();
 
-    // El filtro activo va relleno y el resto se lee en ese mismo azul secundario
+    // El filtro activo va relleno con el azul secundario del módulo
     const activo = regla('.chip.activo');
     expect(activo).toContain('background:var(--azulSecundario)');
     expect(activo).toContain('color:#fff');
 
+    // El resto de filtros se dibuja como una píldora neutra
     const base = regla('.chip[');
-    expect(base).toContain('border:1pxsolidvar(--azulSecundario)');
-    expect(base).toContain('color:var(--azulSecundario)');
+    expect(base).toContain('border:1pxsolid#e2e8f0');
+    expect(base).toContain('color:#334155');
   });
 
   it('presenta el detalle con la estructura del módulo de pacientes', async () => {

@@ -1,0 +1,16 @@
+.git
+.github
+.gitignore
+node_modules
+dist
+.angular
+.vscode
+coverage
+*.log
+.env
+.env.*
+AGENTS.md
+README.md
+DEPLOYMENT.md
+config
+fix_indentation.py
