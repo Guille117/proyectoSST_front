@@ -11,6 +11,7 @@
   </div>
 } @else {
   <div class="resumen">
+    @if (seccion === 'resumen') {
     <header class="resumen-cabecera">
       <div class="resumen-identidad">
         <h2>{{ paciente?.nombreCompleto || 'Paciente' }}</h2>
@@ -46,6 +47,12 @@
         {{ episodio?.activo === false ? 'Episodio cerrado' : 'Episodio en curso' }}
       </span>
     </header>
+    } @else {
+      <header class="resumen-seccion-cabecera">
+        <h2>{{ tituloSeccion }}</h2>
+        <p>{{ descripcionSeccion }}</p>
+      </header>
+    }
 
     @if (seccionesConError.length) {
       <div class="resumen-aviso" role="status">
@@ -55,7 +62,9 @@
     }
 
     <!-- ==================== INFORMACIÓN MÉDICA ==================== -->
+    @if (seccion === 'resumen' || seccion === 'evaluacion' || seccion === 'examenes' || seccion === 'procedimientos' || seccion === 'evolucion' || seccion === 'indicaciones' || seccion === 'alta') {
     <section class="resumen-bloque resumen-bloque--medica" aria-labelledby="tituloMedica">
+      @if (seccion === 'resumen') {
       <header class="resumen-bloque-cabecera">
         <i class="bi bi-heart-pulse" aria-hidden="true"></i>
         <div>
@@ -63,7 +72,9 @@
           <p>Evaluación, diagnóstico, evolución, indicaciones, procedimientos y alta.</p>
         </div>
       </header>
+      }
 
+      @if (seccion === 'resumen' || seccion === 'evaluacion') {
       <section class="resumen-subseccion" aria-labelledby="tituloHistoria">
         <h4 id="tituloHistoria">Historia clínica</h4>
         @if (historiaClinica.length) {
@@ -79,7 +90,9 @@
           <p class="resumen-vacio">Sin registros de historia clínica.</p>
         }
       </section>
+      }
 
+      @if (seccion === 'resumen' || seccion === 'evaluacion') {
       <section class="resumen-subseccion" aria-labelledby="tituloExamenFisico">
         <h4 id="tituloExamenFisico">Examen físico</h4>
         @if (examenFisico.length) {
@@ -96,7 +109,9 @@
           <p class="resumen-vacio">Sin registros de examen físico.</p>
         }
       </section>
+      }
 
+      @if (seccion === 'resumen' || seccion === 'evaluacion') {
       <section class="resumen-subseccion" aria-labelledby="tituloDiagnosticos">
         <h4 id="tituloDiagnosticos">Diagnósticos</h4>
         @if (diagnosticos.length) {
@@ -113,7 +128,9 @@
           <p class="resumen-vacio">Sin diagnósticos registrados.</p>
         }
       </section>
+      }
 
+      @if (seccion === 'resumen' || seccion === 'evolucion') {
       <section class="resumen-subseccion" aria-labelledby="tituloEvoluciones">
         <h4 id="tituloEvoluciones">Evolución médica</h4>
         @if (evoluciones.length) {
@@ -132,7 +149,9 @@
           <p class="resumen-vacio">Sin evoluciones registradas.</p>
         }
       </section>
+      }
 
+      @if (seccion === 'resumen' || seccion === 'indicaciones') {
       <section class="resumen-subseccion" aria-labelledby="tituloIndicaciones">
         <h4 id="tituloIndicaciones">Indicaciones médicas</h4>
 
@@ -200,7 +219,12 @@
           <p class="resumen-vacio">Sin cuidados indicados.</p>
         }
 
-        <h5>Exámenes</h5>
+      </section>
+      }
+
+      @if (seccion === 'resumen' || seccion === 'examenes') {
+      <section class="resumen-subseccion" aria-labelledby="tituloExamenesIndicados">
+        <h4 id="tituloExamenesIndicados">Exámenes</h4>
         @if (examenes.length) {
           <div class="resumen-tabla-container">
             <table class="resumen-tabla" aria-label="Exámenes indicados">
@@ -230,7 +254,9 @@
           <p class="resumen-vacio">Sin exámenes indicados.</p>
         }
       </section>
+      }
 
+      @if (seccion === 'resumen' || seccion === 'procedimientos') {
       <section class="resumen-subseccion" aria-labelledby="tituloProcedimientos">
         <h4 id="tituloProcedimientos">Procedimientos médicos</h4>
         @if (procedimientos.length) {
@@ -266,7 +292,9 @@
           <p class="resumen-vacio">Sin procedimientos registrados.</p>
         }
       </section>
+      }
 
+      @if (seccion === 'resumen' || seccion === 'alta') {
       <section class="resumen-subseccion" aria-labelledby="tituloAlta">
         <h4 id="tituloAlta">Alta médica</h4>
         @if (alta; as altaVigente) {
@@ -334,10 +362,14 @@
           <p class="resumen-vacio">Sin alta médica vigente.</p>
         }
       </section>
+      }
     </section>
+    }
 
     <!-- ==================== ENFERMERÍA ==================== -->
+    @if (seccion === 'resumen' || seccion === 'registros-enfermeria') {
     <section class="resumen-bloque resumen-bloque--enfermeria" aria-labelledby="tituloEnfermeria">
+      @if (seccion === 'resumen') {
       <header class="resumen-bloque-cabecera">
         <i class="bi bi-clipboard2-pulse" aria-hidden="true"></i>
         <div>
@@ -345,6 +377,7 @@
           <p>Monitoreo, notas y registros de tratamientos realizados durante el episodio.</p>
         </div>
       </header>
+      }
 
       <section class="resumen-subseccion" aria-labelledby="tituloSignos">
         <h4 id="tituloSignos">Signos vitales</h4>
@@ -532,9 +565,12 @@
         }
       </section>
     </section>
+    }
 
     <!-- ==================== CONSUMO Y ESTANCIA ==================== -->
+    @if (seccion === 'resumen' || seccion === 'consumo') {
     <section class="resumen-bloque resumen-bloque--consumo" aria-labelledby="tituloConsumo">
+      @if (seccion === 'resumen') {
       <header class="resumen-bloque-cabecera">
         <i class="bi bi-receipt" aria-hidden="true"></i>
         <div>
@@ -542,6 +578,7 @@
           <p>Productos entregados y días de cama utilizados en el episodio.</p>
         </div>
       </header>
+      }
 
       @if (consumo && consumo.items.length) {
         <div class="resumen-tabla-container">
@@ -582,5 +619,6 @@
         <p class="resumen-vacio">Sin consumos registrados en el episodio.</p>
       }
     </section>
+    }
   </div>
 }

@@ -33,6 +33,28 @@
   }
 }
 
+.resumen-seccion-cabecera {
+  padding: 18px 20px;
+  border: 2px solid var(--colorBorde);
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.06);
+
+  h2 {
+    margin: 0;
+    color: var(--azulPrincipal);
+    font-size: 1.35rem;
+    font-weight: 700;
+  }
+
+  p {
+    margin: 4px 0 0;
+    color: #475569;
+    font-size: 0.9rem;
+    line-height: 1.4;
+  }
+}
+
 .resumen-meta {
   display: flex;
   flex-wrap: wrap;

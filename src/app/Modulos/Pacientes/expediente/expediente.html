@@ -1,22 +1,4 @@
 <div class="expediente">
-  <header class="expediente-cabecera">
-    <button type="button" class="btn _cancelar" (click)="volver()">Volver</button>
-
-    <div class="expediente-paciente">
-      <h1>{{ paciente?.nombreCompleto || 'Expediente clínico' }}</h1>
-      @if (paciente) {
-        <p>
-          <span>Expediente: {{ paciente.codigoExpediente || '—' }}</span>
-          @if (paciente.cui) {
-            <span>CUI: {{ paciente.cui }}</span>
-          }
-          <span>{{ paciente.edad ?? '—' }} años</span>
-          <span>{{ sexoLegible(paciente.sexo) }}</span>
-        </p>
-      }
-    </div>
-  </header>
-
   @if (cargando) {
     <div class="expediente-estado">
       <i class="bi bi-hourglass-split" aria-hidden="true"></i>
@@ -30,49 +12,87 @@
     </div>
   } @else {
     <div class="expediente-layout">
-      <aside class="expediente-episodios" aria-labelledby="tituloEpisodios">
-        <h2 id="tituloEpisodios">Episodios</h2>
+      <aside class="expediente-menu" aria-label="Submenú del expediente">
+        <div class="menu-paciente">
+          <h1>{{ paciente?.nombreCompleto || 'Expediente clínico' }}</h1>
+          @if (paciente) {
+            <div class="menu-paciente-meta">
+              <span>{{ paciente.codigoExpediente || '—' }}</span>
+              <span>{{ paciente.edad ?? '—' }} años</span>
+              <span>{{ sexoLegible(paciente.sexo) }}</span>
+            </div>
+          }
+        </div>
 
-        @if (episodios.length) {
-          <div class="episodios-lista">
-            @for (episodio of episodios; track episodio.episodioId) {
+        <!-- El expediente muestra el episodio más reciente del paciente. -->
+        <div class="menu-episodio">
+          @if (episodioSeleccionado; as episodio) {
+            <div class="menu-episodio-card">
+              <span class="menu-episodio-tipo">
+                {{ tipoAtencionLegible(episodio.tipoAtencion) }}
+              </span>
+
+              <dl class="menu-episodio-fechas">
+                <div>
+                  <dt>Ingreso</dt>
+                  <dd>{{ fecha(episodio.fechaHoraIngreso) }}</dd>
+                </div>
+                <div>
+                  <dt>Egreso</dt>
+                  <dd>
+                    {{ episodio.fechaHoraEgreso ? fecha(episodio.fechaHoraEgreso) : 'En curso' }}
+                  </dd>
+                </div>
+              </dl>
+            </div>
+          } @else {
+            <p class="expediente-vacio">El paciente no tiene episodios registrados.</p>
+          }
+        </div>
+
+        <nav class="menu-opciones" aria-label="Secciones del expediente">
+          @for (seccion of seccionesMenu; track $index) {
+            @if (seccion.titulo) {
+              <p class="menu-grupo-titulo">{{ seccion.titulo }}</p>
+            }
+
+            @for (opcion of seccion.opciones; track opcion.id) {
               <button
                 type="button"
-                class="episodio-item"
-                [class.episodio-item--activo]="esSeleccionado(episodio)"
-                [attr.aria-pressed]="esSeleccionado(episodio)"
-                (click)="seleccionarEpisodio(episodio)"
+                class="menu-opcion"
+                [class.menu-opcion--activa]="opcionActiva === opcion.id"
+                [attr.aria-pressed]="opcionActiva === opcion.id"
+                (click)="seleccionarOpcion(opcion.id)"
               >
-                <span class="episodio-item-tipo">
-                  {{ tipoAtencionLegible(episodio.tipoAtencion) }}
-                </span>
-                <span class="episodio-item-fechas">
-                  {{ fecha(episodio.fechaHoraIngreso) }} —
-                  {{ episodio.fechaHoraEgreso ? fecha(episodio.fechaHoraEgreso) : 'En curso' }}
-                </span>
-                <span class="episodio-item-medico">
-                  {{ episodio.medicoNombre || 'Médico no registrado' }}
-                </span>
-                <span
-                  class="episodio-item-estado"
-                  [class.episodio-item-estado--cerrado]="!episodio.activo"
-                >
-                  {{ episodio.activo ? 'Activo' : 'Cerrado' }}
-                </span>
+                <i class="bi {{ opcion.icono }}" aria-hidden="true"></i>
+                <span>{{ opcion.titulo }}</span>
               </button>
             }
-          </div>
-        } @else {
-          <p class="expediente-vacio">El paciente no tiene episodios registrados.</p>
-        }
+
+            @if (!$last) {
+              <hr class="menu-separador" />
+            }
+          }
+
+          <hr class="menu-separador" />
+
+          <button type="button" class="menu-opcion menu-opcion--volver" (click)="volver()">
+            <i class="bi bi-arrow-left" aria-hidden="true"></i>
+            <span>Volver</span>
+          </button>
+        </nav>
       </aside>
 
-      <section class="expediente-detalle" aria-label="Resumen del episodio">
+      <section
+        class="expediente-detalle"
+        [attr.aria-label]="opcionActivaActual()?.titulo || 'Expediente'"
+      >
         @if (episodioSeleccionado; as episodio) {
           <app-resumen-episodio
             [episodioId]="episodio.episodioId"
             [paciente]="paciente"
             [episodio]="episodio"
+            [seccion]="opcionActiva"
           ></app-resumen-episodio>
         } @else {
           <p class="expediente-vacio">Seleccione un episodio para consultar el expediente.</p>
