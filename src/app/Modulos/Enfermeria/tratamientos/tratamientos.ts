@@ -27,16 +27,13 @@ import {
 import { MedicamentoIndicacionService } from '../../Medica/indicaciones/medicamentos/data/medicamento-service';
 import { MedicamentoIndicacionResponse } from '../../Medica/indicaciones/medicamentos/data/medicamentoInterfaz';
 import { ProcedimientoMedicoService } from '../../Medica/procedimiento-medico/data/procedimiento-medico-service';
-import {
-  ProcedimientoMedicoRequest,
-  RecursoDisponibleResponse,
-  TipoProcedimientoResponse,
-} from '../../Medica/procedimiento-medico/data/procedimientoMedicoInterfaz';
+import { RecursoDisponibleResponse } from '../../Medica/procedimiento-medico/data/procedimientoMedicoInterfaz';
 import {
   AplicacionMedicamentoResponse,
   EjecucionCuidadoResponse,
 } from '../data/registrosEnfermeriaInterfaz';
 import { RegistrosEnfermeriaService } from '../data/registrosEnfermeriaService';
+import { SolicitudMedicamentoService } from '../data/solicitud-medicamento-service';
 import {
   AplicacionProgramada,
   calcularAplicaciones,
@@ -195,6 +192,7 @@ export class Tratamientos implements OnInit, OnDestroy {
   private readonly authService = inject(AuthService);
   private readonly episodioActivo = inject(EpisodioActivoService);
   private readonly servicioProcedimientos = inject(ProcedimientoMedicoService);
+  private readonly solicitudMedicamento = inject(SolicitudMedicamentoService);
   private readonly servicioMedicamentos = inject(MedicamentoIndicacionService);
   private readonly servicioCuidados = inject(IndicacionCuidadoService);
   private readonly servicioExamenes = inject(IndicacionExamenService);
@@ -249,10 +247,8 @@ export class Tratamientos implements OnInit, OnDestroy {
   cantidadMedicamento: number | null = null;
   medicamentosSolicitados: MedicamentoSolicitadoVista[] = [];
 
-  /** Estados de la carga de tipos y del envío de la solicitud. */
-  cargandoTiposSolicitud = false;
+  /** Estado del envío de la solicitud. */
   enviandoSolicitud = false;
-  private tiposSolicitud: TipoProcedimientoResponse[] = [];
 
   /** Datos reales del episodio activo. */
   medicamentos: MedicamentoIndicadoVista[] = [];
@@ -476,33 +472,12 @@ export class Tratamientos implements OnInit, OnDestroy {
     );
   }
 
-  /** Hay un tipo de procedimiento disponible para generar la solicitud. */
-  get hayTipoSolicitud(): boolean {
-    return this.tipoSolicitudMedicamento !== null;
-  }
-
-  /** La solicitud se puede enviar con al menos un medicamento y un tipo disponible. */
+  /** La solicitud se puede enviar con al menos un medicamento. */
   get puedeEnviarSolicitud(): boolean {
     return (
       !this.soloLectura &&
       !this.enviandoSolicitud &&
-      !this.cargandoTiposSolicitud &&
-      this.medicamentosSolicitados.length > 0 &&
-      this.tipoSolicitudMedicamento !== null
-    );
-  }
-
-  /** Tipo de procedimiento que se usará para generar la solicitud de farmacia. */
-  private get tipoSolicitudMedicamento(): TipoProcedimientoResponse | null {
-    const activos = this.tiposSolicitud.filter((tipo) => tipo.estado !== false);
-
-    return (
-      activos.find(
-        (tipo) => /solicitud/i.test(tipo.nombre) && /medicamento/i.test(tipo.nombre),
-      ) ??
-      activos.find((tipo) => /solicitud/i.test(tipo.nombre)) ??
-      activos.find((tipo) => /medicamento/i.test(tipo.nombre)) ??
-      null
+      this.medicamentosSolicitados.length > 0
     );
   }
 
@@ -608,40 +583,11 @@ export class Tratamientos implements OnInit, OnDestroy {
     if (this.aplicacionEnEdicion) {
       this.limpiarFormularioAdministracion();
     }
-
-    this.cargarTiposSolicitud();
   }
 
   /** Vuelve al listado de tratamientos. */
   cerrarSolicitudMedicamento(): void {
     this.solicitandoMedicamento = false;
-  }
-
-  /** Carga los tipos de procedimiento con los que se puede generar la solicitud. */
-  cargarTiposSolicitud(): void {
-    if (this.tiposSolicitud.length || this.cargandoTiposSolicitud) return;
-
-    this.cargandoTiposSolicitud = true;
-    this.peticionSolicitud?.unsubscribe();
-    this.peticionSolicitud = this.servicioProcedimientos
-      .getTiposProcedimiento()
-      .pipe(
-        finalize(() => {
-          this.cargandoTiposSolicitud = false;
-          if (!this.destruido) this.cdr.markForCheck();
-        }),
-      )
-      .subscribe({
-        next: (tipos) => {
-          this.tiposSolicitud = tipos.filter((tipo) => tipo.estado !== false);
-          if (!this.destruido) this.cdr.markForCheck();
-        },
-        error: (error) => {
-          this.tiposSolicitud = [];
-          if (!this.destruido) this.cdr.markForCheck();
-          this.mostrarError(error, 'No se pudieron cargar los tipos de solicitud.');
-        },
-      });
   }
 
   /** Busca medicamentos en el catálogo de farmacia. */
@@ -736,19 +682,11 @@ export class Tratamientos implements OnInit, OnDestroy {
   enviarSolicitudMedicamento(): void {
     if (this.soloLectura || this.enviandoSolicitud) return;
 
-    const tipo = this.tipoSolicitudMedicamento;
     const episodioId = this.episodioActivo.obtener();
     const usuarioId = this.authService.currentUser()?.id;
 
     if (!this.medicamentosSolicitados.length) {
       this.popUps.advertencia('Agregue al menos un medicamento a la solicitud.');
-      return;
-    }
-
-    if (!tipo) {
-      this.popUps.advertencia(
-        'No hay un tipo de procedimiento configurado para generar la solicitud de medicamentos.',
-      );
       return;
     }
 
@@ -764,16 +702,10 @@ export class Tratamientos implements OnInit, OnDestroy {
       return;
     }
 
-    const request: ProcedimientoMedicoRequest = {
-      tipoProcedimientoId: tipo.id,
-      descripcion: 'Solicitud de medicamento a farmacia',
-      resultado: null,
-      inicio: this.fechaHoraActual(),
-      fin: null,
+    const request = {
       episodioId,
       usuarioId,
-      recursos: this.medicamentosSolicitados.map((medicamento) => ({
-        tipo: 'MEDICAMENTO',
+      medicamentos: this.medicamentosSolicitados.map((medicamento) => ({
         referenciaId: medicamento.id,
         cantidad: medicamento.cantidad,
       })),
@@ -781,8 +713,8 @@ export class Tratamientos implements OnInit, OnDestroy {
 
     this.enviandoSolicitud = true;
     this.peticionSolicitud?.unsubscribe();
-    this.peticionSolicitud = this.servicioProcedimientos
-      .crearProcedimiento(request)
+    this.peticionSolicitud = this.solicitudMedicamento
+      .crear(request)
       .pipe(
         finalize(() => {
           this.enviandoSolicitud = false;
@@ -1576,11 +1508,6 @@ export class Tratamientos implements OnInit, OnDestroy {
     const dia = `${fecha.getDate()}`.padStart(2, '0');
     const mes = `${fecha.getMonth() + 1}`.padStart(2, '0');
     return `${dia}/${mes}/${fecha.getFullYear()} ${horaTexto}`;
-  }
-
-  /** Fecha y hora actual en el formato que espera el backend. */
-  private fechaHoraActual(): string {
-    return this.aIsoLocal(new Date());
   }
 
   /** Distingue el timeout de comunicación del resto de errores del backend. */
