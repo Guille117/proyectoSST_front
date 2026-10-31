@@ -6,9 +6,20 @@ import { ActivatedRoute } from '@angular/router';
 import { TimeoutError, forkJoin } from 'rxjs';
 import { PacienteDetalle, TipoAtencion } from '../paciente/data/pacienteInterfaz';
 import { PacienteService } from '../paciente/data/paciente-service';
-import { EpisodioResumen } from './data/expedienteInterfaz';
+import { EpisodioResumen, SeccionExpediente } from './data/expedienteInterfaz';
 import { ExpedienteService } from './data/expediente-service';
 import { ResumenEpisodio } from './resumen-episodio/resumen-episodio';
+
+interface OpcionExpedienteVista {
+  id: SeccionExpediente;
+  titulo: string;
+  icono: string;
+}
+
+interface SeccionExpedienteVista {
+  titulo: string | null;
+  opciones: OpcionExpedienteVista[];
+}
 
 @Component({
   selector: 'app-expediente',
@@ -25,10 +36,44 @@ export class Expediente implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
 
   paciente: PacienteDetalle | null = null;
-  episodios: EpisodioResumen[] = [];
   episodioSeleccionado: EpisodioResumen | null = null;
   cargando = false;
   error = '';
+
+  /** Opción del submenú actualmente seleccionada. */
+  opcionActiva: SeccionExpediente = 'resumen';
+
+  /** Opciones del submenú izquierdo agrupadas por sección. */
+  readonly seccionesMenu: SeccionExpedienteVista[] = [
+    {
+      titulo: null,
+      opciones: [
+        { id: 'resumen', titulo: 'Resumen', icono: 'bi-journal-text' },
+        { id: 'evaluacion', titulo: 'Evaluación clínica', icono: 'bi-clipboard2-pulse' },
+        { id: 'examenes', titulo: 'Exámenes', icono: 'bi-clipboard2-check' },
+        { id: 'procedimientos', titulo: 'Procedimientos', icono: 'bi-scissors' },
+        { id: 'evolucion', titulo: 'Evolución médica', icono: 'bi-graph-up-arrow' },
+        { id: 'indicaciones', titulo: 'Indicaciones médicas', icono: 'bi-capsule' },
+        { id: 'alta', titulo: 'Alta médica', icono: 'bi-box-arrow-up-right' },
+      ],
+    },
+    {
+      titulo: 'Enfermería',
+      opciones: [
+        {
+          id: 'registros-enfermeria',
+          titulo: 'Registros de enfermería',
+          icono: 'bi-clipboard2-pulse',
+        },
+      ],
+    },
+    {
+      titulo: null,
+      opciones: [
+        { id: 'consumo', titulo: 'Consumo y estancia', icono: 'bi-receipt' },
+      ],
+    },
+  ];
 
   ngOnInit(): void {
     const pacienteId = Number(this.route.snapshot.paramMap.get('pacienteId'));
@@ -39,13 +84,17 @@ export class Expediente implements OnInit {
     this.cargar(pacienteId);
   }
 
-  seleccionarEpisodio(episodio: EpisodioResumen): void {
-    this.episodioSeleccionado = episodio;
-    this.cdr.detectChanges();
+  seleccionarOpcion(opcion: SeccionExpediente): void {
+    this.opcionActiva = opcion;
+    this.cdr.markForCheck();
   }
 
-  esSeleccionado(episodio: EpisodioResumen): boolean {
-    return this.episodioSeleccionado?.episodioId === episodio.episodioId;
+  opcionActivaActual(): OpcionExpedienteVista | null {
+    for (const seccion of this.seccionesMenu) {
+      const opcion = seccion.opciones.find((item) => item.id === this.opcionActiva);
+      if (opcion) return opcion;
+    }
+    return null;
   }
 
   volver(): void {
@@ -94,9 +143,7 @@ export class Expediente implements OnInit {
       .subscribe({
         next: ({ paciente, episodios }) => {
           this.paciente = paciente;
-          this.episodios = episodios;
-          this.episodioSeleccionado =
-            episodios.find((episodio) => episodio.activo) ?? episodios[0] ?? null;
+          this.episodioSeleccionado = this.episodioMasReciente(episodios);
           this.cargando = false;
           this.cdr.detectChanges();
         },
@@ -106,6 +153,17 @@ export class Expediente implements OnInit {
           this.cdr.detectChanges();
         },
       });
+  }
+
+  private episodioMasReciente(episodios: EpisodioResumen[]): EpisodioResumen | null {
+    if (!episodios.length) return null;
+    return [...episodios].sort((a, b) => {
+      const fechaA = new Date(a.fechaHoraIngreso).getTime();
+      const fechaB = new Date(b.fechaHoraIngreso).getTime();
+      const valorA = Number.isNaN(fechaA) ? 0 : fechaA;
+      const valorB = Number.isNaN(fechaB) ? 0 : fechaB;
+      return valorB - valorA;
+    })[0];
   }
 
   private mensajeError(error: unknown, porDefecto: string): string {

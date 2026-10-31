@@ -9,6 +9,7 @@ import { Expediente } from './expediente';
 
 describe('Expediente', () => {
   let fixture: ComponentFixture<Expediente>;
+  let component: Expediente;
 
   const paciente = {
     pacienteId: 3,
@@ -42,6 +43,7 @@ describe('Expediente', () => {
     }).compileComponents();
 
     fixture = TestBed.createComponent(Expediente);
+    component = fixture.componentInstance;
   });
 
   it('muestra el paciente y el estado vacío cuando no tiene episodios', async () => {
@@ -55,17 +57,40 @@ describe('Expediente', () => {
 
     const texto = fixture.nativeElement.textContent as string;
     expect(texto).toContain('Ana López');
-    expect(texto).toContain('Episodios');
     expect(texto).toContain('El paciente no tiene episodios registrados.');
   });
 
-  it('vuelve a la pantalla anterior', () => {
+  it('vuelve a la pantalla anterior', async () => {
     fixture.detectChanges();
+    await fixture.whenStable();
+    await new Promise((resolve) => setTimeout(resolve));
+    fixture.detectChanges();
+
     const boton = fixture.nativeElement.querySelector(
-      '.expediente-cabecera button',
+      '.menu-opcion--volver',
     ) as HTMLButtonElement;
     boton.click();
 
     expect(location.back).toHaveBeenCalled();
+  });
+
+  it('cambia la opción activa del submenú', async () => {
+    fixture.detectChanges();
+    await fixture.whenStable();
+    await new Promise((resolve) => setTimeout(resolve));
+    fixture.detectChanges();
+
+    const opciones = Array.from(
+      fixture.nativeElement.querySelectorAll('.menu-opcion'),
+    ) as HTMLButtonElement[];
+    const consumo = opciones.find((opcion) =>
+      opcion.textContent?.includes('Consumo y estancia'),
+    );
+
+    expect(consumo).toBeTruthy();
+    consumo!.click();
+    fixture.detectChanges();
+
+    expect(component.opcionActiva).toBe('consumo');
   });
 });

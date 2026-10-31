@@ -7,80 +7,153 @@
   margin-top: 25px;
 }
 
-.expediente-cabecera {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 16px;
-  margin-bottom: 20px;
-}
-
-.expediente-paciente {
-  min-width: 0;
-
-  h1 {
-    margin: 0;
-    color: var(--azulPrincipal);
-    font-size: 1.5rem;
-    font-weight: 700;
-    overflow-wrap: anywhere;
-  }
-
-  p {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px 16px;
-    margin: 4px 0 0;
-    color: #475569;
-    font-size: 0.9rem;
-  }
-}
-
 .expediente-layout {
   display: grid;
-  grid-template-columns: minmax(240px, 310px) minmax(0, 1fr);
+  grid-template-columns: minmax(240px, 300px) minmax(0, 1fr);
   align-items: start;
   gap: 24px;
 }
 
-.expediente-episodios {
+.expediente-menu {
+  position: sticky;
+  top: 0;
+  align-self: start;
+  display: flex;
+  flex-direction: column;
   box-sizing: border-box;
-  padding: 16px;
+  max-height: calc(100vh - var(--heightTopBar) - 70px);
+  padding: 18px;
   border: 2px solid var(--colorBorde);
   border-radius: 18px;
   background: #fff;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+}
 
-  h2 {
-    margin: 0 0 12px;
+.menu-paciente {
+  flex-shrink: 0;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #e2e8f0;
+
+  h1 {
+    margin: 0;
     color: var(--azulPrincipal);
-    font-size: 1.15rem;
+    font-size: 1.25rem;
     font-weight: 700;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
   }
 }
 
-.episodios-lista {
+.menu-paciente-meta {
   display: flex;
-  flex-direction: column;
-  gap: 10px;
+  flex-wrap: wrap;
+  gap: 3px 10px;
+  margin: 6px 0 0;
+  color: #64748b;
+  font-size: 0.85rem;
 }
 
-.episodio-item {
+.menu-episodio {
+  flex-shrink: 0;
+  padding: 14px 0;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.menu-episodio-card {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  width: 100%;
+  gap: 8px;
   padding: 12px 14px;
   border: 1px solid #dbe4f0;
   border-radius: 12px;
-  background: #fff;
+  background: #f8fafc;
+}
+
+.menu-episodio-tipo {
+  color: var(--azulPrincipal);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.menu-episodio-fechas {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+
+  div {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  dt {
+    color: #64748b;
+    font-size: 0.8rem;
+  }
+
+  dd {
+    margin: 0;
+    color: #334155;
+    font-size: 0.82rem;
+    font-weight: 600;
+  }
+}
+
+.menu-opciones {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+  padding-top: 14px;
+  padding-right: 4px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.menu-grupo-titulo {
+  margin: 4px 0 0;
+  color: var(--azulPrincipal);
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.menu-separador {
+  width: 100%;
+  margin: 6px 0;
+  border: 0;
+  border-top: 1px solid #e2e8f0;
+}
+
+.menu-opcion {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
   color: #334155;
   font-family: inherit;
+  font-size: 0.92rem;
+  font-weight: 600;
   text-align: left;
   cursor: pointer;
   transition:
     border-color 0.2s ease,
-    background-color 0.2s ease;
+    background-color 0.2s ease,
+    color 0.2s ease;
+
+  i {
+    color: var(--azulSecundario);
+    font-size: 1.05rem;
+  }
 
   &:hover,
   &:focus-visible {
@@ -94,37 +167,14 @@
   }
 }
 
-.episodio-item--activo {
+.menu-opcion--activa {
   border-color: var(--azulSecundario);
   background: #eef5ff;
-}
-
-.episodio-item-tipo {
   color: var(--azulPrincipal);
-  font-size: 0.95rem;
-  font-weight: 700;
 }
 
-.episodio-item-fechas,
-.episodio-item-medico {
-  color: #64748b;
-  font-size: 0.82rem;
-}
-
-.episodio-item-estado {
-  align-self: flex-start;
-  margin-top: 2px;
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: #e5f6e9;
-  color: #3f9d5c;
-  font-size: 0.75rem;
-  font-weight: 700;
-}
-
-.episodio-item-estado--cerrado {
-  background: #f1f5f9;
-  color: #64748b;
+.menu-opcion--volver {
+  flex-shrink: 0;
 }
 
 .expediente-detalle {
@@ -172,5 +222,14 @@
 @media (max-width: 900px) {
   .expediente-layout {
     grid-template-columns: 1fr;
+  }
+
+  .expediente-menu {
+    position: static;
+    max-height: none;
+  }
+
+  .menu-opciones {
+    overflow: visible;
   }
 }

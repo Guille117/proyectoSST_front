@@ -59,7 +59,7 @@ import { NotaEnfermeriaResponse } from '../../../Enfermeria/notas/data/notaEnfer
 import { ConsumoEpisodioService } from '../../paciente/data/consumo-service';
 import { ConsumoEpisodio } from '../../paciente/data/consumoInterfaz';
 import { PacienteDetalle, TipoAtencion } from '../../paciente/data/pacienteInterfaz';
-import { EpisodioResumen } from '../data/expedienteInterfaz';
+import { EpisodioResumen, SeccionExpediente } from '../data/expedienteInterfaz';
 
 @Component({
   selector: 'app-resumen-episodio',
@@ -71,6 +71,7 @@ export class ResumenEpisodio implements OnChanges {
   @Input({ required: true }) episodioId!: number;
   @Input() paciente: PacienteDetalle | null = null;
   @Input() episodio: EpisodioResumen | null = null;
+  @Input() seccion: SeccionExpediente = 'resumen';
 
   private readonly servicioHistoria = inject(HistoriaClinicaService);
   private readonly servicioExamenFisico = inject(ExamenFisicoService);
@@ -120,6 +121,52 @@ export class ResumenEpisodio implements OnChanges {
 
   recargar(): void {
     this.cargar();
+  }
+
+  /** Título de la sección activa del expediente. */
+  get tituloSeccion(): string {
+    return {
+      resumen: 'Resumen del episodio',
+      evaluacion: 'Evaluación clínica',
+      examenes: 'Exámenes',
+      procedimientos: 'Procedimientos',
+      evolucion: 'Evolución médica',
+      indicaciones: 'Indicaciones médicas',
+      alta: 'Alta médica',
+      'registros-enfermeria': 'Registros de enfermería',
+      consumo: 'Consumo y estancia',
+    }[this.seccion];
+  }
+
+  /** Descripción breve de la sección activa del expediente. */
+  get descripcionSeccion(): string {
+    return {
+      resumen: 'Información general del episodio.',
+      evaluacion: 'Historia clínica, examen físico y diagnósticos.',
+      examenes: 'Exámenes indicados y sus archivos.',
+      procedimientos: 'Procedimientos médicos realizados en el episodio.',
+      evolucion: 'Evoluciones clínicas y planes médicos.',
+      indicaciones: 'Medicamentos y cuidados indicados.',
+      alta: 'Datos del egreso y tratamiento indicado.',
+      'registros-enfermeria': 'Monitoreo, notas y tratamientos realizados por Enfermería.',
+      consumo: 'Productos entregados y días de cama utilizados.',
+    }[this.seccion];
+  }
+
+  /** Ordena los registros por fecha, del más reciente al más antiguo. */
+  private ordenarPorFechaDesc<T>(
+    items: T[],
+    obtenerFecha: (item: T) => string | null | undefined,
+  ): T[] {
+    return [...items].sort(
+      (a, b) => this.fechaMs(obtenerFecha(b)) - this.fechaMs(obtenerFecha(a)),
+    );
+  }
+
+  private fechaMs(valor: string | null | undefined): number {
+    if (!valor) return 0;
+    const fecha = new Date(valor).getTime();
+    return Number.isNaN(fecha) ? 0 : fecha;
   }
 
   private cargar(): void {
@@ -236,21 +283,45 @@ export class ResumenEpisodio implements OnChanges {
         next: (datos) => {
           if (solicitud !== this.solicitud) return;
 
-          this.historiaClinica = datos.historia;
-          this.examenFisico = datos.examenFisico;
-          this.diagnosticos = datos.diagnosticos;
-          this.evoluciones = datos.evoluciones;
-          this.medicamentos = datos.medicamentos;
-          this.cuidados = datos.cuidados;
-          this.examenes = datos.examenes;
-          this.procedimientos = datos.procedimientos;
+          this.historiaClinica = this.ordenarPorFechaDesc(
+            datos.historia,
+            (item) => item.fecha,
+          );
+          this.examenFisico = this.ordenarPorFechaDesc(
+            datos.examenFisico,
+            (item) => item.fecha,
+          );
+          this.diagnosticos = this.ordenarPorFechaDesc(
+            datos.diagnosticos,
+            (item) => item.fecha,
+          );
+          this.evoluciones = this.ordenarPorFechaDesc(
+            datos.evoluciones,
+            (item) => item.fecha,
+          );
+          this.medicamentos = this.ordenarPorFechaDesc(
+            datos.medicamentos,
+            (item) => item.fechaInicio,
+          );
+          this.cuidados = this.ordenarPorFechaDesc(datos.cuidados, (item) => item.fechaInicio);
+          this.examenes = this.ordenarPorFechaDesc(datos.examenes, (item) => item.fecha);
+          this.procedimientos = this.ordenarPorFechaDesc(
+            datos.procedimientos,
+            (item) => item.inicio,
+          );
           this.alta = datos.altas[0] ?? null;
-          this.signosVitales = datos.signos;
-          this.controlHidrico = datos.control;
-          this.glucosa = datos.glucosa;
-          this.notas = datos.notas;
-          this.aplicaciones = datos.aplicaciones;
-          this.ejecuciones = datos.ejecuciones;
+          this.signosVitales = this.ordenarPorFechaDesc(datos.signos, (item) => item.fecha);
+          this.controlHidrico = this.ordenarPorFechaDesc(datos.control, (item) => item.fecha);
+          this.glucosa = this.ordenarPorFechaDesc(datos.glucosa, (item) => item.fecha);
+          this.notas = this.ordenarPorFechaDesc(datos.notas, (item) => item.fecha);
+          this.aplicaciones = this.ordenarPorFechaDesc(
+            datos.aplicaciones,
+            (item) => item.fechaHoraProgramada,
+          );
+          this.ejecuciones = this.ordenarPorFechaDesc(
+            datos.ejecuciones,
+            (item) => item.fechaHoraProgramada,
+          );
           this.consumo = datos.consumo;
           this.cargando = false;
           this.cdr.detectChanges();

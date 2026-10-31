@@ -17,7 +17,7 @@ import { NotaEnfermeriaService } from '../../../Enfermeria/notas/data/nota-enfer
 import { ConsumoEpisodioService } from '../../paciente/data/consumo-service';
 import { ConsumoEpisodio } from '../../paciente/data/consumoInterfaz';
 import { PacienteDetalle } from '../../paciente/data/pacienteInterfaz';
-import { EpisodioResumen } from '../data/expedienteInterfaz';
+import { EpisodioResumen, SeccionExpediente } from '../data/expedienteInterfaz';
 import { ResumenEpisodio } from './resumen-episodio';
 
 describe('ResumenEpisodio', () => {
@@ -180,10 +180,11 @@ describe('ResumenEpisodio', () => {
     fixture = TestBed.createComponent(ResumenEpisodio);
   });
 
-  const render = async (): Promise<void> => {
+  const render = async (seccion: SeccionExpediente = 'resumen'): Promise<void> => {
     fixture.componentRef.setInput('paciente', paciente);
     fixture.componentRef.setInput('episodio', episodio);
     fixture.componentRef.setInput('episodioId', 7);
+    fixture.componentRef.setInput('seccion', seccion);
     fixture.detectChanges();
     await fixture.whenStable();
     fixture.detectChanges();
@@ -206,5 +207,86 @@ describe('ResumenEpisodio', () => {
     const texto = fixture.nativeElement.textContent as string;
     expect(texto).not.toContain('Signo eliminado');
     expect(texto).toContain('Control vigente');
+  });
+
+  it('muestra solo la evaluación clínica en su sección', async () => {
+    await render('evaluacion');
+
+    const texto = fixture.nativeElement.textContent as string;
+    expect(texto).toContain('Historia clínica');
+    expect(texto).toContain('Examen físico');
+    expect(texto).toContain('Diagnósticos');
+    expect(texto).toContain('Historia de prueba');
+    expect(texto).not.toContain('Alta médica');
+    expect(texto).not.toContain('Consumo y estancia');
+  });
+
+  it('muestra solo las indicaciones médicas en su sección', async () => {
+    await render('indicaciones');
+
+    const texto = fixture.nativeElement.textContent as string;
+    expect(texto).toContain('Indicaciones médicas');
+    expect(texto).toContain('Medicamentos');
+    expect(texto).toContain('Cuidados');
+    expect(texto).not.toContain('Historia de prueba');
+    expect(texto).not.toContain('Exámenes');
+  });
+
+  it('muestra solo los exámenes en su sección', async () => {
+    await render('examenes');
+
+    const texto = fixture.nativeElement.textContent as string;
+    expect(texto).toContain('Exámenes');
+    expect(texto).not.toContain('Historia de prueba');
+    expect(texto).not.toContain('Medicamentos');
+    expect(texto).not.toContain('Alta médica');
+  });
+
+  it('muestra solo los procedimientos en su sección', async () => {
+    await render('procedimientos');
+
+    const texto = fixture.nativeElement.textContent as string;
+    expect(texto).toContain('Procedimientos');
+    expect(texto).toContain('Sin procedimientos registrados.');
+    expect(texto).not.toContain('Historia de prueba');
+  });
+
+  it('muestra solo la evolución médica en su sección', async () => {
+    await render('evolucion');
+
+    const texto = fixture.nativeElement.textContent as string;
+    expect(texto).toContain('Evolución médica');
+    expect(texto).toContain('Sin evoluciones registradas.');
+    expect(texto).not.toContain('Historia de prueba');
+  });
+
+  it('muestra solo el alta médica en su sección', async () => {
+    await render('alta');
+
+    const texto = fixture.nativeElement.textContent as string;
+    expect(texto).toContain('Alta médica');
+    expect(texto).toContain('Sin alta médica vigente.');
+    expect(texto).not.toContain('Historia de prueba');
+    expect(texto).not.toContain('Consumo y estancia');
+  });
+
+  it('muestra solo los registros de enfermería en su sección', async () => {
+    await render('registros-enfermeria');
+
+    const texto = fixture.nativeElement.textContent as string;
+    expect(texto).toContain('Signos vitales');
+    expect(texto).toContain('Control vigente');
+    expect(texto).not.toContain('Historia de prueba');
+    expect(texto).not.toContain('Consumo y estancia');
+  });
+
+  it('muestra solo el consumo y estancia en su sección', async () => {
+    await render('consumo');
+
+    const texto = fixture.nativeElement.textContent as string;
+    expect(texto).toContain('Consumo y estancia');
+    expect(texto).toContain('Q 512.00');
+    expect(texto).not.toContain('Historia de prueba');
+    expect(texto).not.toContain('Alta médica');
   });
 });

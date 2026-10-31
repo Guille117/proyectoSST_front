@@ -8,3 +8,15 @@ export interface EpisodioResumen {
   medicoNombre: string | null;
   activo: boolean;
 }
+
+/** Opciones del submenú del expediente clínico. */
+export type SeccionExpediente =
+  | 'resumen'
+  | 'evaluacion'
+  | 'examenes'
+  | 'procedimientos'
+  | 'evolucion'
+  | 'indicaciones'
+  | 'alta'
+  | 'registros-enfermeria'
+  | 'consumo';
