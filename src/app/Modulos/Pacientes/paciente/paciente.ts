@@ -235,6 +235,11 @@ export class Paciente implements OnInit {
     return this.pacienteSeleccionado?.episodioId ?? this.pacienteSeleccionado?.ultimoEpisodioId ?? null;
   }
 
+  /** Episodio cuyos documentos se consultan: el activo o, para egresados, el último. */
+  get episodioDocumentosId(): number | null {
+    return this.episodioIdDocumentacion;
+  }
+
   /** Datos del episodio actual para la cabecera del resumen. */
   get episodioDocumentacion(): EpisodioResumen | null {
     const episodioId = this.episodioIdDocumentacion;
@@ -585,7 +590,8 @@ export class Paciente implements OnInit {
   private cargarDocumentos(paciente: PacienteResumido | null): void {
     this.errorDocumentos = '';
 
-    if (!paciente?.episodioId) {
+    const episodioId = paciente?.episodioId ?? paciente?.ultimoEpisodioId ?? null;
+    if (!episodioId) {
       this.documentos = [];
       this.cargandoDocumentos = false;
       return;
@@ -593,17 +599,17 @@ export class Paciente implements OnInit {
 
     this.cargandoDocumentos = true;
     this.servicioDocumento
-      .listarDocumentos(paciente.episodioId)
+      .listarDocumentos(episodioId)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (documentos) => {
-          if (this.pacienteSeleccionado?.pacienteId !== paciente.pacienteId) return;
+          if (this.pacienteSeleccionado?.pacienteId !== paciente?.pacienteId) return;
           this.documentos = documentos;
           this.cargandoDocumentos = false;
           this.cdr.detectChanges();
         },
         error: (error) => {
-          if (this.pacienteSeleccionado?.pacienteId !== paciente.pacienteId) return;
+          if (this.pacienteSeleccionado?.pacienteId !== paciente?.pacienteId) return;
           this.cargandoDocumentos = false;
           this.errorDocumentos = this.mensajeError(error, 'No se pudieron cargar los documentos.');
           this.cdr.detectChanges();
@@ -627,14 +633,16 @@ export class Paciente implements OnInit {
       indiceInicial: 0,
       cargarArchivo: (archivo: ArchivoVisor) =>
         this.servicioDocumento.obtenerArchivo(Number(archivo.id)),
-      onEliminar: (archivo: ArchivoVisor) =>
-        this.servicioDocumento.eliminarDocumento(Number(archivo.id)),
+      onEliminar: this.pacienteSeleccionado?.episodioId
+        ? (archivo: ArchivoVisor) =>
+            this.servicioDocumento.eliminarDocumento(Number(archivo.id))
+        : undefined,
       onCambio: () => this.cargarDocumentos(this.pacienteSeleccionado),
     });
   }
 
   seleccionarArchivo(tipo: TipoDocumentoEpisodio, input: HTMLInputElement): void {
-    if (!this.pacienteSeleccionado?.episodioId || this.subiendoTipo) return;
+    if (!this.episodioDocumentosId || this.subiendoTipo) return;
     this.tipoSubida = tipo;
     input.value = '';
     input.click();
@@ -643,7 +651,7 @@ export class Paciente implements OnInit {
   subirDocumento(event: Event): void {
     const input = event.target as HTMLInputElement;
     const tipo = this.tipoSubida;
-    const episodioId = this.pacienteSeleccionado?.episodioId;
+    const episodioId = this.episodioDocumentosId;
     const usuarioId = this.authService.currentUser()?.id;
     this.tipoSubida = null;
 

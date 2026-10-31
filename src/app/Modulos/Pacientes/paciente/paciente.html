@@ -416,8 +416,8 @@
                         (change)="subirDocumento($event)"
                     >
 
-                    @if (!paciente.episodioId) {
-                        <p class="aviso">El paciente no tiene un episodio activo.</p>
+                    @if (!episodioDocumentosId) {
+                        <p class="aviso">El paciente no tiene un episodio con documentos.</p>
                     } @else {
                         @if (cargandoDocumentos) {
                             <p class="aviso">Cargando documentos...</p>

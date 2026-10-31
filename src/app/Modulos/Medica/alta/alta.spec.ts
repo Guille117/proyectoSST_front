@@ -8,8 +8,6 @@ import { EpisodioActivoService } from '../data/episodio-activo-service';
 import { PacienteService } from '../../Pacientes/paciente/data/paciente-service';
 import { PacienteDetalle } from '../../Pacientes/paciente/data/pacienteInterfaz';
 import { SignosVitalesService } from '../../Enfermeria/monitoreo/data/signos-vitales-service';
-import { ProcedimientoMedicoService } from '../procedimiento-medico/data/procedimiento-medico-service';
-import { ProcedimientoMedicoResponse } from '../procedimiento-medico/data/procedimientoMedicoInterfaz';
 import { Alta } from './alta';
 import { AltaResponse } from './data/altaInterfaz';
 import { AltaService } from './data/alta-service';
@@ -85,12 +83,6 @@ describe('Alta', () => {
     actualizar: vi.fn(),
     anular: vi.fn(),
   };
-  const procedimientoService = {
-    getTiposProcedimiento: vi.fn(),
-    crearProcedimiento: vi.fn(),
-    eliminarProcedimiento: vi.fn(),
-  };
-  const procedimientoCreado = { id: 77 } as ProcedimientoMedicoResponse;
   const catalogoService = {
     listar: vi.fn(),
     listarUnidadMedida: vi.fn(() => of([])),
@@ -141,11 +133,6 @@ describe('Alta', () => {
     altaService.crear.mockReturnValue(of(altaVigente));
     altaService.actualizar.mockReturnValue(of(altaVigente));
     altaService.anular.mockReturnValue(of(void 0));
-    procedimientoService.getTiposProcedimiento.mockReturnValue(
-      of([{ id: 5, nombre: 'Solicitud de medicamento a farmacia', estado: true }]),
-    );
-    procedimientoService.crearProcedimiento.mockReturnValue(of(procedimientoCreado));
-    procedimientoService.eliminarProcedimiento.mockReturnValue(of(void 0));
     episodioActivo.obtener.mockReturnValue(1);
     popUps.confirmarToast.mockResolvedValue(true);
 
@@ -153,7 +140,6 @@ describe('Alta', () => {
       imports: [Alta],
       providers: [
         { provide: AltaService, useValue: altaService },
-        { provide: ProcedimientoMedicoService, useValue: procedimientoService },
         { provide: CatalogoService, useValue: catalogoService },
         { provide: EpisodioActivoService, useValue: episodioActivo },
         { provide: PacienteService, useValue: pacienteService },
@@ -303,91 +289,11 @@ describe('Alta', () => {
         },
       ],
     });
-    expect(procedimientoService.crearProcedimiento).toHaveBeenCalledTimes(1);
-    expect(procedimientoService.crearProcedimiento).toHaveBeenCalledWith(
-      expect.objectContaining({
-        tipoProcedimientoId: 5,
-        episodioId: 1,
-        usuarioId: 2,
-        recursos: [{ tipo: 'MEDICAMENTO', referenciaId: 9, cantidad: 2 }],
-      }),
-    );
     expect(episodioActivo.limpiar).toHaveBeenCalled();
-    expect(popUps.exito).toHaveBeenCalledWith(
-      'Alta registrada exitosamente. Solicitud de medicamento enviada a farmacia.',
-    );
-  });
-
-  it('envía una sola solicitud con todos los medicamentos del tratamiento', async () => {
-    await escribir('#diagnosticoEgreso', 'Nuevo diagnóstico');
-
-    component.registrarMedicamento({
-      nombre: 'Ibuprofeno',
-      medicamentoLogId: 9,
-      medicamentoLibre: '',
-      cantidad: 2,
-      unidadMedida: 'tabletas',
-      frecuencia: 8,
-      duracionTipo: 'dias',
-      duracionCantidad: 7,
-      observaciones: '',
-    });
-    component.registrarMedicamento({
-      nombre: 'Paracetamol',
-      medicamentoLogId: 10,
-      medicamentoLibre: '',
-      cantidad: 3,
-      unidadMedida: 'tabletas',
-      frecuencia: 6,
-      duracionTipo: 'dias',
-      duracionCantidad: 3,
-      observaciones: '',
-    });
-
-    botonGuardar().click();
-    await fixture.whenStable();
-
-    expect(procedimientoService.crearProcedimiento).toHaveBeenCalledTimes(1);
-    expect(procedimientoService.crearProcedimiento).toHaveBeenCalledWith(
-      expect.objectContaining({
-        recursos: [
-          { tipo: 'MEDICAMENTO', referenciaId: 9, cantidad: 2 },
-          { tipo: 'MEDICAMENTO', referenciaId: 10, cantidad: 3 },
-        ],
-      }),
-    );
-  });
-
-  it('guarda el alta aunque falle la solicitud a farmacia', async () => {
-    procedimientoService.crearProcedimiento.mockReturnValue(
-      throwError(() => new Error('Sin existencia')),
-    );
-    await escribir('#diagnosticoEgreso', 'Nuevo diagnóstico');
-
-    component.registrarMedicamento({
-      nombre: 'Ibuprofeno',
-      medicamentoLogId: 9,
-      medicamentoLibre: '',
-      cantidad: 2,
-      unidadMedida: 'tabletas',
-      frecuencia: 8,
-      duracionTipo: 'dias',
-      duracionCantidad: 7,
-      observaciones: '',
-    });
-
-    botonGuardar().click();
-    await fixture.whenStable();
-
-    expect(altaService.crear).toHaveBeenCalled();
-    expect(popUps.errorDesdeBackend).toHaveBeenCalledWith(
-      expect.any(Error),
-      'No se pudo generar la solicitud de medicamento a farmacia.',
-    );
     expect(popUps.exito).toHaveBeenCalledWith('Alta registrada exitosamente.');
   });
 
-  it('cancela la solicitud si el alta no se puede guardar', async () => {
+  it('muestra el error cuando el alta no se puede guardar', async () => {
     altaService.crear.mockReturnValue(throwError(() => new Error('Fallo el alta')));
     await escribir('#diagnosticoEgreso', 'Nuevo diagnóstico');
 
@@ -406,7 +312,6 @@ describe('Alta', () => {
     botonGuardar().click();
     await fixture.whenStable();
 
-    expect(procedimientoService.eliminarProcedimiento).toHaveBeenCalledWith(77);
     expect(popUps.errorDesdeBackend).toHaveBeenCalledWith(
       expect.any(Error),
       'No se pudo guardar el alta. Intente nuevamente.',
@@ -442,7 +347,6 @@ describe('Alta', () => {
         ],
       }),
     );
-    expect(procedimientoService.crearProcedimiento).not.toHaveBeenCalled();
     expect(popUps.exito).toHaveBeenCalledWith('Alta registrada exitosamente.');
   });
 

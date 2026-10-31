@@ -20,12 +20,6 @@ import {
   textoDuracion,
 } from '../indicaciones/medicamentos/medicamento-indicacion/medicamento-indicacion';
 import {
-  ProcedimientoMedicoRequest,
-  ProcedimientoMedicoResponse,
-  TipoProcedimientoResponse,
-} from '../procedimiento-medico/data/procedimientoMedicoInterfaz';
-import { ProcedimientoMedicoService } from '../procedimiento-medico/data/procedimiento-medico-service';
-import {
   AltaRequest,
   AltaResponse,
   AltaTratamientoRequest,
@@ -84,7 +78,6 @@ interface CuidadoEnEdicion {
 export class Alta implements OnInit, OnDestroy {
   private readonly catalogoService = inject(CatalogoService);
   private readonly servicio = inject(AltaService);
-  private readonly servicioProcedimientos = inject(ProcedimientoMedicoService);
   private readonly authService = inject(AuthService);
   private readonly episodioActivo = inject(EpisodioActivoService);
   private readonly popUps = inject(PopUps);
@@ -94,7 +87,6 @@ export class Alta implements OnInit, OnDestroy {
   private peticionCondiciones?: Subscription;
   private peticionAlta?: Subscription;
   private peticionAccion?: Subscription;
-  private tiposSolicitud?: TipoProcedimientoResponse[];
   private destruido = false;
 
   // ------------------- ESTADO DE LA VISTA -------------------
@@ -723,29 +715,12 @@ export class Alta implements OnInit, OnDestroy {
     this.cdr.markForCheck();
     this.peticionAccion?.unsubscribe();
 
-    let solicitudFarmacia: ProcedimientoMedicoResponse | null = null;
-
     try {
-      // La solicitud debe crearse antes del alta: al guardarla, el backend cierra el episodio.
-      if (idEditado === null) {
-        solicitudFarmacia = await this.crearSolicitudFarmacia(episodioId, usuarioId);
-        if (this.destruido) return;
-      }
-
-      let respuesta: AltaResponse;
-      try {
-        respuesta = await firstValueFrom(
-          idEditado === null
-            ? this.servicio.crear(cuerpo)
-            : this.servicio.actualizar(idEditado, cuerpo),
-        );
-      } catch (error) {
-        if (solicitudFarmacia) await this.cancelarSolicitudFarmacia(solicitudFarmacia.id);
-        if (!this.destruido) {
-          this.mostrarError(error, 'No se pudo guardar el alta. Intente nuevamente.');
-        }
-        return;
-      }
+      const respuesta = await firstValueFrom(
+        idEditado === null
+          ? this.servicio.crear(cuerpo)
+          : this.servicio.actualizar(idEditado, cuerpo),
+      );
 
       if (this.destruido) return;
 
@@ -754,107 +729,16 @@ export class Alta implements OnInit, OnDestroy {
       this.sinEpisodioActivo = false;
       this.popUps.exito(
         idEditado === null
-          ? solicitudFarmacia
-            ? 'Alta registrada exitosamente. Solicitud de medicamento enviada a farmacia.'
-            : 'Alta registrada exitosamente.'
+          ? 'Alta registrada exitosamente.'
           : 'Alta actualizada exitosamente.',
       );
+    } catch (error) {
+      if (!this.destruido) {
+        this.mostrarError(error, 'No se pudo guardar el alta. Intente nuevamente.');
+      }
     } finally {
       this.guardando = false;
       if (!this.destruido) this.cdr.markForCheck();
-    }
-  }
-
-  /** Crea una única solicitud de farmacia con todos los medicamentos de catálogo del alta. */
-  private async crearSolicitudFarmacia(
-    episodioId: number,
-    usuarioId: number,
-  ): Promise<ProcedimientoMedicoResponse | null> {
-    const recursos = this.tratamientoMedicamentos
-      .filter(
-        (medicamento) =>
-          medicamento.medicamentoLogId !== null && (medicamento.cantidad ?? 0) > 0,
-      )
-      .map((medicamento) => ({
-        referenciaId: medicamento.medicamentoLogId!,
-        cantidad: medicamento.cantidad!,
-      }));
-
-    if (!recursos.length) return null;
-
-    const tipo = await this.obtenerTipoSolicitudFarmacia();
-    if (!tipo) return null;
-
-    const request: ProcedimientoMedicoRequest = {
-      tipoProcedimientoId: tipo.id,
-      descripcion: 'Solicitud de medicamento a farmacia',
-      resultado: null,
-      inicio: this.fechaHoraActual(),
-      fin: null,
-      episodioId,
-      usuarioId,
-      recursos: recursos.map((recurso) => ({
-        tipo: 'MEDICAMENTO' as const,
-        referenciaId: recurso.referenciaId,
-        cantidad: recurso.cantidad,
-      })),
-    };
-
-    try {
-      return await firstValueFrom(this.servicioProcedimientos.crearProcedimiento(request));
-    } catch (error) {
-      if (!this.destruido) {
-        this.mostrarError(
-          error,
-          'No se pudo generar la solicitud de medicamento a farmacia.',
-        );
-      }
-      return null;
-    }
-  }
-
-  /** Tipo de procedimiento con el que se envían las solicitudes a farmacia. */
-  private async obtenerTipoSolicitudFarmacia(): Promise<TipoProcedimientoResponse | null> {
-    let tipos = this.tiposSolicitud;
-
-    if (!tipos) {
-      try {
-        tipos = await firstValueFrom(this.servicioProcedimientos.getTiposProcedimiento());
-        this.tiposSolicitud = tipos;
-      } catch (error) {
-        if (!this.destruido) {
-          this.mostrarError(error, 'No se pudieron consultar los tipos de solicitud.');
-        }
-        return null;
-      }
-    }
-
-    const activos = tipos.filter((tipo) => tipo.estado !== false);
-    const tipo =
-      activos.find(
-        (opcion) => /solicitud/i.test(opcion.nombre) && /medicamento/i.test(opcion.nombre),
-      ) ??
-      activos.find((opcion) => /solicitud/i.test(opcion.nombre)) ??
-      activos.find((opcion) => /medicamento/i.test(opcion.nombre)) ??
-      null;
-
-    if (!tipo) {
-      this.popUps.advertencia(
-        'No hay un tipo de solicitud de medicamento configurado en el catálogo de procedimientos.',
-      );
-    }
-
-    return tipo;
-  }
-
-  /** Cancela el procedimiento si el alta no pudo guardarse después de crear la solicitud. */
-  private async cancelarSolicitudFarmacia(procedimientoId: number): Promise<void> {
-    try {
-      await firstValueFrom(this.servicioProcedimientos.eliminarProcedimiento(procedimientoId));
-    } catch (error) {
-      if (!this.destruido) {
-        this.mostrarError(error, 'No se pudo cancelar la solicitud de farmacia generada.');
-      }
     }
   }
 
@@ -1109,16 +993,6 @@ export class Alta implements OnInit, OnDestroy {
   private aIdCatalogo(valor: string): number | null {
     const id = Number(valor);
     return Number.isInteger(id) && id > 0 ? id : null;
-  }
-
-  /** Fecha y hora local en el formato ISO que espera el backend. */
-  private fechaHoraActual(): string {
-    const ahora = new Date();
-    const dosDigitos = (valor: number): string => `${valor}`.padStart(2, '0');
-
-    return `${ahora.getFullYear()}-${dosDigitos(ahora.getMonth() + 1)}-${dosDigitos(
-      ahora.getDate(),
-    )}T${dosDigitos(ahora.getHours())}:${dosDigitos(ahora.getMinutes())}:00`;
   }
 
   private formatearFecha(fechaIso: string): string {

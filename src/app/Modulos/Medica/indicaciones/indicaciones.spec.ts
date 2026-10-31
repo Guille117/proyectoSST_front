@@ -471,14 +471,14 @@ describe('Indicaciones', () => {
     expect(etiquetas[4]).toContain('Tipo de duraci');
     expect(etiquetas[5]).toBe('Observaciones');
 
-    // Los cinco campos del cuidado estǭn en el formulario
+    // Los cinco campos del cuidado están en el formulario
     expect(elemento('#nombreCuidado')).not.toBeNull();
     expect(elemento('#frecuenciaCuidado')).not.toBeNull();
     expect(elemento('#fechaInicioCuidado')).not.toBeNull();
     expect(elemento('#duracionCuidado')).not.toBeNull();
     expect(elemento('#observacionesCuidado')).not.toBeNull();
 
-    // El nombre, la frecuencia, la fecha de inicio y el tipo de duraci��n son obligatorios
+    // El nombre, la frecuencia, la fecha de inicio y el tipo de duración son obligatorios
     expect(elementos<HTMLElement>('.indicacion-obligatorio').length).toBe(4);
     expect(obligatorio.closest('label')?.textContent).toContain('Nombre de cuidado');
     expect(botonGuardar().disabled).toBe(true);

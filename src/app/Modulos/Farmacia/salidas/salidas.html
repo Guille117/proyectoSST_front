@@ -1,4 +1,4 @@
-﻿<div class="areaTrabajo-container">
+<div class="areaTrabajo-container">
   <div class="trabajoArea">
     <!-- ==================== COLUMNA IZQUIERDA: SOLICITUDES ==================== -->
     <section class="panel-solicitudes" aria-labelledby="tituloSolicitudes" [class.panel-bloqueado]="generandoSalida()" [attr.inert]="generandoSalida() ? '' : null" [attr.aria-disabled]="generandoSalida() ? 'true' : null">
@@ -9,7 +9,7 @@
           <input
             class="inputB"
             type="search"
-            placeholder="Buscar por paciente, NÂ° solicitud o procedimiento..."
+            placeholder="Buscar por paciente, N° solicitud o procedimiento..."
             aria-label="Buscar solicitud de salida"
             [(ngModel)]="textoBusqueda"
             (keydown.enter)="$event.preventDefault(); buscar()"
@@ -145,7 +145,7 @@
                 [(ngModel)]="cantidadRecurso"
                 (ngModelChange)="ajustarCantidadRecurso()"
               />
-              <span class="recurso-seleccionado_ayuda">MÃ¡ximo {{ cantidadMaximaRecurso }}</span>
+              <span class="recurso-seleccionado_ayuda">Máximo {{ cantidadMaximaRecurso }}</span>
             </div>
 
             <div class="indicacion-campo">
@@ -253,7 +253,7 @@
               </div>
             } @else {
               <p class="indicacion-vacio">
-                No se encontraron {{ etiquetaRecurso }}s que coincidan con la bÃºsqueda.
+                No se encontraron {{ etiquetaRecurso }}s que coincidan con la búsqueda.
               </p>
             }
           </div>
@@ -337,10 +337,10 @@
         <header class="detalle-encabezado">
           <div class="detalle-titulo">
             <h2 id="tituloDetalle" class="titulo-panel">{{ tituloDetalle }}</h2>
-            <span class="etiqueta-sol">NÂ° {{ solicitud.codigo }}</span>
+            <span class="etiqueta-sol">N° {{ solicitud.codigo }}</span>
           </div>
 
-          <nav class="subMenuNav submenu-detalle" aria-label="SecciÃ³n de la solicitud">
+          <nav class="subMenuNav submenu-detalle" aria-label="Sección de la solicitud">
             <div
               class="option"
               [class.active]="!enDevoluciones() && !enHistorial()"
@@ -388,14 +388,14 @@
           } @else if (enDevoluciones()) {
             <p>
               <strong>
-                Registre la condiciÃ³n y el motivo de la devoluciÃ³n. El sistema valida el lote
+                Registre la condición y el motivo de la devolución. El sistema valida el lote
                 entregado antes de actualizar el inventario.
               </strong>
             </p>
           } @else {
             <p>
               <strong>
-                El sistema sugiere el lote con vencimiento prÃ³ximo. Puede seleccionar otro lote
+                El sistema sugiere el lote con vencimiento próximo. Puede seleccionar otro lote
                 disponible si lo requiere.
               </strong>
             </p>
@@ -434,7 +434,7 @@
                   }
                 </section>
               } @empty {
-                <p class="indicacion-vacio">Esta salida aÃºn no tiene movimientos.</p>
+                <p class="indicacion-vacio">Esta salida aún no tiene movimientos.</p>
               }
             }
           </div>
@@ -448,8 +448,8 @@
                   <th class="celda_izquierda">Producto</th>
                   <th class="celda_centrada">Entregado</th>
                   <th class="celda_centrada">Lote entregado</th>
-                  <th class="celda_centrada">CondiciÃ³n</th>
-                  <th class="celda_centrada">Motivo devoluciÃ³n</th>
+                  <th class="celda_centrada">Condición</th>
+                  <th class="celda_centrada">Motivo devolución</th>
                   <th class="celda_centrada">Cantidad a devolver</th>
                 </tr>
               </thead>
@@ -485,7 +485,7 @@
                     <td class="celda_centrada">
                       <select
                         class="lote-select"
-                        aria-label="CondiciÃ³n del producto"
+                        aria-label="Condición del producto"
                         [ngModelOptions]="{ standalone: true }"
                         [(ngModel)]="detalle.condicion"
                       >
@@ -504,7 +504,7 @@
                       } @else {
                         <select
                           class="lote-select select-motivo"
-                          aria-label="Motivo de devoluciÃ³n"
+                          aria-label="Motivo de devolución"
                           [disabled]="cargandoMotivos"
                           [ngModelOptions]="{ standalone: true }"
                           [ngModel]="detalle.motivoBajaId"
@@ -533,7 +533,7 @@
                         (keydown)="bloquearCantidadMayor($event, maximoDevolucion(detalle))"
                         (ngModelChange)="ajustarCantidadDevolucion(detalle)"
                       />
-                      <span class="sub-dato">MÃ¡x. {{ maximoDevolucion(detalle) }}</span>
+                      <span class="sub-dato">Máx. {{ maximoDevolucion(detalle) }}</span>
                     </td>
                   </tr>
                 } @empty {
@@ -629,11 +629,11 @@
                           (keydown)="bloquearCantidadMayor($event, maximoEntrega(detalle))"
                           (ngModelChange)="ajustarCantidadEntrega(detalle)"
                         />
-                        <span class="sub-dato">MÃ¡x. {{ maximoEntrega(detalle) }}</span>
+                        <span class="sub-dato">Máx. {{ maximoEntrega(detalle) }}</span>
                       } @else if (detalle.lotesEntregados.length) {
                         <span>{{ detalle.entregado }}</span>
                       } @else {
-                        â€”
+                        —
                       }
                     </td>
                     <td class="celda_centrada">{{ detalle.entregado }}</td>

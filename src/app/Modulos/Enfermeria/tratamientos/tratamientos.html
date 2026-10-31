@@ -271,24 +271,28 @@
       }
     </div>
 
-    <!-- Filtros del listado: cada opción muestra las indicaciones que están en un estado -->
-    <div
-      class="indicados-filtros"
-      role="group"
-      aria-label="Filtrar indicaciones por estado"
-    >
-      @for (filtro of filtros; track filtro.id) {
-        <button
-          type="button"
-          class="indicados-filtro"
-          [class.indicados-filtro--activo]="filtroActivo === filtro.id"
-          [attr.aria-pressed]="filtroActivo === filtro.id"
-          (click)="seleccionarFiltro(filtro.id)"
-        >
-          {{ filtro.etiqueta }}
-        </button>
-      }
-    </div>
+    <!-- Filtros del listado: cada opción muestra las indicaciones que están en un estado.
+         Exámenes no los usa: los pendientes quedan en «Exámenes indicados» y los completados
+         pasan al panel lateral. -->
+    @if (seccionActiva !== 'examenes') {
+      <div
+        class="indicados-filtros"
+        role="group"
+        aria-label="Filtrar indicaciones por estado"
+      >
+        @for (filtro of filtros; track filtro.id) {
+          <button
+            type="button"
+            class="indicados-filtro"
+            [class.indicados-filtro--activo]="filtroActivo === filtro.id"
+            [attr.aria-pressed]="filtroActivo === filtro.id"
+            (click)="seleccionarFiltro(filtro.id)"
+          >
+            {{ filtro.etiqueta }}
+          </button>
+        }
+      </div>
+    }
 
     <!-- Listado de indicaciones: solo las tarjetas se desplazan bajo el título y los filtros fijos -->
     <div class="indicados-lista">
@@ -480,28 +484,12 @@
         }
 
         @case ('examenes') {
-          @for (indicacion of examenesFiltrados; track indicacion.id) {
-            <article
-              class="indicacion-card"
-              [class.indicacion-card--naranja]="indicacion.estado === 'pendiente'"
-              [class.indicacion-card--verde]="indicacion.estado === 'realizada'"
-            >
+          @for (indicacion of examenesIndicados; track indicacion.id) {
+            <article class="indicacion-card indicacion-card--naranja">
               <header class="indicacion-encabezado">
                 <span class="indicacion-nombre">{{ indicacion.nombre }}</span>
 
                 <div class="examen-acciones">
-                  @if (indicacion.archivos.length) {
-                    <button
-                      type="button"
-                      class="examen-accion examen-accion--ver"
-                      title="Ver archivos"
-                      [attr.aria-label]="'Ver archivos del examen ' + indicacion.nombre"
-                      (click)="verArchivosExamen(indicacion)"
-                    >
-                      <i class="bi bi-eye" aria-hidden="true"></i>
-                    </button>
-                  }
-
                   <button
                     type="button"
                     class="examen-accion"
@@ -835,7 +823,51 @@
       </form>
       }
     } @else {
-      <p class="tratamientos-vacio">Aún no hay registros para mostrar.</p>
+      @if (examenesCompletados.length) {
+        <div class="examenes-completados">
+          @for (examen of examenesCompletados; track examen.id) {
+            <article class="indicacion-card indicacion-card--verde examen-completado">
+              <header class="indicacion-encabezado">
+                <span class="indicacion-nombre">{{ examen.nombre }}</span>
+
+                <div class="examen-acciones">
+                  <button
+                    type="button"
+                    class="examen-accion examen-accion--ver"
+                    title="Ver archivos"
+                    [attr.aria-label]="'Ver archivos del examen ' + examen.nombre"
+                    (click)="verArchivosExamen(examen)"
+                  >
+                    <i class="bi bi-eye" aria-hidden="true"></i>
+                  </button>
+
+                  <button
+                    type="button"
+                    class="examen-accion"
+                    title="Cargar archivos"
+                    [attr.aria-label]="'Cargar archivos del examen ' + examen.nombre"
+                    (click)="abrirCargaArchivosExamen(examen)"
+                  >
+                    <i class="bi bi-cloud-arrow-up" aria-hidden="true"></i>
+                  </button>
+                </div>
+              </header>
+
+              @if (examen.observaciones) {
+                <p class="indicacion-observaciones">{{ examen.observaciones }}</p>
+              }
+
+              <footer class="indicacion-meta">
+                <span><i class="bi bi-calendar3" aria-hidden="true"></i>{{ examen.fecha }}</span>
+                <span><i class="bi bi-clock" aria-hidden="true"></i>{{ examen.hora }}</span>
+                <span><i class="bi bi-person" aria-hidden="true"></i>{{ examen.usuario }}</span>
+              </footer>
+            </article>
+          }
+        </div>
+      } @else {
+        <p class="tratamientos-vacio">No hay exámenes completados.</p>
+      }
     }
   </section>
 

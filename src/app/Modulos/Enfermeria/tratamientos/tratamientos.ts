@@ -336,9 +336,14 @@ export class Tratamientos implements OnInit, OnDestroy {
     return this.medicamentos.filter((indicacion) => indicacion.estado === this.estadoFiltro);
   }
 
-  /** Exámenes que muestra el listado con el filtro elegido. */
-  get examenesFiltrados(): ExamenIndicadoVista[] {
-    return this.examenes.filter((indicacion) => indicacion.estado === this.estadoFiltro);
+  /** Exámenes aún no realizados: se muestran en «Exámenes indicados». */
+  get examenesIndicados(): ExamenIndicadoVista[] {
+    return this.examenes.filter((indicacion) => indicacion.estado === 'pendiente');
+  }
+
+  /** Exámenes con resultados cargados: se muestran en «Exámenes completados». */
+  get examenesCompletados(): ExamenIndicadoVista[] {
+    return this.examenes.filter((indicacion) => indicacion.estado === 'realizada');
   }
 
   /** Cuidados que muestra el listado con el filtro elegido. */
@@ -352,6 +357,10 @@ export class Tratamientos implements OnInit, OnDestroy {
     if (this.sinEpisodioActivo) return 'Abra un episodio para consultar sus indicaciones.';
     if (this.errorCargaIndicaciones) {
       return 'No se pudieron cargar las indicaciones. Intente nuevamente.';
+    }
+
+    if (this.seccionActiva === 'examenes') {
+      return 'No hay exámenes indicados.';
     }
 
     return this.filtroActivo === 'pendientes'
@@ -405,7 +414,7 @@ export class Tratamientos implements OnInit, OnDestroy {
 
     if (this.seccionActiva === 'medicamentos') return 'Registrar administración';
     if (this.seccionActiva === 'cuidados') return 'Registrar cuidado';
-    return 'Historial';
+    return 'Exámenes completados';
   }
 
   /** Indica si la indicación está seleccionada en el listado. */

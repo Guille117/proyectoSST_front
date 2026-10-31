@@ -265,6 +265,35 @@ describe('Paciente', () => {
     expect(filasEgresados[0].textContent).toContain('EXP-002');
   });
 
+  it('carga y permite subir documentos del último episodio de un egresado', async () => {
+    servicioPaciente.listarPacientes.mockReturnValue(of([paciente, pacienteEgresado]));
+
+    await render();
+    component.cambiarFiltroPacientes(false);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(component.pacienteSeleccionado?.pacienteId).toBe(2);
+    expect(servicioDocumento.listarDocumentos).toHaveBeenCalledWith(202);
+
+    component.abrirModalDocumentos('AUTORIZACION_PROCEDIMIENTO', 'Autorización');
+    expect(modalService.open).toHaveBeenCalledWith(
+      VisorArchivos,
+      expect.objectContaining({ onEliminar: undefined }),
+    );
+
+    const input = { value: '', click: vi.fn() } as unknown as HTMLInputElement;
+    component.seleccionarArchivo('REFERENCIA', input);
+    component.subirDocumento({ target: { files: [archivo], value: '' } } as unknown as Event);
+
+    expect(servicioDocumento.subirDocumento).toHaveBeenCalledWith(
+      202,
+      'REFERENCIA',
+      5,
+      archivo,
+    );
+  });
+
   it('lista las alergias y enfermedades diagnosticadas del paciente', async () => {
     await render();
 
