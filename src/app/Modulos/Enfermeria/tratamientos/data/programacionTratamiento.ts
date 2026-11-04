@@ -149,8 +149,8 @@ function totalAplicaciones(tratamiento: ProgramacionTratamiento): number {
   const horas = (tratamiento.duracionCantidad ?? 0) * 24;
   if (horas <= 0) return 0;
 
-  // El tratamiento incluye la aplicación de inicio y la de cierre del último día
-  return Math.max(1, Math.floor(horas / tratamiento.frecuencia) + 1);
+  // Cantidad de aplicaciones = horas / frecuencia, truncada al entero.
+  return Math.max(1, Math.floor(horas / tratamiento.frecuencia));
 }
 
 /** Clave de minuto para comparar fechas programadas sin depender de los segundos. */

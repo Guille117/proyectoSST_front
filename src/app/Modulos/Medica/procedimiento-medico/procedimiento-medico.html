@@ -26,22 +26,6 @@
     class="contenido-procedimiento"
     [class.contenido-procedimiento--registro]="esRegistrar"
   >
-    <!-- Check para indicar si el procedimiento ya fue finalizado -->
-    <div class="finalizado-checkbox">
-      <button
-        type="button"
-        class="chk-finalizado"
-        [class.activo]="procedimientoFinalizado"
-        (click)="alternarFinalizado()"
-        [disabled]="!esRegistrar || soloLectura || guardando"
-        [attr.aria-pressed]="procedimientoFinalizado"
-        aria-label="{{ textoFinalizado }}"
-      >
-        <span class="chk-icono"></span>
-        <span class="chk-texto">{{ textoFinalizado }}</span>
-      </button>
-    </div>
-
     @if (esRegistrar) {
       <form
         id="formProcedimiento"
@@ -106,6 +90,22 @@
             maxlength="2000"
             [(ngModel)]="resultado"
           ></textarea>
+        </div>
+
+        <!-- Check para indicar si el procedimiento ya fue finalizado -->
+        <div class="finalizado-checkbox">
+          <button
+            type="button"
+            class="chk-finalizado"
+            [class.activo]="procedimientoFinalizado"
+            (click)="alternarFinalizado()"
+            [disabled]="soloLectura || guardando"
+            [attr.aria-pressed]="procedimientoFinalizado"
+            aria-label="{{ textoFinalizado }}"
+          >
+            <span class="chk-icono"></span>
+            <span class="chk-texto">{{ textoFinalizado }}</span>
+          </button>
         </div>
 
         <div class="indicacion-fila indicacion-fila--dos">

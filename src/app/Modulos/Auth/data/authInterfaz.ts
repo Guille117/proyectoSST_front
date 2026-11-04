@@ -38,3 +38,9 @@ export interface LoginResponse {
   estado?: boolean;
   permisos?: PermisoAuth[];
 }
+
+export interface EstadoSesion {
+  id: number;
+  username: string;
+  estado: boolean;
+}

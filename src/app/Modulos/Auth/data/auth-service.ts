@@ -1,9 +1,10 @@
 import { Injectable, signal, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { Observable, tap } from 'rxjs';
+import { Observable, Subscription, catchError, interval, of, switchMap, tap } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 import {
+  EstadoSesion,
   EstablecerCredencialesRequest,
   LoginRequest,
   LoginResponse,
@@ -18,6 +19,9 @@ export class AuthService {
   private router = inject(Router);
   private apiUrl = `${environment.apiUrl}/auth`;
 
+  private sondeoSub: Subscription | null = null;
+  private readonly intervaloMs = 10000;
+
   currentUser = signal<LoginResponse | null>(this.obtenerUsuarioGuardado());
 
   login(credentials: LoginRequest): Observable<LoginResponse> {
@@ -28,6 +32,7 @@ export class AuthService {
           localStorage.setItem('auth_token', token);
           localStorage.setItem('auth_user', JSON.stringify(res));
           this.currentUser.set(res);
+          this.iniciarSondeo();
         }
       })
     );
@@ -49,10 +54,27 @@ export class AuthService {
   }
 
   logout(): void {
+    this.detenerSondeo();
     localStorage.removeItem('auth_token');
     localStorage.removeItem('auth_user');
     this.currentUser.set(null);
     this.router.navigate(['/login']);
+  }
+
+  iniciarSondeo(): void {
+    if (this.sondeoSub) {
+      return;
+    }
+    this.sondeoSub = interval(this.intervaloMs)
+      .pipe(
+        switchMap(() => this.http.get<EstadoSesion>(`${this.apiUrl}/me`).pipe(catchError(() => of(null)))),
+      )
+      .subscribe();
+  }
+
+  detenerSondeo(): void {
+    this.sondeoSub?.unsubscribe();
+    this.sondeoSub = null;
   }
 
   isLoggedIn(): boolean {
@@ -88,5 +110,6 @@ export class AuthService {
     localStorage.setItem('auth_token', token);
     localStorage.setItem('auth_user', JSON.stringify(res));
     this.currentUser.set(res);
+    this.iniciarSondeo();
   }
 }

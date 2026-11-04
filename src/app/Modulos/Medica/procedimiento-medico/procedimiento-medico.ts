@@ -279,9 +279,7 @@ export class ProcedimientoMedico implements OnInit, OnDestroy {
   }
 
   get textoFinalizado(): string {
-    return this.procedimientoFinalizado
-      ? 'Procedimiento finalizado'
-      : 'Procedimiento sin finalizar';
+    return this.procedimientoFinalizado ? 'Finalizado' : 'Marcar como finalizado';
   }
 
   /** Marca o retira la finalización del formulario actualizando su fecha de fin. */

@@ -88,18 +88,18 @@
   gap: 0.35rem;
   padding: 0.4rem 0.75rem;
   background: none;
-  border: 1px solid #dfe7f3;
+  border: 1px solid #ed1a0f;
   border-radius: 6px;
-  color: #1f2f45;
+  color: #ed1a0f;
   font-size: 0.8125rem;
   font-weight: 500;
   cursor: pointer;
   transition: background-color 0.2s ease, border-color 0.2s ease;
 
   &.activo {
-    background: #e8f1ff;
-    border-color: #0d6efd;
-    color: #0d6efd;
+    background: #e8f7ee;
+    border-color: #22c55e;
+    color: #22c55e;
   }
 
   &:disabled {
