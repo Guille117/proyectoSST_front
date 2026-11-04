@@ -92,7 +92,8 @@
           ></textarea>
         </div>
 
-        <!-- Check para indicar si el procedimiento ya fue finalizado -->
+        <!-- Check para indicar si el procedimiento ya fue finalizado y la autorización
+             necesaria para generar el documento correspondiente -->
         <div class="finalizado-checkbox">
           <button
             type="button"
@@ -106,6 +107,16 @@
             <span class="chk-icono"></span>
             <span class="chk-texto">{{ textoFinalizado }}</span>
           </button>
+
+          <label class="autorizacion-check">
+            <input
+              type="checkbox"
+              class="chk-autorizacion"
+              [disabled]="soloLectura || guardando"
+              [(ngModel)]="requiereAutorizacion"
+            />
+            <span>Requiere autorización del paciente o familiar responsable</span>
+          </label>
         </div>
 
         <div class="indicacion-fila indicacion-fila--dos">

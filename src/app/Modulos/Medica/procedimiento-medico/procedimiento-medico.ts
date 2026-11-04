@@ -118,6 +118,10 @@ export class ProcedimientoMedico implements OnInit, OnDestroy {
   inicio = '';
   fin = '';
 
+  /** Indica si el procedimiento requiere autorización del paciente o del familiar
+   * responsable para generar el documento. Solo selección visual por ahora. */
+  requiereAutorizacion = false;
+
   /** Estado del buscador y de la selección de recursos. */
   tipoRecurso: TipoRecurso = 'medicamento';
   textoBusquedaRecurso = '';

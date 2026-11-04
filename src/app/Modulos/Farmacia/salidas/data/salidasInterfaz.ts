@@ -89,6 +89,20 @@ export interface DevolucionSalidaRequest {
   lineas: DevolucionLineaRequest[];
 }
 
+/** Recurso (medicamento o insumo) que Enfermería solicita a Farmacia. */
+export interface RecursoSolicitudSalidaRequest {
+  tipo: TipoRecursoSalida;
+  referenciaId: number;
+  cantidad: number;
+}
+
+/** Solicitud directa de Enfermería a Farmacia, sin procedimiento médico. */
+export interface SolicitudSalidaCrearRequest {
+  episodioId: number;
+  usuarioId: number;
+  recursos: RecursoSolicitudSalidaRequest[];
+}
+
 /** Línea de una salida directa: producto, lote elegido y cantidad que sale del inventario. */
 export interface SalidaDirectaLineaRequest {
   tipo: TipoRecursoSalida;

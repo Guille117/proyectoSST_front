@@ -47,3 +47,9 @@ export interface EjecucionCuidadoResponse {
   usuarioNombre: string;
   fechaRegistro: string;
 }
+
+/** Disponibilidad en piso de un medicamento del catálogo dentro del episodio. */
+export interface DisponibilidadMedicamentoResponse {
+  medicamentoLogId: number;
+  disponible: number;
+}

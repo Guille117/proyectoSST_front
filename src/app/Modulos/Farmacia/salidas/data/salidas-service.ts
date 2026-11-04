@@ -9,6 +9,7 @@ import {
   HistorialMovimiento,
   SalidaDirectaRequest,
   SolicitudSalida,
+  SolicitudSalidaCrearRequest,
   SolicitudSalidaResumen,
 } from './salidasInterfaz';
 
@@ -41,6 +42,13 @@ export class SalidasService {
   obtener(id: number): Observable<SolicitudSalida> {
     return this.http
       .get<SolicitudSalida>(`${this.apiUrl}/${id}`)
+      .pipe(timeout(TIEMPO_ESPERA_MS));
+  }
+
+  /** Crea la solicitud directa de Enfermería a Farmacia, sin procedimiento médico. */
+  crearSolicitud(request: SolicitudSalidaCrearRequest): Observable<SolicitudSalida> {
+    return this.http
+      .post<SolicitudSalida>(this.apiUrl, request)
       .pipe(timeout(TIEMPO_ESPERA_MS));
   }
 

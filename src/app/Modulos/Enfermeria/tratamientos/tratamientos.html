@@ -43,7 +43,7 @@
     (change)="seleccionarArchivosExamen($event)"
   />
 
-  <!-- Solicitud de medicamento: usa el catálogo de recursos de farmacia de procedimientos -->
+  <!-- Solicitud a farmacia: búsqueda a la izquierda y recursos solicitados a la derecha -->
   @if (solicitandoMedicamento) {
     <section class="solicitud-medicamento" aria-labelledby="tituloSolicitudMedicamento">
       <header class="solicitud-medicamento_cabecera">
@@ -54,70 +54,22 @@
         </button>
       </header>
 
-      <div class="solicitud-medicamento_contenido">
-        <!-- Medicamentos agregados a la solicitud -->
+      <div class="panel solicitud-medicamento_contenido">
+        <!-- Búsqueda y selección de recursos en farmacia -->
         <section
-          class="panel solicitud-medicamento_lista"
-          aria-labelledby="tituloSolicitudLista"
-        >
-          <h3 class="panel-titulo" id="tituloSolicitudLista">Medicamentos solicitados</h3>
-
-          @if (medicamentosSolicitados.length) {
-            <ul class="solicitud-medicamento_items">
-              @for (medicamento of medicamentosSolicitados; track medicamento.id) {
-                <li class="solicitud-medicamento_item">
-                  <span class="solicitud-medicamento_nombre">{{ medicamento.nombre }}</span>
-                  <span class="solicitud-medicamento_cantidad">{{ medicamento.cantidad }}</span>
-
-                  <button
-                    type="button"
-                    class="solicitud-medicamento_quitar"
-                    [attr.aria-label]="'Quitar ' + medicamento.nombre"
-                    (click)="quitarMedicamento(medicamento.id)"
-                  >
-                    <i class="bi bi-trash3" aria-hidden="true"></i>
-                  </button>
-                </li>
-              }
-            </ul>
-          } @else {
-            <p class="indicacion-vacio">
-              Busque y agregue los medicamentos que desea solicitar a farmacia.
-            </p>
-          }
-
-          <div class="acciones-formulario solicitud-medicamento_acciones">
-            <button
-              type="button"
-              class="btn _cancelar"
-              [disabled]="!medicamentosSolicitados.length || enviandoSolicitud"
-              (click)="limpiarSolicitudMedicamento()"
-            >
-              Cancelar
-            </button>
-            <button
-              type="button"
-              class="btn _guardar"
-              [disabled]="!puedeEnviarSolicitud"
-              (click)="enviarSolicitudMedicamento()"
-            >
-              {{ enviandoSolicitud ? 'Solicitando...' : 'Solicitar medicamento' }}
-            </button>
-          </div>
-
-          @if (!cargandoTiposSolicitud && !hayTipoSolicitud) {
-            <p class="solicitud-medicamento_ayuda">
-              No hay un tipo de solicitud configurado en el catálogo de procedimientos.
-            </p>
-          }
-        </section>
-
-        <!-- Búsqueda y selección de medicamentos en farmacia -->
-        <section
-          class="panel solicitud-medicamento_busqueda"
+          class="solicitud-medicamento_busqueda"
           aria-labelledby="tituloSolicitudBusqueda"
         >
-          <h3 class="panel-titulo" id="tituloSolicitudBusqueda">Buscar medicamento</h3>
+          <h3 class="panel-titulo" id="tituloSolicitudBusqueda">
+            Buscar {{ etiquetaRecursoBusqueda }}
+          </h3>
+
+          <app-tab-switch
+            op1="Medicamento"
+            op2="Insumo"
+            [mostrarActivos]="tipoBusqueda === 'MEDICAMENTO'"
+            (opcionCambiada)="cambiarTipoBusqueda($event)"
+          ></app-tab-switch>
 
           @if (medicamentoSeleccionado; as medicamento) {
             <div class="solicitud-medicamento_seleccionado">
@@ -168,8 +120,8 @@
                 <input
                   class="inputB"
                   type="text"
-                  placeholder="Buscar medicamento..."
-                  aria-label="Buscar medicamento"
+                  [placeholder]="'Buscar ' + etiquetaRecursoBusqueda + '...'"
+                  [attr.aria-label]="'Buscar ' + etiquetaRecursoBusqueda"
                   maxlength="1000"
                   [disabled]="cargandoMedicamentos"
                   [(ngModel)]="textoBusquedaMedicamento"
@@ -179,8 +131,8 @@
                 <button
                   class="btnLupa"
                   type="button"
-                  title="Buscar medicamento"
-                  aria-label="Buscar medicamento"
+                  [title]="'Buscar ' + etiquetaRecursoBusqueda"
+                  [attr.aria-label]="'Buscar ' + etiquetaRecursoBusqueda"
                   [disabled]="cargandoMedicamentos"
                   (click)="buscarMedicamentos()"
                 >
@@ -192,10 +144,10 @@
             @if (busquedaMedicamentoRealizada) {
               <div class="solicitud-medicamento_resultados">
                 @if (cargandoMedicamentos) {
-                  <p class="indicacion-vacio">Buscando medicamentos...</p>
+                  <p class="indicacion-vacio">Buscando {{ etiquetaRecursoBusqueda }}s...</p>
                 } @else if (medicamentosEncontrados.length) {
                   <div class="tabla-container">
-                    <table aria-label="Medicamentos disponibles en farmacia">
+                    <table [attr.aria-label]="'Recursos disponibles en farmacia'">
                       <thead>
                         <tr>
                           <th class="columna-numero celda_centrada" scope="col">No.</th>
@@ -227,7 +179,7 @@
                       <tfoot>
                         <tr>
                           <td colspan="3" class="solicitud-medicamento_ayuda">
-                            Seleccione un medicamento
+                            Seleccione un {{ etiquetaRecursoBusqueda }}
                           </td>
                         </tr>
                       </tfoot>
@@ -235,15 +187,77 @@
                   </div>
                 } @else {
                   <p class="indicacion-vacio">
-                    No se encontraron medicamentos que coincidan con la búsqueda.
+                    No se encontraron {{ etiquetaRecursoBusqueda }}s que coincidan con la búsqueda.
                   </p>
                 }
               </div>
             } @else {
-              <p class="indicacion-vacio">Busque un medicamento para agregarlo a la solicitud.</p>
+              <p class="indicacion-vacio">
+                Busque un {{ etiquetaRecursoBusqueda }} para agregarlo a la solicitud.
+              </p>
             }
           }
         </section>
+
+        <!-- Recursos agregados a la solicitud -->
+        <section class="solicitud-medicamento_lista" aria-labelledby="tituloSolicitudLista">
+          <h3 class="panel-titulo" id="tituloSolicitudLista">Medicamentos solicitados</h3>
+
+          @if (medicamentosSolicitados.length) {
+            <ul class="solicitud-medicamento_items">
+              @for (
+                medicamento of medicamentosSolicitados;
+                track medicamento.tipo + '-' + medicamento.id
+              ) {
+                <li class="solicitud-medicamento_item">
+                  <span class="solicitud-medicamento_nombre">{{ medicamento.nombre }}</span>
+                  <input
+                    class="solicitud-medicamento_cantidad-input"
+                    type="number"
+                    min="1"
+                    step="1"
+                    inputmode="numeric"
+                    [attr.aria-label]="'Cantidad de ' + medicamento.nombre"
+                    [(ngModel)]="medicamento.cantidad"
+                    (ngModelChange)="ajustarCantidadSolicitada(medicamento)"
+                  />
+
+                  <button
+                    type="button"
+                    class="solicitud-medicamento_quitar"
+                    [attr.aria-label]="'Quitar ' + medicamento.nombre"
+                    (click)="quitarMedicamento(medicamento.tipo, medicamento.id)"
+                  >
+                    <i class="bi bi-trash3" aria-hidden="true"></i>
+                  </button>
+                </li>
+              }
+            </ul>
+          } @else {
+            <p class="indicacion-vacio">
+              Busque y agregue los medicamentos o insumos que desea solicitar a farmacia.
+            </p>
+          }
+        </section>
+      </div>
+
+      <div class="acciones-formulario solicitud-medicamento_acciones">
+        <button
+          type="button"
+          class="btn _cancelar"
+          [disabled]="!medicamentosSolicitados.length || enviandoSolicitud"
+          (click)="limpiarSolicitudMedicamento()"
+        >
+          Cancelar
+        </button>
+        <button
+          type="button"
+          class="btn _guardar"
+          [disabled]="!puedeEnviarSolicitud"
+          (click)="enviarSolicitudMedicamento()"
+        >
+          {{ enviandoSolicitud ? 'Enviando...' : 'Enviar solicitud' }}
+        </button>
       </div>
     </section>
   }
@@ -258,17 +272,6 @@
       <h3 class="panel-titulo tratamientos-titulo" id="tituloSeccionTratamiento">
         {{ seccionActual.titulo }} indicados
       </h3>
-
-      @if (!soloLectura && (seccionActiva === 'medicamentos' || seccionActiva === 'cuidados')) {
-        <button
-          type="button"
-          class="btn _principal tratamientos-solicitar"
-          (click)="abrirSolicitudMedicamento()"
-        >
-          <i class="bi bi-capsule" aria-hidden="true"></i>
-          Solicitar medicamento
-        </button>
-      }
     </div>
 
     <!-- Filtros del listado: cada opción muestra las indicaciones que están en un estado -->
@@ -321,6 +324,17 @@
                         </span>
                       }
                     </div>
+
+                    @if (!soloLectura && !indicacion.medicamentoLibre) {
+                      <button
+                        type="button"
+                        class="btn _principal indicacion-solicitar"
+                        (click)="solicitarParaMedicamento(indicacion)"
+                      >
+                        <i class="bi bi-capsule" aria-hidden="true"></i>
+                        Solicitar
+                      </button>
+                    }
                   </header>
 
                   <ul class="indicacion-badges">
@@ -328,6 +342,16 @@
                     <li>{{ textoFrecuencia(indicacion) }}</li>
                     <li>{{ textoDuracion(indicacion) }}</li>
                   </ul>
+
+                  @if (!indicacion.medicamentoLibre) {
+                    <p
+                      class="indicacion-disponible"
+                      [class.indicacion-disponible--agotado]="indicacion.disponiblePiso === 0"
+                    >
+                      <i class="bi bi-box-seam" aria-hidden="true"></i>
+                      Disponible: {{ indicacion.disponiblePiso }}
+                    </p>
+                  }
 
                   @if (indicacion.observaciones) {
                     <p class="indicacion-observaciones">{{ indicacion.observaciones }}</p>
@@ -447,7 +471,7 @@
                                   class="aplicaciones-accion aplicaciones-accion--editar"
                                   title="Editar aplicación"
                                   [attr.aria-label]="'Editar la aplicación ' + aplicacion.numero"
-                                  (click)="editarAplicacion(indicacion, registro)"
+                                  (click)="editarAplicacion(indicacion, registro); $event.stopPropagation()"
                                 >
                                   <i class="bi bi-pencil-square" aria-hidden="true"></i>
                                 </button>
@@ -552,6 +576,17 @@
                         </span>
                       }
                     </div>
+
+                    @if (!soloLectura) {
+                      <button
+                        type="button"
+                        class="btn _principal indicacion-solicitar"
+                        (click)="abrirSolicitudMedicamento()"
+                      >
+                        <i class="bi bi-capsule" aria-hidden="true"></i>
+                        Solicitar
+                      </button>
+                    }
                   </header>
 
                   <ul class="indicacion-badges">
@@ -676,7 +711,7 @@
                                   class="aplicaciones-accion aplicaciones-accion--editar"
                                   title="Editar aplicación"
                                   [attr.aria-label]="'Editar la aplicación ' + aplicacion.numero"
-                                  (click)="editarAplicacion(indicacion, registro)"
+                                  (click)="editarAplicacion(indicacion, registro); $event.stopPropagation()"
                                 >
                                   <i class="bi bi-pencil-square" aria-hidden="true"></i>
                                 </button>
@@ -732,35 +767,33 @@
         <p class="tratamientos-vacio">El episodio está cerrado. Solo se puede consultar.</p>
       } @else {
       <form class="administracion-form" (ngSubmit)="guardarAdministracion()">
-        @if (!editandoAplicacion) {
-          <div class="administracion-campo">
-            <label class="administracion-etiqueta" for="horaAdministracion">
-              {{
-                seccionActiva === 'cuidados'
-                  ? 'Fecha y hora de realización'
-                  : 'Fecha y hora de administración'
-              }}<span class="administracion-obligatorio" aria-hidden="true">*</span>
-            </label>
-            <select
-              class="administracion-input"
-              id="horaAdministracion"
-              name="horaAdministracion"
-              aria-required="true"
-              [(ngModel)]="horaAdministracion"
-            >
-              <option value="">Seleccionar...</option>
-              @for (hora of horasAdministracion; track hora.valor) {
-                <option [value]="hora.valor">{{ hora.numero }}. {{ hora.etiqueta }}</option>
-              }
-            </select>
-
-            @if (!horasAdministracion.length) {
-              <span class="administracion-ayuda">
-                No hay horas programadas pendientes para esta indicación.
-              </span>
+        <div class="administracion-campo">
+          <label class="administracion-etiqueta" for="horaAdministracion">
+            {{
+              seccionActiva === 'cuidados'
+                ? 'Fecha y hora de realización'
+                : 'Fecha y hora de administración'
+            }}<span class="administracion-obligatorio" aria-hidden="true">*</span>
+          </label>
+          <select
+            class="administracion-input"
+            id="horaAdministracion"
+            name="horaAdministracion"
+            aria-required="true"
+            [(ngModel)]="horaAdministracion"
+          >
+            <option value="">Seleccionar...</option>
+            @for (hora of horasAdministracion; track hora.valor) {
+              <option [value]="hora.valor">{{ hora.numero }}. {{ hora.etiqueta }}</option>
             }
-          </div>
-        }
+          </select>
+
+          @if (!horasAdministracion.length) {
+            <span class="administracion-ayuda">
+              No hay horas programadas pendientes para esta indicación.
+            </span>
+          }
+        </div>
 
         <!-- Estado de la administración -->
         <div class="administracion-campo">
@@ -782,7 +815,7 @@
           </select>
         </div>
 
-        @if (seccionActiva === 'medicamentos' && !editandoAplicacion) {
+        @if (seccionActiva === 'medicamentos') {
           <div class="administracion-campo">
             <label class="administracion-etiqueta" for="cantidadAdministrada">
               Cantidad
@@ -803,6 +836,13 @@
               [disabled]="esNoAdministrado"
               [(ngModel)]="cantidadAdministrada"
             />
+
+            @if (sinStockParaAdministrar) {
+              <span class="administracion-ayuda administracion-ayuda--error">
+                No hay suficiente medicamento entregado por Farmacia. Disponible:
+                {{ disponibleParaAdministrar }}.
+              </span>
+            }
           </div>
         }
 
@@ -829,7 +869,7 @@
             Cancelar
           </button>
           <button type="submit" class="btn _guardar" [disabled]="!puedeGuardarAdministracion">
-            Guardar
+            {{ editandoAplicacion ? 'Guardar cambios' : 'Guardar' }}
           </button>
         </div>
       </form>

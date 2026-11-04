@@ -72,13 +72,33 @@
   overflow: hidden;
 }
 
-/* Estilo para el checkbox de procedimiento finalizado */
+/* Estilo para el checkbox de procedimiento finalizado y el check de autorización */
 .finalizado-checkbox {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 1.25rem;
+  flex-wrap: wrap;
   padding: 0.5rem 0;
   font-size: 0.875rem;
+}
+
+/* Check de autorización junto al check de finalizado */
+.autorizacion-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #334155;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+
+  .chk-autorizacion {
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    accent-color: var(--azulSecundario);
+    cursor: pointer;
+  }
 }
 
 /* Botón tipo casilla para finalizar procedimiento */
