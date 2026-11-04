@@ -60,6 +60,7 @@ export interface DetalleSolicitudSalida {
 /** Solicitud con su detalle completo. */
 export interface SolicitudSalida extends SolicitudSalidaBase {
   solicitante: string;
+  solicitantePuesto: string;
   detalles: DetalleSolicitudSalida[];
 }
 

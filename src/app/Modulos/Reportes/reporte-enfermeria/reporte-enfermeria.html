@@ -1,0 +1,113 @@
+<div class="reporte areaTrabajo-container">
+    <div class="reporte-encabezado">
+        <h2 class="reporte-titulo">Reporte de Enfermería</h2>
+        <div class="filtros">
+            <label>Desde <input type="date" [(ngModel)]="desde" /></label>
+            <label>Hasta <input type="date" [(ngModel)]="hasta" /></label>
+            <button type="button" class="btn _principal" [disabled]="cargando" (click)="generar()">Generar</button>
+            <button type="button" class="btn" (click)="exportarPdf()">PDF</button>
+            <button type="button" class="btn" (click)="exportarExcel()">Excel</button>
+        </div>
+    </div>
+
+    @if (cargando) {
+        <p>Cargando reporte...</p>
+    } @else {
+        <div class="kpis">
+            <div class="kpi">
+                <div class="valor">{{ monitoreo.signosVitales }}</div>
+                <div class="etiqueta">Signos vitales</div>
+            </div>
+            <div class="kpi">
+                <div class="valor">{{ monitoreo.glucosa }}</div>
+                <div class="etiqueta">Mediciones de glucosa</div>
+            </div>
+            <div class="kpi">
+                <div class="valor">{{ monitoreo.controlHidrico }}</div>
+                <div class="etiqueta">Control hídrico</div>
+            </div>
+        </div>
+
+        <h3 class="seccion-titulo">Glucosa promedio por tipo</h3>
+        <div class="table-container">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th class="celda_izquierda">Tipo</th>
+                        <th class="celda_centrada">Promedio</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (g of glucosa; track g.tipo) {
+                        <tr>
+                            <td class="celda_izquierda">{{ g.tipo }}</td>
+                            <td class="celda_centrada">{{ g.promedio }}</td>
+                        </tr>
+                    } @empty {
+                        <tr>
+                            <td colspan="2" class="celda_centrada">Sin datos.</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        @if (medicamentos.length) {
+            <div class="grafica">
+                <app-grafica-barras
+                    [etiquetas]="etiquetasMedicamentos()"
+                    [valores]="valoresMedicamentos()"
+                    titulo="Medicamentos administrados"
+                ></app-grafica-barras>
+            </div>
+        }
+
+        <h3 class="seccion-titulo">Medicamentos administrados</h3>
+        <div class="table-container">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th class="celda_izquierda">Medicamento</th>
+                        <th class="celda_centrada">Aplicaciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (m of medicamentos; track m.nombre) {
+                        <tr>
+                            <td class="celda_izquierda">{{ m.nombre }}</td>
+                            <td class="celda_centrada">{{ m.cantidad }}</td>
+                        </tr>
+                    } @empty {
+                        <tr>
+                            <td colspan="2" class="celda_centrada">Sin datos.</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <h3 class="seccion-titulo">Cuidados realizados</h3>
+        <div class="table-container">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th class="celda_izquierda">Cuidado</th>
+                        <th class="celda_centrada">Ejecuciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (c of cuidados; track c.nombre) {
+                        <tr>
+                            <td class="celda_izquierda">{{ c.nombre }}</td>
+                            <td class="celda_centrada">{{ c.cantidad }}</td>
+                        </tr>
+                    } @empty {
+                        <tr>
+                            <td colspan="2" class="celda_centrada">Sin datos.</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>

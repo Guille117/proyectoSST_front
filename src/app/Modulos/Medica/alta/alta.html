@@ -384,13 +384,13 @@
   @if (tratamientoVisible) {
     <aside class="tratamiento-panel" aria-labelledby="tituloTratamientoAgregado">
       <h3 class="tratamiento-panel_titulo" id="tituloTratamientoAgregado">
-        Tratamiento ({{ totalTratamiento }})
+        Tratamiento
       </h3>
 
       @if (tratamientoMedicamentos.length) {
         <section class="tratamiento-grupo" aria-labelledby="tituloMedicamentosTratamiento">
           <h4 class="tratamiento-grupo_titulo" id="tituloMedicamentosTratamiento">
-            Medicamentos ({{ tratamientoMedicamentos.length }})
+            Medicamentos
           </h4>
 
           @for (medicamento of tratamientoMedicamentos; track $index) {
@@ -454,7 +454,7 @@
       @if (tratamientoCuidados.length) {
         <section class="tratamiento-grupo" aria-labelledby="tituloCuidadosTratamiento">
           <h4 class="tratamiento-grupo_titulo" id="tituloCuidadosTratamiento">
-            Cuidados ({{ tratamientoCuidados.length }})
+            Cuidados
           </h4>
 
           @for (cuidado of tratamientoCuidados; track $index) {

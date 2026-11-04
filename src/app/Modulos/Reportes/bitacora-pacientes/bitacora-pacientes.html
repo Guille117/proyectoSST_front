@@ -1,0 +1,83 @@
+<div class="reporte areaTrabajo-container">
+    <div class="reporte-encabezado">
+        <h2 class="reporte-titulo">Bitácora de pacientes</h2>
+        <div class="filtros">
+            <label>Paciente
+                <input
+                    type="search"
+                    [(ngModel)]="textoBusqueda"
+                    (keydown.enter)="buscarPacientes()"
+                    placeholder="Buscar por nombre o CUI..."
+                />
+            </label>
+            <button type="button" class="btn" [disabled]="buscando" (click)="buscarPacientes()">Buscar</button>
+            <label>Desde <input type="date" [(ngModel)]="desde" /></label>
+            <label>Hasta <input type="date" [(ngModel)]="hasta" /></label>
+            <button
+                type="button"
+                class="btn _principal"
+                [disabled]="cargando || !pacienteSeleccionado"
+                (click)="generar()"
+            >
+                Generar
+            </button>
+        </div>
+    </div>
+
+    @if (resultados.length) {
+        <div class="table-container">
+            <table class="table">
+                <tbody>
+                    @for (p of resultados; track p.pacienteId) {
+                        <tr>
+                            <td class="celda_izquierda">
+                                <button type="button" class="btn" (click)="seleccionarPaciente(p)">
+                                    {{ p.nombreCompleto }} ({{ p.cui ?? 'sin CUI' }})
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+
+    @if (pacienteSeleccionado) {
+        <p>Paciente seleccionado: <strong>{{ pacienteSeleccionado.nombreCompleto }}</strong></p>
+    }
+
+    <div class="table-container">
+        <table class="table" [attr.aria-busy]="cargando">
+            <thead>
+                <tr>
+                    <th class="celda_centrada">Fecha / Hora</th>
+                    <th class="celda_izquierda">Usuario</th>
+                    <th class="celda_izquierda">Acción</th>
+                    <th class="celda_izquierda">Entidad</th>
+                    <th class="celda_izquierda">Detalle</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (cargando) {
+                    <tr>
+                        <td colspan="5" class="celda_centrada">Cargando bitácora...</td>
+                    </tr>
+                } @else {
+                    @for (e of entradas; track e.id) {
+                        <tr>
+                            <td class="celda_centrada">{{ formatearFechaHora(e.fechaHora) }}</td>
+                            <td class="celda_izquierda">{{ e.usuarioNombre ?? '—' }}</td>
+                            <td class="celda_izquierda">{{ e.accion }}</td>
+                            <td class="celda_izquierda">{{ e.entidad ?? e.modulo ?? '—' }}</td>
+                            <td class="celda_izquierda" [title]="e.detalle ?? ''">{{ e.detalle ?? '—' }}</td>
+                        </tr>
+                    } @empty {
+                        <tr>
+                            <td colspan="5" class="celda_centrada">Sin registros.</td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

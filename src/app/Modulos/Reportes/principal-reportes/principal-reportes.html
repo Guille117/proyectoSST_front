@@ -1,0 +1,49 @@
+<div class="principal">
+    <nav class="subMenuNav">
+        @if (permisos.puedeLeerSubmodulo('REPORTES-FARMACIA')) {
+            <div class="option" routerLink="farmacia" routerLinkActive="active">
+                Farmacia
+            </div>
+        }
+
+        @if (permisos.puedeLeerSubmodulo('REPORTES-PACIENTES')) {
+            <div class="option" routerLink="pacientes" routerLinkActive="active">
+                Pacientes
+            </div>
+        }
+
+        @if (permisos.puedeLeerSubmodulo('REPORTES-MEDICA')) {
+            <div class="option" routerLink="medica" routerLinkActive="active">
+                Área médica
+            </div>
+        }
+
+        @if (permisos.puedeLeerSubmodulo('REPORTES-ENFERMERIA')) {
+            <div class="option" routerLink="enfermeria" routerLinkActive="active">
+                Enfermería
+            </div>
+        }
+
+        @if (permisos.puedeLeerSubmodulo('REPORTES-USUARIOS')) {
+            <div class="option" routerLink="usuarios" routerLinkActive="active">
+                Usuarios
+            </div>
+        }
+
+        @if (permisos.puedeLeerSubmodulo('REPORTES-BITACORA-PACIENTES')) {
+            <div class="option" routerLink="bitacora-pacientes" routerLinkActive="active">
+                Bitácora pacientes
+            </div>
+        }
+
+        @if (permisos.puedeLeerSubmodulo('REPORTES-BITACORA-GENERAL')) {
+            <div class="option" routerLink="bitacora-general" routerLinkActive="active">
+                Bitácora general
+            </div>
+        }
+    </nav>
+
+    <div class="contenido">
+        <router-outlet></router-outlet>
+    </div>
+</div>

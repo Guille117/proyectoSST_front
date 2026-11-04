@@ -1,5 +1,5 @@
 <!-- Procedimiento médico: rail de opciones, registro o listado en el centro y recursos o detalle a la derecha -->
-<div class="procedimiento-medico">
+<div class="procedimiento-medico" [class.procedimiento-medico--ficha-abierta]="pacienteAbierto">
   <!-- Opciones del procedimiento: registrar o consultar los realizados -->
   <section class="panel panel-secciones" aria-labelledby="tituloProcedimientoMedico">
     <h3 class="panel-titulo" id="tituloProcedimientoMedico">Procedimiento médico</h3>
@@ -20,13 +20,34 @@
     }
   </section>
 
-  <!-- Contenido central: formulario de registro o tarjetas de procedimientos -->
+  <!-- Contenido central y recursos en un único bloque separado por una línea divisoria -->
+  <div class="bloque-procedimiento">
   <section
-    class="panel contenido-procedimiento"
+    class="contenido-procedimiento"
     [class.contenido-procedimiento--registro]="esRegistrar"
   >
+    <!-- Check para indicar si el procedimiento ya fue finalizado -->
+    <div class="finalizado-checkbox">
+      <button
+        type="button"
+        class="chk-finalizado"
+        [class.activo]="procedimientoFinalizado"
+        (click)="alternarFinalizado()"
+        [disabled]="!esRegistrar || soloLectura || guardando"
+        [attr.aria-pressed]="procedimientoFinalizado"
+        aria-label="{{ textoFinalizado }}"
+      >
+        <span class="chk-icono"></span>
+        <span class="chk-texto">{{ textoFinalizado }}</span>
+      </button>
+    </div>
+
     @if (esRegistrar) {
-      <form class="indicacion-form" (ngSubmit)="registrarProcedimiento()">
+      <form
+        id="formProcedimiento"
+        class="indicacion-form"
+        (ngSubmit)="registrarProcedimiento()"
+      >
         <div class="indicacion-campo">
           <label class="indicacion-etiqueta" for="tipoProcedimientoMedico">
             Tipo de procedimiento<span class="indicacion-obligatorio" aria-hidden="true">*</span>
@@ -114,21 +135,6 @@
               [(ngModel)]="fin"
             />
           </div>
-        </div>
-
-        <div class="acciones-formulario indicacion-acciones">
-          <button
-            type="button"
-            class="btn _cancelar"
-            [disabled]="guardando"
-            (click)="cancelarRegistro()"
-          >
-            Cancelar
-          </button>
-
-          <button type="submit" class="btn _guardar" [disabled]="!puedeRegistrarProcedimiento">
-            {{ textoBotonRegistro }}
-          </button>
         </div>
       </form>
     } @else {
@@ -255,7 +261,7 @@
   </section>
 
   <!-- Panel derecho: recursos del procedimiento o detalle del procedimiento elegido -->
-  <aside class="panel panel-recursos">
+  <aside class="panel-recursos">
     @if (esRegistrar) {
       <div class="recursos-cabecera">
         <h3 class="panel-titulo" id="tituloRecursos">Recursos</h3>
@@ -471,4 +477,37 @@
       }
     }
   </aside>
+
+  @if (esRegistrar) {
+    <div class="acciones-formulario acciones-procedimiento">
+      <button
+        type="button"
+        class="btn _cancelar"
+        [disabled]="guardando"
+        (click)="cancelarRegistro()"
+      >
+        Cancelar
+      </button>
+
+      <button
+        type="submit"
+        form="formProcedimiento"
+        class="btn _guardar"
+        [disabled]="!puedeRegistrarProcedimiento"
+      >
+        {{ textoBotonRegistro }}
+      </button>
+    </div>
+  }
+  </div>
+
+  <!-- Datos del paciente: bloque compartido con el resto del módulo Médico, pegado al borde
+       derecho de la pantalla. Se abre y se cierra con su pestaña lateral. -->
+  <app-datos-paciente
+    [plegable]="true"
+    [abierto]="pacienteAbierto"
+    (abiertoCambia)="cambiarFichaPaciente($event)"
+    [cuerpoVisible]="datosPacienteVisibles"
+    (cuerpoVisibleCambia)="datosPacienteVisibles = $event"
+  ></app-datos-paciente>
 </div>

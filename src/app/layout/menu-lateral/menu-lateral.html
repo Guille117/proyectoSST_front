@@ -57,6 +57,15 @@ como el área de trabajo dinámico-->
             </div>
         }
 
+        @if (permisos.puedeLeerModulo('REPORTES')) {
+            <div class="option" routerLink="/reportes" routerLinkActive="active">
+                <div class="barra"></div>
+                <div class="foco">
+                    <i class="bi bi-bar-chart-line"></i>
+                </div>
+            </div>
+        }
+
         <div class="option" routerLink="/configuracion" routerLinkActive="active">
             <div class="barra"></div>
             <div class="foco">

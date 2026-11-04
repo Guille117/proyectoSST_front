@@ -78,6 +78,18 @@ export const routes: Routes = [
         data: { modulo: 'ENFERMERIA' },
         children: rutasEnfermeria,
       },
+      {
+        path: 'reportes',
+        canActivate: [moduloGuard],
+        canActivateChild: [submoduloGuard],
+        data: { modulo: 'REPORTES' },
+        loadComponent: () =>
+          import('./Modulos/Reportes/principal-reportes/principal-reportes').then(
+            (m) => m.PrincipalReportes,
+          ),
+        loadChildren: () =>
+          import('./Modulos/Reportes/rutasReportes').then((m) => m.rutasReportes),
+      },
     ],
   },
   {

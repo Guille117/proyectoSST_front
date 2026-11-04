@@ -52,6 +52,7 @@ interface DetalleSalidaVista extends DetalleSolicitudSalida {
 
 interface SolicitudSalidaVista extends SolicitudSalidaBase {
   solicitante: string;
+  solicitantePuesto: string;
   detalles: DetalleSalidaVista[];
 }
 
@@ -1183,6 +1184,7 @@ export class Salidas implements OnInit, OnDestroy {
       codigo: solicitud.codigo,
       paciente: solicitud.paciente,
       solicitante: solicitud.solicitante,
+      solicitantePuesto: solicitud.solicitantePuesto,
       tipoAtencion: solicitud.tipoAtencion,
       procedimiento: solicitud.procedimiento,
       fecha: solicitud.fecha,

@@ -33,6 +33,7 @@ describe('Salidas', () => {
     codigo: 'SOL-00001',
     paciente: 'Ana López',
     solicitante: 'Dra. María Pérez',
+    solicitantePuesto: 'Médico',
     tipoAtencion: 'EMERGENCIA',
     procedimiento: 'Sutura',
     fecha: '2026-10-19T10:00:00',

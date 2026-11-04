@@ -477,11 +477,6 @@ export class Alta implements OnInit, OnDestroy {
     return !this.hayTratamiento || this.cuerpoPacienteVisible;
   }
 
-  /** Cantidad total de indicaciones del tratamiento. */
-  get totalTratamiento(): number {
-    return this.tratamientoMedicamentos.length + this.tratamientoCuidados.length;
-  }
-
   /** Hay un alta vigente cargada: se puede anular o actualizar. */
   get hayAltaExistente(): boolean {
     return this.altaExistente !== null;

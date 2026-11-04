@@ -371,7 +371,12 @@
               <span>
                 {{ formatearFechaHora(solicitud.fecha) }}
               </span>
-              <span>Solicitado por: {{ solicitud.solicitante || '—' }}</span>
+              <span>
+                Solicitado por: {{ solicitud.solicitante || '—' }}
+                @if (solicitud.solicitantePuesto) {
+                  — {{ solicitud.solicitantePuesto }}
+                }
+              </span>
             </p>
           </div>
           <span class="estado" [ngClass]="claseEstado(solicitud.estado)">

@@ -239,31 +239,7 @@ export class DatosPaciente implements OnInit, OnDestroy {
     return `${dia}-${mes}-${anio}`;
   }
 
-  /** Parte el texto en líneas cortas para que el tooltip nativo no se abra tan ancho. */
-  protected textoTooltip(valor: string | null, porDefecto: string): string {
-    const texto = (valor ?? '').trim() || porDefecto;
-    const limite = 34;
-    const palabras = texto.split(/\s+/);
-    const lineas: string[] = [];
-    let linea = '';
 
-    for (const palabra of palabras) {
-      if (!linea) {
-        linea = palabra;
-        continue;
-      }
-
-      if (`${linea} ${palabra}`.length > limite) {
-        lineas.push(linea);
-        linea = palabra;
-      } else {
-        linea = `${linea} ${palabra}`;
-      }
-    }
-
-    if (linea) lineas.push(linea);
-    return lineas.join('\n');
-  }
 
   /** Fecha de un registro clínico en milisegundos; los valores inválidos quedan al final. */
   private fechaMs(valor: string): number {

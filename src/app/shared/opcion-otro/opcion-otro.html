@@ -1,6 +1,7 @@
 <div class="opcion-otro" [class.con-datos]="completo">
     <div class="opcion-otro__campo">
         <input
+            #entrada
             type="text"
             class="opcion-otro__entrada"
             [class.opcion-otro__entrada--con-acciones]="!requiereAbreviatura()"
