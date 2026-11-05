@@ -262,8 +262,17 @@
                         label="Cantidad"
                         fieldId="cantidadMedicamento"
                         [required]="true"
-                        [showError]="!!cantidadCtrl.touched && (cantidad ?? 0) <= 0"
-                        errorMessage="Ingrese una cantidad mayor a 0"
+                        [showError]="
+                            !!cantidadCtrl.touched &&
+                            ((cantidad ?? 0) <= 0 || (cantidad ?? 0) < cantidadMinimaLote)
+                        "
+                        [errorMessage]="
+                            (cantidad ?? 0) <= 0
+                                ? 'Ingrese una cantidad mayor a 0'
+                                : 'La cantidad no puede ser menor a ' +
+                                  cantidadMinimaLote +
+                                  ' (unidades ya entregadas)'
+                        "
                     >
                     <input
                         id="cantidadMedicamento"
@@ -271,6 +280,7 @@
                         type="number"
                         placeholder="Cantidad"
                         [(ngModel)]="cantidad"
+                        [min]="cantidadMinimaLote"
                         required
                         #cantidadCtrl="ngModel"
                     />

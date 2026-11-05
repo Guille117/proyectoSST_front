@@ -335,6 +335,28 @@ describe('Ingresos', () => {
     fixtureCancelar.destroy();
   });
 
+  it('oculta editar y eliminar en compras eliminadas', () => {
+    servicioCompra.listarComprasResumen.mockReturnValue(of([resumenCompra]));
+    servicioCompra.listarCompras.mockReturnValue(of([{ ...detalleCompra, estado: false }]));
+
+    const fixtureEliminada = TestBed.createComponent(Ingresos);
+    fixtureEliminada.detectChanges();
+
+    const detalle: HTMLElement = fixtureEliminada.nativeElement.querySelector('.detalle-card');
+    const acciones = Array.from(
+      detalle.querySelectorAll<HTMLButtonElement>('.acciones-compra button'),
+    );
+
+    expect(acciones.some((boton) => boton.textContent?.includes('Ver Comprobante'))).toBe(true);
+    expect(acciones.some((boton) => boton.getAttribute('title') === 'Editar compra')).toBe(false);
+    expect(acciones.some((boton) => boton.getAttribute('title') === 'Eliminar compra')).toBe(false);
+
+    fixtureEliminada.componentInstance.editarCompra();
+    expect(fixtureEliminada.componentInstance.compraEditar).toBeNull();
+
+    fixtureEliminada.destroy();
+  });
+
   it('busca compras por código y envía activos=true', () => {
     servicioCompra.buscarComprasResumen.mockReturnValue(of([resumenCompra]));
 

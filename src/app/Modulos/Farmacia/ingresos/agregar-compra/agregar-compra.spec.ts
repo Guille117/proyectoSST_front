@@ -1129,4 +1129,44 @@ describe('AgregarCompra', () => {
 
     editFixture.destroy();
   });
+
+  it('no reduce la cantidad por debajo de las unidades entregadas del lote', async () => {
+    const editFixture = crearFixtureEdicion();
+    const editComponent = editFixture.componentInstance;
+    editComponent.editarLote(0);
+    await editFixture.whenStable();
+    const formulario = editFixture.debugElement
+      .query(By.css('.trabajoArea2 form'))
+      .injector.get(NgForm);
+
+    editComponent.cantidad = 9;
+    editComponent.agregarLote(formulario);
+
+    expect(editComponent.lotes[0].cantidad).toBe(50);
+    expect(popUp.advertencia).toHaveBeenCalledWith(
+      'La cantidad no puede ser menor a 10: el lote ya tiene unidades entregadas.',
+    );
+
+    editFixture.destroy();
+  });
+
+  it('no cambia el producto de un lote con unidades entregadas', async () => {
+    const editFixture = crearFixtureEdicion();
+    const editComponent = editFixture.componentInstance;
+    editComponent.editarLote(0);
+    await editFixture.whenStable();
+    const formulario = editFixture.debugElement
+      .query(By.css('.trabajoArea2 form'))
+      .injector.get(NgForm);
+
+    editComponent.productoSeleccionadoId = 99;
+    editComponent.agregarLote(formulario);
+
+    expect(editComponent.lotes[0].idItem).toBe(compraDetalle.lotes[0].idMedicamentoLog);
+    expect(popUp.advertencia).toHaveBeenCalledWith(
+      'No se puede cambiar el producto de un lote con unidades ya entregadas.',
+    );
+
+    editFixture.destroy();
+  });
 });

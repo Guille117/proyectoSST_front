@@ -290,14 +290,14 @@ export class Ingresos implements OnInit {
   }
 
   editarCompra(): void {
-    if (!this.detalleCompra || this.eliminandoCompra) return;
+    if (!this.detalleCompra?.estado || this.eliminandoCompra) return;
     this.compraEditar = this.detalleCompra;
     this.mostrarAgregarCompra.set(true);
   }
 
   async eliminarCompra(): Promise<void> {
     const detalle = this.detalleCompra;
-    if (!detalle || this.eliminandoCompra) return;
+    if (!detalle?.estado || this.eliminandoCompra) return;
 
     this.eliminandoCompra = true;
     this.cdr.markForCheck();

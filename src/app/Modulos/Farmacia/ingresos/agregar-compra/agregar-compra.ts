@@ -383,6 +383,14 @@ export class AgregarCompra implements OnInit {
     return this.indiceLoteEdicion !== null;
   }
 
+  /** Cantidad mínima editable: no puede bajar de las unidades ya entregadas del lote. */
+  get cantidadMinimaLote(): number {
+    if (this.indiceLoteEdicion === null) return 1;
+    const lote = this.lotes[this.indiceLoteEdicion];
+    if (!lote || lote.disponible === undefined) return 1;
+    return Math.max(1, lote.cantidad - lote.disponible);
+  }
+
   /**
    * Agrega los datos del lote al acumulado de la compra.
    * Requiere un producto seleccionado y el formulario del paso 1 completo.
@@ -390,6 +398,18 @@ export class AgregarCompra implements OnInit {
   agregarLote(formulario: NgForm): void {
     if (this.productoSeleccionadoId === null) {
       this.popUp.advertencia('Seleccione un medicamento o insumo antes de agregarlo.');
+      return;
+    }
+
+    if (this.cantidad !== null && this.cantidad <= 0) {
+      this.popUp.advertencia('La cantidad debe ser mayor a 0.');
+      return;
+    }
+
+    if (this.cantidad !== null && this.cantidad < this.cantidadMinimaLote) {
+      this.popUp.advertencia(
+        `La cantidad no puede ser menor a ${this.cantidadMinimaLote}: el lote ya tiene unidades entregadas.`,
+      );
       return;
     }
 
@@ -416,11 +436,6 @@ export class AgregarCompra implements OnInit {
       return;
     }
 
-    if (this.cantidad !== null && this.cantidad <= 0) {
-      this.popUp.advertencia('La cantidad debe ser mayor a 0.');
-      return;
-    }
-
     const producto = this.productoSeleccionado();
     const indiceEdicion = this.indiceLoteEdicion;
 
@@ -428,6 +443,18 @@ export class AgregarCompra implements OnInit {
       const original = this.lotes[indiceEdicion];
       if (!original) {
         this.indiceLoteEdicion = null;
+        return;
+      }
+
+      const tieneEntregas =
+        original.disponible !== undefined && original.cantidad > original.disponible;
+      const cambiaProducto =
+        original.esMedicamento !== this.isMedicamento ||
+        original.idItem !== this.productoSeleccionadoId;
+      if (tieneEntregas && cambiaProducto) {
+        this.popUp.advertencia(
+          'No se puede cambiar el producto de un lote con unidades ya entregadas.',
+        );
         return;
       }
 
@@ -440,8 +467,10 @@ export class AgregarCompra implements OnInit {
         fechaVencimiento: this.fechaVencimiento,
         precioCompra: this.precioCompra!,
         precioVenta: this.precioVenta!,
-        nombreItem: original.nombreItem,
-        descripcionItem: original.descripcionItem,
+        nombreItem: producto?.nombre ?? original.nombreItem,
+        descripcionItem: producto
+          ? this.descripcionProducto(producto)
+          : original.descripcionItem,
       };
 
       this.limpiarLote(formulario);

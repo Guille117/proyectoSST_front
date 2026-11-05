@@ -60,6 +60,7 @@ describe('Proveedores', () => {
     'cf',
     'Cf',
     ' CF ',
+    '12345678',
     '1234567-8',
     '12345678-9',
     '1234567-K',
@@ -71,7 +72,7 @@ describe('Proveedores', () => {
     expect(component.isFormValido()).toBe(true);
   });
 
-  it.each(['123456-8', '123456789-0', '12345678', '1234567-A', 'C F', '1234567-88'])(
+  it.each(['123456-8', '123456789-0', '1234567', '123456789', '1234567-A', 'C F', '1234567-88'])(
     'rechaza el NIT %j',
     (nit) => {
       component.proveedor = { nombre: 'Proveedor', nit, telefono: '', email: '' };
