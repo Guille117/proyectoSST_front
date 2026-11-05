@@ -292,6 +292,42 @@ tbody tr.selected-row td {
 					outline-color: #22c55e;
 				}
 			}
+
+			/* Generar usa el azul del proyecto; pulsa solo cuando hay una autorización pendiente */
+			.iconGenerar {
+				position: relative;
+				color: var(--azulSecundario);
+
+				&:hover:not(:disabled) {
+					color: #fff;
+					background: var(--azulSecundario);
+				}
+
+				&:focus-visible {
+					outline-color: var(--azulSecundario);
+				}
+
+				&.iconGenerar--pulsar {
+					i {
+						animation: pulso-color-autorizacion 1.6s ease-in-out infinite;
+					}
+
+					&:hover:not(:disabled) i {
+						animation: none;
+						color: #fff;
+					}
+
+					&::after {
+						content: '';
+						position: absolute;
+						inset: 0;
+						border-radius: 50%;
+						border: 2px solid currentColor;
+						pointer-events: none;
+						animation: pulso-autorizacion 1.6s ease-out infinite;
+					}
+				}
+			}
 		}
 	}
 
@@ -659,5 +695,30 @@ tbody tr.selected-row td {
 				justify-content: flex-start;
 			}
 		}
+	}
+}
+
+/* Anillo que se expande y desvanece para avisar que hay que generar la hoja */
+@keyframes pulso-autorizacion {
+	0% {
+		transform: scale(1);
+		opacity: 0.7;
+	}
+
+	100% {
+		transform: scale(1.7);
+		opacity: 0;
+	}
+}
+
+/* Cambio de color del icono al compás de la pulsación */
+@keyframes pulso-color-autorizacion {
+	0%,
+	100% {
+		color: #0d6efd;
+	}
+
+	50% {
+		color: #60a5fa;
 	}
 }

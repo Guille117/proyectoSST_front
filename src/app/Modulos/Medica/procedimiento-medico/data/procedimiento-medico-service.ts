@@ -65,6 +65,12 @@ export class ProcedimientoMedicoService {
     return this.http.delete<void>(`${this.apiUrl}/${id}`).pipe(timeout(TIMEOUT_HTTP_MS));
   }
 
+  marcarAutorizacionGenerada(id: number): Observable<void> {
+    return this.http
+      .patch<void>(`${this.apiUrl}/${id}/autorizacion-generada`, null)
+      .pipe(timeout(TIMEOUT_HTTP_MS));
+  }
+
   buscarRecursos(
     tipo: TipoRecursoProcedimientoApi,
     nombre = '',

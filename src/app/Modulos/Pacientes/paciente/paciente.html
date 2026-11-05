@@ -438,6 +438,20 @@
                                     <strong class="documento-nombre">{{ tipo.etiqueta }}</strong>
 
                                     <div class="documento-acciones">
+                                        @if (tipo.tipo === 'AUTORIZACION_PROCEDIMIENTO') {
+                                            <button
+                                                type="button"
+                                                class="iconEditar iconGenerar"
+                                                [class.iconGenerar--pulsar]="autorizacionesPendientes"
+                                                title="Generar hoja de autorización"
+                                                [attr.aria-label]="'Generar ' + tipo.etiqueta"
+                                                [disabled]="generandoAutorizacion"
+                                                (click)="generarAutorizacion()"
+                                            >
+                                                <i class="bi bi-pen" aria-hidden="true"></i>
+                                            </button>
+                                        }
+
                                         @if (documentosPorTipo(tipo.tipo).length > 0) {
                                             <button
                                                 type="button"

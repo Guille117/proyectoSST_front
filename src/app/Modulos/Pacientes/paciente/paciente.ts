@@ -24,8 +24,14 @@ import { DocumentoEpisodio, TipoDocumentoEpisodio } from './data/documentoInterf
 import { PacienteDetalle, PacienteResumido, TipoAtencion } from './data/pacienteInterfaz';
 import { PacienteService } from './data/paciente-service';
 import { UsuarioService } from '../../Usuarios/usu/data/usuario-service';
+import { ProcedimientoMedicoService } from '../../Medica/procedimiento-medico/data/procedimiento-medico-service';
 import { EpisodioResumen } from '../expediente/data/expedienteInterfaz';
 import { ResumenEpisodio } from '../expediente/resumen-episodio/resumen-episodio';
+import {
+  DatosAutorizacionVista,
+  ProcedimientoAutorizacionVista,
+  VisorAutorizacion,
+} from './visor-autorizacion/visor-autorizacion';
 
 /** Tipo de documento que se muestra en el panel del paciente. */
 interface TipoDocumentoVista {
@@ -67,6 +73,7 @@ export class Paciente implements OnInit {
   private readonly servicioPdf = inject(DocumentoTratamientoPdfService);
   private readonly servicioAlta = inject(AltaService);
   private readonly servicioUsuario = inject(UsuarioService);
+  private readonly servicioProcedimientos = inject(ProcedimientoMedicoService);
   private readonly authService = inject(AuthService);
   private readonly archivoService = inject(ArchivoService);
   private readonly popUps = inject(PopUps);
@@ -105,6 +112,10 @@ export class Paciente implements OnInit {
   cargandoTratamientos = false;
   errorTratamientos = '';
   generandoDocumento = false;
+  generandoAutorizacion = false;
+
+  /** Hay un procedimiento pendiente con autorización y sin carta generada: el icono pulsa. */
+  autorizacionesPendientes = false;
 
   /** Consumo del episodio: productos entregados y estancia en cama. */
   consumo: ConsumoEpisodio | null = null;
@@ -152,7 +163,7 @@ export class Paciente implements OnInit {
    * se muestra todavía porque el flujo actual solo maneja autorización y referencia.
    */
   protected readonly tiposDocumento: TipoDocumentoVista[] = [
-    { tipo: 'AUTORIZACION_PROCEDIMIENTO', etiqueta: 'Autorización de atención' },
+    { tipo: 'AUTORIZACION_PROCEDIMIENTO', etiqueta: 'Autorización de procedimiento' },
     { tipo: 'REFERENCIA', etiqueta: 'Hoja de referencia' },
   ];
 
@@ -201,6 +212,7 @@ export class Paciente implements OnInit {
       this.consumo = null;
       this.errorConsumo = '';
       this.cargandoConsumo = false;
+      this.autorizacionesPendientes = false;
       return;
     }
     if (!forzar && this.pacienteSeleccionado?.pacienteId === paciente.pacienteId) return;
@@ -214,8 +226,10 @@ export class Paciente implements OnInit {
     this.consumo = null;
     this.errorConsumo = '';
     this.cargandoConsumo = false;
+    this.autorizacionesPendientes = false;
     this.cargarDetalle(paciente);
     this.cargarDocumentos(paciente);
+    this.consultarAutorizacionesPendientes();
   }
 
   esSeleccionado(paciente: PacienteResumido): boolean {
@@ -684,6 +698,122 @@ export class Paciente implements OnInit {
           this.cdr.detectChanges();
         },
       });
+  }
+
+  /** Consulta los procedimientos pendientes que requieren autorización y abre su carta. */
+  async generarAutorizacion(): Promise<void> {
+    const paciente = this.pacienteSeleccionado;
+    const detalle = this.detalle;
+
+    if (!paciente?.episodioId) {
+      this.popUps.advertencia('El paciente no tiene un episodio activo para generar la autorización.');
+      return;
+    }
+    if (!detalle) {
+      this.popUps.advertencia('No se pudo cargar la información del paciente.');
+      return;
+    }
+
+    this.generandoAutorizacion = true;
+    this.cdr.detectChanges();
+
+    try {
+      const procedimientos = await firstValueFrom(
+        this.servicioProcedimientos
+          .getProcedimientos(paciente.episodioId)
+          .pipe(timeout(5000)),
+      );
+      const pendientes = procedimientos
+        .filter(
+          (procedimiento) =>
+            procedimiento.requiereAutorizacion &&
+            !procedimiento.autorizacionGenerada &&
+            procedimiento.estado === 'PENDIENTE',
+        )
+        .map((procedimiento) => ({
+          id: procedimiento.id,
+          nombre: procedimiento.tipoProcedimientoNombre,
+        }));
+
+      if (!pendientes.length) {
+        this.popUps.advertencia('No hay procedimientos pendientes que requieran autorización.');
+        return;
+      }
+
+      this.modalService.open(VisorAutorizacion, {
+        title: 'Autorización de procedimiento',
+        modalClass: 'modal-visor-documentos',
+        datos: this.aDatosAutorizacion(detalle, pendientes),
+        onCambio: () => this.consultarAutorizacionesPendientes(),
+      });
+    } catch (error) {
+      this.popUps.errorDesdeBackend(error, 'No se pudo cargar la información para la autorización.');
+    } finally {
+      this.generandoAutorizacion = false;
+      this.cdr.detectChanges();
+    }
+  }
+
+  /** Consulta si hay procedimientos con autorización pendiente para activar el pulso del icono. */
+  private consultarAutorizacionesPendientes(): void {
+    const paciente = this.pacienteSeleccionado;
+
+    if (!paciente?.episodioId) {
+      this.autorizacionesPendientes = false;
+      this.cdr.detectChanges();
+      return;
+    }
+
+    this.servicioProcedimientos
+      .getProcedimientos(paciente.episodioId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (procedimientos) => {
+          if (this.pacienteSeleccionado?.pacienteId !== paciente.pacienteId) return;
+
+          this.autorizacionesPendientes = procedimientos.some(
+            (procedimiento) =>
+              procedimiento.requiereAutorizacion &&
+              !procedimiento.autorizacionGenerada &&
+              procedimiento.estado === 'PENDIENTE',
+          );
+          this.cdr.detectChanges();
+        },
+        error: () => {
+          this.autorizacionesPendientes = false;
+          this.cdr.detectChanges();
+        },
+      });
+  }
+
+  /** Resuelve quién autoriza: el familiar responsable si existe, o el propio paciente. */
+  private aDatosAutorizacion(
+    detalle: PacienteDetalle,
+    procedimientos: ProcedimientoAutorizacionVista[],
+  ): DatosAutorizacionVista {
+    const responsable = detalle.responsable;
+    const nombreResponsable = responsable
+      ? `${responsable.nombres} ${responsable.apellidos}`.trim()
+      : '';
+
+    const autoriza = nombreResponsable
+      ? {
+          nombre: nombreResponsable,
+          cui: responsable?.cui ?? null,
+          calidad: 'representante legal del paciente',
+        }
+      : {
+          nombre: detalle.nombreCompleto,
+          cui: detalle.cui,
+          calidad: 'paciente',
+        };
+
+    return {
+      paciente: { nombre: detalle.nombreCompleto, cui: detalle.cui },
+      autoriza,
+      medico: { nombre: detalle.medicoNombre?.trim() || 'No registrado' },
+      procedimientos,
+    };
   }
 
   // ------------------- ACCIONES DE MODAL -------------------

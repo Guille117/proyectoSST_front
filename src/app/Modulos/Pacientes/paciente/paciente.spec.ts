@@ -11,6 +11,7 @@ import { DocumentoEpisodio } from './data/documentoInterfaz';
 import { PacienteDetalle, PacienteResumido } from './data/pacienteInterfaz';
 import { PacienteService } from './data/paciente-service';
 import { UsuarioService } from '../../Usuarios/usu/data/usuario-service';
+import { ProcedimientoMedicoService } from '../../Medica/procedimiento-medico/data/procedimiento-medico-service';
 import { AuthService } from '../../Auth/data/auth-service';
 import { LoginResponse } from '../../Auth/data/authInterfaz';
 import { ModalService } from '../../../modal-principal/modal-service';
@@ -169,6 +170,11 @@ describe('Paciente', () => {
 
   const servicioConsumo = { obtenerConsumo: vi.fn(() => of(consumo)) };
 
+  const servicioProcedimientos = {
+    getProcedimientos: vi.fn(() => of([])),
+    marcarAutorizacionGenerada: vi.fn(() => of(undefined)),
+  };
+
   const servicioPdf = { generar: vi.fn(() => Promise.resolve()) };
 
   const usuarioService = {
@@ -215,6 +221,7 @@ describe('Paciente', () => {
         { provide: PacienteService, useValue: servicioPaciente },
         { provide: DocumentoEpisodioService, useValue: servicioDocumento },
         { provide: ConsumoEpisodioService, useValue: servicioConsumo },
+        { provide: ProcedimientoMedicoService, useValue: servicioProcedimientos },
         { provide: DocumentoTratamientoPdfService, useValue: servicioPdf },
         { provide: UsuarioService, useValue: usuarioService },
         { provide: ModalService, useValue: modalService },

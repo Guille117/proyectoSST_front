@@ -3,6 +3,26 @@ export interface Conteo {
   cantidad: number;
 }
 
+export type ClaveConteo =
+  | 'masVendidos'
+  | 'menosVendidos'
+  | 'ingresos'
+  | 'demografia'
+  | 'diagnosticos'
+  | 'altas'
+  | 'atenciones'
+  | 'medicamentos'
+  | 'cuidados'
+  | 'porRol'
+  | 'accesos';
+
+export interface Vencimiento {
+  producto: string;
+  cantidad: number;
+  mes: number;
+  anio: number;
+}
+
 export interface CompraProveedor {
   proveedor: string;
   cantidad: number;

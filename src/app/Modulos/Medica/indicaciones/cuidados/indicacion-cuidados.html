@@ -121,7 +121,13 @@
       >
         Cancelar
       </button>
-      <button type="submit" class="btn _guardar" [disabled]="!puedeGuardarCuidado">Guardar</button>
+      <button
+        type="submit"
+        class="btn _guardar"
+        [disabled]="!puedeGuardarCuidado || (cuidadoEnEdicion !== null && !hayCambiosEnEdicion)"
+      >
+        {{ textoBotonGuardar }}
+      </button>
     </div>
   </form>
   }

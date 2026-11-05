@@ -6,10 +6,17 @@ import { BitacoraEntry } from '../data/reportes-interfaz';
 import { PacienteService } from '../../Pacientes/paciente/data/paciente-service';
 import { PacienteResumido } from '../../Pacientes/paciente/data/pacienteInterfaz';
 import { PopUps } from '../../../shared/popUps/popUpsService';
+import { CampoValidado } from '../../../shared/campo-validado/campo-validado';
+import {
+  accionLegible,
+  claseAccion,
+  descripcionBitacora,
+  formatearFechaHora,
+} from '../data/bitacora-format';
 
 @Component({
   selector: 'app-bitacora-pacientes',
-  imports: [FormsModule],
+  imports: [FormsModule, CampoValidado],
   templateUrl: './bitacora-pacientes.html',
   styleUrl: '../reporte-comun.scss',
 })
@@ -77,9 +84,20 @@ export class BitacoraPacientes implements OnDestroy {
       });
   }
 
+  accionLegible(accion: string): string {
+    return accionLegible(accion);
+  }
+
+  claseAccion(accion: string): string {
+    return claseAccion(accion);
+  }
+
+  descripcion(entrada: BitacoraEntry): string {
+    return descripcionBitacora(entrada);
+  }
+
   formatearFechaHora(iso: string): string {
-    const fecha = new Date(iso);
-    return isNaN(fecha.getTime()) ? iso : fecha.toLocaleString();
+    return formatearFechaHora(iso);
   }
 
   private hoy(): string {

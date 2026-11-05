@@ -793,6 +793,7 @@ export class Alta implements OnInit, OnDestroy {
         referenciaId: recurso.referenciaId,
         cantidad: recurso.cantidad,
       })),
+      requiereAutorizacion: false,
     };
 
     try {

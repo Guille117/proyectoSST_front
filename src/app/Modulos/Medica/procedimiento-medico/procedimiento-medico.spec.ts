@@ -24,6 +24,7 @@ describe('ProcedimientoMedico', () => {
   const episodio = {
     obtener: vi.fn(() => 10),
     esSoloLectura: vi.fn(() => soloLectura),
+    pacienteId: vi.fn(() => null),
   };
 
   const auth = {
@@ -166,6 +167,7 @@ describe('ProcedimientoMedico', () => {
       episodioId: 10,
       usuarioId: 1,
       recursos: [],
+      requiereAutorizacion: false,
     });
     expect(popUps.exito).toHaveBeenCalledWith('Procedimiento registrado exitosamente.');
   });

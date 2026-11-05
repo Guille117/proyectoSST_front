@@ -21,12 +21,14 @@ export class AuthService {
 
   private sondeoSub: Subscription | null = null;
   private readonly intervaloMs = 10000;
+  private cerrando = false;
 
   currentUser = signal<LoginResponse | null>(this.obtenerUsuarioGuardado());
 
   login(credentials: LoginRequest): Observable<LoginResponse> {
     return this.http.post<LoginResponse>(`${this.apiUrl}/login`, credentials).pipe(
       tap((res) => {
+        this.cerrando = false;
         if (res) {
           const token = res.token || (res as any).accessToken || (res as any).jwt || 'session_active';
           localStorage.setItem('auth_token', token);
@@ -54,7 +56,16 @@ export class AuthService {
   }
 
   logout(): void {
+    if (this.cerrando) return;
+    this.cerrando = true;
     this.detenerSondeo();
+
+    // Registra el cierre de sesión en la bitácora (mejor esfuerzo; no bloquea la salida).
+    this.http
+      .post(`${this.apiUrl}/logout`, {})
+      .pipe(catchError(() => of(null)))
+      .subscribe();
+
     localStorage.removeItem('auth_token');
     localStorage.removeItem('auth_user');
     this.currentUser.set(null);
@@ -106,6 +117,7 @@ export class AuthService {
       return;
     }
 
+    this.cerrando = false;
     const token = res.token || (res as any).accessToken || (res as any).jwt || 'session_active';
     localStorage.setItem('auth_token', token);
     localStorage.setItem('auth_user', JSON.stringify(res));

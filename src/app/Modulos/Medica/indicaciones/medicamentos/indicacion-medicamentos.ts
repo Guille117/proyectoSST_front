@@ -78,6 +78,19 @@ interface FiltroIndicacionVista {
   estados: EstadoIndicacionMedicamento[];
 }
 
+/** Instantánea de los campos del formulario al iniciar la edición, para detectar cambios. */
+interface FormularioMedicamentoOriginal {
+  medicamentoElegidoId: number | null;
+  medicamentoLibre: string;
+  cantidad: number | null;
+  unidadMedida: string;
+  frecuencia: number | null;
+  duracionTipo: TipoDuracion | '';
+  duracionCantidad: number | null;
+  fechaInicio: string;
+  observaciones: string;
+}
+
 /**
  * Sección de medicamentos de las indicaciones médicas: registro de la indicación con la búsqueda del
  * medicamento en el catálogo y listado de los medicamentos indicados en el episodio. Las operaciones
@@ -157,6 +170,9 @@ export class IndicacionMedicamentos implements OnInit, OnDestroy {
 
   /** Indicación cuyos datos están cargados en el formulario; null al capturar una nueva. */
   indicacionEnEdicion: number | null = null;
+
+  /** Valores originales de la indicación en edición, para deshabilitar el botón sin cambios. */
+  private edicionOriginal: FormularioMedicamentoOriginal | null = null;
 
   /** Indicaciones del episodio con el filtro elegido, ya traducidas a la vista. */
   indicaciones: IndicacionMedicamentoVista[] = [];
@@ -261,6 +277,28 @@ export class IndicacionMedicamentos implements OnInit, OnDestroy {
   /** Indicaciones que muestra el listado; el backend ya aplica el filtro elegido. */
   get indicacionesFiltradas(): IndicacionMedicamentoVista[] {
     return this.indicaciones;
+  }
+
+  /** Texto del botón de guardar: «Guardar cambios» al corregir una indicación existente. */
+  get textoBotonGuardar(): string {
+    return this.indicacionEnEdicion === null ? 'Guardar' : 'Guardar cambios';
+  }
+
+  /** Verdadero si la indicación en edición tiene al menos un campo modificado. */
+  get hayCambiosEnEdicion(): boolean {
+    if (this.edicionOriginal === null) return true;
+
+    return (
+      (this.medicamentoElegido?.id ?? null) !== this.edicionOriginal.medicamentoElegidoId ||
+      this.medicamentoLibre !== this.edicionOriginal.medicamentoLibre ||
+      this.cantidad !== this.edicionOriginal.cantidad ||
+      this.unidadMedida !== this.edicionOriginal.unidadMedida ||
+      this.frecuencia !== this.edicionOriginal.frecuencia ||
+      this.duracionTipo !== this.edicionOriginal.duracionTipo ||
+      this.duracionCantidad !== this.edicionOriginal.duracionCantidad ||
+      this.fechaInicio !== this.edicionOriginal.fechaInicio ||
+      this.observaciones !== this.edicionOriginal.observaciones
+    );
   }
 
   /** Texto del listado cuando el filtro elegido no tiene indicaciones. */
@@ -773,6 +811,18 @@ export class IndicacionMedicamentos implements OnInit, OnDestroy {
     this.busquedaMedicamentoRealizada = false;
     this.medicamentosEncontrados = [];
     this.paginaMedicamentos = 1;
+
+    this.edicionOriginal = {
+      medicamentoElegidoId: this.medicamentoElegido?.id ?? null,
+      medicamentoLibre: this.medicamentoLibre,
+      cantidad: this.cantidad,
+      unidadMedida: this.unidadMedida,
+      frecuencia: this.frecuencia,
+      duracionTipo: this.duracionTipo,
+      duracionCantidad: this.duracionCantidad,
+      fechaInicio: this.fechaInicio,
+      observaciones: this.observaciones,
+    };
   }
 
   /** Deja el formulario listo para capturar una indicación nueva. */
@@ -787,6 +837,7 @@ export class IndicacionMedicamentos implements OnInit, OnDestroy {
     this.fechaInicio = this.fechaHoraLocalActual();
     this.observaciones = '';
     this.indicacionEnEdicion = null;
+    this.edicionOriginal = null;
     this.cerrarResultadosMedicamento();
   }
 

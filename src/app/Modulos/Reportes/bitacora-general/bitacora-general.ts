@@ -1,17 +1,25 @@
-import { Component, inject, OnDestroy } from '@angular/core';
+import { Component, inject, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
 import { ReportesService } from '../data/reportes-service';
 import { BitacoraEntry } from '../data/reportes-interfaz';
+import { Celda, exportarExcel, exportarPdf } from '../data/reportes-export';
 import { PopUps } from '../../../shared/popUps/popUpsService';
+import { CampoValidado } from '../../../shared/campo-validado/campo-validado';
+import {
+  accionLegible,
+  claseAccion,
+  descripcionBitacora,
+  formatearFechaHora,
+} from '../data/bitacora-format';
 
 @Component({
   selector: 'app-bitacora-general',
-  imports: [FormsModule],
+  imports: [FormsModule, CampoValidado],
   templateUrl: './bitacora-general.html',
   styleUrl: '../reporte-comun.scss',
 })
-export class BitacoraGeneral implements OnDestroy {
+export class BitacoraGeneral implements OnInit, OnDestroy {
   private readonly service = inject(ReportesService);
   private readonly popUps = inject(PopUps);
   private sub?: Subscription;
@@ -21,7 +29,7 @@ export class BitacoraGeneral implements OnDestroy {
   cargando = false;
   entradas: BitacoraEntry[] = [];
 
-  constructor() {
+  ngOnInit(): void {
     this.generar();
   }
 
@@ -44,9 +52,42 @@ export class BitacoraGeneral implements OnDestroy {
     });
   }
 
+  accionLegible(accion: string): string {
+    return accionLegible(accion);
+  }
+
+  claseAccion(accion: string): string {
+    return claseAccion(accion);
+  }
+
+  descripcion(entrada: BitacoraEntry): string {
+    return descripcionBitacora(entrada);
+  }
+
   formatearFechaHora(iso: string): string {
-    const fecha = new Date(iso);
-    return isNaN(fecha.getTime()) ? iso : fecha.toLocaleString();
+    return formatearFechaHora(iso);
+  }
+
+  exportarPdf(): void {
+    exportarPdf(
+      'Bitácora general',
+      ['Fecha', 'Usuario', 'Acción', 'Descripción'],
+      this.entradas.map(
+        (e) =>
+          [formatearFechaHora(e.fechaHora), e.usuarioNombre ?? '—', accionLegible(e.accion), descripcionBitacora(e)] as Celda[],
+      ),
+    );
+  }
+
+  exportarExcel(): void {
+    exportarExcel(
+      'Bitácora general',
+      ['Fecha', 'Usuario', 'Acción', 'Descripción'],
+      this.entradas.map(
+        (e) =>
+          [formatearFechaHora(e.fechaHora), e.usuarioNombre ?? '—', accionLegible(e.accion), descripcionBitacora(e)] as Celda[],
+      ),
+    );
   }
 
   private hoy(): string {

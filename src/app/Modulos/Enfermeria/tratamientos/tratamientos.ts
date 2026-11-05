@@ -1628,9 +1628,9 @@ export class Tratamientos implements OnInit, OnDestroy {
     )}T${dosDigitos(fecha.getHours())}:${dosDigitos(fecha.getMinutes())}:00`;
   }
 
-  /** Fecha y hora en el formato de la tabla (dd/MM/yyyy HH:mm). */
+  /** Fecha y hora en el formato de la tabla (dd/MM/yyyy - HH:mm). */
   private formatearFechaHora(fecha: Date): string {
-    return `${this.formatearFecha(fecha)} ${this.formatearHora(fecha)}`;
+    return `${this.formatearFecha(fecha)} - ${this.formatearHora(fecha)}`;
   }
 
   /** Fecha de la aplicación en el formato corto (dd/MM/yyyy). */

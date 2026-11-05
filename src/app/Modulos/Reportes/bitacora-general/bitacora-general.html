@@ -1,45 +1,55 @@
 <div class="reporte areaTrabajo-container">
-    <div class="reporte-encabezado">
-        <h2 class="reporte-titulo">Bitácora general</h2>
-        <div class="filtros">
-            <label>Desde <input type="date" [(ngModel)]="desde" /></label>
-            <label>Hasta <input type="date" [(ngModel)]="hasta" /></label>
-            <button type="button" class="btn _principal" [disabled]="cargando" (click)="generar()">Generar</button>
-        </div>
+  <div class="reporte-encabezado">
+    <h2 class="reporte-titulo">Bitácora general</h2>
+    <div class="filtros">
+      <div class="filtro-fecha">
+        <app-campo-validado [label]="'Desde'" [fieldId]="'desde'">
+          <input type="date" id="desde" name="desde" [(ngModel)]="desde" />
+        </app-campo-validado>
+      </div>
+      <div class="filtro-fecha">
+        <app-campo-validado [label]="'Hasta'" [fieldId]="'hasta'">
+          <input type="date" id="hasta" name="hasta" [(ngModel)]="hasta" />
+        </app-campo-validado>
+      </div>
+      <button type="button" class="btn _principal" [disabled]="cargando" (click)="generar()">Generar</button>
+      <button type="button" class="btn" (click)="exportarPdf()">PDF</button>
+      <button type="button" class="btn" (click)="exportarExcel()">Excel</button>
     </div>
+  </div>
 
-    <div class="table-container">
-        <table class="table" [attr.aria-busy]="cargando">
-            <thead>
-                <tr>
-                    <th class="celda_centrada">Fecha / Hora</th>
-                    <th class="celda_izquierda">Usuario</th>
-                    <th class="celda_izquierda">Acción</th>
-                    <th class="celda_izquierda">Entidad</th>
-                    <th class="celda_izquierda">Detalle</th>
-                </tr>
-            </thead>
-            <tbody>
-                @if (cargando) {
-                    <tr>
-                        <td colspan="5" class="celda_centrada">Cargando bitácora...</td>
-                    </tr>
-                } @else {
-                    @for (e of entradas; track e.id) {
-                        <tr>
-                            <td class="celda_centrada">{{ formatearFechaHora(e.fechaHora) }}</td>
-                            <td class="celda_izquierda">{{ e.usuarioNombre ?? '—' }}</td>
-                            <td class="celda_izquierda">{{ e.accion }}</td>
-                            <td class="celda_izquierda">{{ e.entidad ?? e.modulo ?? '—' }}</td>
-                            <td class="celda_izquierda" [title]="e.detalle ?? ''">{{ e.detalle ?? '—' }}</td>
-                        </tr>
-                    } @empty {
-                        <tr>
-                            <td colspan="5" class="celda_centrada">Sin registros.</td>
-                        </tr>
-                    }
-                }
-            </tbody>
-        </table>
-    </div>
+  <div class="table-container">
+    <table class="table" [attr.aria-busy]="cargando">
+      <thead>
+        <tr>
+          <th class="celda_centrada">Fecha / Hora</th>
+          <th class="celda_izquierda">Usuario</th>
+          <th class="celda_izquierda">Acción</th>
+          <th class="celda_izquierda">Descripción</th>
+        </tr>
+      </thead>
+      <tbody>
+        @if (cargando) {
+          <tr>
+            <td colspan="4" class="celda_centrada">Cargando bitácora...</td>
+          </tr>
+        } @else {
+          @for (e of entradas; track e.id) {
+            <tr>
+              <td class="celda_centrada">{{ formatearFechaHora(e.fechaHora) }}</td>
+              <td class="celda_izquierda">{{ e.usuarioNombre ?? '—' }}</td>
+              <td class="celda_izquierda">
+                <span [class]="claseAccion(e.accion)">{{ accionLegible(e.accion) }}</span>
+              </td>
+              <td class="celda_izquierda" [title]="e.detalle ?? ''">{{ descripcion(e) }}</td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="4" class="celda_centrada">Sin registros.</td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
 </div>

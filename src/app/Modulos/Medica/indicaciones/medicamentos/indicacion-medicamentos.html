@@ -293,7 +293,13 @@
       <button type="button" class="btn _cancelar" [disabled]="guardando" (click)="limpiarFormulario()">
         Cancelar
       </button>
-      <button type="submit" class="btn _guardar" [disabled]="!puedeGuardar">Guardar</button>
+      <button
+        type="submit"
+        class="btn _guardar"
+        [disabled]="!puedeGuardar || (indicacionEnEdicion !== null && !hayCambiosEnEdicion)"
+      >
+        {{ textoBotonGuardar }}
+      </button>
     </div>
   </form>
   }

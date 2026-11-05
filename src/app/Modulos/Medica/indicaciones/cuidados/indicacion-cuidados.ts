@@ -66,6 +66,16 @@ interface FiltroCuidadoVista {
   estados: EstadoCuidadoApi[];
 }
 
+/** Instantánea de los campos del formulario al iniciar la edición, para detectar cambios. */
+interface FormularioCuidadoOriginal {
+  nombreCuidado: string;
+  frecuenciaCuidado: number | null;
+  duracionTipoCuidado: TipoDuracion | '';
+  duracionCantidadCuidado: number | null;
+  fechaInicioCuidado: string;
+  observacionesCuidado: string;
+}
+
 /**
  * Sección de cuidados de las indicaciones médicas: registro del cuidado con su frecuencia, su
  * duración y sus observaciones, y listado de los cuidados indicados en el episodio. Las operaciones
@@ -112,6 +122,9 @@ export class IndicacionCuidados implements OnInit, OnDestroy {
 
   /** Cuidado cuyos datos están cargados en el formulario; null al capturar un cuidado nuevo. */
   cuidadoEnEdicion: number | null = null;
+
+  /** Valores originales del cuidado en edición, para deshabilitar el botón sin cambios. */
+  private edicionOriginal: FormularioCuidadoOriginal | null = null;
 
   /** Tipos de duración que ofrece el desplegable de la duración. */
   tiposDuracion = TIPOS_DURACION;
@@ -197,6 +210,25 @@ export class IndicacionCuidados implements OnInit, OnDestroy {
   /** Cuidados que muestra el listado; el backend ya aplica el filtro elegido. */
   get cuidadosFiltrados(): CuidadoVista[] {
     return this.cuidados;
+  }
+
+  /** Texto del botón de guardar: «Guardar cambios» al corregir un cuidado existente. */
+  get textoBotonGuardar(): string {
+    return this.cuidadoEnEdicion === null ? 'Guardar' : 'Guardar cambios';
+  }
+
+  /** Verdadero si el cuidado en edición tiene al menos un campo modificado. */
+  get hayCambiosEnEdicion(): boolean {
+    if (this.edicionOriginal === null) return true;
+
+    return (
+      this.nombreCuidado !== this.edicionOriginal.nombreCuidado ||
+      this.frecuenciaCuidado !== this.edicionOriginal.frecuenciaCuidado ||
+      this.duracionTipoCuidado !== this.edicionOriginal.duracionTipoCuidado ||
+      this.duracionCantidadCuidado !== this.edicionOriginal.duracionCantidadCuidado ||
+      this.fechaInicioCuidado !== this.edicionOriginal.fechaInicioCuidado ||
+      this.observacionesCuidado !== this.edicionOriginal.observacionesCuidado
+    );
   }
 
   /** Texto del listado cuando el filtro elegido no tiene cuidados. */
@@ -460,6 +492,15 @@ export class IndicacionCuidados implements OnInit, OnDestroy {
     this.duracionCantidadCuidado = cuidado.duracionCantidad;
     this.fechaInicioCuidado = this.aFechaHoraInput(cuidado.fechaInicio);
     this.observacionesCuidado = cuidado.observaciones;
+
+    this.edicionOriginal = {
+      nombreCuidado: this.nombreCuidado,
+      frecuenciaCuidado: this.frecuenciaCuidado,
+      duracionTipoCuidado: this.duracionTipoCuidado,
+      duracionCantidadCuidado: this.duracionCantidadCuidado,
+      fechaInicioCuidado: this.fechaInicioCuidado,
+      observacionesCuidado: this.observacionesCuidado,
+    };
   }
 
   /** Deja el formulario del cuidado listo para capturar uno nuevo. */
@@ -471,6 +512,7 @@ export class IndicacionCuidados implements OnInit, OnDestroy {
     this.fechaInicioCuidado = this.fechaHoraLocalActual();
     this.observacionesCuidado = '';
     this.cuidadoEnEdicion = null;
+    this.edicionOriginal = null;
   }
 
   /**

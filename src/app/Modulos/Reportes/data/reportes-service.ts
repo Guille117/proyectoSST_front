@@ -5,11 +5,13 @@ import { environment } from '../../../../environments/environment';
 import {
   BitacoraEntry,
   Censo,
+  ClaveConteo,
   CompraProveedor,
   Conteo,
   GlucosaPromedio,
   MonitoreoSummary,
   StockBajo,
+  Vencimiento,
 } from './reportes-interfaz';
 
 const TIEMPO_ESPERA_MS = 5000;
@@ -18,6 +20,21 @@ const TIEMPO_ESPERA_MS = 5000;
 export class ReportesService {
   private readonly base = `${environment.apiUrl}/reportes`;
   private readonly baseBitacora = `${environment.apiUrl}/bitacora`;
+
+  /** URL de cada reporte de tipo Conteo (nombre/cantidad). */
+  private readonly urlsConteo: Record<ClaveConteo, string> = {
+    masVendidos: `${this.base}/farmacia/mas-vendidos`,
+    menosVendidos: `${this.base}/farmacia/menos-vendidos`,
+    ingresos: `${this.base}/pacientes/ingresos-por-area`,
+    demografia: `${this.base}/pacientes/demografia`,
+    diagnosticos: `${this.base}/medica/diagnosticos-frecuentes`,
+    altas: `${this.base}/medica/altas-por-tipo`,
+    atenciones: `${this.base}/medica/atenciones-por-medico`,
+    medicamentos: `${this.base}/enfermeria/tratamientos-medicamentos`,
+    cuidados: `${this.base}/enfermeria/tratamientos-cuidados`,
+    porRol: `${this.base}/usuarios/por-rol`,
+    accesos: `${this.base}/usuarios/accesos`,
+  };
 
   constructor(private readonly http: HttpClient) {}
 
@@ -28,13 +45,14 @@ export class ReportesService {
     return p;
   }
 
-  // --- Farmacia ---
-  despachos(desde?: string, hasta?: string): Observable<Conteo[]> {
+  // --- Reporte genérico de conteo (nombre/cantidad) ---
+  conteo(clave: ClaveConteo, desde?: string, hasta?: string): Observable<Conteo[]> {
     return this.http
-      .get<Conteo[]>(`${this.base}/farmacia/despachos`, { params: this.params(desde, hasta) })
+      .get<Conteo[]>(this.urlsConteo[clave], { params: this.params(desde, hasta) })
       .pipe(timeout(TIEMPO_ESPERA_MS));
   }
 
+  // --- Farmacia ---
   comprasPorProveedor(desde?: string, hasta?: string): Observable<CompraProveedor[]> {
     return this.http
       .get<CompraProveedor[]>(`${this.base}/farmacia/compras-por-proveedor`, {
@@ -50,38 +68,15 @@ export class ReportesService {
       .pipe(timeout(TIEMPO_ESPERA_MS));
   }
 
+  vencimientos(): Observable<Vencimiento[]> {
+    return this.http
+      .get<Vencimiento[]>(`${this.base}/farmacia/vencimientos`)
+      .pipe(timeout(TIEMPO_ESPERA_MS));
+  }
+
   // --- Pacientes ---
   censo(): Observable<Censo[]> {
     return this.http.get<Censo[]>(`${this.base}/pacientes/censo`).pipe(timeout(TIEMPO_ESPERA_MS));
-  }
-
-  ingresosPorArea(desde?: string, hasta?: string): Observable<Conteo[]> {
-    return this.http
-      .get<Conteo[]>(`${this.base}/pacientes/ingresos-por-area`, { params: this.params(desde, hasta) })
-      .pipe(timeout(TIEMPO_ESPERA_MS));
-  }
-
-  demografia(): Observable<Conteo[]> {
-    return this.http.get<Conteo[]>(`${this.base}/pacientes/demografia`).pipe(timeout(TIEMPO_ESPERA_MS));
-  }
-
-  // --- Médica ---
-  diagnosticosFrecuentes(desde?: string, hasta?: string): Observable<Conteo[]> {
-    return this.http
-      .get<Conteo[]>(`${this.base}/medica/diagnosticos-frecuentes`, { params: this.params(desde, hasta) })
-      .pipe(timeout(TIEMPO_ESPERA_MS));
-  }
-
-  altasPorTipo(desde?: string, hasta?: string): Observable<Conteo[]> {
-    return this.http
-      .get<Conteo[]>(`${this.base}/medica/altas-por-tipo`, { params: this.params(desde, hasta) })
-      .pipe(timeout(TIEMPO_ESPERA_MS));
-  }
-
-  atencionesPorMedico(desde?: string, hasta?: string): Observable<Conteo[]> {
-    return this.http
-      .get<Conteo[]>(`${this.base}/medica/atenciones-por-medico`, { params: this.params(desde, hasta) })
-      .pipe(timeout(TIEMPO_ESPERA_MS));
   }
 
   // --- Enfermería ---
@@ -91,38 +86,11 @@ export class ReportesService {
       .pipe(timeout(TIEMPO_ESPERA_MS));
   }
 
-  tratamientosMedicamentos(desde?: string, hasta?: string): Observable<Conteo[]> {
-    return this.http
-      .get<Conteo[]>(`${this.base}/enfermeria/tratamientos-medicamentos`, {
-        params: this.params(desde, hasta),
-      })
-      .pipe(timeout(TIEMPO_ESPERA_MS));
-  }
-
-  tratamientosCuidados(desde?: string, hasta?: string): Observable<Conteo[]> {
-    return this.http
-      .get<Conteo[]>(`${this.base}/enfermeria/tratamientos-cuidados`, {
-        params: this.params(desde, hasta),
-      })
-      .pipe(timeout(TIEMPO_ESPERA_MS));
-  }
-
   glucosaPromedio(desde?: string, hasta?: string): Observable<GlucosaPromedio[]> {
     return this.http
       .get<GlucosaPromedio[]>(`${this.base}/enfermeria/glucosa-promedio`, {
         params: this.params(desde, hasta),
       })
-      .pipe(timeout(TIEMPO_ESPERA_MS));
-  }
-
-  // --- Usuarios ---
-  usuariosPorRol(): Observable<Conteo[]> {
-    return this.http.get<Conteo[]>(`${this.base}/usuarios/por-rol`).pipe(timeout(TIEMPO_ESPERA_MS));
-  }
-
-  accesos(desde?: string, hasta?: string): Observable<Conteo[]> {
-    return this.http
-      .get<Conteo[]>(`${this.base}/usuarios/accesos`, { params: this.params(desde, hasta) })
       .pipe(timeout(TIEMPO_ESPERA_MS));
   }
 

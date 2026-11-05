@@ -67,6 +67,7 @@ interface ProcedimientoVista {
   profesional: string;
   estado: EstadoProcedimiento;
   recursos: RecursoUtilizado[];
+  requiereAutorizacion: boolean;
 }
 
 /** Procedimiento médico del episodio: rail de opciones, registro del procedimiento y sus recursos,
@@ -531,6 +532,7 @@ export class ProcedimientoMedico implements OnInit, OnDestroy {
     this.resultado = procedimiento.resultado;
     this.inicio = procedimiento.inicio;
     this.fin = procedimiento.fin;
+    this.requiereAutorizacion = procedimiento.requiereAutorizacion;
     this.recursosAgregados = procedimiento.recursos.map((recurso) => ({ ...recurso }));
     this.cancelarSeleccionRecurso();
     this.procedimientoEnEdicion = procedimiento.id;
@@ -649,6 +651,7 @@ export class ProcedimientoMedico implements OnInit, OnDestroy {
         referenciaId: recurso.referenciaId,
         cantidad: recurso.cantidad,
       })),
+      requiereAutorizacion: this.requiereAutorizacion,
     };
 
     this.peticionAccion?.unsubscribe();
@@ -855,6 +858,7 @@ export class ProcedimientoMedico implements OnInit, OnDestroy {
         nombre: recurso.nombre,
         cantidad: recurso.cantidad,
       })),
+      requiereAutorizacion: respuesta.requiereAutorizacion,
     };
   }
 
@@ -890,6 +894,7 @@ export class ProcedimientoMedico implements OnInit, OnDestroy {
     this.resultado = '';
     this.inicio = this.fechaHoraActualLocal();
     this.fin = '';
+    this.requiereAutorizacion = false;
     this.procedimientoEnEdicion = null;
   }
 
