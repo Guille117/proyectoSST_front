@@ -555,7 +555,12 @@
 				<i class="bi bi-arrow-right"></i>
 			</button>
 		} @else {
-			<button type="button" class="btn _guardar" [disabled]="guardando" (click)="guardarPaciente()">
+			<button
+				type="button"
+				class="btn _guardar"
+				[disabled]="guardando || (isEditing && !hayCambios)"
+				(click)="guardarPaciente()"
+			>
 				{{ guardando ? 'Guardando...' : isEditing ? 'Guardar cambios' : 'Guardar' }}
 			</button>
 		}

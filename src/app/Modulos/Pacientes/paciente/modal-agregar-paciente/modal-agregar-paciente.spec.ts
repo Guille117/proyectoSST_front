@@ -220,6 +220,16 @@ describe('ModalAgregarPaciente', () => {
     expect(component.pasos.length).toBe(5);
   });
 
+  it('solo detecta cambios cuando el formulario se modifica', async () => {
+    await crearEnEdicion(detalle);
+
+    expect(component.hayCambios).toBe(false);
+
+    component.pacienteForm.direccion = 'Otra dirección';
+
+    expect(component.hayCambios).toBe(true);
+  });
+
   it('precarga y envía las alergias y enfermedades seleccionadas por ID', async () => {
     await crearEnEdicion(detalle);
 

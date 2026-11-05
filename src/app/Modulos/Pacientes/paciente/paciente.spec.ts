@@ -5,9 +5,14 @@ import { ModalAgregarPaciente } from './modal-agregar-paciente/modal-agregar-pac
 import { Paciente } from './paciente';
 import { ConsumoEpisodioService } from './data/consumo-service';
 import { ConsumoEpisodio } from './data/consumoInterfaz';
+import { DocumentoAltaPdfService } from './data/documento-alta-pdf-service';
+import { DocumentoAutorizacionPdfService } from './data/documento-autorizacion-pdf-service';
 import { DocumentoEpisodioService } from './data/documento-episodio-service';
 import { DocumentoTratamientoPdfService } from './data/documento-tratamiento-pdf-service';
 import { DocumentoEpisodio } from './data/documentoInterfaz';
+import { AltaService } from '../../Medica/alta/data/alta-service';
+import { AltaResponse } from '../../Medica/alta/data/altaInterfaz';
+import { ProcedimientoMedicoResponse } from '../../Medica/procedimiento-medico/data/procedimientoMedicoInterfaz';
 import { PacienteDetalle, PacienteResumido } from './data/pacienteInterfaz';
 import { PacienteService } from './data/paciente-service';
 import { UsuarioService } from '../../Usuarios/usu/data/usuario-service';
@@ -122,6 +127,60 @@ describe('Paciente', () => {
     usuarioId: 5,
     usuarioNombre: 'Ana López',
     estado: true,
+    procedimientoMedicoId: 21,
+    altaId: null,
+  };
+
+  const procedimiento: ProcedimientoMedicoResponse = {
+    id: 21,
+    tipoProcedimientoId: 3,
+    tipoProcedimientoNombre: 'Apendicectomía',
+    descripcion: 'Procedimiento',
+    resultado: null,
+    inicio: '2026-10-10T10:00:00',
+    fin: null,
+    episodioId: 101,
+    usuarioId: 5,
+    usuarioNombre: 'Ana López',
+    estado: 'PENDIENTE',
+    recursos: [],
+    requiereAutorizacion: true,
+    autorizacionGenerada: false,
+  };
+
+  const alta: AltaResponse = {
+    id: 30,
+    tipoAlta: 'INDICACION_MEDICA',
+    diagnosticoEgreso: 'Recuperación satisfactoria',
+    condicionEgresoId: null,
+    condicionEgresoNombre: 'Mejorado',
+    observacionEgreso: 'Control en consulta externa',
+    fechaHoraEgreso: '2026-10-12T10:00:00',
+    episodioId: 101,
+    usuarioId: 5,
+    usuarioNombre: 'Dr. Juan Pérez',
+    estado: 'VIGENTE',
+    responsableRetiro: null,
+    motivoRetiro: null,
+    riesgosRetiro: [],
+    institucionId: null,
+    institucionNombre: null,
+    motivoReferencia: null,
+    indicacionesTraslado: null,
+    tratamientos: [
+      {
+        tipo: 'MEDICAMENTO',
+        nombre: 'Paracetamol',
+        medicamentoLogId: null,
+        medicamentoLibre: null,
+        cantidad: 500,
+        unidadMedida: 'mg',
+        frecuencia: 8,
+        duracionTipo: 'DIAS',
+        duracion: 3,
+        observaciones: null,
+      },
+    ],
   };
 
   const archivoSeleccionado: ArchivoSeleccionado = {
@@ -141,6 +200,11 @@ describe('Paciente', () => {
   const servicioDocumento = {
     listarDocumentos: vi.fn(() => of([documento])),
     subirDocumento: vi.fn(() => of([documento])),
+    eliminarDocumento: vi.fn(() => of(undefined)),
+  };
+
+  const servicioAlta = {
+    buscarPorEpisodio: vi.fn(() => of([] as AltaResponse[])),
   };
 
   const consumo: ConsumoEpisodio = {
@@ -171,11 +235,22 @@ describe('Paciente', () => {
   const servicioConsumo = { obtenerConsumo: vi.fn(() => of(consumo)) };
 
   const servicioProcedimientos = {
-    getProcedimientos: vi.fn(() => of([])),
+    getProcedimientos: vi.fn(() => of([procedimiento])),
     marcarAutorizacionGenerada: vi.fn(() => of(undefined)),
   };
 
-  const servicioPdf = { generar: vi.fn(() => Promise.resolve()) };
+  const servicioPdf = {
+    generar: vi.fn(() => Promise.resolve()),
+    generarBlob: vi.fn(() => Promise.resolve(new Blob(['pdf'], { type: 'application/pdf' }))),
+  };
+
+  const servicioPdfAlta = {
+    generarBlob: vi.fn(() => Promise.resolve(new Blob(['pdf'], { type: 'application/pdf' }))),
+  };
+
+  const servicioPdfAutorizacion = {
+    generarBlob: vi.fn(() => Promise.resolve(new Blob(['pdf'], { type: 'application/pdf' }))),
+  };
 
   const usuarioService = {
     getMedicos: vi.fn(() =>
@@ -210,6 +285,9 @@ describe('Paciente', () => {
     servicioPaciente.obtenerPaciente.mockReturnValue(of(detalle));
     servicioDocumento.listarDocumentos.mockReturnValue(of([documento]));
     servicioDocumento.subirDocumento.mockReturnValue(of([documento]));
+    servicioDocumento.eliminarDocumento.mockReturnValue(of(undefined));
+    servicioProcedimientos.getProcedimientos.mockReturnValue(of([procedimiento]));
+    servicioAlta.buscarPorEpisodio.mockReturnValue(of([]));
     usuarioService.getMedicos.mockReturnValue(
       of([{ id: 5, nombreCompleto: 'Dr. Juan Pérez', especialidad: 'Medicina general' }]),
     );
@@ -220,6 +298,9 @@ describe('Paciente', () => {
       providers: [
         { provide: PacienteService, useValue: servicioPaciente },
         { provide: DocumentoEpisodioService, useValue: servicioDocumento },
+        { provide: DocumentoAltaPdfService, useValue: servicioPdfAlta },
+        { provide: DocumentoAutorizacionPdfService, useValue: servicioPdfAutorizacion },
+        { provide: AltaService, useValue: servicioAlta },
         { provide: ConsumoEpisodioService, useValue: servicioConsumo },
         { provide: ProcedimientoMedicoService, useValue: servicioProcedimientos },
         { provide: DocumentoTratamientoPdfService, useValue: servicioPdf },
@@ -335,8 +416,10 @@ describe('Paciente', () => {
 
     const input = { value: '', click: vi.fn() } as unknown as HTMLInputElement;
     const evento = { target: { files: [archivo], value: '' } } as unknown as Event;
+    const fila = component.filasDocumento.find((item) => item.tipo === 'REFERENCIA');
+    expect(fila).toBeDefined();
 
-    component.seleccionarArchivo('REFERENCIA', input);
+    component.seleccionarArchivo(fila!, input);
     component.subirDocumento(evento);
 
     expect(servicioDocumento.subirDocumento).toHaveBeenCalledWith(
@@ -344,6 +427,101 @@ describe('Paciente', () => {
       'REFERENCIA',
       5,
       archivo,
+      null,
+      null,
+    );
+  });
+
+  it('sube la autorización asociada al procedimiento de la fila', async () => {
+    await render();
+
+    const input = { value: '', click: vi.fn() } as unknown as HTMLInputElement;
+    const evento = { target: { files: [archivo], value: '' } } as unknown as Event;
+    const fila = component.filasDocumento.find(
+      (item) => item.tipo === 'AUTORIZACION_PROCEDIMIENTO',
+    );
+    expect(fila).toBeDefined();
+
+    component.seleccionarArchivo(fila!, input);
+    component.subirDocumento(evento);
+
+    expect(servicioDocumento.subirDocumento).toHaveBeenCalledWith(
+      101,
+      'AUTORIZACION_PROCEDIMIENTO',
+      5,
+      archivo,
+      21,
+      null,
+    );
+  });
+
+  it('crea una fila de alta y una de receta por cada alta con tratamientos', async () => {
+    servicioAlta.buscarPorEpisodio.mockReturnValue(of([alta]));
+
+    await render();
+
+    const etiquetas = component.filasDocumento.map((fila) => fila.etiqueta);
+    expect(etiquetas).toContain('Indicación médica · 2026-10-12');
+    expect(etiquetas).toContain('Receta médica');
+  });
+
+  it('genera la receta del alta y la muestra en el visor', async () => {
+    servicioAlta.buscarPorEpisodio.mockReturnValue(of([alta]));
+
+    await render();
+
+    const fila = component.filasDocumento.find((item) => item.tipo === 'RECETA');
+    expect(fila).toBeDefined();
+
+    await component.generarRecetaDocumento(fila!);
+
+    expect(servicioPdf.generarBlob).toHaveBeenCalled();
+    expect(modalService.open).toHaveBeenCalledWith(
+      VisorArchivos,
+      expect.objectContaining({
+        title: 'Receta médica',
+        archivos: [expect.objectContaining({ nombreOriginal: 'receta-30.pdf' })],
+      }),
+    );
+  });
+
+  it('genera la autorización y la muestra en el visor de archivos', async () => {
+    await render();
+
+    const fila = component.filasDocumento.find(
+      (item) => item.tipo === 'AUTORIZACION_PROCEDIMIENTO',
+    );
+    expect(fila).toBeDefined();
+
+    await component.generarAutorizacionFila(fila!);
+
+    expect(servicioPdfAutorizacion.generarBlob).toHaveBeenCalled();
+    expect(modalService.open).toHaveBeenCalledWith(
+      VisorArchivos,
+      expect.objectContaining({
+        title: 'Autorización: Apendicectomía',
+        archivos: [expect.objectContaining({ nombreOriginal: 'autorizacion-21.pdf' })],
+      }),
+    );
+  });
+
+  it('genera el alta médica y la muestra en el visor', async () => {
+    servicioAlta.buscarPorEpisodio.mockReturnValue(of([alta]));
+
+    await render();
+
+    const fila = component.filasDocumento.find((item) => item.tipo === 'ALTA_MEDICA');
+    expect(fila).toBeDefined();
+
+    await component.generarAltaDocumento(fila!);
+
+    expect(servicioPdfAlta.generarBlob).toHaveBeenCalled();
+    expect(modalService.open).toHaveBeenCalledWith(
+      VisorArchivos,
+      expect.objectContaining({
+        title: fila!.etiqueta,
+        archivos: [expect.objectContaining({ nombreOriginal: 'alta-30.pdf' })],
+      }),
     );
   });
 
@@ -357,7 +535,9 @@ describe('Paciente', () => {
     const input = { value: '', click: vi.fn() } as unknown as HTMLInputElement;
     const evento = { target: { files: [archivo], value: '' } } as unknown as Event;
 
-    component.seleccionarArchivo('REFERENCIA', input);
+    const fila = component.filasDocumento.find((item) => item.tipo === 'REFERENCIA');
+    expect(fila).toBeDefined();
+    component.seleccionarArchivo(fila!, input);
     component.subirDocumento(evento);
 
     expect(popUps.advertencia).toHaveBeenCalledWith('Formato no permitido.');
@@ -390,20 +570,50 @@ describe('Paciente', () => {
     expect(boton.disabled).toBe(true);
   });
 
-  it('carga y muestra el detalle de consumo con su total', async () => {
+  it('abre el detalle de consumo desde el botón principal', async () => {
     await render();
-    component.documentacionAbierta = true;
-    fixture.componentRef.changeDetectorRef.detectChanges();
 
-    component.seleccionarSeccionDocumentacion('consumo');
+    const botones = Array.from(
+      fixture.nativeElement.querySelectorAll('.acciones .btn') as NodeListOf<HTMLButtonElement>,
+    );
+    const botonConsumo = botones.find((boton) =>
+      boton.textContent?.includes('Detalle de consumo'),
+    );
+    expect(botonConsumo).toBeDefined();
+
+    botonConsumo!.click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(component.vistaDetalleConsumo).toBe(true);
+    expect(component.documentacionAbierta).toBe(false);
+    expect(component.seccionDocumentacion).toBe('consumo');
+    expect(servicioConsumo.obtenerConsumo).toHaveBeenCalledWith(101);
+  });
+
+  it('carga y muestra el detalle de consumo dentro del panel de detalle', async () => {
+    await render();
+
+    component.abrirDetalleConsumo();
     await fixture.whenStable();
     fixture.componentRef.changeDetectorRef.detectChanges();
 
     expect(servicioConsumo.obtenerConsumo).toHaveBeenCalledWith(101);
 
-    const filas = fixture.nativeElement.querySelectorAll('.doc-tabla tbody tr');
+    const filas = fixture.nativeElement.querySelectorAll('.detalle-consumo .doc-tabla tbody tr');
     expect(filas.length).toBe(2);
     expect(fixture.nativeElement.textContent).toContain('Q 512.00');
+  });
+
+  it('vuelve al detalle del paciente desde el detalle de consumo', async () => {
+    await render();
+
+    component.abrirDetalleConsumo();
+    expect(component.vistaDetalleConsumo).toBe(true);
+
+    component.volverDetallePaciente();
+
+    expect(component.vistaDetalleConsumo).toBe(false);
   });
 
   it('genera el documento con los datos del paciente, los tratamientos y el médico', async () => {

@@ -869,6 +869,129 @@ export class ModalAgregarPaciente {
   }
 
   // ------------------- GETTERS PARA VALIDACIONES -------------------
+  /** Indica si el formulario de edición difiere de los datos originales del paciente. */
+  get hayCambios(): boolean {
+    if (!this.isEditing || !this.datosEdicion) return true;
+    return this.firmaFormularioActual() !== this.firmaFormularioOriginal(this.datosEdicion);
+  }
+
+  private firmaFormularioActual(): string {
+    return JSON.stringify({
+      persona: this.firmaPersona(this.pacienteForm.persona),
+      estadoCivil: this.textoNormalizado(this.pacienteForm.estadoCivil),
+      direccion: this.textoNormalizado(this.pacienteForm.direccion),
+      ocupacion: this.textoNormalizado(this.pacienteForm.ocupacion),
+      camaId: this.soloDatosPersonales
+        ? null
+        : this.tipoAtencion === 'hospitalizacion'
+          ? this.camaSeleccionada?.idCama ?? null
+          : null,
+      alergias: [...this.alergiasSeleccionadas].sort((a, b) => a - b),
+      enfermedades: [...this.enfermedadesSeleccionadas].sort((a, b) => a - b),
+      episodio: this.soloDatosPersonales
+        ? null
+        : {
+            tipoAtencion: this.tipoAtencion === 'emergencia' ? 'EMERGENCIA' : 'HOSPITALIZACION',
+            descripcion: this.textoNormalizado(this.descripcionAtencion),
+            medicoId: this.medicoSeleccionado?.id ?? null,
+            responsable: this.firmaResponsableActual(),
+            referencia: this.referenciaTieneDatos
+              ? {
+                  institucionId: this.institucionSeleccionada?.id ?? null,
+                  motivoReferencia: this.textoNormalizado(this.motivoReferencia),
+                }
+              : null,
+          },
+      archivoReferencia: this.archivoReferencia?.name ?? null,
+    });
+  }
+
+  private firmaFormularioOriginal(datos: PacienteDetalle): string {
+    return JSON.stringify({
+      persona: this.firmaPersona({
+        cui: datos.cui ?? undefined,
+        nombres: datos.nombres,
+        apellidos: datos.apellidos,
+        sexo: datos.sexo ?? undefined,
+        fechaNacimiento: datos.fechaNacimiento ?? undefined,
+        telefono: datos.telefono,
+        email: datos.email,
+      }),
+      estadoCivil: this.textoNormalizado(datos.estadoCivil),
+      direccion: this.textoNormalizado(datos.direccion),
+      ocupacion: this.textoNormalizado(datos.ocupacion),
+      camaId: datos.episodioId == null ? null : datos.camaId ?? null,
+      alergias: datos.alergias.map((alergia) => alergia.id).sort((a, b) => a - b),
+      enfermedades: datos.enfermedades.map((enfermedad) => enfermedad.id).sort((a, b) => a - b),
+      episodio:
+        datos.episodioId == null
+          ? null
+          : {
+              tipoAtencion: datos.tipoAtencion ?? 'EMERGENCIA',
+              descripcion: this.textoNormalizado(datos.descripcion),
+              medicoId: datos.medicoId ?? null,
+              responsable: datos.responsable
+                ? {
+                    ...this.firmaPersona({
+                      cui: datos.responsable.cui ?? undefined,
+                      nombres: datos.responsable.nombres,
+                      apellidos: datos.responsable.apellidos,
+                      sexo: datos.responsable.sexo ?? undefined,
+                      fechaNacimiento: datos.responsable.fechaNacimiento ?? undefined,
+                      telefono: datos.responsable.telefono,
+                      email: null,
+                    }),
+                    parentescoId: datos.responsable.parentescoId ?? null,
+                    direccion: this.textoNormalizado(datos.responsable.direccion),
+                  }
+                : null,
+              referencia: datos.referencia
+                ? {
+                    institucionId: datos.referencia.institucionId ?? null,
+                    motivoReferencia: this.textoNormalizado(datos.referencia.motivoReferencia),
+                  }
+                : null,
+            },
+      archivoReferencia: null,
+    });
+  }
+
+  private firmaPersona(persona: Partial<PersonaDatos>) {
+    return {
+      cui: this.textoNormalizado(persona.cui),
+      nombres: this.textoNormalizado(persona.nombres) ?? '',
+      apellidos: this.textoNormalizado(persona.apellidos) ?? '',
+      sexo: persona.sexo ?? null,
+      fechaNacimiento: this.textoNormalizado(persona.fechaNacimiento) ?? '',
+      telefono: this.textoNormalizado(persona.telefono),
+      email: this.textoNormalizado(persona.email),
+    };
+  }
+
+  private firmaResponsableActual() {
+    const firma = {
+      ...this.firmaPersona(this.responsableForm.persona),
+      parentescoId: this.responsableForm.parentescoId,
+      direccion: this.textoNormalizado(this.responsableForm.direccion),
+    };
+    const vacio =
+      !firma.cui &&
+      !firma.nombres &&
+      !firma.apellidos &&
+      !firma.sexo &&
+      !firma.fechaNacimiento &&
+      !firma.telefono &&
+      !firma.email &&
+      !firma.parentescoId &&
+      !firma.direccion;
+    return vacio ? null : firma;
+  }
+
+  private textoNormalizado(valor: string | null | undefined): string | null {
+    const texto = valor?.trim() ?? '';
+    return texto || null;
+  }
+
   get responsableRequerido(): boolean {
     return this.tipoAtencion === 'hospitalizacion' || this.esPacienteMenor();
   }

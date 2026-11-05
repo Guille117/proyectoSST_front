@@ -15,19 +15,6 @@
     </div>
   }
 
-  <div class="autorizacion-acciones">
-    <button
-      type="button"
-      class="btn _principal"
-      [disabled]="cargando() || !listo()"
-      (click)="imprimir()"
-    >
-      <i class="bi bi-printer" aria-hidden="true"></i>
-      Imprimir
-    </button>
-    <button type="button" class="btn _cancelar" (click)="cerrar()">Cerrar</button>
-  </div>
-
   <div class="autorizacion-contenido">
     @if (cargando()) {
       <div class="autorizacion-vacio">
