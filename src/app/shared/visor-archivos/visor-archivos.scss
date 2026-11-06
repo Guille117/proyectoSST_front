@@ -348,3 +348,32 @@
     min-width: 40px;
   }
 }
+
+@media (max-width: 640px) {
+  .barra-boton {
+    width: 44px;
+    height: 44px;
+    font-size: 1.15rem;
+  }
+
+  .flecha {
+    width: 48px;
+    height: 48px;
+  }
+
+  .flecha--izquierda {
+    left: 8px;
+  }
+
+  .flecha--derecha {
+    right: 8px;
+  }
+
+  .archivo-nombre {
+    font-size: 0.95rem;
+  }
+
+  .archivo-meta {
+    font-size: 0.8rem;
+  }
+}

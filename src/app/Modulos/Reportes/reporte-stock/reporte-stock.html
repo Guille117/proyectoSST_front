@@ -1,0 +1,38 @@
+<div class="reporte areaTrabajo-container">
+  <div class="reporte-encabezado">
+    <h2 class="reporte-titulo">Stock bajo</h2>
+    <div class="filtros">
+      <button type="button" class="btn" (click)="exportarPdf()">PDF</button>
+      <button type="button" class="btn" (click)="exportarExcel()">Excel</button>
+    </div>
+  </div>
+
+  @if (cargando) {
+    <p class="reporte-vacio">Cargando reporte...</p>
+  } @else {
+    <div class="table-container">
+      <table class="table">
+        <thead>
+          <tr>
+            <th class="celda_izquierda">Producto</th>
+            <th class="celda_centrada">Disponible</th>
+            <th class="celda_centrada">Vencimiento</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (s of datos; track s.id) {
+            <tr>
+              <td class="celda_izquierda">{{ s.producto }}</td>
+              <td class="celda_centrada">{{ s.disponible }}</td>
+              <td class="celda_centrada">{{ s.vencimiento ?? '—' }}</td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="3" class="celda_centrada">Sin datos.</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>

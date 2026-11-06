@@ -1,8 +1,11 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { Observable, of } from 'rxjs';
+import { By } from '@angular/platform-browser';
+import { MatSelect } from '@angular/material/select';
+import { Observable, of, throwError } from 'rxjs';
 import { ModalService } from '../../../../modal-principal/modal-service';
 import { ArchivoService } from '../../../../shared/archivos/archivoService';
 import { ModalPopUps } from '../../../../shared/popUps/modal-popUpsService';
+import { OpcionOtroComponent } from '../../../../shared/opcion-otro/opcion-otro';
 import { CatalogoService } from '../../../Catalogos/data/serviceCatalogo';
 import { ServicioCama } from '../../camas/data/servicioCama';
 import { camaResponseSimple, EstadoCama } from '../../camas/data/interfazCama';
@@ -124,6 +127,9 @@ describe('ModalAgregarPaciente', () => {
 
   const servicioCatalogo = {
     listar: vi.fn<(recurso: string, activos?: boolean) => Observable<unknown[]>>(() => of([])),
+    crear: vi.fn<(recurso: string, datos: { nombre: string }) => Observable<{ id: number; nombre: string }>>(
+      () => of({ id: 9, nombre: 'Nuevo' }),
+    ),
   };
 
   const modalService = { open: vi.fn(), close: vi.fn() };
@@ -153,6 +159,7 @@ describe('ModalAgregarPaciente', () => {
     servicioCama.listarCamas.mockReturnValue(of([cama]));
     servicioCama.buscarCamas.mockReturnValue(of([cama]));
     servicioCatalogo.listar.mockReturnValue(of([]));
+    servicioCatalogo.crear.mockReturnValue(of({ id: 9, nombre: 'Nuevo' }));
     modalPopUps.confirmarToast.mockResolvedValue(true);
     modalPopUps.exito.mockResolvedValue(undefined);
 
@@ -218,6 +225,16 @@ describe('ModalAgregarPaciente', () => {
     expect(component.institucionSeleccionada?.id).toBe(8);
     expect(component.motivoReferencia).toBe('Evaluación');
     expect(component.pasos.length).toBe(5);
+  });
+
+  it('solo detecta cambios cuando el formulario se modifica', async () => {
+    await crearEnEdicion(detalle);
+
+    expect(component.hayCambios).toBe(false);
+
+    component.pacienteForm.direccion = 'Otra dirección';
+
+    expect(component.hayCambios).toBe(true);
   });
 
   it('precarga y envía las alergias y enfermedades seleccionadas por ID', async () => {
@@ -407,5 +424,215 @@ describe('ModalAgregarPaciente', () => {
     expect(pacienteService.obtenerPaciente).toHaveBeenCalledWith(21);
     expect(component.modoBusqueda).toBe(false);
     expect(component.cargandoPrecarga).toBe(false);
+  });
+
+  function completarPacienteValido(): void {
+    component.pacienteForm.persona = {
+      cui: '1234567890123',
+      nombres: 'Ana',
+      apellidos: 'Lopez',
+      sexo: 'FEMENINO',
+      fechaNacimiento: '1990-01-01',
+      telefono: '12345678',
+      email: 'ana@correo.com',
+    };
+    component.tipoAtencion = 'emergencia';
+    component.descripcionAtencion = 'Control';
+    component.medicoSeleccionado = {
+      id: 5,
+      nombreCompleto: 'Dr. Juan Pérez',
+      especialidad: 'Medicina general',
+    };
+  }
+
+  function abrirOtroMatSelect(name: string, valor: unknown): OpcionOtroComponent {
+    const select = fixture.debugElement.query(By.css(`mat-select[name="${name}"]`))
+      .componentInstance as MatSelect;
+    select._onChange(valor);
+    fixture.detectChanges();
+    const componentes = fixture.debugElement.queryAll(By.css('app-opcion-otro'));
+    return componentes[componentes.length - 1].componentInstance as OpcionOtroComponent;
+  }
+
+  function abrirOtroSelectNativo(id: string): OpcionOtroComponent {
+    const select: HTMLSelectElement = fixture.nativeElement.querySelector(`#${id}`);
+    const opcionOtro = Array.from(select.options).find(
+      (opcion) => opcion.textContent?.trim() === 'Otro',
+    );
+    select.selectedIndex = opcionOtro?.index ?? -1;
+    select.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+    return fixture.debugElement.query(By.css('app-opcion-otro'))
+      .componentInstance as OpcionOtroComponent;
+  }
+
+  it('crea la enfermedad pendiente antes de guardar y usa el nuevo id', async () => {
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    component.contador = 1;
+    component.enfermedades = [{ id: 1, nombre: 'Diabetes' }];
+    component.enfermedadesSeleccionadas = [1];
+    fixture.detectChanges();
+
+    const otro = abrirOtroMatSelect('enfermedadesPaciente', [1, -1]);
+    otro.nombre = 'Asma';
+    fixture.detectChanges();
+
+    completarPacienteValido();
+    await component.guardarPaciente();
+
+    expect(servicioCatalogo.crear).toHaveBeenCalledWith('enfermedades', { nombre: 'Asma' });
+    expect(pacienteService.postPaciente).toHaveBeenCalledWith(
+      expect.objectContaining({
+        request: expect.objectContaining({
+          paciente: expect.objectContaining({ enfermedadIds: [1, 9] }),
+        }),
+      }),
+    );
+    expect(servicioCatalogo.crear.mock.invocationCallOrder[0])
+      .toBeLessThan(pacienteService.postPaciente.mock.invocationCallOrder[0]);
+  });
+
+  it('crea la enfermedad y la alergia pendientes en orden antes de guardar', async () => {
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    servicioCatalogo.crear.mockImplementation((recurso: string) =>
+      of({ id: recurso === 'enfermedades' ? 9 : 10, nombre: recurso }),
+    );
+
+    component.contador = 1;
+    component.enfermedades = [{ id: 1, nombre: 'Diabetes' }];
+    component.alergias = [{ id: 2, nombre: 'Penicilina' }];
+    component.enfermedadesSeleccionadas = [1];
+    component.alergiasSeleccionadas = [2];
+    fixture.detectChanges();
+
+    const enfermedad = abrirOtroMatSelect('enfermedadesPaciente', [1, -1]);
+    enfermedad.nombre = 'Asma';
+    const alergia = abrirOtroMatSelect('alergiasPaciente', [2, -1]);
+    alergia.nombre = 'Polen';
+    fixture.detectChanges();
+
+    completarPacienteValido();
+    await component.guardarPaciente();
+
+    expect(servicioCatalogo.crear.mock.calls).toEqual([
+      ['enfermedades', { nombre: 'Asma' }],
+      ['alergias', { nombre: 'Polen' }],
+    ]);
+    expect(pacienteService.postPaciente).toHaveBeenCalledWith(
+      expect.objectContaining({
+        request: expect.objectContaining({
+          paciente: expect.objectContaining({
+            enfermedadIds: [1, 9],
+            alergiaIds: [2, 10],
+          }),
+        }),
+      }),
+    );
+  });
+
+  it('crea el parentesco pendiente antes de guardar y usa el nuevo id', async () => {
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    component.contador = 3;
+    fixture.detectChanges();
+
+    const otro = abrirOtroSelectNativo('parentescoResponsable');
+    otro.nombre = 'Tío';
+    fixture.detectChanges();
+
+    component.responsableForm.persona = {
+      cui: '9876543210123',
+      nombres: 'Rosa',
+      apellidos: 'Lopez',
+      sexo: 'FEMENINO',
+      fechaNacimiento: '1970-01-01',
+      telefono: '87654321',
+    };
+    servicioCatalogo.crear.mockReturnValueOnce(of({ id: 12, nombre: 'Tío' }));
+    completarPacienteValido();
+
+    await component.guardarPaciente();
+
+    expect(servicioCatalogo.crear).toHaveBeenCalledWith('parentescos', { nombre: 'Tío' });
+    expect(pacienteService.postPaciente).toHaveBeenCalledWith(
+      expect.objectContaining({
+        request: expect.objectContaining({
+          episodio: expect.objectContaining({
+            responsable: expect.objectContaining({ parentescoId: 12 }),
+          }),
+        }),
+      }),
+    );
+  });
+
+  it('crea la institución pendiente antes de guardar y usa el nuevo id', async () => {
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    component.contador = 4;
+    fixture.detectChanges();
+
+    const otro = abrirOtroMatSelect('institucionSeleccionada', -1);
+    otro.nombre = 'Clínica';
+    fixture.detectChanges();
+
+    servicioCatalogo.crear.mockReturnValueOnce(
+      of({ id: 12, nombre: 'Clínica', telefono: '', direccion: '' }),
+    );
+    completarPacienteValido();
+
+    await component.guardarPaciente();
+
+    expect(servicioCatalogo.crear).toHaveBeenCalledWith('instituciones', { nombre: 'Clínica' });
+    expect(pacienteService.postPaciente).toHaveBeenCalledWith(
+      expect.objectContaining({
+        request: expect.objectContaining({
+          episodio: expect.objectContaining({
+            referencia: expect.objectContaining({ institucionId: 12 }),
+          }),
+        }),
+      }),
+    );
+  });
+
+  it('no guarda el paciente si falla la creación de una selección pendiente', async () => {
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    component.contador = 1;
+    fixture.detectChanges();
+    const otro = abrirOtroMatSelect('enfermedadesPaciente', [-1]);
+    otro.nombre = 'Asma';
+    fixture.detectChanges();
+
+    servicioCatalogo.crear.mockReturnValueOnce(throwError(() => new Error('fallo')));
+    completarPacienteValido();
+
+    await component.guardarPaciente();
+
+    expect(pacienteService.postPaciente).not.toHaveBeenCalled();
+    expect(modalPopUps.errorDesdeBackend).toHaveBeenCalled();
+  });
+
+  it('no guarda si el parentesco pendiente está vacío y avisa al usuario', async () => {
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    component.contador = 3;
+    fixture.detectChanges();
+    abrirOtroSelectNativo('parentescoResponsable');
+    completarPacienteValido();
+
+    await component.guardarPaciente();
+
+    expect(pacienteService.postPaciente).not.toHaveBeenCalled();
+    expect(modalPopUps.formIncompleto).toHaveBeenCalledWith(
+      'Completa el valor de «Parentesco» o cancélalo antes de guardar.',
+    );
   });
 });

@@ -185,7 +185,7 @@
             <span class="indicacion-nombre">{{ examen.nombre }}</span>
 
             <!-- Menú de opciones de la tarjeta: mismo despliegue del listado de medicamentos -->
-            @if (!soloLectura) {
+            @if (puedeGestionar(examen.usuarioId)) {
             <button
               type="button"
               class="indicacion-menu-trigger"
@@ -218,7 +218,7 @@
           }
 
           <!-- Menú de opciones: se dibuja al final de la tarjeta y flota sobre ella -->
-          @if (menuIndicacionAbierta === examen.id && !soloLectura) {
+          @if (menuIndicacionAbierta === examen.id && puedeGestionar(examen.usuarioId)) {
             <div
               class="indicacion-menu"
               role="menu"

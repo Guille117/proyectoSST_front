@@ -66,5 +66,6 @@ export interface ConteoCatalogosClinica {
   partesCuerpo: number;
   condicionesEgreso: number;
   procedimientos: number;
+  estadosClinico: number;
 }
 

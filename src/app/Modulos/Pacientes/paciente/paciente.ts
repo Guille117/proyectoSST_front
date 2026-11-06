@@ -2,7 +2,7 @@ import { DecimalPipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectorRef, Component, DestroyRef, ElementRef, HostListener, OnInit, ViewChild, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { firstValueFrom, TimeoutError, timeout } from 'rxjs';
+import { firstValueFrom, of, TimeoutError, timeout } from 'rxjs';
 import { TabSwitch } from '../../../shared/tab-switch/tab-switch';
 import { Paginacion } from '../../../shared/paginacion/paginacion';
 import { calcularFilasVisibles, FILAS_VISIBLES_POR_DEFECTO } from '../../../shared/paginacion/filas-visibles';
@@ -11,27 +11,33 @@ import { ArchivoService } from '../../../shared/archivos/archivoService';
 import { PopUps } from '../../../shared/popUps/popUpsService';
 import { AuthService } from '../../Auth/data/auth-service';
 import { AltaService } from '../../Medica/alta/data/alta-service';
-import { AltaTratamientoResponse } from '../../Medica/alta/data/altaInterfaz';
+import { AltaResponse, AltaTratamientoResponse, TipoAltaApi } from '../../Medica/alta/data/altaInterfaz';
 import { Sexo } from '../../Usuarios/usu/data/usuarioInterfaz';
 import { ModalAgregarPaciente } from './modal-agregar-paciente/modal-agregar-paciente';
 import { VisorArchivos } from '../../../shared/visor-archivos/visor-archivos';
 import { ArchivoVisor } from '../../../shared/visor-archivos/visor-archivos.interfaz';
 import { ConsumoEpisodioService } from './data/consumo-service';
 import { ConsumoEpisodio } from './data/consumoInterfaz';
+import { DocumentoAltaPdfService } from './data/documento-alta-pdf-service';
+import { DocumentoAutorizacionPdfService } from './data/documento-autorizacion-pdf-service';
 import { DocumentoEpisodioService } from './data/documento-episodio-service';
-import { DocumentoTratamientoPdfService } from './data/documento-tratamiento-pdf-service';
+import {
+  DatosDocumentoTratamiento,
+  DocumentoTratamientoPdfService,
+  TratamientoDocumento,
+} from './data/documento-tratamiento-pdf-service';
 import { DocumentoEpisodio, TipoDocumentoEpisodio } from './data/documentoInterfaz';
 import { PacienteDetalle, PacienteResumido, TipoAtencion } from './data/pacienteInterfaz';
 import { PacienteService } from './data/paciente-service';
 import { UsuarioService } from '../../Usuarios/usu/data/usuario-service';
+import { ProcedimientoMedicoService } from '../../Medica/procedimiento-medico/data/procedimiento-medico-service';
+import { ProcedimientoMedicoResponse } from '../../Medica/procedimiento-medico/data/procedimientoMedicoInterfaz';
 import { EpisodioResumen } from '../expediente/data/expedienteInterfaz';
 import { ResumenEpisodio } from '../expediente/resumen-episodio/resumen-episodio';
-
-/** Tipo de documento que se muestra en el panel del paciente. */
-interface TipoDocumentoVista {
-  tipo: TipoDocumentoEpisodio;
-  etiqueta: string;
-}
+import {
+  DatosAutorizacionVista,
+  ProcedimientoAutorizacionVista,
+} from './visor-autorizacion/visor-autorizacion';
 
 /** Secciones de la vista de documentación del paciente. */
 type SeccionDocumentacion = 'tratamiento' | 'consumo' | 'resumen';
@@ -53,6 +59,17 @@ interface TratamientoAltaVista {
   observaciones: string;
 }
 
+/** Fila de la sección Documentos del panel del paciente. */
+interface FilaDocumentoVista {
+  clave: string;
+  etiqueta: string;
+  tipo: TipoDocumentoEpisodio;
+  procedimientoId: number | null;
+  altaId: number | null;
+  alta: AltaResponse | null;
+  tituloGrupo: string | null;
+}
+
 @Component({
   selector: 'app-paciente',
   imports: [TabSwitch, Paginacion, DecimalPipe, ResumenEpisodio],
@@ -65,8 +82,11 @@ export class Paciente implements OnInit {
   private readonly servicioDocumento = inject(DocumentoEpisodioService);
   private readonly servicioConsumo = inject(ConsumoEpisodioService);
   private readonly servicioPdf = inject(DocumentoTratamientoPdfService);
+  private readonly servicioPdfAlta = inject(DocumentoAltaPdfService);
+  private readonly servicioPdfAutorizacion = inject(DocumentoAutorizacionPdfService);
   private readonly servicioAlta = inject(AltaService);
   private readonly servicioUsuario = inject(UsuarioService);
+  private readonly servicioProcedimientos = inject(ProcedimientoMedicoService);
   private readonly authService = inject(AuthService);
   private readonly archivoService = inject(ArchivoService);
   private readonly popUps = inject(PopUps);
@@ -90,8 +110,15 @@ export class Paciente implements OnInit {
   errorDocumentos = '';
   subiendoTipo: TipoDocumentoEpisodio | null = null;
 
+  /** Procedimientos y altas del episodio que alimentan las filas de Documentos. */
+  procedimientosDocumento: ProcedimientoMedicoResponse[] = [];
+  altasDocumento: AltaResponse[] = [];
+
   /** La vista de documentación ocupa la pantalla en lugar del listado y el detalle. */
   documentacionAbierta = false;
+
+  /** El panel de detalle muestra el consumo del episodio en lugar de los datos del paciente. */
+  vistaDetalleConsumo = false;
 
   /** Sección de documentación elegida. */
   seccionDocumentacion: SeccionDocumentacion = 'tratamiento';
@@ -105,6 +132,8 @@ export class Paciente implements OnInit {
   cargandoTratamientos = false;
   errorTratamientos = '';
   generandoDocumento = false;
+  generandoAutorizacion = false;
+  generandoDocumentoId: string | null = null;
 
   /** Consumo del episodio: productos entregados y estancia en cama. */
   consumo: ConsumoEpisodio | null = null;
@@ -133,7 +162,7 @@ export class Paciente implements OnInit {
     },
   ];
 
-  private tipoSubida: TipoDocumentoEpisodio | null = null;
+  private filaSubida: FilaDocumentoVista | null = null;
 
   /** Etiquetas del tipo de atención del paciente. */
   protected readonly etiquetasTipo: Record<TipoAtencion, string> = {
@@ -147,14 +176,66 @@ export class Paciente implements OnInit {
     FEMENINO: 'Femenino',
   };
 
-  /**
-   * Tipos de documento visibles. RESPONSABILIDAD se mantiene en los tipos y en el servicio, pero no
-   * se muestra todavía porque el flujo actual solo maneja autorización y referencia.
-   */
-  protected readonly tiposDocumento: TipoDocumentoVista[] = [
-    { tipo: 'AUTORIZACION_PROCEDIMIENTO', etiqueta: 'Autorización de atención' },
-    { tipo: 'REFERENCIA', etiqueta: 'Hoja de referencia' },
-  ];
+  /** Filas visibles de Documentos: una por autorización, alta, receta y la hoja de referencia. */
+  get filasDocumento(): FilaDocumentoVista[] {
+    const filas: FilaDocumentoVista[] = [];
+    let tituloAutorizaciones = true;
+    let tituloAltas = true;
+    let tituloRecetas = true;
+
+    for (const procedimiento of this.procedimientosDocumento) {
+      if (!procedimiento.requiereAutorizacion) continue;
+      filas.push({
+        clave: `autorizacion-${procedimiento.id}`,
+        etiqueta: `Autorización: ${procedimiento.tipoProcedimientoNombre}`,
+        tipo: 'AUTORIZACION_PROCEDIMIENTO',
+        procedimientoId: procedimiento.id,
+        altaId: null,
+        alta: null,
+        tituloGrupo: tituloAutorizaciones ? 'Autorizaciones' : null,
+      });
+      tituloAutorizaciones = false;
+    }
+
+    for (const alta of this.altasDocumento) {
+      filas.push({
+        clave: `alta-${alta.id}`,
+        etiqueta: this.etiquetaAlta(alta),
+        tipo: 'ALTA_MEDICA',
+        procedimientoId: null,
+        altaId: alta.id,
+        alta,
+        tituloGrupo: tituloAltas ? 'Altas médicas' : null,
+      });
+      tituloAltas = false;
+    }
+
+    for (const alta of this.altasDocumento) {
+      if (!alta.tratamientos.length) continue;
+      filas.push({
+        clave: `receta-${alta.id}`,
+        etiqueta: 'Receta médica',
+        tipo: 'RECETA',
+        procedimientoId: null,
+        altaId: alta.id,
+        alta,
+        tituloGrupo: tituloRecetas ? 'Recetas' : null,
+      });
+      tituloRecetas = false;
+    }
+
+    filas.push({
+      clave: 'referencia',
+      etiqueta: 'Hoja de referencia',
+      tipo: 'REFERENCIA',
+      procedimientoId: null,
+      altaId: null,
+      alta: null,
+      tituloGrupo: 'Referencia',
+    });
+
+    return filas;
+  }
 
   protected get archivosAceptados(): string {
     return this.archivoService.aceptados;
@@ -201,6 +282,9 @@ export class Paciente implements OnInit {
       this.consumo = null;
       this.errorConsumo = '';
       this.cargandoConsumo = false;
+      this.vistaDetalleConsumo = false;
+      this.procedimientosDocumento = [];
+      this.altasDocumento = [];
       return;
     }
     if (!forzar && this.pacienteSeleccionado?.pacienteId === paciente.pacienteId) return;
@@ -214,8 +298,13 @@ export class Paciente implements OnInit {
     this.consumo = null;
     this.errorConsumo = '';
     this.cargandoConsumo = false;
+    this.vistaDetalleConsumo = false;
+    this.procedimientosDocumento = [];
+    this.altasDocumento = [];
     this.cargarDetalle(paciente);
     this.cargarDocumentos(paciente);
+    this.cargarProcedimientosDocumento(paciente);
+    this.cargarTratamientosAlta();
   }
 
   esSeleccionado(paciente: PacienteResumido): boolean {
@@ -233,11 +322,6 @@ export class Paciente implements OnInit {
   /** Episodio que se muestra en la sección Resumen de episodio. */
   get episodioIdDocumentacion(): number | null {
     return this.pacienteSeleccionado?.episodioId ?? this.pacienteSeleccionado?.ultimoEpisodioId ?? null;
-  }
-
-  /** Episodio cuyos documentos se consultan: el activo o, para egresados, el último. */
-  get episodioDocumentosId(): number | null {
-    return this.episodioIdDocumentacion;
   }
 
   /** Datos del episodio actual para la cabecera del resumen. */
@@ -264,6 +348,20 @@ export class Paciente implements OnInit {
     this.documentacionAbierta = true;
     this.seccionDocumentacion = 'tratamiento';
     this.cargarTratamientosAlta();
+  }
+
+  /** Muestra el consumo del episodio dentro del panel de detalle. */
+  abrirDetalleConsumo(): void {
+    if (!this.pacienteSeleccionado) return;
+
+    this.vistaDetalleConsumo = true;
+    this.seccionDocumentacion = 'consumo';
+    this.cargarConsumo();
+  }
+
+  /** Vuelve del consumo a los datos del paciente en el mismo panel. */
+  volverDetallePaciente(): void {
+    this.vistaDetalleConsumo = false;
   }
 
   /** Vuelve al listado y al detalle del paciente. */
@@ -373,6 +471,13 @@ export class Paciente implements OnInit {
     }
   }
 
+  /** Nombres de todos los médicos asignados al paciente para la ficha. */
+  nombresMedicos(datos: PacienteDetalle): string {
+    const nombres = (datos.medicos ?? []).map((medico) => `Dr. ${medico.nombreCompleto}`);
+    if (nombres.length) return nombres.join(', ');
+    return datos.medicoNombre ? `Dr. ${datos.medicoNombre}` : '-';
+  }
+
   /** Obtiene la especialidad del médico asignado desde el catálogo de médicos. */
   private async obtenerEspecialidadMedico(medicoId: number | null): Promise<string> {
     if (!medicoId) return '—';
@@ -412,6 +517,7 @@ export class Paciente implements OnInit {
           if (this.pacienteSeleccionado?.pacienteId !== paciente.pacienteId) return;
 
           const tratamientos = altas[0]?.tratamientos ?? [];
+          this.altasDocumento = altas;
           this.medicamentosAlta = tratamientos
             .filter((tratamiento) => tratamiento.tipo === 'MEDICAMENTO')
             .map((tratamiento, indice) => this.aTratamientoAltaVista(tratamiento, indice));
@@ -426,6 +532,7 @@ export class Paciente implements OnInit {
 
           this.medicamentosAlta = [];
           this.cuidadosAlta = [];
+          this.altasDocumento = [];
           this.cargandoTratamientos = false;
           this.errorTratamientos = this.mensajeError(
             error,
@@ -540,11 +647,6 @@ export class Paciente implements OnInit {
       });
   }
 
-  /** El paciente no tiene un episodio activo porque ya fue dado de alta. */
-  get estaEnAlta(): boolean {
-    return this.pacienteSeleccionado?.episodioId === null;
-  }
-
   protected esHospitalizacion(): boolean {
     const tipo = this.detalle?.tipoAtencion ?? this.pacienteSeleccionado?.tipoTratamiento ?? null;
     return tipo === 'HOSPITALIZACION';
@@ -579,8 +681,35 @@ export class Paciente implements OnInit {
   }
 
   // ------------------- DOCUMENTOS -------------------
-  documentosPorTipo(tipo: TipoDocumentoEpisodio): DocumentoEpisodio[] {
-    return this.documentos.filter((documento) => documento.tipo === tipo);
+  /** Documentos que pertenecen a una fila concreta (procedimiento, alta o referencia). */
+  documentosDeFila(fila: FilaDocumentoVista): DocumentoEpisodio[] {
+    return this.documentos.filter((documento) => {
+      if (documento.tipo !== fila.tipo) return false;
+      if (fila.tipo === 'AUTORIZACION_PROCEDIMIENTO') {
+        return documento.procedimientoMedicoId === fila.procedimientoId;
+      }
+      if (fila.tipo === 'ALTA_MEDICA' || fila.tipo === 'RECETA') {
+        return documento.altaId === fila.altaId;
+      }
+      return true;
+    });
+  }
+
+  tieneDocumentosFila(fila: FilaDocumentoVista): boolean {
+    return this.documentosDeFila(fila).length > 0;
+  }
+
+  autorizacionPendiente(fila: FilaDocumentoVista): boolean {
+    if (fila.tipo !== 'AUTORIZACION_PROCEDIMIENTO' || fila.procedimientoId === null) return false;
+    const procedimiento = this.procedimientosDocumento.find(
+      (item) => item.id === fila.procedimientoId,
+    );
+    return Boolean(
+      procedimiento &&
+        procedimiento.requiereAutorizacion &&
+        !procedimiento.autorizacionGenerada &&
+        procedimiento.estado === 'PENDIENTE',
+    );
   }
 
   recargarDocumentos(): void {
@@ -591,7 +720,7 @@ export class Paciente implements OnInit {
     this.errorDocumentos = '';
 
     const episodioId = paciente?.episodioId ?? paciente?.ultimoEpisodioId ?? null;
-    if (!episodioId) {
+    if (!paciente || episodioId === null) {
       this.documentos = [];
       this.cargandoDocumentos = false;
       return;
@@ -603,13 +732,13 @@ export class Paciente implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (documentos) => {
-          if (this.pacienteSeleccionado?.pacienteId !== paciente?.pacienteId) return;
+          if (this.pacienteSeleccionado?.pacienteId !== paciente.pacienteId) return;
           this.documentos = documentos;
           this.cargandoDocumentos = false;
           this.cdr.detectChanges();
         },
         error: (error) => {
-          if (this.pacienteSeleccionado?.pacienteId !== paciente?.pacienteId) return;
+          if (this.pacienteSeleccionado?.pacienteId !== paciente.pacienteId) return;
           this.cargandoDocumentos = false;
           this.errorDocumentos = this.mensajeError(error, 'No se pudieron cargar los documentos.');
           this.cdr.detectChanges();
@@ -617,8 +746,8 @@ export class Paciente implements OnInit {
       });
   }
 
-  abrirModalDocumentos(tipo: TipoDocumentoEpisodio, etiqueta: string): void {
-    const documentos = this.documentosPorTipo(tipo);
+  abrirModalDocumentos(fila: FilaDocumentoVista): void {
+    const documentos = this.documentosDeFila(fila);
     if (!documentos.length) return;
 
     const archivos: ArchivoVisor[] = documentos.map((documento) => ({
@@ -627,35 +756,33 @@ export class Paciente implements OnInit {
     }));
 
     this.modalService.open(VisorArchivos, {
-      title: etiqueta,
+      title: fila.etiqueta,
       modalClass: 'modal-visor-documentos',
       archivos,
       indiceInicial: 0,
       cargarArchivo: (archivo: ArchivoVisor) =>
         this.servicioDocumento.obtenerArchivo(Number(archivo.id)),
-      onEliminar: this.pacienteSeleccionado?.episodioId
-        ? (archivo: ArchivoVisor) =>
-            this.servicioDocumento.eliminarDocumento(Number(archivo.id))
-        : undefined,
+      onEliminar: (archivo: ArchivoVisor) =>
+        this.servicioDocumento.eliminarDocumento(Number(archivo.id)),
       onCambio: () => this.cargarDocumentos(this.pacienteSeleccionado),
     });
   }
 
-  seleccionarArchivo(tipo: TipoDocumentoEpisodio, input: HTMLInputElement): void {
-    if (!this.episodioDocumentosId || this.subiendoTipo) return;
-    this.tipoSubida = tipo;
+  seleccionarArchivo(fila: FilaDocumentoVista, input: HTMLInputElement): void {
+    if (this.episodioIdDocumentacion === null || this.subiendoTipo) return;
+    this.filaSubida = fila;
     input.value = '';
     input.click();
   }
 
   subirDocumento(event: Event): void {
     const input = event.target as HTMLInputElement;
-    const tipo = this.tipoSubida;
-    const episodioId = this.episodioDocumentosId;
+    const fila = this.filaSubida;
+    const episodioId = this.episodioIdDocumentacion;
     const usuarioId = this.authService.currentUser()?.id;
-    this.tipoSubida = null;
+    this.filaSubida = null;
 
-    if (!tipo || !episodioId) return;
+    if (!fila || episodioId === null) return;
     if (!usuarioId) {
       this.popUps.advertencia('No se pudo identificar al usuario para cargar el documento.');
       input.value = '';
@@ -673,9 +800,16 @@ export class Paciente implements OnInit {
       return;
     }
 
-    this.subiendoTipo = tipo;
+    this.subiendoTipo = fila.tipo;
     this.servicioDocumento
-      .subirDocumento(episodioId, tipo, usuarioId, resultado.seleccionado.archivo)
+      .subirDocumento(
+        episodioId,
+        fila.tipo,
+        usuarioId,
+        resultado.seleccionado.archivo,
+        fila.procedimientoId,
+        fila.altaId,
+      )
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: () => {
@@ -692,6 +826,262 @@ export class Paciente implements OnInit {
           this.cdr.detectChanges();
         },
       });
+  }
+
+  /** Abre la carta de autorización del procedimiento de la fila. */
+  async generarAutorizacionFila(fila: FilaDocumentoVista): Promise<void> {
+    const paciente = this.pacienteSeleccionado;
+    const detalle = this.detalle;
+    const episodioId = this.episodioIdDocumentacion;
+
+    if (episodioId === null) {
+      this.popUps.advertencia('El paciente no tiene un episodio para generar la autorización.');
+      return;
+    }
+    if (!detalle || !paciente || fila.procedimientoId === null) {
+      this.popUps.advertencia('No se pudo cargar la información del paciente.');
+      return;
+    }
+
+    this.generandoAutorizacion = true;
+    this.cdr.detectChanges();
+
+    try {
+      const procedimiento = this.procedimientosDocumento.find(
+        (item) => item.id === fila.procedimientoId,
+      );
+      if (!procedimiento) {
+        this.popUps.advertencia('No se encontró el procedimiento seleccionado.');
+        return;
+      }
+
+      const datos = this.aDatosAutorizacion(detalle, [
+        { id: procedimiento.id, nombre: procedimiento.tipoProcedimientoNombre },
+      ]);
+      const blob = await this.servicioPdfAutorizacion.generarBlob({
+        paciente: datos.paciente,
+        autoriza: datos.autoriza,
+        medico: datos.medico,
+        procedimiento: { nombre: procedimiento.tipoProcedimientoNombre },
+        fechaGeneracion: new Date(),
+      });
+
+      if (this.pacienteSeleccionado?.pacienteId !== paciente.pacienteId) return;
+
+      this.abrirPdfGenerado(
+        blob,
+        `autorizacion-${procedimiento.id}.pdf`,
+        `Autorización: ${procedimiento.tipoProcedimientoNombre}`,
+      );
+
+      this.servicioProcedimientos
+        .marcarAutorizacionGenerada(procedimiento.id)
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe({
+          next: () => this.cargarProcedimientosDocumento(paciente),
+          error: () => this.cargarProcedimientosDocumento(paciente),
+        });
+    } catch (error) {
+      this.popUps.error(this.mensajeError(error, 'No se pudo generar la autorización.'));
+    } finally {
+      this.generandoAutorizacion = false;
+      this.cdr.detectChanges();
+    }
+  }
+
+  /** Genera el PDF del alta seleccionada y lo muestra en el visor, sin persistirlo. */
+  async generarAltaDocumento(fila: FilaDocumentoVista): Promise<void> {
+    const alta = fila.alta;
+    if (!alta || this.generandoDocumentoId) return;
+
+    await this.generarPdfDeAlta(fila, async (datosPaciente, medico) => {
+      const blob = await this.servicioPdfAlta.generarBlob({
+        paciente: datosPaciente,
+        alta: {
+          tipoAlta: alta.tipoAlta,
+          diagnosticoEgreso: alta.diagnosticoEgreso,
+          condicionEgresoNombre: alta.condicionEgresoNombre,
+          observacionEgreso: alta.observacionEgreso,
+          fechaHoraEgreso: alta.fechaHoraEgreso,
+          motivoRetiro: alta.motivoRetiro,
+          riesgosRetiro: alta.riesgosRetiro,
+          institucionNombre: alta.institucionNombre,
+          motivoReferencia: alta.motivoReferencia,
+          indicacionesTraslado: alta.indicacionesTraslado,
+          tratamientos: alta.tratamientos,
+        },
+        medico,
+      });
+      this.abrirPdfGenerado(blob, `alta-${alta.id}.pdf`, fila.etiqueta);
+    });
+  }
+
+  /** Genera la receta médica del alta seleccionada y la muestra en el visor. */
+  async generarRecetaDocumento(fila: FilaDocumentoVista): Promise<void> {
+    const alta = fila.alta;
+    if (!alta || this.generandoDocumentoId) return;
+
+    if (!alta.tratamientos.length) {
+      this.popUps.advertencia('El alta no tiene medicamentos ni cuidados para la receta.');
+      return;
+    }
+
+    await this.generarPdfDeAlta(fila, async (datosPaciente, medico) => {
+      const medicamentos = this.tratamientosDocumento(alta, 'MEDICAMENTO');
+      const cuidados = this.tratamientosDocumento(alta, 'CUIDADO');
+      const datos: DatosDocumentoTratamiento = {
+        paciente: datosPaciente,
+        medicamentos,
+        cuidados,
+        medico,
+        titulo: 'RECETA MÉDICA',
+      };
+      const blob = await this.servicioPdf.generarBlob(datos);
+      this.abrirPdfGenerado(blob, `receta-${alta.id}.pdf`, 'Receta médica');
+    });
+  }
+
+  private async generarPdfDeAlta(
+    fila: FilaDocumentoVista,
+    generar: (
+      paciente: {
+        nombre: string;
+        cui: string | null;
+        sexo: string;
+        edad: string;
+        direccion: string;
+      },
+      medico: { nombre: string; especialidad: string },
+    ) => Promise<void>,
+  ): Promise<void> {
+    const paciente = this.pacienteSeleccionado;
+    if (!paciente) return;
+
+    this.generandoDocumentoId = fila.clave;
+    this.cdr.detectChanges();
+
+    try {
+      const detalle =
+        this.detalle ??
+        (await firstValueFrom(this.servicioPaciente.obtenerPaciente(paciente.pacienteId)));
+      if (this.pacienteSeleccionado?.pacienteId !== paciente.pacienteId) return;
+      if (!this.detalle) this.detalle = detalle;
+
+      const especialidad = await this.obtenerEspecialidadMedico(detalle.medicoId);
+      if (this.pacienteSeleccionado?.pacienteId !== paciente.pacienteId) return;
+      await generar(this.datosPacienteDocumento(detalle, paciente), {
+        nombre: detalle.medicoNombre?.trim() || 'No registrado',
+        especialidad,
+      });
+    } catch (error) {
+      this.popUps.error(this.mensajeError(error, 'No se pudo generar el documento.'));
+    } finally {
+      this.generandoDocumentoId = null;
+      this.cdr.detectChanges();
+    }
+  }
+
+  private abrirPdfGenerado(blob: Blob, nombre: string, titulo: string): void {
+    this.modalService.open(VisorArchivos, {
+      title: titulo,
+      modalClass: 'modal-visor-documentos',
+      archivos: [{ id: 0, nombreOriginal: nombre }],
+      indiceInicial: 0,
+      cargarArchivo: () => of(blob),
+    });
+  }
+
+  private tratamientosDocumento(
+    alta: AltaResponse,
+    tipo: 'MEDICAMENTO' | 'CUIDADO',
+  ): TratamientoDocumento[] {
+    return alta.tratamientos
+      .filter((tratamiento) => tratamiento.tipo === tipo)
+      .map((tratamiento) => {
+        const vista = this.aTratamientoAltaVista(tratamiento, 0);
+        return {
+          nombre: vista.nombre,
+          cantidad: vista.cantidad,
+          frecuencia: vista.frecuencia,
+          duracion: vista.duracion,
+          observaciones: vista.observaciones,
+        };
+      });
+  }
+
+  private cargarProcedimientosDocumento(paciente: PacienteResumido): void {
+    const episodioId = paciente.episodioId ?? paciente.ultimoEpisodioId;
+    if (episodioId === null) {
+      this.procedimientosDocumento = [];
+      this.cdr.detectChanges();
+      return;
+    }
+
+    this.servicioProcedimientos
+      .getProcedimientos(episodioId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (procedimientos) => {
+          if (this.pacienteSeleccionado?.pacienteId !== paciente.pacienteId) return;
+          this.procedimientosDocumento = procedimientos;
+          this.cdr.detectChanges();
+        },
+        error: () => {
+          if (this.pacienteSeleccionado?.pacienteId !== paciente.pacienteId) return;
+          this.procedimientosDocumento = [];
+          this.cdr.detectChanges();
+        },
+      });
+  }
+
+  private etiquetaAlta(alta: AltaResponse): string {
+    const tipo: Record<TipoAltaApi, string> = {
+      INDICACION_MEDICA: 'Indicación médica',
+      RETIRO_VOLUNTARIO: 'Retiro voluntario',
+      REFERENCIA_TRASLADO: 'Referencia / traslado',
+    };
+    const fecha = alta.fechaHoraEgreso?.split('T')[0] ?? '';
+    return fecha ? `${tipo[alta.tipoAlta]} · ${fecha}` : tipo[alta.tipoAlta];
+  }
+
+  private datosPacienteDocumento(detalle: PacienteDetalle, paciente: PacienteResumido) {
+    return {
+      nombre: detalle.nombreCompleto || paciente.nombreCompleto,
+      cui: detalle.cui?.trim() || paciente.cui?.trim() || null,
+      sexo: this.sexoLegible(detalle.sexo),
+      edad: detalle.edad === null ? '—' : `${detalle.edad} años`,
+      direccion: detalle.direccion?.trim() || '—',
+    };
+  }
+
+  /** Resuelve quién autoriza: el familiar responsable si existe, o el propio paciente. */
+  private aDatosAutorizacion(
+    detalle: PacienteDetalle,
+    procedimientos: ProcedimientoAutorizacionVista[],
+  ): DatosAutorizacionVista {
+    const responsable = detalle.responsable;
+    const nombreResponsable = responsable
+      ? `${responsable.nombres} ${responsable.apellidos}`.trim()
+      : '';
+
+    const autoriza = nombreResponsable
+      ? {
+          nombre: nombreResponsable,
+          cui: responsable?.cui ?? null,
+          calidad: 'representante legal del paciente',
+        }
+      : {
+          nombre: detalle.nombreCompleto,
+          cui: detalle.cui,
+          calidad: 'paciente',
+        };
+
+    return {
+      paciente: { nombre: detalle.nombreCompleto, cui: detalle.cui },
+      autoriza,
+      medico: { nombre: detalle.medicoNombre?.trim() || 'No registrado' },
+      procedimientos,
+    };
   }
 
   // ------------------- ACCIONES DE MODAL -------------------

@@ -1,0 +1,33 @@
+<div class="autorizacion">
+  @if (hayMultiples) {
+    <div class="autorizacion-selector">
+      <label for="procedimientoAutorizacion">Procedimiento</label>
+      <select
+        id="procedimientoAutorizacion"
+        name="procedimientoAutorizacion"
+        [ngModel]="procedimientoSeleccionadoId"
+        (ngModelChange)="cambiarProcedimiento($event)"
+      >
+        @for (procedimiento of datos.procedimientos; track procedimiento.id) {
+          <option [ngValue]="procedimiento.id">{{ procedimiento.nombre }}</option>
+        }
+      </select>
+    </div>
+  }
+
+  <div class="autorizacion-contenido">
+    @if (cargando()) {
+      <div class="autorizacion-vacio">
+        <i class="bi bi-hourglass-split" aria-hidden="true"></i>
+        <p>Generando documento...</p>
+      </div>
+    } @else if (error()) {
+      <div class="autorizacion-vacio autorizacion-vacio--error">
+        <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
+        <p>{{ error() }}</p>
+      </div>
+    } @else if (urlPdf(); as url) {
+      <iframe class="autorizacion-marco" [src]="url" title="Carta de autorización"></iframe>
+    }
+  </div>
+</div>

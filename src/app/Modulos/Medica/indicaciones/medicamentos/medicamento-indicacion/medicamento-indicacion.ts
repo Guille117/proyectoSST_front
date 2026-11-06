@@ -9,20 +9,20 @@ import {
   Output,
   SimpleChanges,
   inject,
+  viewChild,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { finalize, Subscription, timeout, TimeoutError } from 'rxjs';
+import { finalize, firstValueFrom, Subscription, timeout, TimeoutError } from 'rxjs';
 import { OpcionOtroComponent, OpcionOtroValor } from '../../../../../shared/opcion-otro/opcion-otro';
+import { crearSeleccionesPendientes } from '../../../../../shared/opcion-otro/crear-seleccion-pendiente';
 import { Paginacion } from '../../../../../shared/paginacion/paginacion';
 import { PopUps } from '../../../../../shared/popUps/popUpsService';
 import { CatalogoService } from '../../../../Catalogos/data/serviceCatalogo';
 import { TIMEOUT_HTTP_MS } from '../../../evaluacion/data/constantes-clinicas';
 import { MedicamentoCatalogoResponse } from '../data/medicamentoInterfaz';
+import { OpcionVista, TIPOS_DURACION, TipoDuracion } from '../../data/duracion';
 import { MedicamentoIndicacionService } from '../data/medicamento-service';
 
-/* Tipos locales de la maqueta: se sustituirán por el contrato real del backend en la fase de integración. */
-/** Tipos de duración del tratamiento; el número de días solo se usa con el tipo «días». */
-export type TipoDuracion = 'dias' | 'unica' | 'indefinida';
 
 /** Medicamento del catálogo que devuelve la búsqueda: son las columnas de la tabla de resultados. */
 export interface MedicamentoCatalogoVista {
@@ -48,27 +48,6 @@ export interface MedicamentoTratamiento {
   observaciones: string;
 }
 
-/** Opción del desplegable del tipo de duración: el valor que se registra y su etiqueta. */
-interface OpcionVista {
-  id: TipoDuracion;
-  nombre: string;
-}
-
-/** Tipos de duración del desplegable; con ellos se describe la duración de lo ya agregado. */
-export const TIPOS_DURACION: OpcionVista[] = [
-  { id: 'dias', nombre: 'Días' },
-  { id: 'unica', nombre: 'Dosis única' },
-  { id: 'indefinida', nombre: 'Por tiempo indefinido' },
-];
-
-/** Texto de la duración de un medicamento: sus días o el nombre del tipo elegido. */
-export function textoDuracion(medicamento: MedicamentoTratamiento): string {
-  if (medicamento.duracionTipo === 'dias') {
-    return `${medicamento.duracionCantidad} días`;
-  }
-
-  return TIPOS_DURACION.find((opcion) => opcion.id === medicamento.duracionTipo)?.nombre ?? '';
-}
 
 /**
  * Tarjeta del bloque de medicamentos del tratamiento: busca el medicamento en el catálogo —con su
@@ -101,7 +80,9 @@ export class MedicamentoIndicacion implements OnInit, OnChanges, OnDestroy {
   readonly opcionOtroId = '__otro__';
   mostrandoOtroUnidad = false;
   creandoUnidad = false;
+  preparandoSelecciones = false;
   private unidadAnterior = '';
+  private readonly unidadOtro = viewChild<OpcionOtroComponent>('unidadOtro');
   frecuencia: number | null = null;
   duracionTipo: TipoDuracion | '' = '';
   duracionCantidad: number | null = null;
@@ -188,40 +169,55 @@ export class MedicamentoIndicacion implements OnInit, OnChanges, OnDestroy {
     this.unidadMedida = valor;
   }
 
-  crearUnidad(datos: OpcionOtroValor): void {
-    if (this.creandoUnidad || !datos.abreviatura) return;
+  async crearUnidad(datos: OpcionOtroValor): Promise<boolean> {
+    if (this.creandoUnidad || !datos.abreviatura) return false;
 
     this.creandoUnidad = true;
-    this.catalogoService
-      .guardarUnidadMedida(datos.nombre, datos.abreviatura)
-      .pipe(
-        timeout(TIMEOUT_HTTP_MS),
-        finalize(() => {
-          this.creandoUnidad = false;
-          if (!this.destruido) this.cdr.markForCheck();
-        }),
-      )
-      .subscribe({
-        next: (creada) => {
-          if (this.destruido) return;
+    try {
+      const creada = await firstValueFrom(
+        this.catalogoService
+          .guardarUnidadMedida(datos.nombre, datos.abreviatura)
+          .pipe(timeout(TIMEOUT_HTTP_MS)),
+      );
 
-          const nombre = creada.nombre?.trim() || datos.nombre;
-          this.unidadesMedida = this.combinarUnidades([...this.unidadesMedida, nombre]);
-          this.unidadMedida = nombre;
-          this.mostrandoOtroUnidad = false;
-          this.cdr.markForCheck();
-        },
-        error: (error) => {
-          if (this.destruido) return;
+      if (this.destruido) return false;
 
-          this.popUps.errorDesdeBackend(error, 'No se pudo crear la unidad de medida.');
-        },
-      });
+      const nombre = creada.nombre?.trim() || datos.nombre;
+      this.unidadesMedida = this.combinarUnidades([...this.unidadesMedida, nombre]);
+      this.unidadMedida = nombre;
+      this.mostrandoOtroUnidad = false;
+      return true;
+    } catch (error) {
+      if (!this.destruido) {
+        this.popUps.errorDesdeBackend(error, 'No se pudo crear la unidad de medida.');
+      }
+      return false;
+    } finally {
+      this.creandoUnidad = false;
+      if (!this.destruido) this.cdr.markForCheck();
+    }
   }
 
   cancelarUnidad(): void {
     this.mostrandoOtroUnidad = false;
     this.unidadMedida = this.unidadAnterior;
+  }
+
+  private resolverUnidadPendiente(): Promise<boolean> {
+    if (!this.mostrandoOtroUnidad) {
+      return Promise.resolve(true);
+    }
+
+    return crearSeleccionesPendientes(
+      [
+        {
+          etiqueta: 'Unidad de medida',
+          componente: this.unidadOtro,
+          crear: (datos) => this.crearUnidad(datos),
+        },
+      ],
+      (mensaje) => this.popUps.formIncompleto(mensaje),
+    );
   }
 
   /** Une las unidades del catálogo con «Gotas», sin repetir nombres equivalentes. */
@@ -276,6 +272,7 @@ export class MedicamentoIndicacion implements OnInit, OnChanges, OnDestroy {
   get puedeGuardar(): boolean {
     return (
       !this.busquedaMedicamentoRealizada &&
+      !this.preparandoSelecciones &&
       this.hayMedicamentoSeleccionado &&
       !this.faltaDuracionEnDias &&
       this.duracionTipo !== '' &&
@@ -435,8 +432,22 @@ export class MedicamentoIndicacion implements OnInit, OnChanges, OnDestroy {
   }
 
   /** Entrega a la pantalla que abrió la tarjeta el medicamento capturado. */
-  agregarMedicamento(): void {
+  async agregarMedicamento(): Promise<void> {
     if (!this.puedeGuardar) {
+      return;
+    }
+
+    this.preparandoSelecciones = true;
+    this.cdr.markForCheck();
+    let listo = false;
+    try {
+      listo = await this.resolverUnidadPendiente();
+    } finally {
+      this.preparandoSelecciones = false;
+      this.cdr.markForCheck();
+    }
+
+    if (!listo) {
       return;
     }
 

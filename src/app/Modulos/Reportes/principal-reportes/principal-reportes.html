@@ -1,0 +1,54 @@
+<div class="principal">
+  <nav class="subMenuNav" aria-label="Categorías de reportes">
+    @for (grupo of grupos; track grupo.titulo) {
+      @if (grupoVisible(grupo)) {
+        <button
+          type="button"
+          class="option"
+          [class.active]="grupoSeleccionado()?.titulo === grupo.titulo"
+          (click)="seleccionarGrupo(grupo)"
+        >
+          {{ grupo.titulo }}
+        </button>
+      }
+    }
+  </nav>
+
+  <div class="reportes-cuerpo">
+    <aside class="reportes-menu" aria-label="Submenú de reportes">
+      <div class="menu-titulo">
+        <h1>Reportes</h1>
+      </div>
+
+      <nav class="menu-opciones" aria-label="Reportes disponibles">
+        @if (grupoSeleccionado(); as grupo) {
+          @for (opcion of grupo.opciones; track opcion.titulo) {
+            @if (permisos.puedeLeerSubmodulo(opcion.submodulo)) {
+              @if (opcion.ruta) {
+                <a
+                  class="menu-opcion"
+                  [routerLink]="opcion.ruta"
+                  routerLinkActive="menu-opcion--activa"
+                >
+                  <span>{{ opcion.titulo }}</span>
+                </a>
+              } @else {
+                <div class="menu-opcion menu-opcion--visual">
+                  <span>{{ opcion.titulo }}</span>
+                </div>
+              }
+            }
+          }
+        }
+      </nav>
+    </aside>
+
+    <section class="reportes-detalle" aria-label="Reporte seleccionado">
+      @if (grupoConectado()) {
+        <router-outlet></router-outlet>
+      } @else {
+        <p class="reporte-pendiente">Reporte en preparación.</p>
+      }
+    </section>
+  </div>
+</div>

@@ -21,6 +21,12 @@ export class ControlHidricoService {
       .pipe(timeout(TIMEOUT_HTTP_MS));
   }
 
+  obtenerPorId(id: number): Observable<ControlHidricoResponse> {
+    return this.http
+      .get<ControlHidricoResponse>(`${this.apiUrl}/${id}`)
+      .pipe(timeout(TIMEOUT_HTTP_MS));
+  }
+
   crear(request: ControlHidricoRequest): Observable<ControlHidricoResponse> {
     return this.http
       .post<ControlHidricoResponse>(this.apiUrl, request)

@@ -1,11 +1,16 @@
 import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { finalize, Subscription, TimeoutError } from 'rxjs';
+import { finalize, firstValueFrom, Subscription, TimeoutError, timeout } from 'rxjs';
 import { AuthService } from '../../../Auth/data/auth-service';
+import { PropiedadRegistroService } from '../../../Auth/data/propiedad-registro-service';
 import { PopUps } from '../../../../shared/popUps/popUpsService';
 import { EpisodioActivoService } from '../../data/episodio-activo-service';
 import { HistoriaClinicaService } from '../data/historia-clinica-service';
 import { HistoriaClinicaRequest } from '../data/historiaClinicaInterfaz';
+import { CatalogoService } from '../../../Catalogos/data/serviceCatalogo';
+import { Inter_base } from '../../../Catalogos/data/nombreInterfaz';
+import { OpcionOtroComponent, OpcionOtroValor } from '../../../../shared/opcion-otro/opcion-otro';
+import { TIMEOUT_HTTP_MS } from '../../evaluacion/data/constantes-clinicas';
 
 /**
  * Historia clínica del episodio: sección de Evaluación clínica con un único cuadro de texto para
@@ -13,7 +18,7 @@ import { HistoriaClinicaRequest } from '../data/historiaClinicaInterfaz';
  */
 @Component({
   selector: 'app-historia-clinica',
-  imports: [FormsModule],
+  imports: [FormsModule, OpcionOtroComponent],
   templateUrl: './historia-clinica.html',
   styleUrl: './historia-clinica.scss',
 })
@@ -31,12 +36,19 @@ export class HistoriaClinica implements OnInit, OnDestroy {
     return this.episodioActivo.esSoloLectura();
   }
 
+  /** Solo el autor del registro (o un rol global) puede editarlo. */
+  puedeGestionar(usuarioId: number | null | undefined): boolean {
+    return !this.soloLectura && this.propiedadRegistro.puedeGestionar(usuarioId);
+  }
+
   constructor(
     private historiaClinicaService: HistoriaClinicaService,
     private authService: AuthService,
+    private propiedadRegistro: PropiedadRegistroService,
     private episodioActivo: EpisodioActivoService,
     private popUps: PopUps,
     private cdr: ChangeDetectorRef,
+    private servicioCatalogo: CatalogoService,
   ) {}
 
   // ------------------- ESTADO DE LA VISTA -------------------
@@ -55,16 +67,47 @@ export class HistoriaClinica implements OnInit, OnDestroy {
   /** Descripción registrada de la historia: es el estado al que vuelve "Cancelar". */
   private historiaOriginal = '';
 
+  /** Estado clínico registrado al cargar: es el valor al que vuelve "Cancelar". */
+  private estadoClinicoOriginal = '';
+
   /** Identificador de la historia vigente; mientras sea nulo el guardado crea un registro nuevo. */
   idHistoriaActual: number | null = null;
+
+  /** Autor de la historia vigente; nulo mientras no haya un registro guardado. */
+  usuarioIdHistoriaActual: number | null = null;
 
   /** Identificadores de carga para bloquear acciones incompatibles y evitar doble clic. */
   cargando = false;
   guardando = false;
 
+  // ------------------- ESTADO CLÍNICO -------------------
+  /** Catálogo de estados clínicos activos para el select del episodio. */
+  estadosClinico: Inter_base[] = [];
+
+  /** Valor elegido en el select de estado clínico (id como cadena o "__otro__"). */
+  estadoClinicoValor = '';
+
+  readonly opcionOtroId = '__otro__';
+  mostrandoOtroEstado = false;
+  creandoEstado = false;
+  private estadoAnterior = '';
+
   // ------------------- CICLO DE VIDA -------------------
   ngOnInit(): void {
     this.cargarHistoria();
+    this.cargarEstadosClinicos();
+  }
+
+  /** Carga el catálogo de estados clínicos activos para el select del episodio. */
+  cargarEstadosClinicos(): void {
+    this.servicioCatalogo.listar<Inter_base>('estadosClinico', true).subscribe({
+      next: (datos) => {
+        this.estadosClinico = datos;
+      },
+      error: () => {
+        this.estadosClinico = [];
+      },
+    });
   }
 
   ngOnDestroy(): void {
@@ -81,6 +124,7 @@ export class HistoriaClinica implements OnInit, OnDestroy {
     if (episodioId === null) {
       this.cargando = false;
       this.idHistoriaActual = null;
+      this.usuarioIdHistoriaActual = null;
       this.historiaClinica = '';
       this.historiaOriginal = '';
       this.modoEdicion = false;
@@ -104,8 +148,11 @@ export class HistoriaClinica implements OnInit, OnDestroy {
           if (this.destruido) return;
           const ultima = historias.length ? historias[historias.length - 1] : null;
           this.idHistoriaActual = ultima?.id ?? null;
+          this.usuarioIdHistoriaActual = ultima?.usuarioId ?? null;
           this.historiaClinica = ultima?.descripcion ?? '';
           this.historiaOriginal = ultima?.descripcion ?? '';
+          this.estadoClinicoValor = ultima?.estadoClinicoId?.toString() ?? '';
+          this.estadoClinicoOriginal = this.estadoClinicoValor;
           // Sin historia registrada no hay nada que habilitar: el cuadro arranca editable para
           // capturarla y la plantilla oculta "Editar" mientras se escribe sobre un registro nuevo.
           this.modoEdicion = ultima === null;
@@ -113,8 +160,10 @@ export class HistoriaClinica implements OnInit, OnDestroy {
         error: (error) => {
           if (this.destruido) return;
           this.idHistoriaActual = null;
+          this.usuarioIdHistoriaActual = null;
           this.historiaClinica = '';
           this.historiaOriginal = '';
+          this.estadoClinicoValor = '';
           this.mostrarError(error, 'No se pudo cargar la historia clínica. Intente nuevamente.');
         },
       });
@@ -132,8 +181,67 @@ export class HistoriaClinica implements OnInit, OnDestroy {
     if (this.cargando || this.guardando) return;
 
     this.historiaClinica = this.historiaOriginal;
+    this.estadoClinicoValor = this.estadoClinicoOriginal;
     // Igual que al cargar: sin historia registrada el cuadro queda editable para capturarla.
     this.modoEdicion = this.idHistoriaActual === null;
+  }
+
+  // ------------------- ESTADO CLÍNICO: OPCIÓN "OTRO" -------------------
+  /** Reacciona al cambio del select de estado clínico: abre el campo "Otro" si se elige. */
+  alElegirEstadoClinico(valor: string): void {
+    if (valor === this.opcionOtroId) {
+      this.estadoAnterior = this.estadoClinicoValor;
+      this.estadoClinicoValor = '';
+      this.mostrandoOtroEstado = true;
+      return;
+    }
+    this.estadoClinicoValor = valor;
+    this.mostrandoOtroEstado = false;
+  }
+
+  /** Crea un nuevo estado clínico a partir del valor capturado en "Otro". */
+  async crearEstadoClinico(datos: OpcionOtroValor): Promise<boolean> {
+    if (this.creandoEstado) return false;
+
+    this.creandoEstado = true;
+    try {
+      const creada: Inter_base = await firstValueFrom(
+        this.servicioCatalogo
+          .crear<Inter_base>('estadosClinico', { nombre: datos.nombre } as Inter_base)
+          .pipe(timeout(TIMEOUT_HTTP_MS)),
+      );
+
+      if (this.destruido) return false;
+      if (creada.id == null) {
+        this.popUps.error('No se pudo crear el estado clínico.');
+        return false;
+      }
+
+      this.estadosClinico = [...this.estadosClinico, creada];
+      this.estadoClinicoValor = String(creada.id);
+      this.mostrandoOtroEstado = false;
+      return true;
+    } catch (error) {
+      if (!this.destruido) {
+        this.mostrarError(error, 'No se pudo crear el estado clínico.');
+      }
+      return false;
+    } finally {
+      this.creandoEstado = false;
+      if (!this.destruido) this.cdr.markForCheck();
+    }
+  }
+
+  /** Cancela la captura de un estado clínico "Otro" y restaura el valor anterior. */
+  cancelarEstadoClinico(): void {
+    this.mostrandoOtroEstado = false;
+    this.estadoClinicoValor = this.estadoAnterior;
+  }
+
+  /** Convierte el valor del select en el id numérico que espera el backend. */
+  private aIdCatalogo(valor: string): number | null {
+    const id = Number(valor);
+    return Number.isInteger(id) && id > 0 ? id : null;
   }
 
   /** Crea o actualiza la historia clínica del episodio según exista un registro vigente. */
@@ -147,6 +255,12 @@ export class HistoriaClinica implements OnInit, OnDestroy {
     }
     if (descripcion.length > this.maxCaracteres) {
       this.popUps.error(`La descripción no puede superar los ${this.maxCaracteres} caracteres.`);
+      return;
+    }
+
+    const estadoClinicoId = this.aIdCatalogo(this.estadoClinicoValor);
+    if (estadoClinicoId === null) {
+      this.popUps.error('El estado clínico es obligatorio. Seleccione una opción del catálogo.');
       return;
     }
 
@@ -164,7 +278,7 @@ export class HistoriaClinica implements OnInit, OnDestroy {
       return;
     }
 
-    const cuerpo: HistoriaClinicaRequest = { descripcion, episodioId, usuarioId };
+    const cuerpo: HistoriaClinicaRequest = { descripcion, episodioId, usuarioId, estadoClinicoId };
     const id = this.idHistoriaActual;
     this.guardando = true;
     this.cdr.markForCheck();
@@ -185,8 +299,11 @@ export class HistoriaClinica implements OnInit, OnDestroy {
         next: (respuesta) => {
           if (this.destruido) return;
           this.idHistoriaActual = respuesta.id;
+          this.usuarioIdHistoriaActual = respuesta.usuarioId;
           this.historiaClinica = respuesta.descripcion;
           this.historiaOriginal = respuesta.descripcion;
+          this.estadoClinicoValor = respuesta.estadoClinicoId?.toString() ?? '';
+          this.estadoClinicoOriginal = this.estadoClinicoValor;
           this.modoEdicion = false;
           this.popUps.exito(
             id === null

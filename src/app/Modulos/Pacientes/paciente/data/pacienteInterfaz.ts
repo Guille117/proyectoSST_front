@@ -35,6 +35,7 @@ export interface PacienteDatos {
   direccion: string | null;
   ocupacion: string | null;
   camaId: number | null;
+  medicoIds: number[];
   alergiaIds: number[];
   enfermedadIds: number[];
 }
@@ -71,6 +72,12 @@ export interface ResponsableDetalle {
   direccion: string | null;
 }
 
+export interface MedicoDetalle {
+  id: number;
+  nombreCompleto: string;
+  especialidad: string | null;
+}
+
 export interface ReferenciaDetalle {
   id: number;
   institucionId: number | null;
@@ -100,12 +107,14 @@ export interface PacienteDetalle {
   fechaHoraIngreso: string | null;
   medicoId: number | null;
   medicoNombre: string | null;
+  medicos?: MedicoDetalle[];
   camaId: number | null;
   camaCodigo: string | null;
   responsable: ResponsableDetalle | null;
   referencia: ReferenciaDetalle | null;
   alergias: CatalogoSeleccionado[];
   enfermedades: CatalogoSeleccionado[];
+  estadoClinicoNombre?: string | null;
 }
 
 export interface PacienteResponse {
@@ -132,6 +141,7 @@ export interface PacienteResumido {
   telefono: string;
   tipoTratamiento: TipoAtencion;
   estado: boolean;
+  estadoClinicoNombre?: string | null;
 }
 
 

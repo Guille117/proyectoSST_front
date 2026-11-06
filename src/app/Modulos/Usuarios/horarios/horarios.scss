@@ -331,11 +331,25 @@
   .contenedorPrincipal {
     flex-direction: column;
     height: auto;
+    overflow: visible;
   }
 
   .izquierda,
   .derecha {
     width: 100%;
+    height: auto;
+    overflow: visible;
+  }
+
+  .formulario-container {
+    height: auto;
+    min-height: 0;
+    overflow: visible;
+  }
+
+  .grupos-horarios,
+  .guardia-horas-container {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .seccionSuperior {
@@ -373,5 +387,47 @@
   .fila-horario {
     grid-template-columns: 1fr;
     gap: 8px;
+  }
+}
+
+@media (max-width: 640px) {
+  .contenedorPrincipal {
+    margin-top: 14px;
+  }
+
+  .buscador-container {
+    flex: 1 1 100%;
+    height: auto;
+  }
+
+  .miniSub-container {
+    width: 100%;
+    height: auto;
+  }
+
+  .formulario-container {
+    border-radius: 12px;
+  }
+
+  .titulo-formulario {
+    padding: 14px 16px;
+    font-size: 1rem;
+  }
+
+  .form {
+    padding: 16px;
+  }
+
+  .input-hora {
+    min-height: 44px;
+    font-size: 1rem;
+  }
+
+  .acciones-formulario {
+    flex-wrap: wrap;
+  }
+
+  .acciones-formulario > * {
+    flex: 1 1 auto;
   }
 }

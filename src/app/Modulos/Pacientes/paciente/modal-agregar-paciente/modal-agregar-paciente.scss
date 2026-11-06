@@ -384,7 +384,7 @@ mat-select {
 	border-top: 2px solid rgba(194, 188, 255, 0.7);
 }
 
-@media (max-width: 560px) {
+@media (max-width: 640px) {
 	.progreso-paciente {
 		flex-wrap: wrap;
 	}
@@ -437,7 +437,7 @@ mat-select {
 	}
 }
 
-/* ==================== BÚSQUEDA DE PACIENTE ==================== */
+/* ==================== B�SQUEDA DE PACIENTE ==================== */
 .resultados-paciente {
 	display: flex;
 	flex-direction: column;

@@ -5,8 +5,6 @@
     [plegable]="true"
     [abierto]="pacienteAbierto"
     (abiertoCambia)="cambiarFichaPaciente($event)"
-    [cuerpoVisible]="datosPacienteVisibles"
-    (cuerpoVisibleCambia)="datosPacienteVisibles = $event"
   ></app-datos-paciente>
 
   <!-- Editor de la nota -->
@@ -59,7 +57,7 @@
           <header class="indicacion-encabezado">
             <span class="indicacion-nombre">Nota de enfermería</span>
 
-            @if (!soloLectura) {
+            @if (puedeGestionar(nota.usuarioId)) {
               <button
                 type="button"
                 class="indicacion-menu-trigger"
@@ -83,7 +81,7 @@
           </footer>
 
           <!-- Menú de opciones de la nota -->
-          @if (menuNotaAbierta === nota.id && !soloLectura) {
+          @if (menuNotaAbierta === nota.id && puedeGestionar(nota.usuarioId)) {
             <div
               class="indicacion-menu"
               role="menu"
@@ -120,7 +118,7 @@
           }
         </article>
       } @empty {
-        <p class="notas-vacio">Aún no hay notas registradas.</p>
+        <p class="notas-vacio">Aǧn no hay notas registradas.</p>
       }
       }
     </div>

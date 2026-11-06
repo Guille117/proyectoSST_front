@@ -22,12 +22,21 @@
      (35px + 35px), título del módulo, submenú (25px + 22px + 7px + 3px + 25px), relleno de la
      pantalla (1.5rem + 1.5rem) y un margen de seguridad para la barra de desplazamiento. */
   --alto-fuera-de-indicados: 16rem;
+
+  /* El formulario no lleva filtros ni listado: solo necesita descontar el marco de la pantalla. */
+  --alto-fuera-de-formulario: 9.5rem;
 }
 
 /* Ficha de los datos del paciente abierta: la rejilla le reserva a la derecha el ancho del bloque
    compartido, que queda pegado al borde de la pantalla sin cubrir los paneles. */
 .indicaciones--ficha-abierta {
   padding-right: calc(var(--ficha-ancho) + 1.5rem);
+}
+
+/* Medicamentos y Atenciones usan un panel de indicados más amplio. */
+.indicaciones--paneles-amplios {
+  grid-template-columns: auto minmax(0, 0.85fr) minmax(0, 1.15fr);
+  padding-left: 0.75rem;
 }
 
 /* El panel de secciones es solo el contenedor de las tarjetas: sin fondo ni borde propios, para que
@@ -60,7 +69,8 @@
 /* ==================== RESPONSIVIDAD ==================== */
 @media (max-width: 1280px) {
   /* El listado de indicados pasa a una fila completa para no dejar el formulario demasiado estrecho */
-  .indicaciones {
+  .indicaciones,
+  .indicaciones--paneles-amplios {
     grid-template-columns: auto minmax(0, 1fr);
     grid-template-areas:
       'secciones formulario'
@@ -71,7 +81,8 @@
 @media (max-width: 900px) {
   /* Una sola columna: cada bloque en su propia fila. La ficha del paciente conserva el ancho de su
      pestaña para que esta siga siendo visible y se apoye en el borde izquierdo de la pantalla. */
-  .indicaciones {
+  .indicaciones,
+  .indicaciones--paneles-amplios {
     --ficha-ancho: calc(100% - 40px);
 
     grid-template-columns: minmax(0, 1fr);

@@ -29,6 +29,9 @@
 .tabla-pacientes {
     max-height: calc(100vh - var(--heightTopBar) - 220px);
     overflow-y: auto;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
 }
 
 /* Las filas del listado son seleccionables: el detalle se muestra a la derecha */
@@ -57,22 +60,28 @@ tbody tr.selected-row td {
 	flex-direction: column;
 	box-sizing: border-box;
 	min-width: 300px;
-	max-height: calc(var(--heightNavBar) - 95px);
-	padding: 16px 18px;
+	max-height: calc(var(--heightNavBar) - 120px);
+	padding: 0;
 	border: solid 2px var(--colorBorde);
 	border-radius: 18px;
 	background: #fff;
 	box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-	overflow-y: auto;
+	overflow: hidden;
 
-	/* Identificación del paciente y estado del mismo */
+	/* La identificación del paciente queda fija; solo el contenido inferior hace scroll. */
 	.paciente {
+		position: relative;
+		z-index: 2;
 		display: flex;
+		flex: 0 0 auto;
 		flex-wrap: wrap;
 		align-items: flex-start;
 		justify-content: space-between;
 		gap: 12px;
-		margin-bottom: 20px;
+		padding: 16px 18px 14px;
+		border-bottom: 1px solid #e8eef6;
+		background: #fff;
+		border-radius: 16px 16px 0 0;
 
 		.paciente-identidad {
 			min-width: 0;
@@ -102,25 +111,29 @@ tbody tr.selected-row td {
 		}
 	}
 
-	.estado {
-		flex-shrink: 0;
-		padding: 5px 16px;
-		border-radius: 999px;
-		background: #e5f6e9;
-		color: #3f9d5c;
-		font-size: 0.85rem;
-		font-weight: 600;
-		line-height: 1.35;
+	.detalle-consumo {
+		display: flex;
+		flex-direction: column;
+		gap: 14px;
 	}
 
-	.estado--inactivo {
-		background: #f1f5f9;
-		color: #64748b;
-	}
+	.detalle-consumo-cabecera {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		justify-content: space-between;
+		gap: 10px;
 
-	.estado--alta {
-		background: #fff4e5;
-		color: #b45309;
+		h4 {
+			margin: 0;
+			color: var(--azulSecundario);
+			font-size: 1rem;
+			font-weight: 700;
+		}
+
+		.btn {
+			margin-bottom: 0;
+		}
 	}
 
 	.bloque {
@@ -250,6 +263,21 @@ tbody tr.selected-row td {
 		overflow: hidden;
 	}
 
+	.documentos-grupo {
+		padding: 7px 12px;
+		border-top: 1px solid #e2e8f0;
+		background: #f8fafc;
+		color: #64748b;
+		font-size: 0.75rem;
+		font-weight: 700;
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
+
+		&:first-child {
+			border-top: 0;
+		}
+	}
+
 	.documento {
 		display: grid;
 		grid-template-columns: minmax(0, 1fr) auto;
@@ -290,6 +318,42 @@ tbody tr.selected-row td {
 
 				&:focus-visible {
 					outline-color: #22c55e;
+				}
+			}
+
+			/* Generar usa el azul del proyecto; pulsa solo cuando hay una autorización pendiente */
+			.iconGenerar {
+				position: relative;
+				color: var(--azulSecundario);
+
+				&:hover:not(:disabled) {
+					color: #fff;
+					background: var(--azulSecundario);
+				}
+
+				&:focus-visible {
+					outline-color: var(--azulSecundario);
+				}
+
+				&.iconGenerar--pulsar {
+					i {
+						animation: pulso-color-autorizacion 1.6s ease-in-out infinite;
+					}
+
+					&:hover:not(:disabled) i {
+						animation: none;
+						color: #fff;
+					}
+
+					&::after {
+						content: '';
+						position: absolute;
+						inset: 0;
+						border-radius: 50%;
+						border: 2px solid currentColor;
+						pointer-events: none;
+						animation: pulso-autorizacion 1.6s ease-out infinite;
+					}
 				}
 			}
 		}
@@ -359,8 +423,16 @@ tbody tr.selected-row td {
 		margin-top: 18px;
 	}
 
+	.detalle-scroll {
+		flex: 1 1 auto;
+		min-height: 0;
+		padding: 16px 18px;
+		overflow-y: auto;
+		scrollbar-gutter: stable;
+	}
+
 	.sin-seleccion {
-		margin: 0;
+		margin: 16px 18px;
 		padding: 40px 20px;
 		border: 1px dashed var(--colorBorde);
 		border-radius: 14px;
@@ -618,6 +690,16 @@ tbody tr.selected-row td {
 		gap: 24px;
 	}
 
+	.tabla-pacientes {
+		max-height: none;
+		overflow-x: auto;
+		overflow-y: auto;
+	}
+
+	.tabla-pacientes > .table {
+		min-width: 640px;
+	}
+
 	.documentacion {
 		grid-template-columns: 1fr;
 		gap: 24px;
@@ -630,7 +712,35 @@ tbody tr.selected-row td {
 	.derecha {
 		min-width: 0;
 		max-height: none;
-		overflow-y: visible;
+		overflow: visible;
+
+		.detalle-scroll {
+			overflow: visible;
+		}
+	}
+}
+
+@media (max-width: 640px) {
+	.izquierda .seccionSuperior {
+		flex-wrap: wrap;
+		gap: 12px;
+	}
+
+	.izquierda .buscador-container {
+		width: 100%;
+		height: auto;
+	}
+
+	.izquierda .switchContainer {
+		width: 100%;
+	}
+
+	.contenedorPrincipal {
+		gap: 20px;
+	}
+
+	.tabla-pacientes > .table {
+		min-width: 620px;
 	}
 }
 
@@ -659,5 +769,30 @@ tbody tr.selected-row td {
 				justify-content: flex-start;
 			}
 		}
+	}
+}
+
+/* Anillo que se expande y desvanece para avisar que hay que generar la hoja */
+@keyframes pulso-autorizacion {
+	0% {
+		transform: scale(1);
+		opacity: 0.7;
+	}
+
+	100% {
+		transform: scale(1.7);
+		opacity: 0;
+	}
+}
+
+/* Cambio de color del icono al compás de la pulsación */
+@keyframes pulso-color-autorizacion {
+	0%,
+	100% {
+		color: #0d6efd;
+	}
+
+	50% {
+		color: #60a5fa;
 	}
 }

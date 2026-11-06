@@ -99,4 +99,45 @@ describe('OpcionOtroComponent', () => {
 
     expect(contenedor().classList.contains('con-datos')).toBe(true);
   });
+
+  it('no devuelve valor pendiente cuando está vacío', async () => {
+    await crearComponente();
+
+    expect(component.valorPendiente()).toBeNull();
+  });
+
+  it('devuelve el nombre pendiente recortado', async () => {
+    await crearComponente();
+    component.nombre = '  Camillero  ';
+
+    expect(component.valorPendiente()).toEqual({
+      nombre: 'Camillero',
+      abreviatura: undefined,
+    });
+  });
+
+  it('devuelve abreviatura solo cuando el campo la exige', async () => {
+    await crearComponente();
+    fixture.componentRef.setInput('requiereAbreviatura', true);
+    component.nombre = 'Mililitro';
+
+    expect(component.valorPendiente()).toBeNull();
+
+    component.abreviatura = ' ml ';
+    expect(component.valorPendiente()).toEqual({
+      nombre: 'Mililitro',
+      abreviatura: 'ml',
+    });
+  });
+
+  it('no incluye abreviatura si el campo no la exige', async () => {
+    await crearComponente();
+    component.nombre = 'Camillero';
+    component.abreviatura = 'cam';
+
+    expect(component.valorPendiente()).toEqual({
+      nombre: 'Camillero',
+      abreviatura: undefined,
+    });
+  });
 });

@@ -1,0 +1,47 @@
+<div class="reporte areaTrabajo-container">
+  <div class="reporte-encabezado">
+    <h2 class="reporte-titulo">Glucosa promedio por tipo</h2>
+    <div class="filtros">
+      <div class="filtro-fecha">
+        <app-campo-validado [label]="'Desde'" [fieldId]="'desde'">
+          <input type="date" id="desde" name="desde" [(ngModel)]="desde" />
+        </app-campo-validado>
+      </div>
+      <div class="filtro-fecha">
+        <app-campo-validado [label]="'Hasta'" [fieldId]="'hasta'">
+          <input type="date" id="hasta" name="hasta" [(ngModel)]="hasta" />
+        </app-campo-validado>
+      </div>
+      <button type="button" class="btn _principal" [disabled]="cargando" (click)="generar()">Generar</button>
+      <button type="button" class="btn" (click)="exportarPdf()">PDF</button>
+      <button type="button" class="btn" (click)="exportarExcel()">Excel</button>
+    </div>
+  </div>
+
+  @if (cargando) {
+    <p class="reporte-vacio">Cargando reporte...</p>
+  } @else {
+    <div class="table-container">
+      <table class="table">
+        <thead>
+          <tr>
+            <th class="celda_izquierda">Tipo</th>
+            <th class="celda_centrada">Promedio</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (g of datos; track g.tipo) {
+            <tr>
+              <td class="celda_izquierda">{{ g.tipo }}</td>
+              <td class="celda_centrada">{{ g.promedio }}</td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="2" class="celda_centrada">Sin datos.</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>

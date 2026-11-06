@@ -2,6 +2,7 @@ import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { finalize, Subscription, TimeoutError } from 'rxjs';
 import { AuthService } from '../../../Auth/data/auth-service';
+import { PropiedadRegistroService } from '../../../Auth/data/propiedad-registro-service';
 import { PopUps } from '../../../../shared/popUps/popUpsService';
 import { EpisodioActivoService } from '../../data/episodio-activo-service';
 import { DiagnosticoService } from '../data/diagnostico-service';
@@ -41,9 +42,15 @@ export class Diagnostico implements OnInit, OnDestroy {
     return this.episodioActivo.esSoloLectura();
   }
 
+  /** Solo el autor del registro (o un rol global) puede editarlo o eliminarlo. */
+  puedeGestionar(usuarioId: number): boolean {
+    return !this.soloLectura && this.propiedadRegistro.puedeGestionar(usuarioId);
+  }
+
   constructor(
     private diagnosticoService: DiagnosticoService,
     private authService: AuthService,
+    private propiedadRegistro: PropiedadRegistroService,
     private episodioActivo: EpisodioActivoService,
     private popUps: PopUps,
     private cdr: ChangeDetectorRef,

@@ -1,8 +1,9 @@
 import { ChangeDetectorRef, Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { finalize, Subscription, TimeoutError } from 'rxjs';
+import { finalize, firstValueFrom, Subscription, TimeoutError, timeout } from 'rxjs';
 import { PopUps } from '../../../shared/popUps/popUpsService';
 import { AuthService } from '../../Auth/data/auth-service';
+import { PropiedadRegistroService } from '../../Auth/data/propiedad-registro-service';
 import { EpisodioActivoService } from '../data/episodio-activo-service';
 import { DatosPaciente } from '../datos-paciente/datos-paciente';
 import {
@@ -11,6 +12,10 @@ import {
   EstadoEvolucionApi,
 } from './data/evolucionInterfaz';
 import { EvolucionService } from './data/evolucion-service';
+import { CatalogoService } from '../../Catalogos/data/serviceCatalogo';
+import { Inter_base } from '../../Catalogos/data/nombreInterfaz';
+import { OpcionOtroComponent, OpcionOtroValor } from '../../../shared/opcion-otro/opcion-otro';
+import { TIMEOUT_HTTP_MS } from '../evaluacion/data/constantes-clinicas';
 
 /* Tipos locales de la vista: traducen el contrato del backend al lenguaje de las tarjetas. */
 /** Colores del acento de las tarjetas del historial de evoluciones. */
@@ -25,6 +30,7 @@ type FiltroEvolucion = 'activas' | 'eliminadas';
 /** Evolución registrada en el episodio: quién la escribió, cuándo y su contenido clínico. */
 interface EvolucionVista {
   id: number;
+  usuarioId: number;
   medico: string;
   fecha: string;
   hora: string;
@@ -51,7 +57,7 @@ interface FiltroEvolucionVista {
  */
 @Component({
   selector: 'app-evolucion',
-  imports: [FormsModule, DatosPaciente],
+  imports: [FormsModule, OpcionOtroComponent, DatosPaciente],
   templateUrl: './evolucion.html',
   styleUrl: './evolucion.scss',
   host: {
@@ -61,7 +67,9 @@ interface FiltroEvolucionVista {
 export class Evolucion implements OnInit, OnDestroy {
   private readonly popUps = inject(PopUps);
   private readonly servicio = inject(EvolucionService);
+  private readonly servicioCatalogo = inject(CatalogoService);
   private readonly authService = inject(AuthService);
+  private readonly propiedadRegistro = inject(PropiedadRegistroService);
   private readonly episodioActivo = inject(EpisodioActivoService);
   private readonly cdr = inject(ChangeDetectorRef);
 
@@ -75,6 +83,11 @@ export class Evolucion implements OnInit, OnDestroy {
     return this.episodioActivo.esSoloLectura();
   }
 
+  /** Solo el autor del registro (o un rol global) puede editarlo o eliminarlo. */
+  puedeGestionar(usuarioId: number): boolean {
+    return !this.soloLectura && this.propiedadRegistro.puedeGestionar(usuarioId);
+  }
+
   /** Longitud máxima de cada cuadro del registro de la evolución. */
   readonly maxCaracteres = 1000;
 
@@ -82,11 +95,21 @@ export class Evolucion implements OnInit, OnDestroy {
   evolucionClinica = '';
   planMedico = '';
 
+  // ------------------- ESTADO CLÍNICO -------------------
+  /** Catálogo de estados clínicos activos para el select del episodio. */
+  estadosClinico: Inter_base[] = [];
+
+  /** Valor elegido en el select de estado clínico (id como cadena o "__otro__"). */
+  estadoClinicoValor = '';
+
+  readonly opcionOtroId = '__otro__';
+  mostrandoOtroEstado = false;
+  creandoEstado = false;
+  private estadoAnterior = '';
+
   /** La ficha con los datos del paciente está desplegada; la abre su pestaña lateral. */
   pacienteAbierto = false;
 
-  /** El cuerpo de la ficha del paciente está desplegado; el chevron de su encabezado lo pliega. */
-  datosPacienteVisibles = true;
 
   /** Tarjeta del historial con su menú de opciones desplegado; null si no hay ninguna. */
   menuEvolucionAbierta: number | null = null;
@@ -121,6 +144,19 @@ export class Evolucion implements OnInit, OnDestroy {
   // ------------------- CICLO DE VIDA -------------------
   ngOnInit(): void {
     this.cargarEvoluciones();
+    this.cargarEstadosClinicos();
+  }
+
+  /** Carga el catálogo de estados clínicos activos para el select del episodio. */
+  cargarEstadosClinicos(): void {
+    this.servicioCatalogo.listar<Inter_base>('estadosClinico', true).subscribe({
+      next: (datos) => {
+        this.estadosClinico = datos;
+      },
+      error: () => {
+        this.estadosClinico = [];
+      },
+    });
   }
 
   ngOnDestroy(): void {
@@ -142,13 +178,14 @@ export class Evolucion implements OnInit, OnDestroy {
       : 'Aún no hay evoluciones registradas para el paciente.';
   }
 
-  /** Solo se puede guardar cuando la evolución clínica y el plan médico tienen contenido. */
+  /** Solo se puede guardar cuando la evolución clínica, el plan médico y el estado clínico tienen contenido. */
   get puedeGuardar(): boolean {
     return (
       this.evolucionClinica.trim().length > 0 &&
       this.planMedico.trim().length > 0 &&
       this.evolucionClinica.length <= this.maxCaracteres &&
       this.planMedico.length <= this.maxCaracteres &&
+      this.aIdCatalogo(this.estadoClinicoValor) !== null &&
       !this.guardando &&
       !this.confirmando
     );
@@ -189,6 +226,13 @@ export class Evolucion implements OnInit, OnDestroy {
 
           this.evoluciones = respuestas.map((respuesta) => this.aVista(respuesta));
 
+          // El estado clínico es compartido del episodio: se toma de cualquiera de las respuestas
+          // para precargar el select al capturar una evolución nueva.
+          if (respuestas.length) {
+            this.estadoClinicoValor =
+              respuestas[0].estadoClinicoId?.toString() ?? '';
+          }
+
           // La evolución en edición no puede quedar fuera del historial visible
           if (
             this.evolucionEnEdicion !== null &&
@@ -224,10 +268,6 @@ export class Evolucion implements OnInit, OnDestroy {
    */
   cambiarFichaPaciente(abierto: boolean): void {
     this.pacienteAbierto = abierto;
-
-    if (abierto) {
-      this.datosPacienteVisibles = true;
-    }
   }
 
   // ------------------- MENÚ DE LA TARJETA -------------------
@@ -325,6 +365,7 @@ export class Evolucion implements OnInit, OnDestroy {
       planMedico: this.planMedico.trim(),
       episodioId,
       usuarioId,
+      estadoClinicoId: this.aIdCatalogo(this.estadoClinicoValor),
     };
 
     this.guardando = true;
@@ -423,6 +464,7 @@ export class Evolucion implements OnInit, OnDestroy {
 
     return {
       id: respuesta.id,
+      usuarioId: respuesta.usuarioId,
       medico: respuesta.usuarioNombre,
       fecha: this.formatearFecha(fecha),
       hora: this.formatearHora(fecha),
@@ -454,6 +496,64 @@ export class Evolucion implements OnInit, OnDestroy {
     const horas = `${fecha.getHours()}`.padStart(2, '0');
     const minutos = `${fecha.getMinutes()}`.padStart(2, '0');
     return `${horas}:${minutos}`;
+  }
+
+  // ------------------- ESTADO CLÍNICO: OPCIÓN "OTRO" -------------------
+  /** Reacciona al cambio del select de estado clínico: abre el campo "Otro" si se elige. */
+  alElegirEstadoClinico(valor: string): void {
+    if (valor === this.opcionOtroId) {
+      this.estadoAnterior = this.estadoClinicoValor;
+      this.estadoClinicoValor = '';
+      this.mostrandoOtroEstado = true;
+      return;
+    }
+    this.estadoClinicoValor = valor;
+    this.mostrandoOtroEstado = false;
+  }
+
+  /** Crea un nuevo estado clínico a partir del valor capturado en "Otro". */
+  async crearEstadoClinico(datos: OpcionOtroValor): Promise<boolean> {
+    if (this.creandoEstado) return false;
+
+    this.creandoEstado = true;
+    try {
+      const creada: Inter_base = await firstValueFrom(
+        this.servicioCatalogo
+          .crear<Inter_base>('estadosClinico', { nombre: datos.nombre } as Inter_base)
+          .pipe(timeout(TIMEOUT_HTTP_MS)),
+      );
+
+      if (this.destruido) return false;
+      if (creada.id == null) {
+        this.popUps.error('No se pudo crear el estado clínico.');
+        return false;
+      }
+
+      this.estadosClinico = [...this.estadosClinico, creada];
+      this.estadoClinicoValor = String(creada.id);
+      this.mostrandoOtroEstado = false;
+      return true;
+    } catch (error) {
+      if (!this.destruido) {
+        this.mostrarError(error, 'No se pudo crear el estado clínico.');
+      }
+      return false;
+    } finally {
+      this.creandoEstado = false;
+      if (!this.destruido) this.cdr.markForCheck();
+    }
+  }
+
+  /** Cancela la captura de un estado clínico "Otro" y restaura el valor anterior. */
+  cancelarEstadoClinico(): void {
+    this.mostrandoOtroEstado = false;
+    this.estadoClinicoValor = this.estadoAnterior;
+  }
+
+  /** Convierte el valor del select en el id numérico que espera el backend. */
+  private aIdCatalogo(valor: string): number | null {
+    const id = Number(valor);
+    return Number.isInteger(id) && id > 0 ? id : null;
   }
 
   /** Avisa del campo que impide guardar cuando el formulario se envía incompleto. */

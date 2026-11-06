@@ -1,10 +1,11 @@
-import { ChangeDetectorRef, Component, DestroyRef, Input, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, DestroyRef, Input, inject, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatSelectModule } from '@angular/material/select';
-import { concatMap, finalize, tap, timeout, Observable, TimeoutError } from 'rxjs';
+import { concatMap, finalize, tap, timeout, Observable, TimeoutError, firstValueFrom } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CampoValidado } from '../../../../shared/campo-validado/campo-validado';
 import { OpcionOtroComponent, OpcionOtroValor } from '../../../../shared/opcion-otro/opcion-otro';
+import { crearSeleccionesPendientes, SeleccionPendiente } from '../../../../shared/opcion-otro/crear-seleccion-pendiente';
 import { TabSwitch } from '../../../../shared/tab-switch/tab-switch';
 import { ArchivoService } from '../../../../shared/archivos/archivoService';
 import { PersonaDatos, Sexo } from '../../../Usuarios/usu/data/usuarioInterfaz';
@@ -82,7 +83,9 @@ export class ModalAgregarPaciente {
   // ----------------------- carga de inicio.------------------
   ngOnInit() {
     this.precargarFormulario();
-    if (!this.soloDatosPersonales) {
+    if (this.soloDatosPersonales) {
+      this.cargarMedicos();
+    } else {
       this.llenarSelects();
     }
   }
@@ -107,8 +110,13 @@ export class ModalAgregarPaciente {
   creandoInstitucion = false;
   creandoEnfermedad = false;
   creandoAlergia = false;
+  preparandoSelecciones = false;
   private parentescoAnterior: number | null = null;
   private institucionAnterior: Inter_institucion | null = null;
+  private readonly parentescoOtro = viewChild<OpcionOtroComponent>('parentescoOtro');
+  private readonly institucionOtro = viewChild<OpcionOtroComponent>('institucionOtro');
+  private readonly enfermedadOtro = viewChild<OpcionOtroComponent>('enfermedadOtro');
+  private readonly alergiaOtro = viewChild<OpcionOtroComponent>('alergiaOtro');
 
   llenarSelects(){
     this.cargarParentescos();
@@ -223,30 +231,34 @@ export class ModalAgregarPaciente {
     this.responsableForm.parentescoId = valor;
   }
 
-  crearParentesco(datos: OpcionOtroValor): void {
-    if (this.creandoParentesco) return;
+  async crearParentesco(datos: OpcionOtroValor): Promise<boolean> {
+    if (this.creandoParentesco) return false;
 
     this.creandoParentesco = true;
-    this.servicioCatalogo
-      .crear<Inter_base>('parentescos', { nombre: datos.nombre })
-      .pipe(
-        timeout(5000),
-        finalize(() => {
-          this.creandoParentesco = false;
-        }),
-        takeUntilDestroyed(this.destroyRef),
-      )
-      .subscribe({
-        next: (creado) => {
-          if (creado.id == null) return;
+    try {
+      const creado = await firstValueFrom(
+        this.servicioCatalogo
+          .crear<Inter_base>('parentescos', { nombre: datos.nombre })
+          .pipe(timeout(5000), takeUntilDestroyed(this.destroyRef)),
+      );
 
-          this.parentesco = [...this.parentesco, creado];
-          this.responsableForm.parentescoId = creado.id;
-          this.parentescoSeleccionadoNombre = creado.nombre;
-          this.mostrandoOtroParentesco = false;
-        },
-        error: (error) => this.popUps.errorDesdeBackend(error, 'No se pudo crear el parentesco.'),
-      });
+      if (creado.id == null) {
+        this.popUps.error('No se pudo crear el parentesco.');
+        return false;
+      }
+
+      this.parentesco = [...this.parentesco, creado];
+      this.responsableForm.parentescoId = creado.id;
+      this.parentescoSeleccionadoNombre = creado.nombre;
+      this.mostrandoOtroParentesco = false;
+      return true;
+    } catch (error) {
+      this.popUps.errorDesdeBackend(error, 'No se pudo crear el parentesco.');
+      return false;
+    } finally {
+      this.creandoParentesco = false;
+      this.cdr.markForCheck();
+    }
   }
 
   cancelarParentesco(): void {
@@ -265,29 +277,33 @@ export class ModalAgregarPaciente {
     this.institucionSeleccionada = valor as Inter_institucion | null;
   }
 
-  crearInstitucion(datos: OpcionOtroValor): void {
-    if (this.creandoInstitucion) return;
+  async crearInstitucion(datos: OpcionOtroValor): Promise<boolean> {
+    if (this.creandoInstitucion) return false;
 
     this.creandoInstitucion = true;
-    this.servicioCatalogo
-      .crear<Inter_institucion>('instituciones', { nombre: datos.nombre } as Inter_institucion)
-      .pipe(
-        timeout(5000),
-        finalize(() => {
-          this.creandoInstitucion = false;
-        }),
-        takeUntilDestroyed(this.destroyRef),
-      )
-      .subscribe({
-        next: (creada) => {
-          if (creada.id == null) return;
+    try {
+      const creada = await firstValueFrom(
+        this.servicioCatalogo
+          .crear<Inter_institucion>('instituciones', { nombre: datos.nombre } as Inter_institucion)
+          .pipe(timeout(5000), takeUntilDestroyed(this.destroyRef)),
+      );
 
-          this.insituciones = [...this.insituciones, creada];
-          this.institucionSeleccionada = creada;
-          this.mostrandoOtroInstitucion = false;
-        },
-        error: (error) => this.popUps.errorDesdeBackend(error, 'No se pudo crear la institución.'),
-      });
+      if (creada.id == null) {
+        this.popUps.error('No se pudo crear la institución.');
+        return false;
+      }
+
+      this.insituciones = [...this.insituciones, creada];
+      this.institucionSeleccionada = creada;
+      this.mostrandoOtroInstitucion = false;
+      return true;
+    } catch (error) {
+      this.popUps.errorDesdeBackend(error, 'No se pudo crear la institución.');
+      return false;
+    } finally {
+      this.creandoInstitucion = false;
+      this.cdr.markForCheck();
+    }
   }
 
   cancelarInstitucion(): void {
@@ -306,29 +322,33 @@ export class ModalAgregarPaciente {
     this.mostrandoOtroEnfermedad = true;
   }
 
-  crearEnfermedad(datos: OpcionOtroValor): void {
-    if (this.creandoEnfermedad) return;
+  async crearEnfermedad(datos: OpcionOtroValor): Promise<boolean> {
+    if (this.creandoEnfermedad) return false;
 
     this.creandoEnfermedad = true;
-    this.servicioCatalogo
-      .crear<Inter_base>('enfermedades', { nombre: datos.nombre })
-      .pipe(
-        timeout(5000),
-        finalize(() => {
-          this.creandoEnfermedad = false;
-        }),
-        takeUntilDestroyed(this.destroyRef),
-      )
-      .subscribe({
-        next: (creada) => {
-          if (creada.id == null) return;
+    try {
+      const creada = await firstValueFrom(
+        this.servicioCatalogo
+          .crear<Inter_base>('enfermedades', { nombre: datos.nombre })
+          .pipe(timeout(5000), takeUntilDestroyed(this.destroyRef)),
+      );
 
-          this.enfermedades = [...this.enfermedades, creada];
-          this.enfermedadesSeleccionadas = [...this.enfermedadesSeleccionadas, creada.id];
-          this.mostrandoOtroEnfermedad = false;
-        },
-        error: (error) => this.popUps.errorDesdeBackend(error, 'No se pudo crear la enfermedad.'),
-      });
+      if (creada.id == null) {
+        this.popUps.error('No se pudo crear la enfermedad.');
+        return false;
+      }
+
+      this.enfermedades = [...this.enfermedades, creada];
+      this.enfermedadesSeleccionadas = [...this.enfermedadesSeleccionadas, creada.id];
+      this.mostrandoOtroEnfermedad = false;
+      return true;
+    } catch (error) {
+      this.popUps.errorDesdeBackend(error, 'No se pudo crear la enfermedad.');
+      return false;
+    } finally {
+      this.creandoEnfermedad = false;
+      this.cdr.markForCheck();
+    }
   }
 
   alCambiarAlergias(valores: number[]): void {
@@ -341,29 +361,73 @@ export class ModalAgregarPaciente {
     this.mostrandoOtroAlergia = true;
   }
 
-  crearAlergia(datos: OpcionOtroValor): void {
-    if (this.creandoAlergia) return;
+  async crearAlergia(datos: OpcionOtroValor): Promise<boolean> {
+    if (this.creandoAlergia) return false;
 
     this.creandoAlergia = true;
-    this.servicioCatalogo
-      .crear<Inter_base>('alergias', { nombre: datos.nombre })
-      .pipe(
-        timeout(5000),
-        finalize(() => {
-          this.creandoAlergia = false;
-        }),
-        takeUntilDestroyed(this.destroyRef),
-      )
-      .subscribe({
-        next: (creada) => {
-          if (creada.id == null) return;
+    try {
+      const creada = await firstValueFrom(
+        this.servicioCatalogo
+          .crear<Inter_base>('alergias', { nombre: datos.nombre })
+          .pipe(timeout(5000), takeUntilDestroyed(this.destroyRef)),
+      );
 
-          this.alergias = [...this.alergias, creada];
-          this.alergiasSeleccionadas = [...this.alergiasSeleccionadas, creada.id];
-          this.mostrandoOtroAlergia = false;
-        },
-        error: (error) => this.popUps.errorDesdeBackend(error, 'No se pudo crear la alergia.'),
+      if (creada.id == null) {
+        this.popUps.error('No se pudo crear la alergia.');
+        return false;
+      }
+
+      this.alergias = [...this.alergias, creada];
+      this.alergiasSeleccionadas = [...this.alergiasSeleccionadas, creada.id];
+      this.mostrandoOtroAlergia = false;
+      return true;
+    } catch (error) {
+      this.popUps.errorDesdeBackend(error, 'No se pudo crear la alergia.');
+      return false;
+    } finally {
+      this.creandoAlergia = false;
+      this.cdr.markForCheck();
+    }
+  }
+
+  private resolverSeleccionesPendientes(): Promise<boolean> {
+    const selecciones: SeleccionPendiente[] = [];
+
+    if (this.mostrandoOtroParentesco) {
+      selecciones.push({
+        etiqueta: 'Parentesco',
+        componente: () => this.parentescoOtro(),
+        crear: (datos) => this.crearParentesco(datos),
       });
+    }
+
+    if (this.mostrandoOtroInstitucion) {
+      selecciones.push({
+        etiqueta: 'Institución',
+        componente: () => this.institucionOtro(),
+        crear: (datos) => this.crearInstitucion(datos),
+      });
+    }
+
+    if (this.mostrandoOtroEnfermedad) {
+      selecciones.push({
+        etiqueta: 'Enfermedad',
+        componente: () => this.enfermedadOtro(),
+        crear: (datos) => this.crearEnfermedad(datos),
+      });
+    }
+
+    if (this.mostrandoOtroAlergia) {
+      selecciones.push({
+        etiqueta: 'Alergia',
+        componente: () => this.alergiaOtro(),
+        crear: (datos) => this.crearAlergia(datos),
+      });
+    }
+
+    return crearSeleccionesPendientes(selecciones, (mensaje) =>
+      this.popUps.formIncompleto(mensaje),
+    );
   }
 
   // ----------------------- PRECARGA DE EDICIÓN -----------------------
@@ -417,21 +481,48 @@ export class ModalAgregarPaciente {
   }
 
   private seleccionarMedicoEdicion(): void {
-    if (!this.isEditing || !this.datosEdicion?.medicoId) return;
+    if (!this.isEditing || !this.datosEdicion) return;
 
-    const id = this.datosEdicion.medicoId;
-    let medico = this.medicos.find((item) => item.id === id) ?? null;
+    const ids = this.datosEdicion.medicos?.map((medico) => medico.id) ?? [];
+    if (!ids.length && this.datosEdicion.medicoId) {
+      ids.push(this.datosEdicion.medicoId);
+    }
+    this.medicosSeleccionados = this.resolverMedicos(ids, this.datosEdicion);
+  }
 
-    if (!medico) {
-      medico = {
+  /** Convierte IDs de médicos en el catálogo local, agregando los que falten. */
+  private resolverMedicos(ids: number[], detallePaciente?: PacienteDetalle | null): MedicoDatos[] {
+    return ids.map((id) => {
+      const existente = this.medicos.find((item) => item.id === id);
+      if (existente) return existente;
+
+      const detalle = detallePaciente?.medicos?.find((medico) => medico.id === id);
+      const medico: MedicoDatos = {
         id,
-        nombreCompleto: this.datosEdicion.medicoNombre ?? '—',
-        especialidad: '',
+        nombreCompleto: detalle?.nombreCompleto ?? detallePaciente?.medicoNombre ?? '—',
+        especialidad: detalle?.especialidad ?? '',
       };
       this.medicos = [...this.medicos, medico];
-    }
+      return medico;
+    });
+  }
 
-    this.medicoSeleccionado = medico;
+  /** Compatibilidad con el contrato anterior de un solo médico tratante. */
+  get medicoSeleccionado(): MedicoDatos | null {
+    return this.medicosSeleccionados[0] ?? null;
+  }
+
+  set medicoSeleccionado(medico: MedicoDatos | null) {
+    this.medicosSeleccionados = medico ? [medico] : [];
+  }
+
+  get nombresMedicosSeleccionados(): string {
+    if (!this.medicosSeleccionados.length) {
+      return 'Seleccione uno o varios médicos';
+    }
+    return this.medicosSeleccionados
+      .map((medico) => `Dr. ${medico.nombreCompleto}`)
+      .join(', ');
   }
 
   private seleccionarInstitucionEdicion(): void {
@@ -556,7 +647,7 @@ export class ModalAgregarPaciente {
     this.parentescoSeleccionadoNombre = null;
     this.tipoAtencion = 'emergencia';
     this.descripcionAtencion = '';
-    this.medicoSeleccionado = null;
+    this.medicosSeleccionados = [];
     this.camaSeleccionada = null;
     this.institucionSeleccionada = null;
     this.motivoReferencia = '';
@@ -619,7 +710,7 @@ export class ModalAgregarPaciente {
   }
 
   // ------------------------ GUARDAR PACIENTE ------------------------
-    medicoSeleccionado: MedicoDatos | null = null;
+    medicosSeleccionados: MedicoDatos[] = [];
     institucionSeleccionada: Inter_institucion | null = null;
     camaSeleccionada: camaResponseSimple | null = null;
     archivoReferencia: File | null = null;
@@ -652,8 +743,9 @@ export class ModalAgregarPaciente {
 
 
     async guardarPaciente(): Promise<void> {
-      const request = this.validarPaciente();
-      if (!request) return;
+      if (this.guardando || this.preparandoSelecciones) return;
+
+      if (!this.validarPaciente()) return;
 
       if (this.isEditing) {
         const confirmado = await this.popUps.confirmarToast(
@@ -661,6 +753,17 @@ export class ModalAgregarPaciente {
         );
         if (!confirmado) return;
       }
+
+      this.preparandoSelecciones = true;
+      this.cdr.detectChanges();
+      try {
+        if (!(await this.resolverSeleccionesPendientes())) return;
+      } finally {
+        this.preparandoSelecciones = false;
+        this.cdr.detectChanges();
+      }
+
+      const request = this.construirSolicitudPaciente();
 
       this.guardando = true;
       this.cdr.detectChanges();
@@ -720,7 +823,7 @@ export class ModalAgregarPaciente {
       return edad < 18;
     }
 
-    private validarPaciente(): PacienteActualizacionRequest | null {
+    private validarPaciente(): boolean {
     const paciente = this.pacienteForm.persona;
     const nombresPaciente = paciente.nombres?.trim() ?? '';
     const apellidosPaciente = paciente.apellidos?.trim() ?? '';
@@ -732,68 +835,54 @@ export class ModalAgregarPaciente {
     if (!nombresPaciente || !apellidosPaciente || !paciente.sexo || !fechaNacimientoPaciente) {
       this.contador = 0;
       this.popUps.formIncompleto('Completa nombres, apellidos, sexo y fecha de nacimiento del paciente.');
-      return null;
+      return false;
     }
 
     if (cuiPaciente && !/^\d{13}$/.test(cuiPaciente)) {
       this.contador = 0;
       this.popUps.formIncompleto('El CUI del paciente debe contener exactamente 13 dígitos.');
-      return null;
+      return false;
     }
     if (telefonoPaciente && !/^\d{8}$/.test(telefonoPaciente)) {
       this.contador = 0;
       this.popUps.formIncompleto('El teléfono del paciente debe contener exactamente 8 dígitos.');
-      return null;
+      return false;
+    }
+
+    // Un paciente sin episodio activo puede editar sus datos personales y médicos,
+    // incluso si aún no tiene médicos asignados.
+    if (this.soloDatosPersonales) {
+      return true;
+    }
+
+    if (!this.medicosSeleccionados.length) {
+      this.contador = 2;
+      this.popUps.formIncompleto('Selecciona al menos un médico para el paciente.');
+      return false;
     }
 
     const camaId = this.tipoAtencion === 'hospitalizacion'
       ? this.camaSeleccionada?.idCama ?? null
       : null;
-
-    const pacienteId = this.isEditing ? this.pacienteId : this.pacienteIdSeleccionado;
-    const pacienteDatos: PacienteDatos = {
-      pacienteId,
-      persona: {
-        cui: cuiPaciente || null,
-        nombres: nombresPaciente,
-        apellidos: apellidosPaciente,
-        fechaNacimiento: fechaNacimientoPaciente,
-        sexo: paciente.sexo,
-        telefono: telefonoPaciente || null,
-        email: paciente.email ?? null,
-      },
-      estadoCivil: this.pacienteForm.estadoCivil || null,
-      direccion: this.pacienteForm.direccion.trim() || null,
-      ocupacion: this.pacienteForm.ocupacion.trim() || null,
-      camaId,
-      alergiaIds: [...this.alergiasSeleccionadas],
-      enfermedadIds: [...this.enfermedadesSeleccionadas],
-    };
-
-    // Un paciente sin episodio activo solo puede actualizar sus datos personales.
-    if (this.soloDatosPersonales) {
-      return { paciente: pacienteDatos, episodio: null };
-    }
-
-    const medicoId = this.medicoSeleccionado?.id;
+    const medicoId = this.medicosSeleccionados[0]?.id;
     const descripcion = this.descripcionAtencion.trim();
 
     // Paso 3: médico y descripción siempre; cama solo para hospitalización.
     if (medicoId == null || !descripcion) {
       this.contador = 2;
       this.popUps.formIncompleto('Selecciona un médico e ingresa la descripción de la atención.');
-      return null;
+      return false;
     }
     if (this.tipoAtencion === 'hospitalizacion' && camaId == null) {
       this.contador = 2;
       this.popUps.formIncompleto('Selecciona una cama para la hospitalización.');
-      return null;
+      return false;
     }
 
     const responsable = this.responsableForm;
     const datosResponsable = responsable.persona;
     const parentescoId = responsable.parentescoId;
-    let responsableRequest: PacienteRequest['episodio']['responsable'] = null;
+    const parentescoValido = parentescoId != null || this.mostrandoOtroParentesco;
 
     // Paso 4: siempre aplica en hospitalización y en emergencia con paciente menor de edad.
     // Si es opcional pero se empezó a llenar, se exige el mismo conjunto completo de datos.
@@ -804,22 +893,87 @@ export class ModalAgregarPaciente {
       const cui = datosResponsable.cui?.trim() ?? '';
       const telefono = datosResponsable.telefono?.trim() ?? '';
 
-      if (!nombres || !apellidos || !fechaNacimiento || !datosResponsable.sexo || !cui || !telefono || parentescoId == null) {
+      if (!nombres || !apellidos || !fechaNacimiento || !datosResponsable.sexo || !cui || !telefono || !parentescoValido) {
         this.contador = 3;
         this.popUps.formIncompleto('Completa nombre, apellidos, nacimiento, sexo, CUI, teléfono y parentesco del responsable.');
-        return null;
+        return false;
       }
 
       if (!/^\d{13}$/.test(cui)) {
         this.contador = 3;
         this.popUps.formIncompleto('El CUI del responsable debe contener exactamente 13 dígitos.');
-        return null;
+        return false;
       }
       if (!/^\d{8}$/.test(telefono)) {
         this.contador = 3;
         this.popUps.formIncompleto('El teléfono del responsable debe contener exactamente 8 dígitos.');
-        return null;
+        return false;
       }
+    }
+
+    const institucionId = this.institucionSeleccionada?.id;
+    const hayReferencia = this.referenciaTieneDatos;
+    const institucionValida = institucionId != null || this.mostrandoOtroInstitucion;
+
+    // Paso 5: la referencia es opcional; si hay motivo o archivo, sí debe indicarse institución.
+    if (hayReferencia && !institucionValida) {
+      this.contador = 4;
+      this.popUps.formIncompleto('Selecciona la institución que refiere.');
+      return false;
+    }
+
+    return true;
+  }
+
+  private construirSolicitudPaciente(): PacienteActualizacionRequest {
+    const paciente = this.pacienteForm.persona;
+    const nombresPaciente = paciente.nombres?.trim() ?? '';
+    const apellidosPaciente = paciente.apellidos?.trim() ?? '';
+    const fechaNacimientoPaciente = paciente.fechaNacimiento ?? '';
+    const cuiPaciente = paciente.cui?.trim() ?? '';
+    const telefonoPaciente = paciente.telefono?.trim() ?? '';
+    const camaId = this.tipoAtencion === 'hospitalizacion'
+      ? this.camaSeleccionada?.idCama ?? null
+      : null;
+    const pacienteId = this.isEditing ? this.pacienteId : this.pacienteIdSeleccionado;
+    const pacienteDatos: PacienteDatos = {
+      pacienteId,
+      persona: {
+        cui: cuiPaciente || null,
+        nombres: nombresPaciente,
+        apellidos: apellidosPaciente,
+        fechaNacimiento: fechaNacimientoPaciente,
+        sexo: paciente.sexo!,
+        telefono: telefonoPaciente || null,
+        email: paciente.email ?? null,
+      },
+      estadoCivil: this.pacienteForm.estadoCivil || null,
+      direccion: this.pacienteForm.direccion.trim() || null,
+      ocupacion: this.pacienteForm.ocupacion.trim() || null,
+      camaId,
+      medicoIds: this.medicosSeleccionados.map((medico) => medico.id),
+      alergiaIds: [...this.alergiasSeleccionadas],
+      enfermedadIds: [...this.enfermedadesSeleccionadas],
+    };
+
+    // Un paciente sin episodio activo solo puede actualizar sus datos personales.
+    if (this.soloDatosPersonales) {
+      return { paciente: pacienteDatos, episodio: null };
+    }
+
+    const medicoId = this.medicosSeleccionados[0]!.id;
+    const descripcion = this.descripcionAtencion.trim();
+    const responsable = this.responsableForm;
+    const datosResponsable = responsable.persona;
+    const parentescoId = responsable.parentescoId;
+    let responsableRequest: PacienteRequest['episodio']['responsable'] = null;
+
+    if (this.responsableCamposRequeridos) {
+      const nombres = datosResponsable.nombres?.trim() ?? '';
+      const apellidos = datosResponsable.apellidos?.trim() ?? '';
+      const fechaNacimiento = datosResponsable.fechaNacimiento ?? '';
+      const cui = datosResponsable.cui?.trim() ?? '';
+      const telefono = datosResponsable.telefono?.trim() ?? '';
 
       responsableRequest = {
         persona: {
@@ -827,10 +981,10 @@ export class ModalAgregarPaciente {
           nombres,
           apellidos,
           fechaNacimiento,
-          sexo: datosResponsable.sexo,
+          sexo: datosResponsable.sexo!,
           telefono,
         },
-        parentescoId,
+        parentescoId: parentescoId!,
         direccion: responsable.direccion.trim() || null,
       };
     }
@@ -838,13 +992,6 @@ export class ModalAgregarPaciente {
     const motivoReferencia = this.motivoReferencia.trim();
     const institucionId = this.institucionSeleccionada?.id;
     const hayReferencia = this.referenciaTieneDatos;
-
-    // Paso 5: la referencia es opcional; si hay motivo o archivo, sí debe indicarse institución.
-    if (hayReferencia && institucionId == null) {
-      this.contador = 4;
-      this.popUps.formIncompleto('Selecciona la institución que refiere.');
-      return null;
-    }
 
     return {
       paciente: pacienteDatos,
@@ -869,6 +1016,132 @@ export class ModalAgregarPaciente {
   }
 
   // ------------------- GETTERS PARA VALIDACIONES -------------------
+  /** Indica si el formulario de edición difiere de los datos originales del paciente. */
+  get hayCambios(): boolean {
+    if (!this.isEditing || !this.datosEdicion) return true;
+    return this.firmaFormularioActual() !== this.firmaFormularioOriginal(this.datosEdicion);
+  }
+
+  private firmaFormularioActual(): string {
+    return JSON.stringify({
+      persona: this.firmaPersona(this.pacienteForm.persona),
+      estadoCivil: this.textoNormalizado(this.pacienteForm.estadoCivil),
+      direccion: this.textoNormalizado(this.pacienteForm.direccion),
+      ocupacion: this.textoNormalizado(this.pacienteForm.ocupacion),
+      camaId: this.soloDatosPersonales
+        ? null
+        : this.tipoAtencion === 'hospitalizacion'
+          ? this.camaSeleccionada?.idCama ?? null
+          : null,
+      medicos: this.medicosSeleccionados.map((medico) => medico.id).sort((a, b) => a - b),
+      alergias: [...this.alergiasSeleccionadas].sort((a, b) => a - b),
+      enfermedades: [...this.enfermedadesSeleccionadas].sort((a, b) => a - b),
+      episodio: this.soloDatosPersonales
+        ? null
+        : {
+            tipoAtencion: this.tipoAtencion === 'emergencia' ? 'EMERGENCIA' : 'HOSPITALIZACION',
+            descripcion: this.textoNormalizado(this.descripcionAtencion),
+            medicoId: this.medicosSeleccionados[0]?.id ?? null,
+            responsable: this.firmaResponsableActual(),
+            referencia: this.referenciaTieneDatos
+              ? {
+                  institucionId: this.institucionSeleccionada?.id ?? null,
+                  motivoReferencia: this.textoNormalizado(this.motivoReferencia),
+                }
+              : null,
+          },
+      archivoReferencia: this.archivoReferencia?.name ?? null,
+    });
+  }
+
+  private firmaFormularioOriginal(datos: PacienteDetalle): string {
+    return JSON.stringify({
+      persona: this.firmaPersona({
+        cui: datos.cui ?? undefined,
+        nombres: datos.nombres,
+        apellidos: datos.apellidos,
+        sexo: datos.sexo ?? undefined,
+        fechaNacimiento: datos.fechaNacimiento ?? undefined,
+        telefono: datos.telefono,
+        email: datos.email,
+      }),
+      estadoCivil: this.textoNormalizado(datos.estadoCivil),
+      direccion: this.textoNormalizado(datos.direccion),
+      ocupacion: this.textoNormalizado(datos.ocupacion),
+      camaId: datos.episodioId == null ? null : datos.camaId ?? null,
+      medicos: (datos.medicos?.map((medico) => medico.id)
+        ?? (datos.medicoId ? [datos.medicoId] : [])).sort((a, b) => a - b),
+      alergias: datos.alergias.map((alergia) => alergia.id).sort((a, b) => a - b),
+      enfermedades: datos.enfermedades.map((enfermedad) => enfermedad.id).sort((a, b) => a - b),
+      episodio:
+        datos.episodioId == null
+          ? null
+          : {
+              tipoAtencion: datos.tipoAtencion ?? 'EMERGENCIA',
+              descripcion: this.textoNormalizado(datos.descripcion),
+              medicoId: datos.medicoId ?? null,
+              responsable: datos.responsable
+                ? {
+                    ...this.firmaPersona({
+                      cui: datos.responsable.cui ?? undefined,
+                      nombres: datos.responsable.nombres,
+                      apellidos: datos.responsable.apellidos,
+                      sexo: datos.responsable.sexo ?? undefined,
+                      fechaNacimiento: datos.responsable.fechaNacimiento ?? undefined,
+                      telefono: datos.responsable.telefono,
+                      email: null,
+                    }),
+                    parentescoId: datos.responsable.parentescoId ?? null,
+                    direccion: this.textoNormalizado(datos.responsable.direccion),
+                  }
+                : null,
+              referencia: datos.referencia
+                ? {
+                    institucionId: datos.referencia.institucionId ?? null,
+                    motivoReferencia: this.textoNormalizado(datos.referencia.motivoReferencia),
+                  }
+                : null,
+            },
+      archivoReferencia: null,
+    });
+  }
+
+  private firmaPersona(persona: Partial<PersonaDatos>) {
+    return {
+      cui: this.textoNormalizado(persona.cui),
+      nombres: this.textoNormalizado(persona.nombres) ?? '',
+      apellidos: this.textoNormalizado(persona.apellidos) ?? '',
+      sexo: persona.sexo ?? null,
+      fechaNacimiento: this.textoNormalizado(persona.fechaNacimiento) ?? '',
+      telefono: this.textoNormalizado(persona.telefono),
+      email: this.textoNormalizado(persona.email),
+    };
+  }
+
+  private firmaResponsableActual() {
+    const firma = {
+      ...this.firmaPersona(this.responsableForm.persona),
+      parentescoId: this.responsableForm.parentescoId,
+      direccion: this.textoNormalizado(this.responsableForm.direccion),
+    };
+    const vacio =
+      !firma.cui &&
+      !firma.nombres &&
+      !firma.apellidos &&
+      !firma.sexo &&
+      !firma.fechaNacimiento &&
+      !firma.telefono &&
+      !firma.email &&
+      !firma.parentescoId &&
+      !firma.direccion;
+    return vacio ? null : firma;
+  }
+
+  private textoNormalizado(valor: string | null | undefined): string | null {
+    const texto = valor?.trim() ?? '';
+    return texto || null;
+  }
+
   get responsableRequerido(): boolean {
     return this.tipoAtencion === 'hospitalizacion' || this.esPacienteMenor();
   }
@@ -920,7 +1193,7 @@ export class ModalAgregarPaciente {
   
   get puedeAvanzarPaso2(): boolean {
     return Boolean(
-      this.medicoSeleccionado?.id != null &&
+      this.medicosSeleccionados.length > 0 &&
       this.descripcionAtencion.trim() &&
       (this.tipoAtencion !== 'hospitalizacion' || this.camaSeleccionada?.idCama != null)
     );
@@ -937,7 +1210,7 @@ export class ModalAgregarPaciente {
       persona.sexo &&
       this.esDigitosValidos(persona.cui, 13) &&
       this.esDigitosValidos(persona.telefono, 8) &&
-      this.responsableForm.parentescoId != null
+      (this.responsableForm.parentescoId != null || this.mostrandoOtroParentesco)
     );
   }
 

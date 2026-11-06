@@ -129,6 +129,7 @@
 
               @if (mostrandoOtroCondicion) {
                 <app-opcion-otro
+                  #condicionOtro
                   [placeholder]="'Escribe la condición de egreso'"
                   [creando]="creandoCondicion"
                   (confirmar)="crearCondicion($event)"
@@ -261,6 +262,7 @@
 
                   @if (mostrandoOtroInstitucion) {
                     <app-opcion-otro
+                      #institucionOtro
                       [placeholder]="'Escribe la institución'"
                       [creando]="creandoInstitucion"
                       (confirmar)="crearInstitucion($event)"
@@ -325,9 +327,16 @@
         </div>
 
         <!-- Acciones del formulario: constancia a la izquierda y acciones del registro a la derecha -->
-        @if (!soloLectura || puedeAnularAlta) {
+        @if (
+          puedeEditarAlta ||
+          (!soloLectura && esRetiroVoluntario) ||
+          (puedeAnularAlta && puedeAnularAltaDe(altaExistente?.usuarioId))
+        ) {
         <div class="acciones-formulario egreso-acciones">
-          @if ((!soloLectura && esRetiroVoluntario) || puedeAnularAlta) {
+          @if (
+            (!soloLectura && esRetiroVoluntario) ||
+            (puedeAnularAlta && puedeAnularAltaDe(altaExistente?.usuarioId))
+          ) {
             <div class="egreso-acciones-grupo egreso-acciones-grupo--izquierda">
               @if (!soloLectura && esRetiroVoluntario) {
                 <!-- Acción pendiente: generará la constancia del retiro voluntario -->
@@ -336,7 +345,7 @@
                 </button>
               }
 
-              @if (puedeAnularAlta) {
+              @if (puedeAnularAlta && puedeAnularAltaDe(altaExistente?.usuarioId)) {
                 <button
                   type="button"
                   class="btn _eliminar"
@@ -349,7 +358,7 @@
             </div>
           }
 
-          @if (!soloLectura) {
+          @if (puedeEditarAlta) {
           <div class="egreso-acciones-grupo">
             <button
               type="button"
@@ -384,13 +393,13 @@
   @if (tratamientoVisible) {
     <aside class="tratamiento-panel" aria-labelledby="tituloTratamientoAgregado">
       <h3 class="tratamiento-panel_titulo" id="tituloTratamientoAgregado">
-        Tratamiento ({{ totalTratamiento }})
+        Tratamiento
       </h3>
 
       @if (tratamientoMedicamentos.length) {
         <section class="tratamiento-grupo" aria-labelledby="tituloMedicamentosTratamiento">
           <h4 class="tratamiento-grupo_titulo" id="tituloMedicamentosTratamiento">
-            Medicamentos ({{ tratamientoMedicamentos.length }})
+            Medicamentos
           </h4>
 
           @for (medicamento of tratamientoMedicamentos; track $index) {
@@ -403,7 +412,7 @@
                   }
                 </span>
 
-                @if (!soloLectura) {
+                @if (puedeEditarAlta) {
                 <span class="tratamiento-card_acciones">
                   <button
                     type="button"
@@ -454,7 +463,7 @@
       @if (tratamientoCuidados.length) {
         <section class="tratamiento-grupo" aria-labelledby="tituloCuidadosTratamiento">
           <h4 class="tratamiento-grupo_titulo" id="tituloCuidadosTratamiento">
-            Cuidados ({{ tratamientoCuidados.length }})
+            Cuidados
           </h4>
 
           @for (cuidado of tratamientoCuidados; track $index) {
@@ -462,7 +471,7 @@
               <header class="tratamiento-card_encabezado">
                 <span class="tratamiento-card_nombre">{{ cuidado.nombre }}</span>
 
-                @if (!soloLectura) {
+                @if (puedeEditarAlta) {
                 <span class="tratamiento-card_acciones">
                   <button
                     type="button"
@@ -501,14 +510,11 @@
     </aside>
   }
 
-  <!-- Datos del paciente: bloque compartido con las demás pantallas del módulo. Solo la pantalla
-       decide cuándo se contrae; el usuario no puede plegarlo con un clic. -->
+  <!-- Datos del paciente: bloque compartido con las demás pantallas del módulo. Se abre y se cierra
+       con su pestaña lateral y se alterna con las tarjetas del tratamiento. -->
   <app-datos-paciente
     [plegable]="true"
-    [permitirAlternar]="hayTratamiento"
     [abierto]="pacienteVisible"
-    [cuerpoVisible]="cuerpoPacienteExpandido"
     (abiertoCambia)="cambiarPanelPaciente($event)"
-    (cuerpoVisibleCambia)="cambiarCuerpoPaciente($event)"
   ></app-datos-paciente>
 </div>

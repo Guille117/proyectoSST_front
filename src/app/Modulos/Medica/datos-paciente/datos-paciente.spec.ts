@@ -161,15 +161,6 @@ describe('DatosPaciente', () => {
     expect(elemento<HTMLElement>('.ficha-pestana_texto')).toBeNull();
   });
 
-  it('mantiene el cuerpo desplegado en su forma fija aunque se pida plegarlo', () => {
-    fixture.componentRef.setInput('cuerpoVisible', false);
-    fixture.detectChanges();
-
-    expect(elemento<HTMLElement>('.ficha-cuerpo').classList.contains('ficha-cuerpo--plegado')).toBe(
-      false,
-    );
-    expect(elemento<HTMLElement>('.ficha-plegar')).toBeNull();
-  });
 
   it('avisa cuando no hay un episodio activo', async () => {
     episodioActivo.obtener.mockReturnValue(null);

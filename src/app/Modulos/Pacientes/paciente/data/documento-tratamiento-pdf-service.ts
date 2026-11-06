@@ -32,6 +32,7 @@ export interface DatosDocumentoTratamiento {
   medicamentos: TratamientoDocumento[];
   cuidados: TratamientoDocumento[];
   medico: MedicoDocumento;
+  titulo?: string;
 }
 
 interface DocumentoConTabla extends jsPDF {
@@ -44,6 +45,19 @@ interface DocumentoConTabla extends jsPDF {
 export class DocumentoTratamientoPdfService {
   /** Genera el PDF del tratamiento del alta con los datos ya preparados por el componente. */
   async generar(datos: DatosDocumentoTratamiento): Promise<void> {
+    const blob = await this.generarBlob(datos);
+    const url = URL.createObjectURL(blob);
+    const enlace = document.createElement('a');
+    enlace.href = url;
+    enlace.download = this.nombreArchivo(datos.paciente.nombre);
+    document.body.appendChild(enlace);
+    enlace.click();
+    enlace.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  /** Genera el PDF como Blob para mostrarlo en el visor sin descargarlo automáticamente. */
+  async generarBlob(datos: DatosDocumentoTratamiento): Promise<Blob> {
     const [{ jsPDF }, { autoTable }] = await Promise.all([
       import('jspdf'),
       import('jspdf-autotable'),
@@ -54,6 +68,10 @@ export class DocumentoTratamientoPdfService {
 
     this.dibujarCabecera(documento, logo);
     let posicion = this.dibujarPaciente(documento, datos.paciente, 62);
+
+    if (datos.titulo) {
+      posicion = this.dibujarSubtitulo(documento, datos.titulo, posicion);
+    }
 
     if (datos.medicamentos.length) {
       posicion = this.dibujarSubtitulo(documento, 'Medicamentos', posicion);
@@ -108,7 +126,7 @@ export class DocumentoTratamientoPdfService {
     }
 
     this.dibujarMedico(documento, datos.medico, posicion);
-    documento.save(this.nombreArchivo(datos.paciente.nombre));
+    return documento.output('blob');
   }
 
   private dibujarCabecera(documento: jsPDF, logo: string | null): void {

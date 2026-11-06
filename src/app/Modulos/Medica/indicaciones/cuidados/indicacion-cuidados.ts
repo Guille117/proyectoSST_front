@@ -1,9 +1,11 @@
 import { NgClass } from '@angular/common';
 import { ChangeDetectorRef, Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { finalize, forkJoin, map, Subscription, TimeoutError } from 'rxjs';
+import { finalize, forkJoin, map, Observable, Subscription, TimeoutError } from 'rxjs';
 import { PopUps } from '../../../../shared/popUps/popUpsService';
+import { TabSwitch } from '../../../../shared/tab-switch/tab-switch';
 import { AuthService } from '../../../Auth/data/auth-service';
+import { PropiedadRegistroService } from '../../../Auth/data/propiedad-registro-service';
 import { EpisodioActivoService } from '../../data/episodio-activo-service';
 import {
   DuracionVista,
@@ -18,12 +20,26 @@ import {
   TipoDuracionCuidadoApi,
 } from './data/cuidadoInterfaz';
 import { IndicacionCuidadoService } from './data/cuidado-service';
+import {
+  CONTROLES_MONITOREO,
+  controlDeNombre,
+  SeccionMonitoreoControl,
+} from './data/monitoreo';
 import { RegistrosEnfermeriaService } from '../../../Enfermeria/data/registrosEnfermeriaService';
 import { EjecucionCuidadoResponse } from '../../../Enfermeria/data/registrosEnfermeriaInterfaz';
+import { ControlHidricoService } from '../../../Enfermeria/monitoreo/data/control-hidrico-service';
+import { ControlHidricoResponse } from '../../../Enfermeria/monitoreo/data/controlHidricoInterfaz';
+import { GlucosaService } from '../../../Enfermeria/monitoreo/data/glucosa-service';
+import { GlucosaResponse } from '../../../Enfermeria/monitoreo/data/glucosaInterfaz';
+import { SignosVitalesService } from '../../../Enfermeria/monitoreo/data/signos-vitales-service';
+import { SignosVitalesResponse } from '../../../Enfermeria/monitoreo/data/signosVitalesInterfaz';
 
 /* Tipos locales de la vista: traducen el contrato del backend al lenguaje de las tarjetas. */
 /** Colores de acento lateral de la tarjeta del cuidado; describen su estado en el listado. */
 type TonoIndicacion = 'verde' | 'rojo' | 'naranja';
+
+/** Pestaña del registro de atención: cuidado de nombre libre o monitoreo de un tipo. */
+type TipoAtencion = 'cuidado' | 'monitoreo';
 
 /** Estados en los que puede quedar un cuidado visto en el listado. */
 type EstadoCuidado = 'enProceso' | 'completado' | 'eliminado';
@@ -34,6 +50,7 @@ type FiltroCuidado = 'todas' | 'completados' | 'enProceso' | 'eliminados';
 /** Cuidado indicado listo para pintar la tarjeta del listado. */
 interface CuidadoVista extends DuracionVista {
   id: number;
+  usuarioId: number;
   nombre: string;
   /** Frecuencia indicada en horas. */
   frecuencia: number;
@@ -56,6 +73,13 @@ interface EjecucionCuidadoVista {
   esPositivo: boolean;
   usuario: string;
   observacion: string;
+  monitoreoId: number | null;
+  monitoreoTipo: SeccionMonitoreoControl | null;
+}
+
+/** Resultados del control listos para la fila expandible del historial. */
+interface ResultadoControlVista {
+  filas: { etiqueta: string; valor: string }[];
 }
 
 /** Opción del filtro que decide qué cuidados se muestran en el listado. */
@@ -66,14 +90,24 @@ interface FiltroCuidadoVista {
   estados: EstadoCuidadoApi[];
 }
 
+/** Instantánea de los campos del formulario al iniciar la edición, para detectar cambios. */
+interface FormularioCuidadoOriginal {
+  nombreCuidado: string;
+  frecuenciaCuidado: number | null;
+  duracionTipoCuidado: TipoDuracion | '';
+  duracionCantidadCuidado: number | null;
+  fechaInicioCuidado: string;
+  observacionesCuidado: string;
+}
+
 /**
- * Sección de cuidados de las indicaciones médicas: registro del cuidado con su frecuencia, su
- * duración y sus observaciones, y listado de los cuidados indicados en el episodio. Las operaciones
- * se guardan contra el backend; el episodio y el usuario salen del contexto de la sesión.
+ * Sección de atenciones de las indicaciones médicas: registro del cuidado o del monitoreo con su
+ * frecuencia, su duración y sus observaciones, y listado de las atenciones indicadas en el episodio.
+ * Las operaciones se guardan contra el backend; el episodio y el usuario salen de la sesión.
  */
 @Component({
   selector: 'app-indicacion-cuidados',
-  imports: [FormsModule, NgClass],
+  imports: [FormsModule, NgClass, TabSwitch],
   templateUrl: './indicacion-cuidados.html',
   styleUrl: './indicacion-cuidados.scss',
   host: {
@@ -84,13 +118,18 @@ export class IndicacionCuidados implements OnInit, OnDestroy {
   private readonly popUps = inject(PopUps);
   private readonly servicio = inject(IndicacionCuidadoService);
   private readonly authService = inject(AuthService);
+  private readonly propiedadRegistro = inject(PropiedadRegistroService);
   private readonly episodioActivo = inject(EpisodioActivoService);
   private readonly registrosEnfermeria = inject(RegistrosEnfermeriaService);
+  private readonly servicioSignos = inject(SignosVitalesService);
+  private readonly servicioGlucosa = inject(GlucosaService);
+  private readonly servicioHidrico = inject(ControlHidricoService);
   private readonly cdr = inject(ChangeDetectorRef);
 
   private peticionLista?: Subscription;
   private peticionAccion?: Subscription;
   private peticionRegistros?: Subscription;
+  private peticionResultado?: Subscription;
   private destruido = false;
 
   // ------------------- ESTADO DE LA VISTA -------------------
@@ -98,6 +137,17 @@ export class IndicacionCuidados implements OnInit, OnDestroy {
   get soloLectura(): boolean {
     return this.episodioActivo.esSoloLectura();
   }
+
+  /** Solo el autor del registro (o un rol global) puede editarlo o eliminarlo. */
+  puedeGestionar(usuarioId: number): boolean {
+    return !this.soloLectura && this.propiedadRegistro.puedeGestionar(usuarioId);
+  }
+
+  /** Pestaña activa del registro: cuidado de nombre libre o monitoreo de un tipo. */
+  tipoAtencion: TipoAtencion = 'cuidado';
+
+  /** Tipos de monitoreo que ofrece el desplegable de la pestaña Monitoreo. */
+  readonly tiposMonitoreo = CONTROLES_MONITOREO.map((control) => control.nombre);
 
   /** Campos del formulario del cuidado: nombre, frecuencia, duración y observaciones. */
   nombreCuidado = '';
@@ -113,6 +163,9 @@ export class IndicacionCuidados implements OnInit, OnDestroy {
   /** Cuidado cuyos datos están cargados en el formulario; null al capturar un cuidado nuevo. */
   cuidadoEnEdicion: number | null = null;
 
+  /** Valores originales del cuidado en edición, para deshabilitar el botón sin cambios. */
+  private edicionOriginal: FormularioCuidadoOriginal | null = null;
+
   /** Tipos de duración que ofrece el desplegable de la duración. */
   tiposDuracion = TIPOS_DURACION;
 
@@ -122,8 +175,18 @@ export class IndicacionCuidados implements OnInit, OnDestroy {
   /** Tarjeta cuyos registros de Enfermería están desplegados; null si ninguno. */
   registrosCuidadoAbierta: number | null = null;
 
-  /** Observación que se muestra al pasar el puntero por un registro. */
-  observacionPopup: { texto: string; x: number; y: number } | null = null;
+  /** Ejecución cuyos resultados están desplegados en el historial; null si ninguna. */
+  resultadoAbierto: number | null = null;
+
+  /** Resultados del control desplegado. */
+  resultadoActual: ResultadoControlVista | null = null;
+
+  /** Estados de carga y error de los resultados del control. */
+  cargandoResultado = false;
+  errorResultado = false;
+
+  /** Resultados ya consultados por ejecución, para no repetir la petición. */
+  private readonly resultadosPorEjecucion = new Map<number, ResultadoControlVista>();
 
   /** Ejecuciones de Enfermería cargadas por cuidado. */
   private readonly registrosPorCuidado = new Map<number, EjecucionCuidadoVista[]>();
@@ -162,9 +225,15 @@ export class IndicacionCuidados implements OnInit, OnDestroy {
     this.peticionLista?.unsubscribe();
     this.peticionAccion?.unsubscribe();
     this.peticionRegistros?.unsubscribe();
+    this.peticionResultado?.unsubscribe();
   }
 
   // ------------------- CONSULTAS PARA LA VISTA -------------------
+  /** Verdadero cuando la pestaña activa es Monitoreo: el nombre se elige de una lista. */
+  get esMonitoreo(): boolean {
+    return this.tipoAtencion === 'monitoreo';
+  }
+
   /** El botón Guardar del cuidado se habilita con el nombre del cuidado escrito. */
   get hayCuidado(): boolean {
     return this.nombreCuidado.trim().length > 0;
@@ -197,6 +266,25 @@ export class IndicacionCuidados implements OnInit, OnDestroy {
   /** Cuidados que muestra el listado; el backend ya aplica el filtro elegido. */
   get cuidadosFiltrados(): CuidadoVista[] {
     return this.cuidados;
+  }
+
+  /** Texto del botón de guardar: «Guardar cambios» al corregir un cuidado existente. */
+  get textoBotonGuardar(): string {
+    return this.cuidadoEnEdicion === null ? 'Guardar' : 'Guardar cambios';
+  }
+
+  /** Verdadero si el cuidado en edición tiene al menos un campo modificado. */
+  get hayCambiosEnEdicion(): boolean {
+    if (this.edicionOriginal === null) return true;
+
+    return (
+      this.nombreCuidado !== this.edicionOriginal.nombreCuidado ||
+      this.frecuenciaCuidado !== this.edicionOriginal.frecuenciaCuidado ||
+      this.duracionTipoCuidado !== this.edicionOriginal.duracionTipoCuidado ||
+      this.duracionCantidadCuidado !== this.edicionOriginal.duracionCantidadCuidado ||
+      this.fechaInicioCuidado !== this.edicionOriginal.fechaInicioCuidado ||
+      this.observacionesCuidado !== this.edicionOriginal.observacionesCuidado
+    );
   }
 
   /** Texto del listado cuando el filtro elegido no tiene cuidados. */
@@ -304,8 +392,20 @@ export class IndicacionCuidados implements OnInit, OnDestroy {
   seleccionarFiltroCuidado(filtro: FiltroCuidado): void {
     this.filtroCuidado = filtro;
     this.cerrarMenuIndicacion();
+    this.cerrarResultado();
     this.registrosCuidadoAbierta = null;
     this.cargarCuidados();
+  }
+
+  // ------------------- PESTAÑA DE ATENCIÓN -------------------
+  /**
+   * Conmuta entre el registro de un cuidado y el de un monitoreo. Limpia el nombre capturado para
+   * no arrastrar un valor que no pertenece a la lista del otro modo.
+   */
+  cambiarTipoAtencion(esCuidado: boolean): void {
+    this.tipoAtencion = esCuidado ? 'cuidado' : 'monitoreo';
+    this.nombreCuidado = '';
+    this.cdr.markForCheck();
   }
 
   // ------------------- MENÚ DE LA TARJETA -------------------
@@ -342,7 +442,7 @@ export class IndicacionCuidados implements OnInit, OnDestroy {
 
   /** Despliega u oculta las ejecuciones de Enfermería del cuidado. */
   alternarRegistros(cuidado: CuidadoVista): void {
-    this.ocultarObservacion();
+    this.cerrarResultado();
 
     if (this.registrosCuidadoAbierta === cuidado.id) {
       this.registrosCuidadoAbierta = null;
@@ -353,37 +453,144 @@ export class IndicacionCuidados implements OnInit, OnDestroy {
     this.cargarRegistros(cuidado.id);
   }
 
-  /** Muestra la observación del registro junto al puntero. */
-  mostrarObservacion(evento: MouseEvent, observacion: string | null | undefined): void {
-    const texto = observacion?.trim();
-    if (!texto) {
-      this.observacionPopup = null;
+  /** Indica si la ejecución tiene resultados de monitoreo u observación que mostrar. */
+  tieneDetalle(registro: EjecucionCuidadoVista): boolean {
+    return registro.monitoreoId !== null || registro.observacion.trim().length > 0;
+  }
+
+  /** Despliega los resultados del control o la observación de la ejecución. */
+  verResultados(registro: EjecucionCuidadoVista): void {
+    if (!this.tieneDetalle(registro)) return;
+
+    if (this.resultadoAbierto === registro.id) {
+      this.cerrarResultado();
       return;
     }
 
-    this.observacionPopup = { texto, ...this.posicionObservacion(evento) };
+    this.resultadoAbierto = registro.id;
+    this.peticionResultado?.unsubscribe();
+    this.resultadoActual = null;
+    this.cargandoResultado = false;
+    this.errorResultado = false;
+
+    if (registro.monitoreoId === null || registro.monitoreoTipo === null) {
+      return;
+    }
+
+    const cache = this.resultadosPorEjecucion.get(registro.id);
+    if (cache) {
+      this.resultadoActual = cache;
+      return;
+    }
+
+    this.cargandoResultado = true;
+    this.cargarResultado(registro);
   }
 
-  /** Mantiene el popup junto al puntero mientras recorre la fila. */
-  moverObservacion(evento: MouseEvent): void {
-    if (!this.observacionPopup) return;
-
-    this.observacionPopup = { ...this.observacionPopup, ...this.posicionObservacion(evento) };
+  /** Oculta los resultados y vuelve a la tabla del historial. */
+  cerrarResultado(): void {
+    this.peticionResultado?.unsubscribe();
+    this.resultadoAbierto = null;
+    this.resultadoActual = null;
+    this.cargandoResultado = false;
+    this.errorResultado = false;
   }
 
-  /** Oculta la observación al salir de la fila. */
-  ocultarObservacion(): void {
-    this.observacionPopup = null;
+  private cargarResultado(registro: EjecucionCuidadoVista): void {
+    const id = registro.monitoreoId;
+    if (id === null || registro.monitoreoTipo === null) return;
+
+    if (registro.monitoreoTipo === 'signos') {
+      this.suscribirResultado(this.servicioSignos.obtenerPorId(id), registro.id, (respuesta) =>
+        this.resultadoSignos(respuesta),
+      );
+      return;
+    }
+
+    if (registro.monitoreoTipo === 'glucosa') {
+      this.suscribirResultado(this.servicioGlucosa.obtenerPorId(id), registro.id, (respuesta) =>
+        this.resultadoGlucosa(respuesta),
+      );
+      return;
+    }
+
+    this.suscribirResultado(this.servicioHidrico.obtenerPorId(id), registro.id, (respuesta) =>
+      this.resultadoHidrico(respuesta),
+    );
   }
 
-  private posicionObservacion(evento: MouseEvent): { x: number; y: number } {
-    const margen = 14;
-    const ancho = 320;
+  private suscribirResultado<T>(
+    peticion: Observable<T>,
+    ejecucionId: number,
+    mapear: (respuesta: T) => ResultadoControlVista,
+  ): void {
+    this.peticionResultado?.unsubscribe();
+    this.peticionResultado = peticion
+      .pipe(
+        finalize(() => {
+          this.cargandoResultado = false;
+          if (!this.destruido) this.cdr.markForCheck();
+        }),
+      )
+      .subscribe({
+        next: (respuesta) => {
+          if (this.destruido || this.resultadoAbierto !== ejecucionId) return;
 
+          const vista = mapear(respuesta);
+          this.resultadoActual = vista;
+          this.resultadosPorEjecucion.set(ejecucionId, vista);
+        },
+        error: (error) => {
+          if (this.destruido) return;
+
+          this.errorResultado = true;
+          this.mostrarError(error, 'No se pudieron cargar los resultados del control.');
+        },
+      });
+  }
+
+  private resultadoSignos(respuesta: SignosVitalesResponse): ResultadoControlVista {
     return {
-      x: Math.min(evento.clientX + margen, Math.max(8, window.innerWidth - ancho - 8)),
-      y: evento.clientY + margen,
+      filas: [
+        {
+          etiqueta: 'Presión arterial',
+          valor: `${respuesta.sistolica}/${respuesta.diastolica} mmHg`,
+        },
+        { etiqueta: 'Fr. cardíaca', valor: `${respuesta.frecuenciaCardiaca} lpm` },
+        { etiqueta: 'Fr. respiratoria', valor: `${respuesta.frecuenciaRespiratoria} rpm` },
+        { etiqueta: 'Temperatura', valor: `${respuesta.temperatura} °C` },
+        { etiqueta: 'Saturación', valor: `${respuesta.saturacion} %` },
+        { etiqueta: 'Observación', valor: respuesta.observacion?.trim() || 'Sin observación' },
+      ],
     };
+  }
+
+  private resultadoGlucosa(respuesta: GlucosaResponse): ResultadoControlVista {
+    return {
+      filas: [
+        { etiqueta: 'Glucosa', valor: `${respuesta.glucosa} mg/dL` },
+        { etiqueta: 'Tipo de medición', valor: this.tipoGlucosaVista(respuesta.tipo) },
+        { etiqueta: 'Observación', valor: respuesta.observacion?.trim() || 'Sin observación' },
+      ],
+    };
+  }
+
+  private resultadoHidrico(respuesta: ControlHidricoResponse): ResultadoControlVista {
+    return {
+      filas: [
+        { etiqueta: 'Tipo', valor: respuesta.tipo === 'INGRESO' ? 'Ingreso' : 'Egreso' },
+        { etiqueta: 'Vía', valor: respuesta.via },
+        { etiqueta: 'Cantidad', valor: `${respuesta.cantidad} ml` },
+        { etiqueta: 'Descripción', valor: respuesta.descripcion },
+      ],
+    };
+  }
+
+  private tipoGlucosaVista(tipo: GlucosaResponse['tipo']): string {
+    if (tipo === 'PREPRANDIAL') return 'Preprandial';
+    if (tipo === 'POSTPRANDIAL') return 'Postprandial';
+    if (tipo === 'ALEATORIA') return 'Aleatoria';
+    return 'Ayunas';
   }
 
   /** Ejecuciones de Enfermería ya cargadas de un cuidado. */
@@ -434,6 +641,14 @@ export class IndicacionCuidados implements OnInit, OnDestroy {
   ): EjecucionCuidadoVista {
     const programada = new Date(respuesta.fechaHoraProgramada);
     const registrada = new Date(respuesta.fechaRegistro);
+    const monitoreoTipo: SeccionMonitoreoControl | null =
+      respuesta.signosVitalesId != null
+        ? 'signos'
+        : respuesta.glucosaId != null
+          ? 'glucosa'
+          : respuesta.controlHidricoId != null
+            ? 'hidrico'
+            : null;
 
     return {
       id: respuesta.id,
@@ -444,6 +659,9 @@ export class IndicacionCuidados implements OnInit, OnDestroy {
       esPositivo: respuesta.estado === 'REALIZADO',
       usuario: respuesta.usuarioNombre,
       observacion: respuesta.observacion ?? '',
+      monitoreoId:
+        respuesta.signosVitalesId ?? respuesta.glucosaId ?? respuesta.controlHidricoId ?? null,
+      monitoreoTipo,
     };
   }
 
@@ -453,17 +671,29 @@ export class IndicacionCuidados implements OnInit, OnDestroy {
     if (this.guardando || this.eliminando) return;
 
     this.cerrarMenuIndicacion();
+    this.cerrarResultado();
     this.cuidadoEnEdicion = cuidado.id;
+    this.tipoAtencion = controlDeNombre(cuidado.nombre) ? 'monitoreo' : 'cuidado';
     this.nombreCuidado = cuidado.nombre;
     this.frecuenciaCuidado = cuidado.frecuencia;
     this.duracionTipoCuidado = cuidado.duracionTipo;
     this.duracionCantidadCuidado = cuidado.duracionCantidad;
     this.fechaInicioCuidado = this.aFechaHoraInput(cuidado.fechaInicio);
     this.observacionesCuidado = cuidado.observaciones;
+
+    this.edicionOriginal = {
+      nombreCuidado: this.nombreCuidado,
+      frecuenciaCuidado: this.frecuenciaCuidado,
+      duracionTipoCuidado: this.duracionTipoCuidado,
+      duracionCantidadCuidado: this.duracionCantidadCuidado,
+      fechaInicioCuidado: this.fechaInicioCuidado,
+      observacionesCuidado: this.observacionesCuidado,
+    };
   }
 
   /** Deja el formulario del cuidado listo para capturar uno nuevo. */
   limpiarFormularioCuidado(): void {
+    this.cerrarResultado();
     this.nombreCuidado = '';
     this.frecuenciaCuidado = null;
     this.duracionTipoCuidado = '';
@@ -471,6 +701,7 @@ export class IndicacionCuidados implements OnInit, OnDestroy {
     this.fechaInicioCuidado = this.fechaHoraLocalActual();
     this.observacionesCuidado = '';
     this.cuidadoEnEdicion = null;
+    this.edicionOriginal = null;
   }
 
   /**
@@ -613,6 +844,7 @@ export class IndicacionCuidados implements OnInit, OnDestroy {
 
     return {
       id: respuesta.id,
+      usuarioId: respuesta.usuarioId,
       nombre: respuesta.nombreCuidado,
       frecuencia: respuesta.frecuencia,
       duracionTipo: this.aDuracionVista(respuesta.tipoDuracion),

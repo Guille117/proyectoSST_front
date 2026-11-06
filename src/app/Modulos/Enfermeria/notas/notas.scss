@@ -312,4 +312,21 @@ app-datos-paciente {
   .nota-textarea {
     min-height: 180px;
   }
+
+  .historial-lista {
+    overflow-y: visible;
+  }
+}
+
+@media (max-width: 640px) {
+  .notas {
+    padding: 12px;
+    gap: 16px;
+  }
+
+  .panel-editor,
+  .panel-historial,
+  .panel-secciones .tarjeta {
+    border-radius: 16px;
+  }
 }

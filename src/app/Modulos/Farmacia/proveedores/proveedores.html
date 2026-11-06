@@ -50,7 +50,7 @@
             <th class="celda_centrada">Teléfono</th>
             <th class="celda_izquierda">Email</th>
             <th class="celda_centrada">NIT</th>
-            <th class="celda_centrada">Acciones</th>
+            <th class="celda_centrada celda-acciones">Acciones</th>
           </tr>
         </thead>
         <tbody>
@@ -81,7 +81,7 @@
                 <td class="celda_centrada">{{ prov.telefono }}</td>
                 <td class="celda_izquierda">{{ prov.email }}</td>
                 <td class="celda_centrada">{{ prov.nit }}</td>
-                <td class="celda_centrada">
+                <td class="celda_centrada celda-acciones">
                   @if (!isEditing) {
                     <div class="interruptor-estado">
                       @if (prov.estado) {
@@ -206,15 +206,18 @@
           [label]="'NIT'"
           [fieldId]="'nit'"
           [showError]="!!nit.touched && !esNitValido()"
-          [errorMessage]="'NIT inválido: use CF o 7 u 8 dígitos, un guion y un dígito o K'"
+          [errorMessage]="'NIT inválido: use CF, 8 dígitos, o 7-8 dígitos con guion y verificador'"
         >
           <input
             type="text"
             id="nit"
             name="nit"
-            placeholder="Ej: CF, 1234567-8 o 12345678-K"
+            placeholder="Ej: CF, 12345678 o 12345678-K"
             [(ngModel)]="proveedor.nit"
+            (input)="proveedor.nit = filtrarNit($event)"
+            [pattern]="nitPattern"
             [disabled]="operacionPendiente"
+            maxlength="10"
             #nit="ngModel"
             [class.input-invalid]="nit.touched && !esNitValido()"
             [attr.aria-invalid]="nit.touched && !esNitValido()"

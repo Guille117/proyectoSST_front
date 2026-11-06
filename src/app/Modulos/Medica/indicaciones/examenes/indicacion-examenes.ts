@@ -26,6 +26,7 @@ import {
 import { ArchivoService } from '../../../../shared/archivos/archivoService';
 import { PopUps } from '../../../../shared/popUps/popUpsService';
 import { AuthService } from '../../../Auth/data/auth-service';
+import { PropiedadRegistroService } from '../../../Auth/data/propiedad-registro-service';
 import { EpisodioActivoService } from '../../data/episodio-activo-service';
 import { IndicacionExamenService } from './data/examen-service';
 import {
@@ -45,6 +46,7 @@ type FiltroExamen = 'todos' | 'disponibles' | 'noDisponibles' | 'eliminados';
 /** Examen indicado con sus archivos y su disponibilidad. */
 interface ExamenVista {
   id: number;
+  usuarioId: number;
   nombre: string;
   observacion: string;
   archivos: ExamenArchivoResponse[];
@@ -81,6 +83,7 @@ export class IndicacionExamenes implements OnInit, OnDestroy {
   private readonly servicio = inject(IndicacionExamenService);
   private readonly modalService = inject(ModalService);
   private readonly authService = inject(AuthService);
+  private readonly propiedadRegistro = inject(PropiedadRegistroService);
   private readonly episodioActivo = inject(EpisodioActivoService);
   private readonly cdr = inject(ChangeDetectorRef);
 
@@ -102,6 +105,11 @@ export class IndicacionExamenes implements OnInit, OnDestroy {
   /** El episodio es un historial cerrado: se consulta, pero no se registran cambios. */
   get soloLectura(): boolean {
     return this.episodioActivo.esSoloLectura();
+  }
+
+  /** Solo el autor del registro (o un rol global) puede editarlo o eliminarlo. */
+  puedeGestionar(usuarioId: number): boolean {
+    return !this.soloLectura && this.propiedadRegistro.puedeGestionar(usuarioId);
   }
 
   /** Campos del formulario del examen: solo su nombre es obligatorio. */
@@ -521,13 +529,17 @@ export class IndicacionExamenes implements OnInit, OnDestroy {
 
   /** Confirma y pasa el examen al estado eliminado; el listado se recarga. */
   async eliminarExamen(examen: ExamenVista): Promise<void> {
-    if (this.destruido || this.eliminando || this.guardando) return;
+    if (this.destruido || this.eliminando || this.guardando || this.confirmando) return;
 
     this.cerrarMenuIndicacion();
+    this.confirmando = true;
+    this.cdr.markForCheck();
 
     const confirmado = await this.popUps
       .confirmarToast(`¿Está seguro de eliminar el examen "${examen.nombre}"?`)
       .catch(() => false);
+
+    this.confirmando = false;
 
     if (!confirmado || this.destruido) return;
 
@@ -593,6 +605,7 @@ export class IndicacionExamenes implements OnInit, OnDestroy {
 
     return {
       id: respuesta.id,
+      usuarioId: respuesta.usuarioId,
       nombre: respuesta.nombreExamen,
       observacion: respuesta.observacion ?? '',
       archivos,

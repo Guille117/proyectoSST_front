@@ -6,7 +6,9 @@
         <div class="option" routerLink="monitoreo" routerLinkActive="active">Monitoreo</div>
       }
       @if (permisos.puedeLeerSubmodulo('ENF-TRATAMIENTOS')) {
-        <div class="option" routerLink="tratamientos" routerLinkActive="active">Tratamientos</div>
+        <div class="option" routerLink="tratamientos" routerLinkActive="active">
+          Indicaciones médicas
+        </div>
       }
       @if (permisos.puedeLeerSubmodulo('ENF-NOTAS')) {
         <div class="option" routerLink="notas" routerLinkActive="active">Notas de enfermería</div>

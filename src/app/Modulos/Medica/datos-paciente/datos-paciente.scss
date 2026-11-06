@@ -22,10 +22,6 @@
   box-shadow: -4px 0 14px rgba(15, 23, 42, 0.06);
 }
 
-/* El cuerpo plegado se oculta; la pestaña lateral abre y cierra el bloque completo. */
-.ficha-cuerpo--plegado {
-  display: none;
-}
 
 /* Pestaña pegada al borde derecho de la pantalla: abre y cierra la ficha del paciente. Se centra
    verticalmente en la ventana y, como está fuera del flujo de la rejilla, no consume ancho ni
@@ -97,6 +93,25 @@
 /* Identificación del paciente: nombre y expediente */
 .ficha-paciente {
   margin: 0 0 4px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Etiqueta del estado clínico: esquina superior derecha de la ficha del paciente */
+.ficha-estado-clinico {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  background: #e2e8f0;
+  color: #334155;
+  font-size: 0.85rem;
+  font-weight: 600;
+  white-space: nowrap;
 }
 
 .ficha-paciente-nombre {
@@ -157,19 +172,16 @@
   overflow-wrap: anywhere;
 }
 
-/* Motivo de atención: texto normal, sin caja, recortado a dos líneas con tooltip completo */
+/* Motivo de atención: texto completo sin corte; si es muy grande, el bloque tiene scroll */
 .ficha-motivo {
-  display: -webkit-box;
-  overflow: hidden;
   margin: 0;
   color: var(--azulPrincipal);
   font-size: 1rem;
   font-weight: 400;
   line-height: 1.4;
   overflow-wrap: anywhere;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  cursor: help;
+  max-height: 40vh;
+  overflow-y: auto;
 }
 
 /* Listado de alergias registradas */
@@ -259,6 +271,38 @@
     border: 1px solid #dfe7f3;
     border-radius: 18px;
     box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
+  }
+
+  /* En su forma deslizante la ficha gana esquinas y una sombra clara de panel, y la pestaña
+     mantiene un objetivo táctil cómodo. */
+  .ficha--plegable {
+    padding: 16px;
+    border-radius: 18px 0 0 18px;
+    box-shadow: -10px 0 30px rgba(15, 23, 42, 0.18);
+  }
+
+  .ficha-pestana {
+    width: 48px;
+    padding: 16px 11px;
+  }
+}
+
+@media (max-width: 640px) {
+  .ficha--plegable {
+    padding: 14px;
+  }
+
+  .ficha-paciente-nombre {
+    font-size: 1.15rem;
+  }
+
+  .ficha-subtitulo {
+    font-size: 1rem;
+  }
+
+  .ficha-pestana {
+    width: 44px;
+    padding: 14px 10px;
   }
 }
 

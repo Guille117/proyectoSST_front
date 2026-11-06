@@ -10,6 +10,21 @@
   align-self: start;
 }
 
+/* Medicamentos y Atenciones: el título del panel queda fijo y solo el formulario se desplaza. */
+.panel-seccion--scroll {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(var(--heightNavBar) - var(--alto-fuera-de-formulario));
+  overflow: hidden;
+}
+
+.panel-seccion--scroll > .indicacion-form {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 0.4rem;
+}
+
 /* Listado de las indicaciones registradas en el episodio: la sección nunca supera el alto de la
    ventana (--alto-fuera-de-indicados, definido en .indicaciones) y reparte ese alto entre el
    título, los filtros y el listado de tarjetas. */
@@ -423,48 +438,39 @@ select.indicacion-input {
   text-align: center;
 }
 
-/* ==================== REGISTROS DE ENFERMERÍA ==================== */
-/* La tabla de registros no se comporta como un control clicable */
-.registros-tabla {
-  cursor: default;
-}
-
-.registros-tabla_estado {
-  width: 70px;
-}
-
-.registros-tabla_estado i {
-  font-size: 1.1rem;
-}
-
-.registros-tabla_estado .bi-check-circle-fill {
-  color: #15803d;
-}
-
-.registros-tabla_estado .bi-x-circle-fill {
-  color: #b42318;
-}
-
-/* Observación del registro que acompaña al puntero */
-.observacion-popup {
-  position: fixed;
-  z-index: 1200;
-  max-width: min(320px, calc(100vw - 2rem));
-  padding: 0.55rem 0.7rem;
-  border-radius: 8px;
-  background: #101828;
-  color: #fff;
-  font-size: 0.85rem;
-  line-height: 1.4;
-  overflow-wrap: anywhere;
-  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.25);
-  pointer-events: none;
-}
-
 /* ==================== RESPONSIVIDAD ==================== */
 @media (max-width: 900px) {
   .indicacion-fila,
   .indicacion-fila--dos {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* En una sola columna la página desplaza el contenido: los paneles no necesitan scroll interno. */
+  .panel-seccion--scroll,
+  .panel-indicados {
+    max-height: none;
+    overflow: visible;
+  }
+
+  .panel-seccion--scroll > .indicacion-form,
+  .indicados-lista {
+    overflow-y: visible;
+    padding-right: 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .panel-seccion,
+  .panel-indicados {
+    border-radius: 16px;
+    padding: 14px;
+  }
+
+  .indicacion-titulo {
+    font-size: 1.25rem;
+  }
+
+  .indicacion-fila {
+    gap: 0.75rem;
   }
 }

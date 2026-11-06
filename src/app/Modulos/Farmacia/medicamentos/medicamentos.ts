@@ -6,12 +6,17 @@ import {
   DestroyRef,
   OnInit,
   inject,
+  viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule, NgForm } from '@angular/forms';
 import { finalize, firstValueFrom, forkJoin, timeout } from 'rxjs';
 import { CampoValidado } from '../../../shared/campo-validado/campo-validado';
 import { OpcionOtroComponent, OpcionOtroValor } from '../../../shared/opcion-otro/opcion-otro';
+import {
+  SeleccionPendiente,
+  crearSeleccionesPendientes,
+} from '../../../shared/opcion-otro/crear-seleccion-pendiente';
 import { Paginacion } from '../../../shared/paginacion/paginacion';
 import { PopUps } from '../../../shared/popUps/popUpsService';
 import { TabSwitch } from '../../../shared/tab-switch/tab-switch';
@@ -56,10 +61,15 @@ export class Medicamentos implements OnInit {
   creandoVia = false;
   creandoPresentacion = false;
   creandoMarca = false;
+  preparandoSelecciones = false;
   private unidadAnterior = 0;
   private viaAnterior = 0;
   private presentacionAnterior = 0;
   private marcaAnterior = 0;
+  private readonly unidadOtro = viewChild<OpcionOtroComponent>('unidadOtro');
+  private readonly viaOtro = viewChild<OpcionOtroComponent>('viaOtro');
+  private readonly presentacionOtro = viewChild<OpcionOtroComponent>('presentacionOtro');
+  private readonly marcaOtro = viewChild<OpcionOtroComponent>('marcaOtro');
 
   llenarSelects(): void {
     forkJoin({
@@ -95,35 +105,39 @@ export class Medicamentos implements OnInit {
     this.medicamento.unidadMedidaId = valor;
   }
 
-  crearUnidad(datos: OpcionOtroValor): void {
-    if (this.creandoUnidad || !datos.abreviatura) return;
+  async crearUnidad(datos: OpcionOtroValor): Promise<boolean> {
+    if (this.creandoUnidad || !datos.abreviatura) return false;
 
     this.creandoUnidad = true;
-    this.servicioCatalogos
-      .guardarUnidadMedida(datos.nombre, datos.abreviatura)
-      .pipe(
-        timeout(5000),
-        finalize(() => {
-          this.creandoUnidad = false;
-          this.cdr.markForCheck();
-        }),
-        takeUntilDestroyed(this.destroyRef),
-      )
-      .subscribe({
-        next: (creada) => {
-          const unidad: Inter_unidadMedida = {
-            id: creada.id,
-            nombre: creada.nombre,
-            abreviatura: creada.abreviatura ?? datos.abreviatura ?? '',
-          };
+    try {
+      const creada = await firstValueFrom(
+        this.servicioCatalogos
+          .guardarUnidadMedida(datos.nombre, datos.abreviatura)
+          .pipe(timeout(5000), takeUntilDestroyed(this.destroyRef)),
+      );
 
-          this.unidadesMedida = [...this.unidadesMedida, unidad];
-          this.medicamento.unidadMedidaId = creada.id;
-          this.mostrandoOtroUnidad = false;
-          this.cdr.markForCheck();
-        },
-        error: (error) => this.popUp.errorDesdeBackend(error, 'No se pudo crear la unidad de medida.'),
-      });
+      if (creada.id == null) {
+        this.popUp.error('No se pudo crear la unidad de medida.');
+        return false;
+      }
+
+      const unidad: Inter_unidadMedida = {
+        id: creada.id,
+        nombre: creada.nombre,
+        abreviatura: creada.abreviatura ?? datos.abreviatura ?? '',
+      };
+
+      this.unidadesMedida = [...this.unidadesMedida, unidad];
+      this.medicamento.unidadMedidaId = creada.id;
+      this.mostrandoOtroUnidad = false;
+      return true;
+    } catch (error) {
+      this.popUp.errorDesdeBackend(error, 'No se pudo crear la unidad de medida.');
+      return false;
+    } finally {
+      this.creandoUnidad = false;
+      this.cdr.markForCheck();
+    }
   }
 
   cancelarUnidad(): void {
@@ -142,32 +156,30 @@ export class Medicamentos implements OnInit {
     this.medicamento.viaAdminId = valor;
   }
 
-  crearVia(datos: OpcionOtroValor): void {
-    if (this.creandoVia) return;
+  async crearVia(datos: OpcionOtroValor): Promise<boolean> {
+    if (this.creandoVia) return false;
 
     this.creandoVia = true;
-    this.servicioCatalogos
-      .crear<Inter_base>('viaAdmin', { nombre: datos.nombre })
-      .pipe(
-        timeout(5000),
-        finalize(() => {
-          this.creandoVia = false;
-          this.cdr.markForCheck();
-        }),
-        takeUntilDestroyed(this.destroyRef),
-      )
-      .subscribe({
-        next: (creada) => {
-          if (creada.id == null) return;
+    try {
+      const creada = await firstValueFrom(
+        this.servicioCatalogos
+          .crear<Inter_base>('viaAdmin', { nombre: datos.nombre })
+          .pipe(timeout(5000), takeUntilDestroyed(this.destroyRef)),
+      );
 
-          this.viasAdmin = [...this.viasAdmin, creada];
-          this.medicamento.viaAdminId = creada.id;
-          this.mostrandoOtroVia = false;
-          this.cdr.markForCheck();
-        },
-        error: (error) =>
-          this.popUp.errorDesdeBackend(error, 'No se pudo crear la vía de administración.'),
-      });
+      if (creada.id == null) return false;
+
+      this.viasAdmin = [...this.viasAdmin, creada];
+      this.medicamento.viaAdminId = creada.id;
+      this.mostrandoOtroVia = false;
+      return true;
+    } catch (error) {
+      this.popUp.errorDesdeBackend(error, 'No se pudo crear la vía de administración.');
+      return false;
+    } finally {
+      this.creandoVia = false;
+      this.cdr.markForCheck();
+    }
   }
 
   cancelarVia(): void {
@@ -186,31 +198,30 @@ export class Medicamentos implements OnInit {
     this.medicamento.presentacionId = valor;
   }
 
-  crearPresentacion(datos: OpcionOtroValor): void {
-    if (this.creandoPresentacion) return;
+  async crearPresentacion(datos: OpcionOtroValor): Promise<boolean> {
+    if (this.creandoPresentacion) return false;
 
     this.creandoPresentacion = true;
-    this.servicioCatalogos
-      .crear<Inter_base>('presentacion', { nombre: datos.nombre })
-      .pipe(
-        timeout(5000),
-        finalize(() => {
-          this.creandoPresentacion = false;
-          this.cdr.markForCheck();
-        }),
-        takeUntilDestroyed(this.destroyRef),
-      )
-      .subscribe({
-        next: (creada) => {
-          if (creada.id == null) return;
+    try {
+      const creada = await firstValueFrom(
+        this.servicioCatalogos
+          .crear<Inter_base>('presentacion', { nombre: datos.nombre })
+          .pipe(timeout(5000), takeUntilDestroyed(this.destroyRef)),
+      );
 
-          this.presentaciones = [...this.presentaciones, creada];
-          this.medicamento.presentacionId = creada.id;
-          this.mostrandoOtroPresentacion = false;
-          this.cdr.markForCheck();
-        },
-        error: (error) => this.popUp.errorDesdeBackend(error, 'No se pudo crear la presentación.'),
-      });
+      if (creada.id == null) return false;
+
+      this.presentaciones = [...this.presentaciones, creada];
+      this.medicamento.presentacionId = creada.id;
+      this.mostrandoOtroPresentacion = false;
+      return true;
+    } catch (error) {
+      this.popUp.errorDesdeBackend(error, 'No se pudo crear la presentación.');
+      return false;
+    } finally {
+      this.creandoPresentacion = false;
+      this.cdr.markForCheck();
+    }
   }
 
   cancelarPresentacion(): void {
@@ -229,31 +240,30 @@ export class Medicamentos implements OnInit {
     this.medicamento.marcaId = valor;
   }
 
-  crearMarca(datos: OpcionOtroValor): void {
-    if (this.creandoMarca) return;
+  async crearMarca(datos: OpcionOtroValor): Promise<boolean> {
+    if (this.creandoMarca) return false;
 
     this.creandoMarca = true;
-    this.servicioCatalogos
-      .crear<Inter_base>('marca', { nombre: datos.nombre })
-      .pipe(
-        timeout(5000),
-        finalize(() => {
-          this.creandoMarca = false;
-          this.cdr.markForCheck();
-        }),
-        takeUntilDestroyed(this.destroyRef),
-      )
-      .subscribe({
-        next: (creada) => {
-          if (creada.id == null) return;
+    try {
+      const creada = await firstValueFrom(
+        this.servicioCatalogos
+          .crear<Inter_base>('marca', { nombre: datos.nombre })
+          .pipe(timeout(5000), takeUntilDestroyed(this.destroyRef)),
+      );
 
-          this.fabricantes = [...this.fabricantes, creada];
-          this.medicamento.marcaId = creada.id;
-          this.mostrandoOtroMarca = false;
-          this.cdr.markForCheck();
-        },
-        error: (error) => this.popUp.errorDesdeBackend(error, 'No se pudo crear el fabricante.'),
-      });
+      if (creada.id == null) return false;
+
+      this.fabricantes = [...this.fabricantes, creada];
+      this.medicamento.marcaId = creada.id;
+      this.mostrandoOtroMarca = false;
+      return true;
+    } catch (error) {
+      this.popUp.errorDesdeBackend(error, 'No se pudo crear el fabricante.');
+      return false;
+    } finally {
+      this.creandoMarca = false;
+      this.cdr.markForCheck();
+    }
   }
 
   cancelarMarca(): void {
@@ -261,12 +271,62 @@ export class Medicamentos implements OnInit {
     this.medicamento.marcaId = this.marcaAnterior;
   }
 
+  private resolverSeleccionesPendientes(): Promise<boolean> {
+    const selecciones: SeleccionPendiente[] = [];
+
+    if (this.mostrandoOtroUnidad) {
+      selecciones.push({
+        etiqueta: 'Unidad de medida',
+        componente: this.unidadOtro,
+        crear: (datos) => this.crearUnidad(datos),
+      });
+    }
+    if (this.mostrandoOtroVia) {
+      selecciones.push({
+        etiqueta: 'Vía de administración',
+        componente: this.viaOtro,
+        crear: (datos) => this.crearVia(datos),
+      });
+    }
+    if (this.mostrandoOtroPresentacion) {
+      selecciones.push({
+        etiqueta: 'Presentación',
+        componente: this.presentacionOtro,
+        crear: (datos) => this.crearPresentacion(datos),
+      });
+    }
+    if (this.mostrandoOtroMarca) {
+      selecciones.push({
+        etiqueta: 'Fabricante',
+        componente: this.marcaOtro,
+        crear: (datos) => this.crearMarca(datos),
+      });
+    }
+
+    if (!selecciones.length) return Promise.resolve(true);
+
+    return crearSeleccionesPendientes(selecciones, (mensaje) =>
+      this.popUp.formIncompleto(mensaje),
+    );
+  }
+
   // ==================== GUARDAR ====================
   medicamento = this.crearMedicamentoVacio();
   procesando = false;
 
   async guardarMedicamento(formulario?: NgForm): Promise<void> {
-    if (this.procesando || !this.formularioValido(formulario)) return;
+    if (this.procesando || this.preparandoSelecciones || !this.formularioValido(formulario)) return;
+
+    this.preparandoSelecciones = true;
+    this.cdr.markForCheck();
+    try {
+      if (!(await this.resolverSeleccionesPendientes())) {
+        return;
+      }
+    } finally {
+      this.preparandoSelecciones = false;
+      this.cdr.markForCheck();
+    }
 
     this.procesando = true;
     this.cdr.markForCheck();
@@ -418,6 +478,7 @@ export class Medicamentos implements OnInit {
   async actualizarMedicamento(formulario?: NgForm): Promise<void> {
     if (
       this.procesando ||
+      this.preparandoSelecciones ||
       !this.mostrarActivos ||
       !this.actualizar ||
       !this.formularioValido(formulario) ||
@@ -428,7 +489,6 @@ export class Medicamentos implements OnInit {
     }
 
     const id = this.idActualizar;
-    const medicamento = { ...this.medicamento };
     this.procesando = true;
     this.cdr.markForCheck();
     let solicitudIniciada = false;
@@ -440,6 +500,17 @@ export class Medicamentos implements OnInit {
         return;
       }
 
+      this.preparandoSelecciones = true;
+      let listo = false;
+      try {
+        listo = await this.resolverSeleccionesPendientes();
+      } finally {
+        this.preparandoSelecciones = false;
+        this.cdr.markForCheck();
+      }
+      if (!listo) return;
+
+      const medicamento = { ...this.medicamento };
       solicitudIniciada = true;
       this.servicioMedicamento
         .actualizarMedicamentoLog(id, medicamento)
@@ -571,9 +642,9 @@ export class Medicamentos implements OnInit {
     return (!formulario || !formulario.invalid)
       && this.medicamento.nombre.trim().length > 0
       && this.medicamento.dosis > 0
-      && this.medicamento.unidadMedidaId > 0
-      && this.medicamento.marcaId > 0
-      && this.medicamento.presentacionId > 0
-      && this.medicamento.viaAdminId > 0;
+      && (this.medicamento.unidadMedidaId > 0 || this.mostrandoOtroUnidad)
+      && (this.medicamento.marcaId > 0 || this.mostrandoOtroMarca)
+      && (this.medicamento.presentacionId > 0 || this.mostrandoOtroPresentacion)
+      && (this.medicamento.viaAdminId > 0 || this.mostrandoOtroVia);
   }
 }

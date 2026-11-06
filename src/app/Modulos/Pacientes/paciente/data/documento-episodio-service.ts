@@ -25,10 +25,18 @@ export class DocumentoEpisodioService {
     tipo: TipoDocumentoEpisodio,
     usuarioId: number,
     archivo: File,
+    procedimientoMedicoId: number | null = null,
+    altaId: number | null = null,
   ): Observable<DocumentoEpisodio[]> {
     const datos = new FormData();
     datos.append('tipo', tipo);
     datos.append('usuarioId', String(usuarioId));
+    if (procedimientoMedicoId !== null) {
+      datos.append('procedimientoMedicoId', String(procedimientoMedicoId));
+    }
+    if (altaId !== null) {
+      datos.append('altaId', String(altaId));
+    }
     datos.append('archivos', archivo);
 
     return this.http

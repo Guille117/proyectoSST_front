@@ -9,6 +9,7 @@ import { FormsModule } from '@angular/forms';
 import { finalize, Subscription, TimeoutError } from 'rxjs';
 import { PopUps } from '../../../shared/popUps/popUpsService';
 import { AuthService } from '../../Auth/data/auth-service';
+import { PropiedadRegistroService } from '../../Auth/data/propiedad-registro-service';
 import { DatosPaciente } from '../../Medica/datos-paciente/datos-paciente';
 import { EpisodioActivoService } from '../../Medica/data/episodio-activo-service';
 import {
@@ -20,6 +21,7 @@ import { NotaEnfermeriaService } from './data/nota-enfermeria-service';
 /** Nota de enfermería mostrada en el historial. */
 interface NotaEnfermeriaVista {
   id: number;
+  usuarioId: number;
   texto: string;
   fecha: string;
   hora: string;
@@ -42,6 +44,7 @@ interface NotaEnfermeriaVista {
 export class Notas implements OnInit, OnDestroy {
   private readonly popUps = inject(PopUps);
   private readonly authService = inject(AuthService);
+  private readonly propiedadRegistro = inject(PropiedadRegistroService);
   private readonly episodioActivo = inject(EpisodioActivoService);
   private readonly servicio = inject(NotaEnfermeriaService);
   private readonly cdr = inject(ChangeDetectorRef);
@@ -53,8 +56,6 @@ export class Notas implements OnInit, OnDestroy {
   /** La ficha con los datos del paciente está desplegada; la abre su pestaña lateral. */
   pacienteAbierto = false;
 
-  /** El cuerpo de la ficha del paciente está desplegado; el chevron de su encabezado lo pliega. */
-  datosPacienteVisibles = true;
 
   /** Texto que se está capturando en el editor. */
   textoNota = '';
@@ -91,15 +92,16 @@ export class Notas implements OnInit, OnDestroy {
    */
   cambiarFichaPaciente(abierto: boolean): void {
     this.pacienteAbierto = abierto;
-
-    if (abierto) {
-      this.datosPacienteVisibles = true;
-    }
   }
 
   /** El episodio es un historial cerrado: se consulta, pero no se registran cambios. */
   get soloLectura(): boolean {
     return this.episodioActivo.esSoloLectura();
+  }
+
+  /** Solo el autor de la nota (o un rol global) puede editarla o eliminarla. */
+  puedeGestionar(usuarioId: number): boolean {
+    return !this.soloLectura && this.propiedadRegistro.puedeGestionar(usuarioId);
   }
 
   /** El editor puede guardar cuando la nota tiene texto. */
@@ -280,6 +282,7 @@ export class Notas implements OnInit, OnDestroy {
 
     return {
       id: nota.id,
+      usuarioId: nota.usuarioId,
       texto: nota.texto,
       fecha: this.formatearFecha(fecha),
       hora: this.formatearHora(fecha),

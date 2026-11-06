@@ -30,6 +30,7 @@
             <button type="button" class="btn _principal" (click)="abrirModalAgregar()">Agregar usuario</button>
         </div>
 
+        <div class="tabla-usuarios">
         <table class="table">
             <thead>
                 <tr>
@@ -38,7 +39,7 @@
                     <th class="celda_izquierda">Nombre</th>
                     <th class="celda_centrada">Teléfono</th>
                     <th class="celda_izquierda">Rol</th>
-                    <th class="celda_centrada">Acciones</th>
+                    <th class="celda_centrada celda-acciones">Acciones</th>
                 </tr>
             </thead>
             <tbody>
@@ -49,7 +50,7 @@
                         <td class="celda_izquierda">{{ getNombreCompleto(user) }}</td>
                         <td class="celda_centrada">{{ getTelefono(user) }}</td>
                         <td class="celda_izquierda">{{ getRol(user) }}</td>
-                        <td class="celda_centrada acciones-tabla">
+                        <td class="celda_centrada acciones-tabla celda-acciones">
                             <div class="acciones-contenido">
                                 @if (!esUsuarioSistema(user)) {
                                     <button
@@ -96,6 +97,7 @@
                 </tr>
             </tfoot>
         </table>
+        </div>
     </div>
 
  

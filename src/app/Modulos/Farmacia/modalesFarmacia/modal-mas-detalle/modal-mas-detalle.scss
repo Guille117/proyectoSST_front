@@ -28,9 +28,39 @@
 
 .form-row {
   display: flex;
+  flex-wrap: wrap;
   gap: 14px;
   width: 100%;
   align-items: flex-start;
+}
+
+.form-row > .campo-formulario {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.form-row .campo-dosis {
+  flex: 0 0 16%;
+}
+
+.form-row .campo-unidad {
+  flex: 0 0 20%;
+}
+
+.form-row .campo-via,
+.form-row .campo-presentacion {
+  flex: 1 1 45%;
+}
+
+@media (max-width: 640px) {
+  .form-row {
+    flex-direction: column;
+  }
+
+  .form-row > .campo-formulario {
+    flex: 1 1 auto;
+    width: 100%;
+  }
 }
 
 

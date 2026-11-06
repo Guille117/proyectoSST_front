@@ -1,5 +1,5 @@
 <!-- Datos del paciente: bloque pegado al borde derecho de la pantalla. En su forma plegable lo abre
-     y lo cierra la pestaña lateral y su encabezado pliega el cuerpo con el chevron. -->
+     y lo cierra la pestaña lateral. -->
 @if (plegable && (permitirAlternar || !abierto)) {
   <!-- Pestaña lateral: abre y cierra la ficha del paciente -->
   <button
@@ -30,7 +30,6 @@
     <div
       class="ficha-cuerpo"
       id="fichaCuerpo"
-      [class.ficha-cuerpo--plegado]="plegable && !cuerpoVisible"
     >
       @if (cargando) {
         <p class="ficha-aviso">Cargando información del paciente...</p>
@@ -42,8 +41,13 @@
       } @else if (detalle; as datos) {
         <!-- Identificación del paciente -->
         <div class="ficha-paciente">
-          <h4 class="ficha-paciente-nombre">{{ datos.nombreCompleto }}</h4>
-          <p class="ficha-paciente-meta">{{ datos.codigoExpediente || '—' }}</p>
+          <div class="ficha-paciente-texto">
+            <h4 class="ficha-paciente-nombre">{{ datos.nombreCompleto }}</h4>
+            <p class="ficha-paciente-meta">{{ datos.codigoExpediente || '—' }}</p>
+          </div>
+          @if (datos.estadoClinicoNombre) {
+            <span class="ficha-estado-clinico">{{ datos.estadoClinicoNombre }}</span>
+          }
         </div>
 
         <!-- Información de la atención -->
@@ -68,7 +72,7 @@
 
         <!-- Motivo de atención -->
         <h4 class="ficha-subtitulo">Motivo de atención</h4>
-        <p class="ficha-motivo" [attr.title]="textoTooltip(datos.descripcion, 'No registrado')">
+        <p class="ficha-motivo">
           {{ motivoAtencion }}
         </p>
 

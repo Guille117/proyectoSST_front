@@ -107,6 +107,9 @@
             (click)="seleccionarPaciente(paciente)"
             (keydown.enter)="seleccionarPaciente(paciente)"
           >
+            @if (paciente.estadoClinicoNombre) {
+              <span class="paciente-estado-clinico">{{ paciente.estadoClinicoNombre }}</span>
+            }
             <div class="paciente-datos">
               <h3 class="paciente-nombre">{{ paciente.nombre }}</h3>
 

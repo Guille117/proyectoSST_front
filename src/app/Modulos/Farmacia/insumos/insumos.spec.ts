@@ -1,5 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { Observable, of } from 'rxjs';
+import { By } from '@angular/platform-browser';
+import { Observable, of, throwError } from 'rxjs';
+import { OpcionOtroComponent } from '../../../shared/opcion-otro/opcion-otro';
 import { PopUps } from '../../../shared/popUps/popUpsService';
 import { CatalogoService } from '../../Catalogos/data/serviceCatalogo';
 import { Inter_base } from '../../Catalogos/data/nombreInterfaz';
@@ -30,11 +32,15 @@ describe('Insumos', () => {
   };
   const catalogos = {
     listar: vi.fn<(recurso: string) => Observable<Inter_base[]>>(() => of([])),
+    crear: vi.fn<(recurso: string, datos: Partial<Inter_base>) => Observable<Inter_base>>(
+      () => of({ id: 9, nombre: 'Nuevo fabricante' }),
+    ),
   };
   const popUp = {
     confirmarToast: vi.fn<() => Promise<boolean>>(() => Promise.resolve(true)),
     exito: vi.fn(),
     errorDesdeBackend: vi.fn(),
+    formIncompleto: vi.fn(),
   };
 
   beforeEach(async () => {
@@ -61,10 +67,13 @@ describe('Insumos', () => {
     servicioInsumos.cambiarEstadoInsumo.mockReturnValue(of(undefined));
     catalogos.listar.mockReset();
     catalogos.listar.mockReturnValue(of([]));
+    catalogos.crear.mockReset();
+    catalogos.crear.mockReturnValue(of({ id: 9, nombre: 'Nuevo fabricante' }));
     popUp.confirmarToast.mockReset();
     popUp.confirmarToast.mockResolvedValue(true);
     popUp.exito.mockReset();
     popUp.errorDesdeBackend.mockReset();
+    popUp.formIncompleto.mockReset();
 
     await TestBed.configureTestingModule({
       imports: [Insumos],
@@ -78,6 +87,18 @@ describe('Insumos', () => {
     component = fixture.componentInstance;
     await fixture.whenStable();
   });
+
+  function abrirOtroMarca(): OpcionOtroComponent {
+    const select: HTMLSelectElement = fixture.nativeElement.querySelector('#fabricanteInsumo');
+    const opcionOtro = Array.from(select.options).find(
+      (opcion) => opcion.textContent?.trim() === 'Otro',
+    );
+    select.selectedIndex = opcionOtro?.index ?? -1;
+    select.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+    return fixture.debugElement.query(By.css('app-opcion-otro'))
+      .componentInstance as OpcionOtroComponent;
+  }
 
   it('crea la vista de insumos con la distribucion de tabla y formulario', () => {
     expect(component).toBeTruthy();
@@ -131,6 +152,54 @@ describe('Insumos', () => {
 
     component.insumo = { nombre: 'Gasas', marcaId: 3, detalle: 'Estériles' };
     expect(component.formularioValido()).toBe(true);
+  });
+
+  it('crea el fabricante pendiente antes de guardar el insumo', async () => {
+    component.insumo = { nombre: 'Guantes', marcaId: 0, detalle: '' };
+    const otro = abrirOtroMarca();
+    otro.nombre = 'Nuevo fabricante';
+    fixture.detectChanges();
+
+    expect(component.formularioValido()).toBe(true);
+    await component.guardarInsumo();
+
+    expect(catalogos.crear).toHaveBeenCalledWith('marca', { nombre: 'Nuevo fabricante' });
+    expect(servicioInsumos.crearInsumo).toHaveBeenCalledWith({
+      nombre: 'Guantes',
+      marcaId: 9,
+      detalle: '',
+    });
+  });
+
+  it('no guarda el insumo si falla la creación del fabricante', async () => {
+    catalogos.crear.mockReturnValueOnce(throwError(() => new Error('fallo')));
+    component.insumo = { nombre: 'Guantes', marcaId: 0, detalle: '' };
+    const otro = abrirOtroMarca();
+    otro.nombre = 'Nuevo fabricante';
+    fixture.detectChanges();
+
+    await component.guardarInsumo();
+
+    expect(servicioInsumos.crearInsumo).not.toHaveBeenCalled();
+    expect(popUp.errorDesdeBackend).toHaveBeenCalled();
+  });
+
+  it('no guarda si el fabricante pendiente está vacío y deja el botón habilitado', async () => {
+    const nombre: HTMLInputElement = fixture.nativeElement.querySelector('#nombreInsumo');
+    nombre.value = 'Guantes';
+    nombre.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    abrirOtroMarca();
+
+    const guardar: HTMLButtonElement = fixture.nativeElement.querySelector('.btn._guardar');
+    expect(guardar.disabled).toBe(false);
+    await component.guardarInsumo();
+
+    expect(catalogos.crear).not.toHaveBeenCalled();
+    expect(servicioInsumos.crearInsumo).not.toHaveBeenCalled();
+    expect(popUp.formIncompleto).toHaveBeenCalledWith(
+      'Completa el valor de «Fabricante» o cancélalo antes de guardar.',
+    );
   });
 
   it('precarga el detalle al editar y lo muestra en la tabla', async () => {

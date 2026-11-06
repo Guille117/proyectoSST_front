@@ -1,3 +1,4 @@
+@use '../../../../shared/registros-tabla/registros-tabla';
 @use '../../panel-seccion';
 @use '../comun';
 
@@ -7,11 +8,44 @@
   display: contents;
 }
 
+/* Cabecera del panel: título a la izquierda y selector Cuidados/Monitoreo a la derecha. */
+.indicacion-cabecera {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+}
+
+.indicacion-cabecera .indicacion-titulo {
+  margin-bottom: 0;
+}
+
+.indicacion-cabecera-switch {
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
+.indicacion-cabecera-switch app-tab-switch {
+  display: block;
+  width: max-content;
+  max-width: 100%;
+}
+
 /* Cada fila comparte dos filas de rejilla (etiqueta e input): los inputs de la misma fila quedan
    alineados aunque una etiqueta ocupe dos líneas. */
 .indicacion-form .indicacion-fila {
   grid-template-rows: auto auto;
   row-gap: 10px;
+}
+
+/* La duración necesita menos ancho que el tipo y la fecha de inicio. */
+.indicacion-fila--vigencia {
+  grid-template-columns: minmax(0, 0.55fr) minmax(0, 0.9fr) minmax(0, 1.55fr);
+
+  .indicacion-input {
+    min-width: 0;
+  }
 }
 
 .indicacion-form .indicacion-campo {
@@ -54,5 +88,19 @@
 @media (max-width: 900px) {
   .indicacion-campo--ancho {
     grid-column: auto;
+  }
+
+  .indicacion-fila--vigencia {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .indicacion-cabecera-switch {
+    width: 100%;
+  }
+
+  .indicacion-cabecera-switch app-tab-switch {
+    width: 100%;
   }
 }

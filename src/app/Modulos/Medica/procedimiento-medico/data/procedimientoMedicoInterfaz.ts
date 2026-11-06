@@ -28,6 +28,7 @@ export interface ProcedimientoMedicoRequest {
   episodioId: number;
   usuarioId: number;
   recursos: RecursoProcedimientoRequest[];
+  requiereAutorizacion: boolean;
 }
 
 /** Recurso tal como lo devuelve el backend. */
@@ -52,6 +53,8 @@ export interface ProcedimientoMedicoResponse {
   usuarioNombre: string;
   estado: EstadoProcedimientoApi;
   recursos: RecursoProcedimientoResponse[];
+  requiereAutorizacion: boolean;
+  autorizacionGenerada: boolean;
 }
 
 /** Recurso de farmacia disponible para agregar a un procedimiento. */

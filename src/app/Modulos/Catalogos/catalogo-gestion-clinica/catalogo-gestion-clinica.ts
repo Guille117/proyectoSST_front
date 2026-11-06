@@ -55,6 +55,14 @@ export class CatalogoGestionClinica implements OnInit, OnDestroy {
       descripcion: 'Indica los tipos de procedimiento médico disponibles',
       cantidad: 0
     },
+    {
+      key: 'Estados clínicos',
+      url: 'estadosClinico',
+      icono: 'bi bi-heart-pulse',
+      titulo: 'Estado clínico',
+      descripcion: 'Indica el estado clínico vigente del episodio del paciente',
+      cantidad: 0
+    },
   ];
 
   catalogoSeleccionado = '';
@@ -91,6 +99,7 @@ export class CatalogoGestionClinica implements OnInit, OnDestroy {
     partesCuerpo: 0,
     condicionesEgreso: 0,
     procedimientos: 0,
+    estadosClinico: 0,
   };
 
   obtenerConteoCatalogos(){
@@ -112,6 +121,7 @@ export class CatalogoGestionClinica implements OnInit, OnDestroy {
     this.listaCatalogos[0].cantidad = this.conteosCatalogos.partesCuerpo;
     this.listaCatalogos[1].cantidad = this.conteosCatalogos.condicionesEgreso;
     this.listaCatalogos[2].cantidad = this.conteosCatalogos.procedimientos;
+    this.listaCatalogos[3].cantidad = this.conteosCatalogos.estadosClinico;
   }
 // ---------------------------------------------------------------------------------
 

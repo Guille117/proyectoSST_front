@@ -224,6 +224,44 @@ input:not([type="checkbox"]):disabled {
 @media (max-width: 1100px) {
   .catalogo-layout {
     grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .panel_tabla {
+    max-height: none;
+    overflow-x: auto;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .tabla-registros {
+    min-width: 620px;
+  }
+}
+
+@media (max-width: 640px) {
+  .panel {
+    min-height: 0;
+    padding: 12px;
+  }
+
+  .encabezado-registros {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .miniSub-container {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .catalogos {
+    grid-template-columns: 44px minmax(0, 1fr) auto;
+    padding: 12px;
+  }
+
+  .tabla-registros {
+    min-width: 640px;
   }
 }
 

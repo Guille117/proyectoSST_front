@@ -1,3 +1,5 @@
+@use '../../../shared/registros-tabla/registros-tabla';
+
 /* ==================== CONTENEDOR (SECCIONES / LISTADO / PANEL LATERAL) ==================== */
 /* Misma rejilla del submenú de monitoreo: rail de secciones, listado de indicaciones de la sección
    activa y panel lateral con el formulario de administración o el historial. Cada pista flexible
@@ -95,13 +97,75 @@ app-datos-paciente {
   margin-bottom: 0;
 }
 
-.tratamientos-solicitar {
+.indicacion-solicitar {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  height: 40px;
+  height: 34px;
+  padding: 0 0.9rem;
   margin-bottom: 0;
-  font-size: 1rem;
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+/* Registro del control: blanco con borde azul y azul al pasar el puntero o pulsarlo. */
+.btn.btn-registrar-control {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 42px;
+  margin-bottom: 0;
+  border: 1px solid var(--azulSecundario);
+  border-radius: 15px;
+  background: #fff;
+  color: var(--azulSecundario);
+  font-weight: 600;
+
+  &:hover:not(:disabled),
+  &:active:not(:disabled) {
+    border-color: var(--azulSecundario);
+    background: var(--azulSecundario);
+    color: #fff;
+  }
+
+  &:focus-visible {
+    outline: 2px solid rgba(13, 110, 253, 0.35);
+    outline-offset: 2px;
+  }
+}
+
+/* Información cuando el control ya se registró y solo falta guardar la atención. */
+.control-registrado-aviso {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid #b6d4fe;
+  border-radius: 12px;
+  background: #eef6ff;
+  color: #084298;
+  font-size: 0.95rem;
+  line-height: 1.4;
+  animation: control-aviso-pulso 2.8s ease-in-out infinite;
+}
+
+@keyframes control-aviso-pulso {
+  0%,
+  100% {
+    border-color: #b6d4fe;
+    background: #eef6ff;
+    box-shadow: 0 0 0 0 rgba(13, 110, 253, 0.38);
+  }
+  50% {
+    border-color: #6ea8fe;
+    background: #dbeafe;
+    box-shadow: 0 0 0 10px rgba(13, 110, 253, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .control-registrado-aviso {
+    animation: none;
+  }
 }
 
 /* El título del formulario lateral queda por debajo del listado en jerarquía */
@@ -193,6 +257,11 @@ select.administracion-input {
   color: #5b6b85;
   font-size: 0.85rem;
   line-height: 1.4;
+}
+
+.administracion-ayuda--error {
+  color: #b42318;
+  font-weight: 600;
 }
 
 .administracion-acciones {
@@ -367,6 +436,21 @@ select.administracion-input {
     color: #93a3bb;
     content: '·';
   }
+}
+
+/* Disponibilidad en piso del medicamento dentro de la tarjeta */
+.indicacion-disponible {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 8px 0 0;
+  color: #17833c;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.indicacion-disponible--agotado {
+  color: #b42318;
 }
 
 /* Tarjeta de medicamento: indicación a la izquierda y aplicaciones a la derecha */
@@ -553,176 +637,6 @@ select.administracion-input {
   justify-content: flex-end;
 }
 
-/* Listado de aplicaciones registradas */
-.aplicaciones-historial {
-  margin-top: 10px;
-}
-
-.aplicaciones-tabla {
-  width: 100%;
-  border: 1px solid #e4ebf5;
-  border-spacing: 0;
-  border-radius: 8px;
-  background: #fff;
-  box-shadow: none;
-  table-layout: fixed;
-  overflow: hidden;
-}
-
-.aplicaciones-tabla th,
-.aplicaciones-tabla td {
-  padding: 8px;
-  border-bottom: 1px solid #eef2f8;
-  color: #1f2f45;
-  font-size: 1rem;
-  font-weight: 400;
-  line-height: 1.35;
-  text-align: left;
-  overflow-wrap: anywhere;
-}
-
-.aplicaciones-tabla th {
-  background: #f8fafc;
-  color: #475569;
-  font-size: 0.95rem;
-  font-weight: 600;
-}
-
-.aplicaciones-tabla tbody tr:last-child td {
-  border-bottom: 0;
-}
-
-.aplicaciones-tabla th + th,
-.aplicaciones-tabla td + td {
-  border-left: 1px solid #eef2f8;
-}
-
-.aplicaciones-tabla_numero {
-  width: 48px;
-  text-align: center;
-  white-space: nowrap;
-}
-
-.aplicaciones-tabla_fecha {
-  width: 22%;
-}
-
-.aplicaciones-tabla_usuario {
-  width: 18%;
-}
-
-.aplicaciones-tabla_acciones {
-  width: 80px;
-  text-align: center;
-  white-space: nowrap;
-}
-
-.aplicaciones-tabla_estado {
-  width: 60px;
-  text-align: center;
-}
-
-.aplicaciones-tabla_estado i {
-  font-size: 1.1rem;
-}
-
-.aplicaciones-tabla_estado .bi-check-circle-fill {
-  color: #15803d;
-}
-
-.aplicaciones-tabla_estado .bi-x-circle-fill {
-  color: #b42318;
-}
-
-/* El historial no se comporta como un control clicable */
-.aplicaciones-historial,
-.aplicaciones-tabla {
-  cursor: default;
-}
-
-/* Observación de la aplicación que acompaña al puntero */
-.observacion-popup {
-  position: fixed;
-  z-index: 1200;
-  max-width: min(320px, calc(100vw - 2rem));
-  padding: 0.55rem 0.7rem;
-  border-radius: 8px;
-  background: #101828;
-  color: #fff;
-  font-size: 0.85rem;
-  line-height: 1.4;
-  overflow-wrap: anywhere;
-  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.25);
-  pointer-events: none;
-}
-
-/* Celdas de las aplicaciones que todavía no tienen registro */
-.aplicaciones-tabla_pendiente {
-  color: #93a3bb;
-  font-weight: 600;
-  text-align: center;
-}
-
-/* Acciones de cada aplicación: editar y eliminar */
-.aplicaciones-acciones {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-}
-
-.aplicaciones-accion {
-  display: grid;
-  width: 30px;
-  height: 30px;
-  padding: 0;
-  place-items: center;
-  border: 1px solid rgba(148, 163, 184, 0.45);
-  border-radius: 50%;
-  background: #fff;
-  box-shadow: 0 2px 6px rgba(26, 37, 53, 0.12);
-  font-size: 14px;
-  cursor: pointer;
-  transition:
-    color 0.2s ease,
-    background-color 0.2s ease,
-    transform 0.2s ease;
-
-  &:hover {
-    color: #fff;
-    transform: translateY(-1px);
-  }
-
-  &:focus-visible {
-    outline: 2px solid var(--azulSecundario);
-    outline-offset: 2px;
-  }
-}
-
-.aplicaciones-accion--editar {
-  color: #f59e0b;
-
-  &:hover {
-    background: #f59e0b;
-  }
-
-  &:focus-visible {
-    outline-color: #f59e0b;
-  }
-}
-
-.aplicaciones-accion--eliminar {
-  color: #ed1a0f;
-
-  &:hover {
-    background: #ed1a0f;
-  }
-
-  &:focus-visible {
-    outline-color: #ed1a0f;
-  }
-}
-
 /* Input oculto para adjuntar archivos a los exámenes */
 .examen-archivo-input {
   display: none;
@@ -778,34 +692,6 @@ select.administracion-input {
   }
 }
 
-/* Exámenes completados en el panel lateral: lista desplazable bajo el título */
-.examenes-completados {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  max-height: calc(var(--heightNavBar) - var(--alto-fuera-de-tratamientos) - 3.25rem);
-  padding-right: 0.35rem;
-  overflow-y: auto;
-}
-
-/* Tarjeta compacta del examen ya realizado para el panel angosto */
-.examen-completado {
-  margin-bottom: 0;
-  padding: 0.85rem 0.9rem;
-
-  .indicacion-encabezado {
-    margin-bottom: 8px;
-    gap: 8px;
-  }
-
-  .indicacion-meta {
-    gap: 0.6rem;
-    margin-top: 0.75rem;
-    padding-top: 0.65rem;
-    font-size: 0.9rem;
-  }
-}
-
 /* ==================== ESTADOS DE LA MAQUETA ==================== */
 .tratamientos-vacio,
 .indicacion-vacio {
@@ -844,6 +730,55 @@ select.administracion-input {
   .tratamientos--ficha-abierta {
     padding-right: 1rem;
   }
+
+  /* Sin columnas el listado no necesita scroll interno ni tabla comprimida. */
+  .panel-indicaciones {
+    max-height: none;
+    overflow: visible;
+  }
+
+  .indicados-lista {
+    overflow-y: visible;
+    padding-right: 0;
+  }
+
+  .aplicaciones-historial {
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .aplicaciones-tabla {
+    min-width: 560px;
+  }
+}
+
+@media (max-width: 640px) {
+  .tratamientos {
+    padding: 12px;
+    gap: 16px;
+  }
+
+  .panel,
+  .tarjeta {
+    border-radius: 16px;
+  }
+
+  .indicacion-contenido {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 0.75rem;
+  }
+
+  .indicacion-aplicaciones {
+    padding-top: 0.75rem;
+    padding-left: 0;
+    border-top: 1px solid #e4ebf5;
+    border-left: 0;
+  }
+
+  .aplicaciones-tabla {
+    min-width: 520px;
+  }
 }
 
 /* ==================== SOLICITUD DE MEDICAMENTO ==================== */
@@ -877,17 +812,28 @@ select.administracion-input {
   margin-bottom: 0;
 }
 
-/* Dos secciones: medicamentos agregados y búsqueda en farmacia */
+/* Dos secciones en un solo panel: búsqueda (izquierda) y recursos solicitados (derecha),
+   separadas por una sola línea vertical. */
 .solicitud-medicamento_contenido {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 1.25rem;
   align-items: start;
 }
 
-.solicitud-medicamento_lista,
 .solicitud-medicamento_busqueda {
   min-width: 0;
+  padding-right: 1.25rem;
+  border-right: 1px solid #e4ebf5;
+
+  app-tab-switch {
+    display: block;
+    margin-bottom: 1rem;
+  }
+}
+
+.solicitud-medicamento_lista {
+  min-width: 0;
+  padding-left: 1.25rem;
 }
 
 .solicitud-medicamento_items {
@@ -918,10 +864,15 @@ select.administracion-input {
   overflow-wrap: anywhere;
 }
 
-.solicitud-medicamento_cantidad {
+.solicitud-medicamento_cantidad-input {
+  width: 64px;
+  padding: 0.3rem 0.5rem;
+  border: 1px solid #cfdcee;
+  border-radius: 8px;
   color: var(--azulPrincipal);
   font-size: 0.95rem;
   font-weight: 700;
+  text-align: center;
 }
 
 .solicitud-medicamento_quitar {
@@ -953,9 +904,7 @@ select.administracion-input {
 
 .solicitud-medicamento_acciones {
   gap: 0.75rem;
-  margin-top: 1.5rem;
-  padding-top: 1.25rem;
-  border-top: 1px solid #e4ebf5;
+  margin-top: 1.25rem;
 }
 
 /* Buscador y resultados de farmacia */
@@ -1058,5 +1007,14 @@ select.administracion-input {
 
   .solicitud-medicamento_contenido {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .solicitud-medicamento_busqueda {
+    padding-right: 0;
+    border-right: none;
+  }
+
+  .solicitud-medicamento_lista {
+    padding-left: 0;
   }
 }

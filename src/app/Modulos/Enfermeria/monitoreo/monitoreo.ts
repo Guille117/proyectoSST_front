@@ -6,10 +6,12 @@ import {
   inject,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute, Router } from '@angular/router';
 import { finalize, forkJoin, Subscription, TimeoutError } from 'rxjs';
 import { PopUps } from '../../../shared/popUps/popUpsService';
 import { TabSwitch } from '../../../shared/tab-switch/tab-switch';
 import { AuthService } from '../../Auth/data/auth-service';
+import { PropiedadRegistroService } from '../../Auth/data/propiedad-registro-service';
 import { DatosPaciente } from '../../Medica/datos-paciente/datos-paciente';
 import { EpisodioActivoService } from '../../Medica/data/episodio-activo-service';
 import {
@@ -33,6 +35,13 @@ import { SignosVitalesService } from './data/signos-vitales-service';
 /** Secciones del monitoreo de enfermería. */
 type SeccionMonitoreo = 'signos' | 'hidrico' | 'glucosa';
 
+/** Atención de control que se está registrando desde Indicaciones médicas. */
+interface ContextoControl {
+  cuidadoId: number;
+  seccion: SeccionMonitoreo;
+  fechaHoraProgramada: string | null;
+}
+
 /** Tipo de registro del control hídrico. */
 type TipoBalance = 'ingreso' | 'egreso';
 
@@ -42,6 +51,7 @@ type FiltroHidrico = 'todos' | 'ingresos' | 'egresos' | 'eliminados';
 /** Registro de control hídrico listo para pintar su tarjeta del historial. */
 interface RegistroHidricoVista {
   id: number;
+  usuarioId: number;
   tipo: TipoBalance;
   via: string;
   cantidad: number;
@@ -61,6 +71,7 @@ interface FiltroHidricoVista {
 /** Registro de glucosa listo para pintar su tarjeta del historial. */
 interface RegistroGlucosaVista {
   id: number;
+  usuarioId: number;
   glucosa: number;
   tipo: string;
   observacion: string;
@@ -78,6 +89,7 @@ interface SeccionVista {
 /** Registro de signos vitales listo para pintar su tarjeta del historial. */
 interface RegistroSignosVista {
   id: number;
+  usuarioId: number;
   sistolica: number;
   diastolica: number;
   frecuenciaCardiaca: number;
@@ -106,10 +118,13 @@ interface RegistroSignosVista {
 export class Monitoreo implements OnInit, OnDestroy {
   private readonly popUps = inject(PopUps);
   private readonly authService = inject(AuthService);
+  private readonly propiedadRegistro = inject(PropiedadRegistroService);
   private readonly episodioActivo = inject(EpisodioActivoService);
   private readonly signosService = inject(SignosVitalesService);
   private readonly hidricoService = inject(ControlHidricoService);
   private readonly glucosaService = inject(GlucosaService);
+  private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
   private readonly cdr = inject(ChangeDetectorRef);
 
   private peticionSignos?: Subscription;
@@ -122,11 +137,12 @@ export class Monitoreo implements OnInit, OnDestroy {
   /** Sección del rail que se muestra en el área central. */
   seccionActiva: SeccionMonitoreo = 'signos';
 
+  /** Control de Indicaciones médicas que se está registrando; null fuera de ese flujo. */
+  private contextoControl: ContextoControl | null = null;
+
   /** La ficha con los datos del paciente está desplegada; la abre su pestaña lateral. */
   pacienteAbierto = false;
 
-  /** El cuerpo de la ficha del paciente está desplegado; el chevron de su encabezado lo pliega. */
-  datosPacienteVisibles = true;
 
   /** Campos del formulario de signos vitales. */
   sistolica: number | null = null;
@@ -219,7 +235,31 @@ export class Monitoreo implements OnInit, OnDestroy {
   registrosGlucosa: RegistroGlucosaVista[] = [];
 
   ngOnInit(): void {
+    this.cargarContextoControl();
     this.cargarTodo();
+  }
+
+  /** Recupera la atención de control que llega desde Indicaciones médicas. */
+  private cargarContextoControl(): void {
+    const params = this.route.snapshot.queryParamMap;
+    const seccion = params.get('seccion');
+    const cuidadoId = Number(params.get('cuidadoId'));
+
+    if (
+      !seccion ||
+      !['signos', 'hidrico', 'glucosa'].includes(seccion) ||
+      !Number.isInteger(cuidadoId) ||
+      cuidadoId <= 0
+    ) {
+      return;
+    }
+
+    this.seccionActiva = seccion as SeccionMonitoreo;
+    this.contextoControl = {
+      cuidadoId,
+      seccion: this.seccionActiva,
+      fechaHoraProgramada: params.get('fechaHoraProgramada'),
+    };
   }
 
   ngOnDestroy(): void {
@@ -233,6 +273,11 @@ export class Monitoreo implements OnInit, OnDestroy {
   /** El episodio es un historial cerrado: se consulta, pero no se registran cambios. */
   get soloLectura(): boolean {
     return this.episodioActivo.esSoloLectura();
+  }
+
+  /** Solo el autor del registro (o un rol global) puede editarlo o eliminarlo. */
+  puedeGestionar(usuarioId: number): boolean {
+    return !this.soloLectura && this.propiedadRegistro.puedeGestionar(usuarioId);
   }
 
   // ------------------- CARGA DEL EPISODIO -------------------
@@ -379,10 +424,49 @@ export class Monitoreo implements OnInit, OnDestroy {
   // ------------------- SECCIONES Y FICHA DEL PACIENTE -------------------
   /** Muestra la sección pulsada y cierra el menú que hubiera abierto. */
   seleccionarSeccion(id: SeccionMonitoreo): void {
+    if (this.contextoControl && this.contextoControl.seccion !== id) {
+      this.contextoControl = null;
+    }
+
     this.seccionActiva = id;
     this.cerrarMenuRegistro();
     this.cerrarMenuHidrico();
     this.cerrarMenuGlucosa();
+  }
+
+  /** Durante un control solo se permite la sección que originó el registro. */
+  seccionBloqueada(id: SeccionMonitoreo): boolean {
+    return this.contextoControl !== null && this.contextoControl.seccion !== id;
+  }
+
+  /** Cancela la toma de signos; si vino de una atención, regresa a Indicaciones médicas. */
+  cancelarRegistroSignos(): void {
+    if (this.volverSinGuardarControl()) return;
+    this.limpiarFormulario();
+  }
+
+  /** Cancela el registro hídrico; si vino de una atención, regresa a Indicaciones médicas. */
+  cancelarRegistroHidrico(): void {
+    if (this.volverSinGuardarControl()) return;
+    this.limpiarFormularioHidrico();
+  }
+
+  /** Cancela la glucosa; si vino de una atención, regresa a Indicaciones médicas. */
+  cancelarRegistroGlucosa(): void {
+    if (this.volverSinGuardarControl()) return;
+    this.limpiarFormularioGlucosa();
+  }
+
+  /** Vuelve a la atención que originó el control sin registrar el monitoreo. */
+  private volverSinGuardarControl(): boolean {
+    const control = this.contextoControl;
+    if (!control) return false;
+
+    this.contextoControl = null;
+    this.router.navigate(['/enfermeria', 'tratamientos'], {
+      queryParams: { seccion: 'cuidados', indicacionId: control.cuidadoId },
+    });
+    return true;
   }
 
   /**
@@ -391,10 +475,6 @@ export class Monitoreo implements OnInit, OnDestroy {
    */
   cambiarFichaPaciente(abierto: boolean): void {
     this.pacienteAbierto = abierto;
-
-    if (abierto) {
-      this.datosPacienteVisibles = true;
-    }
   }
 
   // ------------------- CAPTURA Y EDICIÓN DE SIGNOS VITALES -------------------
@@ -448,8 +528,15 @@ export class Monitoreo implements OnInit, OnDestroy {
         }),
       )
       .subscribe({
-        next: () => {
+        next: (respuesta) => {
+          const control = this.contextoControl;
           this.limpiarFormulario();
+
+          if (control) {
+            this.volverAIndicaciones(control, respuesta.id, 'signos');
+            return;
+          }
+
           this.popUps.exito('Signos vitales registrados exitosamente.');
           this.recargarSignos();
         },
@@ -552,8 +639,15 @@ export class Monitoreo implements OnInit, OnDestroy {
         }),
       )
       .subscribe({
-        next: () => {
+        next: (respuesta) => {
+          const control = this.contextoControl;
           this.limpiarFormularioHidrico();
+
+          if (control) {
+            this.volverAIndicaciones(control, respuesta.id, 'hidrico');
+            return;
+          }
+
           this.popUps.exito('Registro hídrico guardado exitosamente.');
           this.recargarHidrico();
         },
@@ -642,8 +736,15 @@ export class Monitoreo implements OnInit, OnDestroy {
         }),
       )
       .subscribe({
-        next: () => {
+        next: (respuesta) => {
+          const control = this.contextoControl;
           this.limpiarFormularioGlucosa();
+
+          if (control) {
+            this.volverAIndicaciones(control, respuesta.id, 'glucosa');
+            return;
+          }
+
           this.popUps.exito('Glucosa registrada exitosamente.');
           this.recargarGlucosa();
         },
@@ -818,6 +919,23 @@ export class Monitoreo implements OnInit, OnDestroy {
   }
 
   // ------------------- APOYO -------------------
+  /** Vuelve a Indicaciones médicas conservando el monitoreo que originó el control. */
+  private volverAIndicaciones(
+    control: ContextoControl,
+    monitoreoId: number,
+    tipoMonitoreo: SeccionMonitoreo,
+  ): void {
+    this.router.navigate(['/enfermeria', 'tratamientos'], {
+      queryParams: {
+        seccion: 'cuidados',
+        indicacionId: control.cuidadoId,
+        fechaHoraProgramada: control.fechaHoraProgramada,
+        monitoreoId,
+        tipoMonitoreo,
+      },
+    });
+  }
+
   /** Contexto obligatorio para registrar cualquier dato de Enfermería. */
   private contexto(): { episodioId: number; usuarioId: number } | null {
     const episodioId = this.episodioActivo.obtener();
@@ -842,6 +960,7 @@ export class Monitoreo implements OnInit, OnDestroy {
 
     return {
       id: respuesta.id,
+      usuarioId: respuesta.usuarioId,
       sistolica: respuesta.sistolica,
       diastolica: respuesta.diastolica,
       frecuenciaCardiaca: respuesta.frecuenciaCardiaca,
@@ -860,6 +979,7 @@ export class Monitoreo implements OnInit, OnDestroy {
 
     return {
       id: respuesta.id,
+      usuarioId: respuesta.usuarioId,
       tipo: respuesta.tipo === 'INGRESO' ? 'ingreso' : 'egreso',
       via: respuesta.via,
       cantidad: respuesta.cantidad,
@@ -876,6 +996,7 @@ export class Monitoreo implements OnInit, OnDestroy {
 
     return {
       id: respuesta.id,
+      usuarioId: respuesta.usuarioId,
       glucosa: respuesta.glucosa,
       tipo: this.aTipoGlucosaVista(respuesta.tipo),
       observacion: respuesta.observacion ?? '',

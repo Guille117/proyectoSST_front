@@ -8,6 +8,7 @@
 @use "styles/forumulario2Style.scss";
 @use "styles/tarjetaStyle.scss";
 @use "styles/medicaStyle.scss";
+@use "styles/responsive";
 
 @layer theme, base, components, utilities;
 

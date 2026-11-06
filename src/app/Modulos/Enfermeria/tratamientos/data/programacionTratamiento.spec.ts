@@ -18,15 +18,15 @@ describe('programacionTratamiento', () => {
   it('genera las aplicaciones de un tratamiento por días', () => {
     const aplicaciones = calcularAplicaciones(tratamiento);
 
-    expect(aplicaciones).toHaveLength(22);
+    expect(aplicaciones).toHaveLength(21);
     expect(aplicaciones[0].fechaHora.getHours()).toBe(8);
     expect(aplicaciones[1].fechaHora.getHours()).toBe(16);
     expect(aplicaciones[2].fechaHora.getDate()).toBe(21);
-    expect(aplicaciones[21].fechaHora.getDate()).toBe(27);
-    expect(aplicaciones[21].fechaHora.getHours()).toBe(8);
+    expect(aplicaciones[20].fechaHora.getDate()).toBe(27);
+    expect(aplicaciones[20].fechaHora.getHours()).toBe(0);
   });
 
-  it('incluye la aplicación de cierre del tratamiento por días', () => {
+  it('calcula el total de aplicaciones de un día sin duplicar el cierre', () => {
     const unDia: ProgramacionTratamiento = {
       fechaInicio: new Date(2026, 9, 24, 9, 53),
       frecuencia: 8,
@@ -42,7 +42,29 @@ describe('programacionTratamiento', () => {
         .padStart(2, '0')}`,
     );
 
-    expect(horas).toEqual(['9:53', '17:53', '1:53', '9:53']);
+    expect(horas).toEqual(['9:53', '17:53', '1:53']);
+  });
+
+  it('genera 6 aplicaciones para cada 4 horas por 1 día', () => {
+    const cadaCuatroHoras: ProgramacionTratamiento = {
+      fechaInicio: new Date(2026, 9, 24, 8, 0),
+      frecuencia: 4,
+      duracionTipo: 'dias',
+      duracionCantidad: 1,
+    };
+
+    expect(calcularAplicaciones(cadaCuatroHoras)).toHaveLength(6);
+  });
+
+  it('trunca al entero cuando la división da decimal', () => {
+    const cadaCincoHoras: ProgramacionTratamiento = {
+      fechaInicio: new Date(2026, 9, 24, 8, 0),
+      frecuencia: 5,
+      duracionTipo: 'dias',
+      duracionCantidad: 1,
+    };
+
+    expect(calcularAplicaciones(cadaCincoHoras)).toHaveLength(4);
   });
 
   it('marca pendiente cuando no hay registros', () => {

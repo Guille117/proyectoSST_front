@@ -832,3 +832,31 @@
   }
 }
 
+@media (max-width: 640px) {
+  .trabajoArea {
+    gap: 16px;
+    max-height: none;
+  }
+
+  .tabla-detalle {
+    min-width: 880px;
+  }
+
+  .panel-solicitudes,
+  .panel-detalle,
+  .generacion-recursos {
+    border-radius: 16px;
+  }
+
+  .generacion-recursos {
+    max-height: none;
+    overflow: visible;
+  }
+
+  .generacion-recursos-cabecera,
+  .detalle-cabecera {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+}
+

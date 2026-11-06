@@ -1,4 +1,4 @@
-<!-- Tratamientos: rail de secciones, listado de indicaciones por estado y panel lateral -->
+<!-- Indicaciones médicas: rail de secciones, listado de indicaciones por estado y panel lateral -->
 <div
   class="tratamientos"
   [class.tratamientos--solicitud]="solicitandoMedicamento"
@@ -9,13 +9,11 @@
     [plegable]="true"
     [abierto]="pacienteAbierto"
     (abiertoCambia)="cambiarFichaPaciente($event)"
-    [cuerpoVisible]="datosPacienteVisibles"
-    (cuerpoVisibleCambia)="datosPacienteVisibles = $event"
   ></app-datos-paciente>
 
-  <!-- Rail de secciones: medicamentos, exámenes y cuidados -->
+  <!-- Rail de secciones: medicamentos, exámenes y atenciones -->
   <section class="panel panel-secciones">
-    <h3 class="panel-titulo">Tratamientos</h3>
+    <h3 class="panel-titulo">Indicaciones médicas</h3>
 
     @for (seccion of secciones; track seccion.id) {
       <button
@@ -43,76 +41,33 @@
     (change)="seleccionarArchivosExamen($event)"
   />
 
-  <!-- Solicitud de medicamento: usa el catálogo de recursos de farmacia de procedimientos -->
+  <!-- Solicitud a farmacia: búsqueda a la izquierda y recursos solicitados a la derecha -->
   @if (solicitandoMedicamento) {
     <section class="solicitud-medicamento" aria-labelledby="tituloSolicitudMedicamento">
       <header class="solicitud-medicamento_cabecera">
         <h3 class="panel-titulo" id="tituloSolicitudMedicamento">Solicitar medicamento</h3>
 
         <button type="button" class="btn _cancelar" (click)="cerrarSolicitudMedicamento()">
-          Volver a tratamientos
+          Volver a indicaciones médicas
         </button>
       </header>
 
-      <div class="solicitud-medicamento_contenido">
-        <!-- Medicamentos agregados a la solicitud -->
+      <div class="panel solicitud-medicamento_contenido">
+        <!-- Búsqueda y selección de recursos en farmacia -->
         <section
-          class="panel solicitud-medicamento_lista"
-          aria-labelledby="tituloSolicitudLista"
-        >
-          <h3 class="panel-titulo" id="tituloSolicitudLista">Medicamentos solicitados</h3>
-
-          @if (medicamentosSolicitados.length) {
-            <ul class="solicitud-medicamento_items">
-              @for (medicamento of medicamentosSolicitados; track medicamento.id) {
-                <li class="solicitud-medicamento_item">
-                  <span class="solicitud-medicamento_nombre">{{ medicamento.nombre }}</span>
-                  <span class="solicitud-medicamento_cantidad">{{ medicamento.cantidad }}</span>
-
-                  <button
-                    type="button"
-                    class="solicitud-medicamento_quitar"
-                    [attr.aria-label]="'Quitar ' + medicamento.nombre"
-                    (click)="quitarMedicamento(medicamento.id)"
-                  >
-                    <i class="bi bi-trash3" aria-hidden="true"></i>
-                  </button>
-                </li>
-              }
-            </ul>
-          } @else {
-            <p class="indicacion-vacio">
-              Busque y agregue los medicamentos que desea solicitar a farmacia.
-            </p>
-          }
-
-          <div class="acciones-formulario solicitud-medicamento_acciones">
-            <button
-              type="button"
-              class="btn _cancelar"
-              [disabled]="!medicamentosSolicitados.length || enviandoSolicitud"
-              (click)="limpiarSolicitudMedicamento()"
-            >
-              Cancelar
-            </button>
-            <button
-              type="button"
-              class="btn _guardar"
-              [disabled]="!puedeEnviarSolicitud"
-              (click)="enviarSolicitudMedicamento()"
-            >
-              {{ enviandoSolicitud ? 'Solicitando...' : 'Solicitar medicamento' }}
-            </button>
-          </div>
-
-        </section>
-
-        <!-- Búsqueda y selección de medicamentos en farmacia -->
-        <section
-          class="panel solicitud-medicamento_busqueda"
+          class="solicitud-medicamento_busqueda"
           aria-labelledby="tituloSolicitudBusqueda"
         >
-          <h3 class="panel-titulo" id="tituloSolicitudBusqueda">Buscar medicamento</h3>
+          <h3 class="panel-titulo" id="tituloSolicitudBusqueda">
+            Buscar {{ etiquetaRecursoBusqueda }}
+          </h3>
+
+          <app-tab-switch
+            op1="Medicamento"
+            op2="Insumo"
+            [mostrarActivos]="tipoBusqueda === 'MEDICAMENTO'"
+            (opcionCambiada)="cambiarTipoBusqueda($event)"
+          ></app-tab-switch>
 
           @if (medicamentoSeleccionado; as medicamento) {
             <div class="solicitud-medicamento_seleccionado">
@@ -163,8 +118,8 @@
                 <input
                   class="inputB"
                   type="text"
-                  placeholder="Buscar medicamento..."
-                  aria-label="Buscar medicamento"
+                  [placeholder]="'Buscar ' + etiquetaRecursoBusqueda + '...'"
+                  [attr.aria-label]="'Buscar ' + etiquetaRecursoBusqueda"
                   maxlength="1000"
                   [disabled]="cargandoMedicamentos"
                   [(ngModel)]="textoBusquedaMedicamento"
@@ -174,8 +129,8 @@
                 <button
                   class="btnLupa"
                   type="button"
-                  title="Buscar medicamento"
-                  aria-label="Buscar medicamento"
+                  [title]="'Buscar ' + etiquetaRecursoBusqueda"
+                  [attr.aria-label]="'Buscar ' + etiquetaRecursoBusqueda"
                   [disabled]="cargandoMedicamentos"
                   (click)="buscarMedicamentos()"
                 >
@@ -187,10 +142,10 @@
             @if (busquedaMedicamentoRealizada) {
               <div class="solicitud-medicamento_resultados">
                 @if (cargandoMedicamentos) {
-                  <p class="indicacion-vacio">Buscando medicamentos...</p>
+                  <p class="indicacion-vacio">Buscando {{ etiquetaRecursoBusqueda }}s...</p>
                 } @else if (medicamentosEncontrados.length) {
                   <div class="tabla-container">
-                    <table aria-label="Medicamentos disponibles en farmacia">
+                    <table [attr.aria-label]="'Recursos disponibles en farmacia'">
                       <thead>
                         <tr>
                           <th class="columna-numero celda_centrada" scope="col">No.</th>
@@ -222,7 +177,7 @@
                       <tfoot>
                         <tr>
                           <td colspan="3" class="solicitud-medicamento_ayuda">
-                            Seleccione un medicamento
+                            Seleccione un {{ etiquetaRecursoBusqueda }}
                           </td>
                         </tr>
                       </tfoot>
@@ -230,15 +185,77 @@
                   </div>
                 } @else {
                   <p class="indicacion-vacio">
-                    No se encontraron medicamentos que coincidan con la búsqueda.
+                    No se encontraron {{ etiquetaRecursoBusqueda }}s que coincidan con la búsqueda.
                   </p>
                 }
               </div>
             } @else {
-              <p class="indicacion-vacio">Busque un medicamento para agregarlo a la solicitud.</p>
+              <p class="indicacion-vacio">
+                Busque un {{ etiquetaRecursoBusqueda }} para agregarlo a la solicitud.
+              </p>
             }
           }
         </section>
+
+        <!-- Recursos agregados a la solicitud -->
+        <section class="solicitud-medicamento_lista" aria-labelledby="tituloSolicitudLista">
+          <h3 class="panel-titulo" id="tituloSolicitudLista">Medicamentos solicitados</h3>
+
+          @if (medicamentosSolicitados.length) {
+            <ul class="solicitud-medicamento_items">
+              @for (
+                medicamento of medicamentosSolicitados;
+                track medicamento.tipo + '-' + medicamento.id
+              ) {
+                <li class="solicitud-medicamento_item">
+                  <span class="solicitud-medicamento_nombre">{{ medicamento.nombre }}</span>
+                  <input
+                    class="solicitud-medicamento_cantidad-input"
+                    type="number"
+                    min="1"
+                    step="1"
+                    inputmode="numeric"
+                    [attr.aria-label]="'Cantidad de ' + medicamento.nombre"
+                    [(ngModel)]="medicamento.cantidad"
+                    (ngModelChange)="ajustarCantidadSolicitada(medicamento)"
+                  />
+
+                  <button
+                    type="button"
+                    class="solicitud-medicamento_quitar"
+                    [attr.aria-label]="'Quitar ' + medicamento.nombre"
+                    (click)="quitarMedicamento(medicamento.tipo, medicamento.id)"
+                  >
+                    <i class="bi bi-trash3" aria-hidden="true"></i>
+                  </button>
+                </li>
+              }
+            </ul>
+          } @else {
+            <p class="indicacion-vacio">
+              Busque y agregue los medicamentos o insumos que desea solicitar a farmacia.
+            </p>
+          }
+        </section>
+      </div>
+
+      <div class="acciones-formulario solicitud-medicamento_acciones">
+        <button
+          type="button"
+          class="btn _cancelar"
+          [disabled]="!medicamentosSolicitados.length || enviandoSolicitud"
+          (click)="limpiarSolicitudMedicamento()"
+        >
+          Cancelar
+        </button>
+        <button
+          type="button"
+          class="btn _guardar"
+          [disabled]="!puedeEnviarSolicitud"
+          (click)="enviarSolicitudMedicamento()"
+        >
+          {{ enviandoSolicitud ? 'Enviando...' : 'Enviar solicitud' }}
+        </button>
       </div>
     </section>
   }
@@ -251,43 +268,28 @@
   >
     <div class="tratamientos-cabecera">
       <h3 class="panel-titulo tratamientos-titulo" id="tituloSeccionTratamiento">
-        {{ seccionActual.titulo }} indicados
+        {{ tituloListado }}
       </h3>
+    </div>
 
-      @if (!soloLectura && (seccionActiva === 'medicamentos' || seccionActiva === 'cuidados')) {
+    <!-- Filtros del listado: cada opción muestra las indicaciones que están en un estado -->
+    <div
+      class="indicados-filtros"
+      role="group"
+      aria-label="Filtrar indicaciones por estado"
+    >
+      @for (filtro of filtros; track filtro.id) {
         <button
           type="button"
-          class="btn _principal tratamientos-solicitar"
-          (click)="abrirSolicitudMedicamento()"
+          class="indicados-filtro"
+          [class.indicados-filtro--activo]="filtroActivo === filtro.id"
+          [attr.aria-pressed]="filtroActivo === filtro.id"
+          (click)="seleccionarFiltro(filtro.id)"
         >
-          <i class="bi bi-capsule" aria-hidden="true"></i>
-          Solicitar medicamento
+          {{ filtro.etiqueta }}
         </button>
       }
     </div>
-
-    <!-- Filtros del listado: cada opción muestra las indicaciones que están en un estado.
-         Exámenes no los usa: los pendientes quedan en «Exámenes indicados» y los completados
-         pasan al panel lateral. -->
-    @if (seccionActiva !== 'examenes') {
-      <div
-        class="indicados-filtros"
-        role="group"
-        aria-label="Filtrar indicaciones por estado"
-      >
-        @for (filtro of filtros; track filtro.id) {
-          <button
-            type="button"
-            class="indicados-filtro"
-            [class.indicados-filtro--activo]="filtroActivo === filtro.id"
-            [attr.aria-pressed]="filtroActivo === filtro.id"
-            (click)="seleccionarFiltro(filtro.id)"
-          >
-            {{ filtro.etiqueta }}
-          </button>
-        }
-      </div>
-    }
 
     <!-- Listado de indicaciones: solo las tarjetas se desplazan bajo el título y los filtros fijos -->
     <div class="indicados-lista">
@@ -320,6 +322,17 @@
                         </span>
                       }
                     </div>
+
+                    @if (!soloLectura && !indicacion.medicamentoLibre) {
+                      <button
+                        type="button"
+                        class="btn _principal indicacion-solicitar"
+                        (click)="solicitarParaMedicamento(indicacion)"
+                      >
+                        <i class="bi bi-capsule" aria-hidden="true"></i>
+                        Solicitar
+                      </button>
+                    }
                   </header>
 
                   <ul class="indicacion-badges">
@@ -327,6 +340,16 @@
                     <li>{{ textoFrecuencia(indicacion) }}</li>
                     <li>{{ textoDuracion(indicacion) }}</li>
                   </ul>
+
+                  @if (!indicacion.medicamentoLibre) {
+                    <p
+                      class="indicacion-disponible"
+                      [class.indicacion-disponible--agotado]="indicacion.disponiblePiso === 0"
+                    >
+                      <i class="bi bi-box-seam" aria-hidden="true"></i>
+                      Disponible: {{ indicacion.disponiblePiso }}
+                    </p>
+                  }
 
                   @if (indicacion.observaciones) {
                     <p class="indicacion-observaciones">{{ indicacion.observaciones }}</p>
@@ -407,18 +430,16 @@
                       <th class="aplicaciones-tabla_fecha" scope="col">Fecha de registro</th>
                       <th class="aplicaciones-tabla_estado celda_centrada" scope="col">Estado</th>
                       <th class="aplicaciones-tabla_usuario" scope="col">Usuario</th>
-                      @if (!soloLectura) {
-                        <th class="aplicaciones-tabla_acciones" scope="col">Acciones</th>
-                      }
+                      <th class="aplicaciones-tabla_acciones" scope="col">Acciones</th>
                     </tr>
                   </thead>
 
                   <tbody>
                     @for (aplicacion of aplicacionesProgramadas(indicacion); track aplicacion.numero) {
                       <tr
-                        (mouseenter)="mostrarObservacion($event, aplicacion.registro?.observacion)"
-                        (mousemove)="moverObservacion($event)"
-                        (mouseleave)="ocultarObservacion()"
+                        [class.aplicaciones-fila--resultados]="
+                          resultadoAbierto !== null && resultadoAbierto === aplicacion.registro?.id
+                        "
                       >
                         <td class="aplicaciones-tabla_numero">{{ aplicacion.numero }}</td>
                         <td class="aplicaciones-tabla_fecha">{{ aplicacion.fechaHora }}</td>
@@ -438,15 +459,41 @@
                             ></i>
                           </td>
                           <td>{{ registro.usuario }}</td>
-                          @if (!soloLectura) {
-                            <td class="aplicaciones-tabla_acciones">
-                              <div class="aplicaciones-acciones">
+                          <td class="aplicaciones-tabla_acciones">
+                            <div class="aplicaciones-acciones">
+                              @if (tieneDetalle(registro)) {
+                                <button
+                                  type="button"
+                                  class="aplicaciones-accion aplicaciones-accion--resultados"
+                                  [title]="
+                                    resultadoAbierto === registro.id
+                                      ? 'Ocultar detalle'
+                                      : 'Ver detalle'
+                                  "
+                                  [attr.aria-label]="
+                                    resultadoAbierto === registro.id
+                                      ? 'Ocultar detalle del registro'
+                                      : 'Ver detalle del registro'
+                                  "
+                                  [attr.aria-expanded]="resultadoAbierto === registro.id"
+                                  (click)="verResultados(registro); $event.stopPropagation()"
+                                >
+                                  <i
+                                    class="bi"
+                                    [class.bi-eye]="resultadoAbierto !== registro.id"
+                                    [class.bi-eye-slash]="resultadoAbierto === registro.id"
+                                    aria-hidden="true"
+                                  ></i>
+                                </button>
+                              }
+
+                              @if (puedeGestionar(registro.usuarioId)) {
                                 <button
                                   type="button"
                                   class="aplicaciones-accion aplicaciones-accion--editar"
                                   title="Editar aplicación"
                                   [attr.aria-label]="'Editar la aplicación ' + aplicacion.numero"
-                                  (click)="editarAplicacion(indicacion, registro)"
+                                  (click)="editarAplicacion(indicacion, registro); $event.stopPropagation()"
                                 >
                                   <i class="bi bi-pencil-square" aria-hidden="true"></i>
                                 </button>
@@ -459,15 +506,55 @@
                                 >
                                   <i class="bi bi-trash3" aria-hidden="true"></i>
                                 </button>
-                              </div>
-                            </td>
-                          }
+                              }
+                            </div>
+                          </td>
                         } @else {
+                          <td class="aplicaciones-tabla_pendiente">---</td>
                           <td class="aplicaciones-tabla_pendiente">---</td>
                           <td class="aplicaciones-tabla_pendiente">---</td>
                           <td class="aplicaciones-tabla_pendiente">---</td>
                         }
                       </tr>
+
+                      @if (aplicacion.registro; as registroResultado) {
+                        @if (
+                          tieneDetalle(registroResultado) &&
+                          resultadoAbierto === registroResultado.id
+                        ) {
+                          <tr class="aplicaciones-resultados">
+                            <td colspan="6">
+                              <div class="resultado-control">
+                                @if (registroResultado.monitoreoTipo === null) {
+                                  <div class="resultado-control_observacion">
+                                    <span class="resultado-control_observacion-etiqueta">
+                                      Observación
+                                    </span>
+                                    <p>{{ registroResultado.observacion.trim() || 'Sin observación' }}</p>
+                                  </div>
+                                }
+
+                                @if (cargandoResultado) {
+                                  <p class="resultado-control_estado">Cargando resultados...</p>
+                                } @else if (errorResultado) {
+                                  <p class="resultado-control_estado">
+                                    No se pudieron cargar los resultados del control.
+                                  </p>
+                                } @else if (resultadoActual; as resultado) {
+                                  <dl class="resultado-control_grid">
+                                    @for (fila of resultado.filas; track fila.etiqueta) {
+                                      <div>
+                                        <dt>{{ fila.etiqueta }}</dt>
+                                        <dd>{{ fila.valor }}</dd>
+                                      </div>
+                                    }
+                                  </dl>
+                                }
+                              </div>
+                            </td>
+                          </tr>
+                        }
+                      }
                     }
                   </tbody>
                 </table>
@@ -479,12 +566,28 @@
         }
 
         @case ('examenes') {
-          @for (indicacion of examenesIndicados; track indicacion.id) {
-            <article class="indicacion-card indicacion-card--naranja">
+          @for (indicacion of examenesFiltrados; track indicacion.id) {
+            <article
+              class="indicacion-card"
+              [class.indicacion-card--naranja]="indicacion.estado === 'pendiente'"
+              [class.indicacion-card--verde]="indicacion.estado === 'realizada'"
+            >
               <header class="indicacion-encabezado">
                 <span class="indicacion-nombre">{{ indicacion.nombre }}</span>
 
                 <div class="examen-acciones">
+                  @if (indicacion.archivos.length) {
+                    <button
+                      type="button"
+                      class="examen-accion examen-accion--ver"
+                      title="Ver archivos"
+                      [attr.aria-label]="'Ver archivos del examen ' + indicacion.nombre"
+                      (click)="verArchivosExamen(indicacion)"
+                    >
+                      <i class="bi bi-eye" aria-hidden="true"></i>
+                    </button>
+                  }
+
                   <button
                     type="button"
                     class="examen-accion"
@@ -535,6 +638,17 @@
                         </span>
                       }
                     </div>
+
+                    @if (!soloLectura && !indicacion.esControl) {
+                      <button
+                        type="button"
+                        class="btn _principal indicacion-solicitar"
+                        (click)="abrirSolicitudMedicamento()"
+                      >
+                        <i class="bi bi-capsule" aria-hidden="true"></i>
+                        Solicitar
+                      </button>
+                    }
                   </header>
 
                   <ul class="indicacion-badges">
@@ -612,7 +726,7 @@
                 [attr.id]="'aplicaciones-' + indicacion.id"
                 [hidden]="!aplicacionesAbierta(indicacion.id)"
               >
-                <table class="aplicaciones-tabla" aria-label="Aplicaciones del cuidado">
+                <table class="aplicaciones-tabla" aria-label="Aplicaciones de la atención">
                   <thead>
                     <tr>
                       <th class="aplicaciones-tabla_numero" scope="col">No.</th>
@@ -620,18 +734,16 @@
                       <th class="aplicaciones-tabla_fecha" scope="col">Fecha de registro</th>
                       <th class="aplicaciones-tabla_estado celda_centrada" scope="col">Estado</th>
                       <th class="aplicaciones-tabla_usuario" scope="col">Usuario</th>
-                      @if (!soloLectura) {
-                        <th class="aplicaciones-tabla_acciones" scope="col">Acciones</th>
-                      }
+                      <th class="aplicaciones-tabla_acciones" scope="col">Acciones</th>
                     </tr>
                   </thead>
 
                   <tbody>
                     @for (aplicacion of aplicacionesProgramadas(indicacion); track aplicacion.numero) {
                       <tr
-                        (mouseenter)="mostrarObservacion($event, aplicacion.registro?.observacion)"
-                        (mousemove)="moverObservacion($event)"
-                        (mouseleave)="ocultarObservacion()"
+                        [class.aplicaciones-fila--resultados]="
+                          resultadoAbierto !== null && resultadoAbierto === aplicacion.registro?.id
+                        "
                       >
                         <td class="aplicaciones-tabla_numero">{{ aplicacion.numero }}</td>
                         <td class="aplicaciones-tabla_fecha">{{ aplicacion.fechaHora }}</td>
@@ -651,15 +763,41 @@
                             ></i>
                           </td>
                           <td>{{ registro.usuario }}</td>
-                          @if (!soloLectura) {
-                            <td class="aplicaciones-tabla_acciones">
-                              <div class="aplicaciones-acciones">
+                          <td class="aplicaciones-tabla_acciones">
+                            <div class="aplicaciones-acciones">
+                              @if (tieneDetalle(registro)) {
+                                <button
+                                  type="button"
+                                  class="aplicaciones-accion aplicaciones-accion--resultados"
+                                  [title]="
+                                    resultadoAbierto === registro.id
+                                      ? 'Ocultar detalle'
+                                      : 'Ver detalle'
+                                  "
+                                  [attr.aria-label]="
+                                    resultadoAbierto === registro.id
+                                      ? 'Ocultar detalle del registro'
+                                      : 'Ver detalle del registro'
+                                  "
+                                  [attr.aria-expanded]="resultadoAbierto === registro.id"
+                                  (click)="verResultados(registro); $event.stopPropagation()"
+                                >
+                                  <i
+                                    class="bi"
+                                    [class.bi-eye]="resultadoAbierto !== registro.id"
+                                    [class.bi-eye-slash]="resultadoAbierto === registro.id"
+                                    aria-hidden="true"
+                                  ></i>
+                                </button>
+                              }
+
+                              @if (puedeGestionar(registro.usuarioId)) {
                                 <button
                                   type="button"
                                   class="aplicaciones-accion aplicaciones-accion--editar"
                                   title="Editar aplicación"
                                   [attr.aria-label]="'Editar la aplicación ' + aplicacion.numero"
-                                  (click)="editarAplicacion(indicacion, registro)"
+                                  (click)="editarAplicacion(indicacion, registro); $event.stopPropagation()"
                                 >
                                   <i class="bi bi-pencil-square" aria-hidden="true"></i>
                                 </button>
@@ -672,15 +810,55 @@
                                 >
                                   <i class="bi bi-trash3" aria-hidden="true"></i>
                                 </button>
-                              </div>
-                            </td>
-                          }
+                              }
+                            </div>
+                          </td>
                         } @else {
+                          <td class="aplicaciones-tabla_pendiente">---</td>
                           <td class="aplicaciones-tabla_pendiente">---</td>
                           <td class="aplicaciones-tabla_pendiente">---</td>
                           <td class="aplicaciones-tabla_pendiente">---</td>
                         }
                       </tr>
+
+                      @if (aplicacion.registro; as registroResultado) {
+                        @if (
+                          tieneDetalle(registroResultado) &&
+                          resultadoAbierto === registroResultado.id
+                        ) {
+                          <tr class="aplicaciones-resultados">
+                            <td colspan="6">
+                              <div class="resultado-control">
+                                @if (registroResultado.monitoreoTipo === null) {
+                                  <div class="resultado-control_observacion">
+                                    <span class="resultado-control_observacion-etiqueta">
+                                      Observación
+                                    </span>
+                                    <p>{{ registroResultado.observacion.trim() || 'Sin observación' }}</p>
+                                  </div>
+                                }
+
+                                @if (cargandoResultado) {
+                                  <p class="resultado-control_estado">Cargando resultados...</p>
+                                } @else if (errorResultado) {
+                                  <p class="resultado-control_estado">
+                                    No se pudieron cargar los resultados del control.
+                                  </p>
+                                } @else if (resultadoActual; as resultado) {
+                                  <dl class="resultado-control_grid">
+                                    @for (fila of resultado.filas; track fila.etiqueta) {
+                                      <div>
+                                        <dt>{{ fila.etiqueta }}</dt>
+                                        <dd>{{ fila.valor }}</dd>
+                                      </div>
+                                    }
+                                  </dl>
+                                }
+                              </div>
+                            </td>
+                          </tr>
+                        }
+                      }
                     }
                   </tbody>
                 </table>
@@ -715,35 +893,33 @@
         <p class="tratamientos-vacio">El episodio está cerrado. Solo se puede consultar.</p>
       } @else {
       <form class="administracion-form" (ngSubmit)="guardarAdministracion()">
-        @if (!editandoAplicacion) {
-          <div class="administracion-campo">
-            <label class="administracion-etiqueta" for="horaAdministracion">
-              {{
-                seccionActiva === 'cuidados'
-                  ? 'Fecha y hora de realización'
-                  : 'Fecha y hora de administración'
-              }}<span class="administracion-obligatorio" aria-hidden="true">*</span>
-            </label>
-            <select
-              class="administracion-input"
-              id="horaAdministracion"
-              name="horaAdministracion"
-              aria-required="true"
-              [(ngModel)]="horaAdministracion"
-            >
-              <option value="">Seleccionar...</option>
-              @for (hora of horasAdministracion; track hora.valor) {
-                <option [value]="hora.valor">{{ hora.numero }}. {{ hora.etiqueta }}</option>
-              }
-            </select>
-
-            @if (!horasAdministracion.length) {
-              <span class="administracion-ayuda">
-                No hay horas programadas pendientes para esta indicación.
-              </span>
+        <div class="administracion-campo">
+          <label class="administracion-etiqueta" for="horaAdministracion">
+            {{
+              seccionActiva === 'cuidados'
+                ? 'Fecha y hora de realización'
+                : 'Fecha y hora de administración'
+            }}<span class="administracion-obligatorio" aria-hidden="true">*</span>
+          </label>
+          <select
+            class="administracion-input"
+            id="horaAdministracion"
+            name="horaAdministracion"
+            aria-required="true"
+            [(ngModel)]="horaAdministracion"
+          >
+            <option value="">Seleccionar...</option>
+            @for (hora of horasAdministracion; track hora.valor) {
+              <option [value]="hora.valor">{{ hora.numero }}. {{ hora.etiqueta }}</option>
             }
-          </div>
-        }
+          </select>
+
+          @if (!horasAdministracion.length) {
+            <span class="administracion-ayuda">
+              No hay horas programadas pendientes para esta indicación.
+            </span>
+          }
+        </div>
 
         <!-- Estado de la administración -->
         <div class="administracion-campo">
@@ -765,7 +941,24 @@
           </select>
         </div>
 
-        @if (seccionActiva === 'medicamentos' && !editandoAplicacion) {
+        @if (controlSeleccionado) {
+          @if (controlTomado) {
+            <p class="control-registrado-aviso" role="status">
+              El control fue registrado correctamente. Guarde la atención para completar el proceso.
+            </p>
+          } @else {
+            <button
+              type="button"
+              class="btn btn-registrar-control"
+              [disabled]="!puedeRegistrarControl"
+              (click)="registrarControl()"
+            >
+              Registrar control
+            </button>
+          }
+        }
+
+        @if (seccionActiva === 'medicamentos') {
           <div class="administracion-campo">
             <label class="administracion-etiqueta" for="cantidadAdministrada">
               Cantidad
@@ -786,21 +979,34 @@
               [disabled]="esNoAdministrado"
               [(ngModel)]="cantidadAdministrada"
             />
+
+            @if (sinStockParaAdministrar) {
+              <span class="administracion-ayuda administracion-ayuda--error">
+                No hay suficiente medicamento entregado por Farmacia. Disponible:
+                {{ disponibleParaAdministrar }}.
+              </span>
+            }
           </div>
         }
 
         <div class="administracion-campo">
           <label class="administracion-etiqueta" for="observacionAdministracion">
-            Observación
+            {{ esControlNoRealizado ? 'Motivo' : 'Observación' }}
+            @if (esControlNoRealizado) {
+              <span class="administracion-obligatorio" aria-hidden="true">*</span>
+            }
           </label>
           <textarea
             class="administracion-input administracion-textarea"
             id="observacionAdministracion"
             name="observacionAdministracion"
+            [attr.aria-required]="esControlNoRealizado"
             [placeholder]="
-              seccionActiva === 'cuidados'
-                ? 'Observaciones del cuidado...'
-                : 'Observaciones de la administración...'
+              esControlNoRealizado
+                ? 'Motivo por el que no se realizó el control...'
+                : seccionActiva === 'cuidados'
+                  ? 'Observaciones de la atención...'
+                  : 'Observaciones de la administración...'
             "
             maxlength="2000"
             [(ngModel)]="observacionAdministracion"
@@ -812,68 +1018,14 @@
             Cancelar
           </button>
           <button type="submit" class="btn _guardar" [disabled]="!puedeGuardarAdministracion">
-            Guardar
+            {{ editandoAplicacion ? 'Guardar cambios' : 'Guardar' }}
           </button>
         </div>
       </form>
       }
     } @else {
-      @if (examenesCompletados.length) {
-        <div class="examenes-completados">
-          @for (examen of examenesCompletados; track examen.id) {
-            <article class="indicacion-card indicacion-card--verde examen-completado">
-              <header class="indicacion-encabezado">
-                <span class="indicacion-nombre">{{ examen.nombre }}</span>
-
-                <div class="examen-acciones">
-                  <button
-                    type="button"
-                    class="examen-accion examen-accion--ver"
-                    title="Ver archivos"
-                    [attr.aria-label]="'Ver archivos del examen ' + examen.nombre"
-                    (click)="verArchivosExamen(examen)"
-                  >
-                    <i class="bi bi-eye" aria-hidden="true"></i>
-                  </button>
-
-                  <button
-                    type="button"
-                    class="examen-accion"
-                    title="Cargar archivos"
-                    [attr.aria-label]="'Cargar archivos del examen ' + examen.nombre"
-                    (click)="abrirCargaArchivosExamen(examen)"
-                  >
-                    <i class="bi bi-cloud-arrow-up" aria-hidden="true"></i>
-                  </button>
-                </div>
-              </header>
-
-              @if (examen.observaciones) {
-                <p class="indicacion-observaciones">{{ examen.observaciones }}</p>
-              }
-
-              <footer class="indicacion-meta">
-                <span><i class="bi bi-calendar3" aria-hidden="true"></i>{{ examen.fecha }}</span>
-                <span><i class="bi bi-clock" aria-hidden="true"></i>{{ examen.hora }}</span>
-                <span><i class="bi bi-person" aria-hidden="true"></i>{{ examen.usuario }}</span>
-              </footer>
-            </article>
-          }
-        </div>
-      } @else {
-        <p class="tratamientos-vacio">No hay exámenes completados.</p>
-      }
+      <p class="tratamientos-vacio">Aún no hay registros para mostrar.</p>
     }
   </section>
 
-  @if (observacionPopup; as popup) {
-    <div
-      class="observacion-popup"
-      role="tooltip"
-      [style.left.px]="popup.x"
-      [style.top.px]="popup.y"
-    >
-      <strong>Observación:</strong> {{ popup.texto }}
-    </div>
-  }
 </div>

@@ -34,8 +34,8 @@
   padding-right: calc(var(--ficha-ancho) + 1.5rem);
 }
 
-/* Secciones que muestran siempre el bloque de datos del paciente (historia clínica y diagnóstico): el
-   bloque compartido se dibuja desplegado y sin pestaña, y la rejilla le reserva su ancho. */
+/* Sección que muestra siempre el bloque de datos del paciente (historia clínica): el bloque
+   compartido se dibuja desplegado y sin pestaña, y la rejilla le reserva su ancho. */
 .evaluacion--datos-paciente {
   padding-right: calc(var(--ficha-ancho) + 1.5rem);
 }
@@ -631,5 +631,22 @@
     grid-template-areas:
       'secciones'
       'examen';
+  }
+}
+
+@media (max-width: 640px) {
+  .evaluacion {
+    padding: 12px;
+    gap: 16px;
+  }
+
+  .panel-secciones .tarjeta,
+  .panel-seccion,
+  .panel-hallazgos {
+    border-radius: 16px;
+  }
+
+  .hallazgo-campo {
+    min-height: 160px;
   }
 }

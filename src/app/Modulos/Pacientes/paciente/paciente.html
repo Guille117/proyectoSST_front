@@ -306,13 +306,77 @@
                         }
                     </p>
                 </div>
-
-                <span class="estado" [class.estado--alta]="estaEnAlta">
-                    {{ estaEnAlta ? 'Alta' : 'Activo' }}
-                </span>
             </div>
 
-            @if (cargandoDetalle) {
+            <div class="detalle-scroll">
+            @if (vistaDetalleConsumo) {
+                <section class="detalle-consumo">
+                    <header class="detalle-consumo-cabecera">
+                        <h4>Detalle de consumo</h4>
+                        <button
+                            type="button"
+                            class="btn _azulsecundario"
+                            (click)="volverDetallePaciente()"
+                        >
+                            Detalle de paciente
+                        </button>
+                    </header>
+
+                    @if (cargandoConsumo) {
+                        <p class="aviso">Cargando detalle de consumo...</p>
+                    } @else if (errorConsumo) {
+                        <div class="aviso-error" role="alert">
+                            <p>{{ errorConsumo }}</p>
+                            <button type="button" class="btns" (click)="recargarConsumo()">
+                                Reintentar
+                            </button>
+                        </div>
+                    } @else if (!consumo || consumo.items.length === 0) {
+                        <p class="aviso">No hay consumos registrados para este episodio.</p>
+                    } @else {
+                        <div class="doc-tabla-container">
+                            <table class="doc-tabla" aria-label="Detalle de consumo">
+                                <thead>
+                                    <tr>
+                                        <th>Tipo</th>
+                                        <th>Concepto</th>
+                                        <th>Detalle</th>
+                                        <th class="doc-celda-numero">Cantidad</th>
+                                        <th class="doc-celda-numero">Precio unitario</th>
+                                        <th class="doc-celda-numero">Subtotal</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @for (item of consumo.items; track $index) {
+                                        <tr>
+                                            <td>{{ item.tipo }}</td>
+                                            <td>{{ item.nombre }}</td>
+                                            <td>{{ item.detalle || '—' }}</td>
+                                            <td class="doc-celda-numero">
+                                                {{ item.cantidad }} {{ item.unidad }}
+                                            </td>
+                                            <td class="doc-celda-numero">
+                                                Q {{ item.precioUnitario | number: '1.2-2' }}
+                                            </td>
+                                            <td class="doc-celda-numero">
+                                                Q {{ item.subtotal | number: '1.2-2' }}
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                                <tfoot>
+                                    <tr>
+                                        <td colspan="5" class="doc-total-etiqueta">Total</td>
+                                        <td class="doc-celda-numero doc-total-valor">
+                                            Q {{ consumo.total | number: '1.2-2' }}
+                                        </td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    }
+                </section>
+            } @else if (cargandoDetalle) {
                 <p class="aviso">Cargando detalle del paciente...</p>
             } @else if (errorDetalle) {
                 <div class="aviso-error" role="alert">
@@ -328,8 +392,8 @@
 
                         <div class="ingreso-datos">
                             <div class="dato">
-                                <span class="dato-rotulo">Médico asignado</span>
-                                <span class="dato-valor">{{ datos.medicoNombre || '—' }}</span>
+                                <span class="dato-rotulo">Médicos asignados</span>
+                                <span class="dato-valor">{{ nombresMedicos(datos) }}</span>
                             </div>
 
                             <div class="dato">
@@ -405,7 +469,7 @@
                     </section>
                 </div>
 
-                <section class="bloque">
+                <section class="bloque bloque-documentos">
                     <h4>Documentos</h4>
 
                     <input
@@ -416,8 +480,8 @@
                         (change)="subirDocumento($event)"
                     >
 
-                    @if (!episodioDocumentosId) {
-                        <p class="aviso">El paciente no tiene un episodio con documentos.</p>
+                    @if (episodioIdDocumentacion === null) {
+                        <p class="aviso">El paciente no tiene un episodio registrado.</p>
                     } @else {
                         @if (cargandoDocumentos) {
                             <p class="aviso">Cargando documentos...</p>
@@ -433,18 +497,62 @@
                         }
 
                         <div class="documentos">
-                            @for (tipo of tiposDocumento; track tipo.tipo) {
+                            @for (fila of filasDocumento; track fila.clave) {
+                                @if (fila.tituloGrupo) {
+                                    <div class="documentos-grupo">{{ fila.tituloGrupo }}</div>
+                                }
+
                                 <div class="documento">
-                                    <strong class="documento-nombre">{{ tipo.etiqueta }}</strong>
+                                    <strong class="documento-nombre">{{ fila.etiqueta }}</strong>
 
                                     <div class="documento-acciones">
-                                        @if (documentosPorTipo(tipo.tipo).length > 0) {
+                                        @if (fila.tipo === 'AUTORIZACION_PROCEDIMIENTO') {
                                             <button
                                                 type="button"
-                                                class="iconEditar"
-                                                [attr.aria-label]="'Ver ' + tipo.etiqueta"
+                                                class="iconEditar iconGenerar"
+                                                [class.iconGenerar--pulsar]="autorizacionPendiente(fila)"
+                                                title="Generar hoja de autorización"
+                                                [attr.aria-label]="'Generar ' + fila.etiqueta"
+                                                [disabled]="generandoAutorizacion"
+                                                (click)="generarAutorizacionFila(fila)"
+                                            >
+                                                <i class="bi bi-pen" aria-hidden="true"></i>
+                                            </button>
+                                        }
+
+                                        @if (fila.tipo === 'ALTA_MEDICA') {
+                                            <button
+                                                type="button"
+                                                class="iconEditar iconGenerar"
+                                                title="Generar alta médica"
+                                                [attr.aria-label]="'Generar ' + fila.etiqueta"
+                                                [disabled]="generandoDocumentoId !== null"
+                                                (click)="generarAltaDocumento(fila)"
+                                            >
+                                                <i class="bi bi-file-earmark-medical" aria-hidden="true"></i>
+                                            </button>
+                                        }
+
+                                        @if (fila.tipo === 'RECETA') {
+                                            <button
+                                                type="button"
+                                                class="iconEditar iconGenerar"
+                                                title="Generar receta médica"
+                                                [attr.aria-label]="'Generar ' + fila.etiqueta"
+                                                [disabled]="generandoDocumentoId !== null"
+                                                (click)="generarRecetaDocumento(fila)"
+                                            >
+                                                <i class="bi bi-file-earmark-text" aria-hidden="true"></i>
+                                            </button>
+                                        }
+
+                                        @if (tieneDocumentosFila(fila)) {
+                                            <button
+                                                type="button"
+                                                class="iconEditar iconVerde"
+                                                [attr.aria-label]="'Ver ' + fila.etiqueta"
                                                 title="Ver"
-                                                (click)="abrirModalDocumentos(tipo.tipo, tipo.etiqueta)"
+                                                (click)="abrirModalDocumentos(fila)"
                                             >
                                                 <i class="bi bi-eye" aria-hidden="true"></i>
                                             </button>
@@ -454,9 +562,9 @@
                                             type="button"
                                             class="iconEditar iconVerde"
                                             [disabled]="subiendoTipo !== null"
-                                            [attr.aria-label]="'Cargar ' + tipo.etiqueta"
+                                            [attr.aria-label]="'Cargar ' + fila.etiqueta"
                                             title="Cargar"
-                                            (click)="seleccionarArchivo(tipo.tipo, archivoDocumento)"
+                                            (click)="seleccionarArchivo(fila, archivoDocumento)"
                                         >
                                             <i class="bi bi-upload" aria-hidden="true"></i>
                                         </button>
@@ -474,13 +582,14 @@
                     <button
                         type="button"
                         class="btn _principal"
-                        title="Documentación del paciente"
-                        (click)="abrirDocumentacion()"
+                        title="Detalle de consumo"
+                        (click)="abrirDetalleConsumo()"
                     >
-                        Documentación
+                        Detalle de consumo
                     </button>
                 </div>
             }
+            </div>
         } @else {
             <p class="sin-seleccion">Seleccione un paciente de la lista para ver su detalle.</p>
         }

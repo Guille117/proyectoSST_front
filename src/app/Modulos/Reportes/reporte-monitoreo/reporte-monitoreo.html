@@ -1,0 +1,39 @@
+<div class="reporte areaTrabajo-container">
+  <div class="reporte-encabezado">
+    <h2 class="reporte-titulo">Monitoreo</h2>
+    <div class="filtros">
+      <div class="filtro-fecha">
+        <app-campo-validado [label]="'Desde'" [fieldId]="'desde'">
+          <input type="date" id="desde" name="desde" [(ngModel)]="desde" />
+        </app-campo-validado>
+      </div>
+      <div class="filtro-fecha">
+        <app-campo-validado [label]="'Hasta'" [fieldId]="'hasta'">
+          <input type="date" id="hasta" name="hasta" [(ngModel)]="hasta" />
+        </app-campo-validado>
+      </div>
+      <button type="button" class="btn _principal" [disabled]="cargando" (click)="generar()">Generar</button>
+      <button type="button" class="btn" (click)="exportarPdf()">PDF</button>
+      <button type="button" class="btn" (click)="exportarExcel()">Excel</button>
+    </div>
+  </div>
+
+  @if (cargando) {
+    <p class="reporte-vacio">Cargando reporte...</p>
+  } @else {
+    <div class="kpis">
+      <div class="kpi">
+        <div class="valor">{{ datos.signosVitales }}</div>
+        <div class="etiqueta">Signos vitales</div>
+      </div>
+      <div class="kpi">
+        <div class="valor">{{ datos.glucosa }}</div>
+        <div class="etiqueta">Mediciones de glucosa</div>
+      </div>
+      <div class="kpi">
+        <div class="valor">{{ datos.controlHidrico }}</div>
+        <div class="etiqueta">Control hídrico</div>
+      </div>
+    </div>
+  }
+</div>

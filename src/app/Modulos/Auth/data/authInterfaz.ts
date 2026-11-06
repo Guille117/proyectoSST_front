@@ -33,8 +33,15 @@ export interface LoginResponse {
   token: string;
   tipo?: string;
   id: number;
+  username?: string;
   nombreCompleto: string;
   roles?: string[];
   estado?: boolean;
   permisos?: PermisoAuth[];
+}
+
+export interface EstadoSesion {
+  id: number;
+  username: string;
+  estado: boolean;
 }

@@ -66,6 +66,19 @@
   margin-bottom: 0;
 }
 
+/* Durante un control, las otras secciones quedan bloqueadas para no perder el registro. */
+.panel-secciones .tarjeta:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+
+  &:hover {
+    box-shadow: none;
+    transform: none;
+  }
+}
+
 /* El formulario se ancla al alto de su propio contenido para no heredar el alto del historial */
 .panel-formulario {
   grid-area: formulario;
@@ -842,5 +855,40 @@ select.monitoreo-input {
 
   .presion-inputs {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* El historial deja de tener scroll interno para que el desplazamiento sea el de la página. */
+  .panel-historial {
+    max-height: none;
+    overflow: visible;
+  }
+
+  .registros-lista,
+  .hidrico-lista,
+  .glucosa-lista {
+    max-height: none;
+    overflow-y: visible;
+  }
+}
+
+@media (max-width: 640px) {
+  .monitoreo {
+    padding: 12px;
+    gap: 16px;
+  }
+
+  .panel-formulario,
+  .panel-historial,
+  .panel-secciones .tarjeta {
+    border-radius: 16px;
+  }
+
+  .hidrico-totales {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 4px;
+  }
+
+  .hidrico-total_etiqueta {
+    font-size: 0.9rem;
   }
 }

@@ -489,3 +489,51 @@
 	.encabezado-listado { align-items: stretch; flex-direction: column; }
 	.buscador-container { width: 100%; }
 }
+
+@media (max-width: 640px) {
+	.camas-layout {
+		gap: 16px;
+	}
+
+	.encabezado-listado {
+		gap: 12px;
+	}
+
+	.buscador-container {
+		height: auto;
+	}
+
+	.camas-paginacion-control {
+		width: 44px;
+		height: 44px;
+	}
+}
+
+/* En pantallas táctiles el detalle de área y precio no depende del hover. */
+@media (hover: none) {
+	.cama-card-hover {
+		position: static;
+		inset: auto;
+		margin-top: 10px;
+		padding: 0;
+		border-radius: 0;
+		background: transparent;
+		-webkit-backdrop-filter: none;
+		backdrop-filter: none;
+		opacity: 1;
+		visibility: visible;
+		flex-direction: row;
+		flex-wrap: wrap;
+		justify-content: flex-start;
+		gap: 4px 12px;
+		text-align: left;
+	}
+
+	.cama-card:not(.menu-abierto):hover {
+		.cama-card dl,
+		.cama-card .cama-paciente {
+			filter: none;
+			opacity: 1;
+		}
+	}
+}

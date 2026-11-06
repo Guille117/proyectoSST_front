@@ -122,4 +122,22 @@ app-campo-validado input {
       flex: 1 1 140px;
     }
   }
+
+  .table-container > .table {
+    min-width: 680px;
+  }
+}
+
+@media (max-width: 640px) {
+  .buscador-container {
+    height: auto;
+  }
+
+  .table-container > .table {
+    min-width: 640px;
+  }
+
+  .table-container {
+    margin-top: 0;
+  }
 }

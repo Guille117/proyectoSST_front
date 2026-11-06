@@ -8,12 +8,14 @@ import {
   OnInit,
   inject,
   output,
+  viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule, NgForm } from '@angular/forms';
-import { TimeoutError, finalize, timeout } from 'rxjs';
+import { TimeoutError, finalize, firstValueFrom, timeout } from 'rxjs';
 import { CampoValidado } from '../../../../shared/campo-validado/campo-validado';
 import { OpcionOtroComponent, OpcionOtroValor } from '../../../../shared/opcion-otro/opcion-otro';
+import { crearSeleccionesPendientes } from '../../../../shared/opcion-otro/crear-seleccion-pendiente';
 import { Paginacion } from '../../../../shared/paginacion/paginacion';
 import { PopUps } from '../../../../shared/popUps/popUpsService';
 import { TabSwitch } from '../../../../shared/tab-switch/tab-switch';
@@ -162,34 +164,53 @@ export class AgregarCompra implements OnInit {
     this.proveedorSeleccionadoId = valor;
   }
 
-  crearProveedor(datos: OpcionOtroValor): void {
-    if (this.creandoProveedor) return;
+  async crearProveedor(datos: OpcionOtroValor): Promise<boolean> {
+    if (this.creandoProveedor) return false;
 
     this.creandoProveedor = true;
-    this.servicioProveedor
-      .postProveedor({ nombre: datos.nombre })
-      .pipe(
-        timeout(5000),
-        finalize(() => {
-          this.creandoProveedor = false;
-          this.cdr.markForCheck();
-        }),
-        takeUntilDestroyed(this.destroyRef),
-      )
-      .subscribe({
-        next: (creado) => {
-          this.proveedores = [...this.proveedores, creado];
-          this.proveedorSeleccionadoId = creado.id;
-          this.mostrandoOtroProveedor = false;
-          this.cdr.markForCheck();
-        },
-        error: (error) => this.popUp.errorDesdeBackend(error, 'No se pudo crear el proveedor.'),
-      });
+    try {
+      const creado = await firstValueFrom(
+        this.servicioProveedor
+          .postProveedor({ nombre: datos.nombre })
+          .pipe(timeout(5000), takeUntilDestroyed(this.destroyRef)),
+      );
+
+      if (creado.id == null) {
+        this.popUp.error('No se pudo crear el proveedor.');
+        return false;
+      }
+
+      this.proveedores = [...this.proveedores, creado];
+      this.proveedorSeleccionadoId = creado.id;
+      this.mostrandoOtroProveedor = false;
+      return true;
+    } catch (error) {
+      this.popUp.errorDesdeBackend(error, 'No se pudo crear el proveedor.');
+      return false;
+    } finally {
+      this.creandoProveedor = false;
+      this.cdr.markForCheck();
+    }
   }
 
   cancelarProveedor(): void {
     this.mostrandoOtroProveedor = false;
     this.proveedorSeleccionadoId = this.proveedorAnterior;
+  }
+
+  private resolverProveedorPendiente(): Promise<boolean> {
+    if (!this.mostrandoOtroProveedor) return Promise.resolve(true);
+
+    return crearSeleccionesPendientes(
+      [
+        {
+          etiqueta: 'Proveedor',
+          componente: this.proveedorOtro,
+          crear: (datos) => this.crearProveedor(datos),
+        },
+      ],
+      (mensaje) => this.popUp.formIncompleto(mensaje),
+    );
   }
 
   // ==================== BUSCAR ====================
@@ -297,8 +318,10 @@ export class AgregarCompra implements OnInit {
   readonly opcionOtroId = -1;
   mostrandoOtroProveedor = false;
   creandoProveedor = false;
+  preparandoSelecciones = false;
   private proveedorAnterior: number | null = null;
   private snapshotEdicion = '';
+  private readonly proveedorOtro = viewChild<OpcionOtroComponent>('proveedorOtro');
 
   /** Total de la compra: suma de los subtotales (cantidad × precio de compra) de todos los lotes. */
   get totalCompra(): number {
@@ -326,7 +349,7 @@ export class AgregarCompra implements OnInit {
   }
 
   get puedeGuardar(): boolean {
-    return !this.guardando && this.lotes.length > 0 && this.hayCambios;
+    return !this.guardando && !this.preparandoSelecciones && this.lotes.length > 0 && this.hayCambios;
   }
 
   private cargarCompraEdicion(compra: detalleCompraResponse): void {
@@ -383,6 +406,14 @@ export class AgregarCompra implements OnInit {
     return this.indiceLoteEdicion !== null;
   }
 
+  /** Cantidad mínima editable: no puede bajar de las unidades ya entregadas del lote. */
+  get cantidadMinimaLote(): number {
+    if (this.indiceLoteEdicion === null) return 1;
+    const lote = this.lotes[this.indiceLoteEdicion];
+    if (!lote || lote.disponible === undefined) return 1;
+    return Math.max(1, lote.cantidad - lote.disponible);
+  }
+
   /**
    * Agrega los datos del lote al acumulado de la compra.
    * Requiere un producto seleccionado y el formulario del paso 1 completo.
@@ -390,6 +421,18 @@ export class AgregarCompra implements OnInit {
   agregarLote(formulario: NgForm): void {
     if (this.productoSeleccionadoId === null) {
       this.popUp.advertencia('Seleccione un medicamento o insumo antes de agregarlo.');
+      return;
+    }
+
+    if (this.cantidad !== null && this.cantidad <= 0) {
+      this.popUp.advertencia('La cantidad debe ser mayor a 0.');
+      return;
+    }
+
+    if (this.cantidad !== null && this.cantidad < this.cantidadMinimaLote) {
+      this.popUp.advertencia(
+        `La cantidad no puede ser menor a ${this.cantidadMinimaLote}: el lote ya tiene unidades entregadas.`,
+      );
       return;
     }
 
@@ -416,11 +459,6 @@ export class AgregarCompra implements OnInit {
       return;
     }
 
-    if (this.cantidad !== null && this.cantidad <= 0) {
-      this.popUp.advertencia('La cantidad debe ser mayor a 0.');
-      return;
-    }
-
     const producto = this.productoSeleccionado();
     const indiceEdicion = this.indiceLoteEdicion;
 
@@ -428,6 +466,18 @@ export class AgregarCompra implements OnInit {
       const original = this.lotes[indiceEdicion];
       if (!original) {
         this.indiceLoteEdicion = null;
+        return;
+      }
+
+      const tieneEntregas =
+        original.disponible !== undefined && original.cantidad > original.disponible;
+      const cambiaProducto =
+        original.esMedicamento !== this.isMedicamento ||
+        original.idItem !== this.productoSeleccionadoId;
+      if (tieneEntregas && cambiaProducto) {
+        this.popUp.advertencia(
+          'No se puede cambiar el producto de un lote con unidades ya entregadas.',
+        );
         return;
       }
 
@@ -440,8 +490,10 @@ export class AgregarCompra implements OnInit {
         fechaVencimiento: this.fechaVencimiento,
         precioCompra: this.precioCompra!,
         precioVenta: this.precioVenta!,
-        nombreItem: original.nombreItem,
-        descripcionItem: original.descripcionItem,
+        nombreItem: producto?.nombre ?? original.nombreItem,
+        descripcionItem: producto
+          ? this.descripcionProducto(producto)
+          : original.descripcionItem,
       };
 
       this.limpiarLote(formulario);
@@ -639,15 +691,11 @@ export class AgregarCompra implements OnInit {
   /** Registra o actualiza la compra: envía los lotes y el comprobante como multipart al backend. */
   async guardarCompra(formulario: NgForm): Promise<void> {
     // No se envía si el formulario está incompleto, ya hay un envío en curso o no hay lotes
-    if (formulario?.invalid || this.guardando || this.lotes.length === 0) return;
-    if (this.proveedorSeleccionadoId === null) return;
+    if (this.guardando || this.preparandoSelecciones || formulario?.invalid || this.lotes.length === 0) {
+      return;
+    }
     if (this.esEdicion && !this.hayCambios) return;
 
-    // Cuerpo JSON de la compra: viaja en la parte `request` del multipart
-    const request: CompraRequest = {
-      proveedorId: this.proveedorSeleccionadoId,
-      lotes: this.lotes.map((lote) => this.aLoteRequest(lote)),
-    };
     const edicion = this.compraEdicion;
     const esEdicion = edicion !== null;
 
@@ -676,6 +724,34 @@ export class AgregarCompra implements OnInit {
         return;
       }
     }
+
+    this.preparandoSelecciones = true;
+    this.cdr.markForCheck();
+    let listo = false;
+    try {
+      listo = await this.resolverProveedorPendiente();
+    } finally {
+      this.preparandoSelecciones = false;
+      this.cdr.markForCheck();
+    }
+    if (!listo) {
+      this.guardando = false;
+      this.cdr.markForCheck();
+      return;
+    }
+
+    if (this.proveedorSeleccionadoId === null) {
+      this.guardando = false;
+      this.cdr.markForCheck();
+      this.popUp.formIncompleto('Seleccione un proveedor antes de guardar.');
+      return;
+    }
+
+    // Cuerpo JSON de la compra: viaja en la parte `request` del multipart
+    const request: CompraRequest = {
+      proveedorId: this.proveedorSeleccionadoId,
+      lotes: this.lotes.map((lote) => this.aLoteRequest(lote)),
+    };
 
     const solicitud = edicion
       ? this.servicioCompra.actualizarCompra(edicion.id, {

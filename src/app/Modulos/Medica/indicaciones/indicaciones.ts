@@ -4,7 +4,7 @@ import { IndicacionCuidados } from './cuidados/indicacion-cuidados';
 import { IndicacionExamenes } from './examenes/indicacion-examenes';
 import { IndicacionMedicamentos } from './medicamentos/indicacion-medicamentos';
 
-/** Secciones del rail de indicaciones: medicamentos, exámenes y cuidados. */
+/** Secciones del rail de indicaciones: medicamentos, exámenes y atenciones. */
 type SeccionIndicacion = 'medicamentos' | 'examenes' | 'cuidados';
 
 interface SeccionVista {
@@ -17,8 +17,8 @@ interface SeccionVista {
 
 /**
  * Indicaciones médicas del episodio: pantalla del módulo Médico que reúne las indicaciones de
- * medicamentos, de exámenes y los cuidados del paciente. El rail de secciones muestra la estructura
- * completa del submenú y conmuta el área central entre las secciones.
+ * medicamentos, de exámenes y las atenciones del paciente. El rail de secciones muestra la
+ * estructura completa del submenú y conmuta el área central entre las secciones.
  */
 @Component({
   selector: 'app-indicaciones',
@@ -34,8 +34,6 @@ export class Indicaciones {
   /** La ficha con los datos del paciente está desplegada; la abre su pestaña lateral. */
   pacienteAbierto = false;
 
-  /** El cuerpo de la ficha del paciente está desplegado; el chevron de su encabezado lo pliega. */
-  datosPacienteVisibles = true;
 
   // ------------------- MOCK: datos temporales para diseño -------------------
   /** Secciones del rail de indicaciones; las tres están desarrolladas en la maqueta. */
@@ -54,7 +52,7 @@ export class Indicaciones {
     },
     {
       id: 'cuidados',
-      titulo: 'Cuidados',
+      titulo: 'Atenciones',
       icono: 'bi-heart-pulse',
       desarrollada: true,
     },
@@ -77,9 +75,5 @@ export class Indicaciones {
    */
   cambiarFichaPaciente(abierto: boolean): void {
     this.pacienteAbierto = abierto;
-
-    if (abierto) {
-      this.datosPacienteVisibles = true;
-    }
   }
 }

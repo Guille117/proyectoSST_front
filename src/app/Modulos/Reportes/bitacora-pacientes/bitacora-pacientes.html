@@ -1,0 +1,97 @@
+<div class="reporte areaTrabajo-container">
+  <div class="reporte-encabezado">
+    <h2 class="reporte-titulo">Bitácora de pacientes</h2>
+    <div class="filtros">
+      <div class="filtro-busqueda">
+        <app-campo-validado [label]="'Paciente'" [fieldId]="'buscarPaciente'">
+          <input
+            type="search"
+            id="buscarPaciente"
+            name="buscarPaciente"
+            [(ngModel)]="textoBusqueda"
+            (keydown.enter)="buscarPacientes()"
+            placeholder="Buscar por nombre o CUI..."
+          />
+        </app-campo-validado>
+      </div>
+      <button type="button" class="btn" [disabled]="buscando" (click)="buscarPacientes()">Buscar</button>
+      <div class="filtro-fecha">
+        <app-campo-validado [label]="'Desde'" [fieldId]="'desde'">
+          <input type="date" id="desde" name="desde" [(ngModel)]="desde" />
+        </app-campo-validado>
+      </div>
+      <div class="filtro-fecha">
+        <app-campo-validado [label]="'Hasta'" [fieldId]="'hasta'">
+          <input type="date" id="hasta" name="hasta" [(ngModel)]="hasta" />
+        </app-campo-validado>
+      </div>
+      <button
+        type="button"
+        class="btn _principal"
+        [disabled]="cargando || !pacienteSeleccionado"
+        (click)="generar()"
+      >
+        Generar
+      </button>
+    </div>
+  </div>
+
+  @if (resultados.length) {
+    <div class="table-container">
+      <table class="table">
+        <tbody>
+          @for (p of resultados; track p.pacienteId) {
+            <tr>
+              <td class="celda_izquierda">
+                <button type="button" class="btn" (click)="seleccionarPaciente(p)">
+                  {{ p.nombreCompleto }} ({{ p.cui ?? 'sin CUI' }})
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+  @if (pacienteSeleccionado) {
+    <p class="paciente-seleccionado">
+      Paciente seleccionado: <strong>{{ pacienteSeleccionado.nombreCompleto }}</strong>
+    </p>
+  }
+
+  <div class="table-container">
+    <table class="table" [attr.aria-busy]="cargando">
+      <thead>
+        <tr>
+          <th class="celda_centrada">Fecha / Hora</th>
+          <th class="celda_izquierda">Usuario</th>
+          <th class="celda_izquierda">Acción</th>
+          <th class="celda_izquierda">Descripción</th>
+        </tr>
+      </thead>
+      <tbody>
+        @if (cargando) {
+          <tr>
+            <td colspan="4" class="celda_centrada">Cargando bitácora...</td>
+          </tr>
+        } @else {
+          @for (e of entradas; track e.id) {
+            <tr>
+              <td class="celda_centrada">{{ formatearFechaHora(e.fechaHora) }}</td>
+              <td class="celda_izquierda">{{ e.usuarioNombre ?? '—' }}</td>
+              <td class="celda_izquierda">
+                <span [class]="claseAccion(e.accion)">{{ accionLegible(e.accion) }}</span>
+              </td>
+              <td class="celda_izquierda" [title]="e.detalle ?? ''">{{ descripcion(e) }}</td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="4" class="celda_centrada">Sin registros.</td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+</div>

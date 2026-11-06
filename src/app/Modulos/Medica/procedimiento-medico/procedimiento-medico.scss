@@ -6,16 +6,27 @@
   display: block;
 }
 
-/* ==================== CONTENEDOR (OPCIONES / CONTENIDO / RECURSOS) ==================== */
-/* Misma rejilla de las indicaciones médicas: rail de opciones, contenido y panel derecho. */
+/* ==================== CONTENEDOR (OPCIONES / CONTENIDO Y RECURSOS) ==================== */
+/* Misma rejilla de las indicaciones médicas: rail de opciones y un bloque único a la derecha. */
 .procedimiento-medico {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr);
-  grid-template-areas: 'secciones contenido recursos';
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas: 'secciones bloque';
   gap: 1.25rem;
   box-sizing: border-box;
   width: 100%;
   padding: 0.75rem 1.5rem 1.5rem;
+}
+
+/* Ancho del bloque de datos del paciente: lo comparten el propio bloque y su pestaña */
+.procedimiento-medico {
+  --ficha-ancho: 340px;
+}
+
+/* Ficha de los datos del paciente abierta: la rejilla le reserva a la derecha el ancho del
+   bloque compartido, que queda pegado al borde de la pantalla sin cubrir los paneles. */
+.procedimiento-medico--ficha-abierta {
+  padding-right: calc(var(--ficha-ancho) + 1.5rem);
 }
 
 /* El rail de opciones es solo el contenedor de las tarjetas, sin fondo ni borde propios */
@@ -33,14 +44,117 @@
   margin-bottom: 0;
 }
 
+/* Bloque único que agrupa el contenido y sus recursos, separados por una línea divisoria */
+.bloque-procedimiento {
+  grid-area: bloque;
+  align-self: start;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-areas:
+    'contenido recursos'
+    'acciones acciones';
+  min-width: 0;
+  overflow: hidden;
+  background: #fff;
+  border: 1px solid #dfe7f3;
+  border-radius: 18px;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
+}
+
 .contenido-procedimiento {
   grid-area: contenido;
-  align-self: start;
   display: flex;
   flex-direction: column;
+  min-width: 0;
   max-height: calc(var(--heightNavBar) - 16rem);
+  padding: 1.5rem;
   padding-top: 1rem;
   overflow: hidden;
+}
+
+/* Estilo para el checkbox de procedimiento finalizado y el check de autorización */
+.finalizado-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+  padding: 0.5rem 0;
+  font-size: 0.875rem;
+}
+
+/* Check de autorización junto al check de finalizado */
+.autorizacion-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #334155;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+
+  .chk-autorizacion {
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    accent-color: var(--azulSecundario);
+    cursor: pointer;
+  }
+}
+
+/* Botón tipo casilla para finalizar procedimiento */
+.chk-finalizado {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.75rem;
+  background: none;
+  border: 1px solid #ed1a0f;
+  border-radius: 6px;
+  color: #ed1a0f;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+
+  &.activo {
+    background: #e8f7ee;
+    border-color: #22c55e;
+    color: #22c55e;
+  }
+
+  &:disabled {
+    opacity: 1;
+    cursor: default;
+  }
+
+  .chk-icono {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    border: 2px solid currentColor;
+    border-radius: 3px;
+    position: relative;
+    &:after {
+      content: '';
+      position: absolute;
+      left: 4px;
+      top: 4px;
+      width: 4px;
+      height: 4px;
+      background: currentColor;
+      border-radius: 2px;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+  }
+
+  &.activo .chk-icono:after {
+    opacity: 1;
+  }
+
+  .chk-texto {
+    white-space: nowrap;
+  }
 }
 
 /* El formulario de registro se muestra completo, sin scroll interno; los botones quedan a la vista */
@@ -74,8 +188,16 @@
 
 .panel-recursos {
   grid-area: recursos;
-  align-self: start;
+  min-width: 0;
+  padding: 1.5rem;
   padding-top: 1rem;
+  border-left: 1px solid #dfe7f3;
+}
+
+/* Fila de acciones alineada al borde derecho del bloque completo, bajo ambas secciones */
+.acciones-procedimiento {
+  grid-area: acciones;
+  padding: 0 1.5rem 1.5rem;
 }
 
 /* ==================== TARJETAS DE PROCEDIMIENTOS ==================== */
@@ -328,11 +450,17 @@
 
 /* ==================== RESPONSIVIDAD ==================== */
 @media (max-width: 1280px) {
-  .procedimiento-medico {
-    grid-template-columns: auto minmax(0, 1fr);
+  .bloque-procedimiento {
+    grid-template-columns: minmax(0, 1fr);
     grid-template-areas:
-      'secciones contenido'
-      'recursos recursos';
+      'contenido'
+      'recursos'
+      'acciones';
+  }
+
+  .panel-recursos {
+    border-left: 0;
+    border-top: 1px solid #dfe7f3;
   }
 }
 
@@ -341,9 +469,13 @@
     grid-template-columns: minmax(0, 1fr);
     grid-template-areas:
       'secciones'
-      'contenido'
-      'recursos';
+      'bloque';
     padding: 1rem;
+    --ficha-ancho: calc(100% - 40px);
+  }
+
+  .procedimiento-medico--ficha-abierta {
+    padding-right: 1rem;
   }
 
   .contenido-procedimiento {
@@ -351,6 +483,24 @@
   }
 
   .contenido-scroll {
-    max-height: 60vh;
+    max-height: none;
+    overflow: visible;
+  }
+}
+
+@media (max-width: 640px) {
+  .procedimiento-medico {
+    padding: 12px;
+    gap: 16px;
+  }
+
+  .panel-seccion,
+  .panel-recursos,
+  .bloque-procedimiento {
+    border-radius: 16px;
+  }
+
+  .recurso-item {
+    grid-template-columns: minmax(0, 1fr);
   }
 }

@@ -5,8 +5,6 @@
     [plegable]="true"
     [abierto]="pacienteAbierto"
     (abiertoCambia)="cambiarFichaPaciente($event)"
-    [cuerpoVisible]="datosPacienteVisibles"
-    (cuerpoVisibleCambia)="datosPacienteVisibles = $event"
   ></app-datos-paciente>
 
   <!-- Rail de secciones del monitoreo -->
@@ -19,6 +17,7 @@
         class="tarjeta"
         [class.tarjeta--activa]="seccionActiva === seccion.id"
         [attr.aria-pressed]="seccionActiva === seccion.id"
+        [disabled]="seccionBloqueada(seccion.id)"
         (click)="seleccionarSeccion(seccion.id)"
       >
         <span class="tarjeta_icono"><i class="bi {{ seccion.icono }}" aria-hidden="true"></i></span>
@@ -152,7 +151,7 @@
           </div>
 
           <div class="acciones-formulario monitoreo-acciones">
-            <button type="button" class="btn _cancelar" (click)="limpiarFormulario()">
+            <button type="button" class="btn _cancelar" (click)="cancelarRegistroSignos()">
               Cancelar
             </button>
             <button type="submit" class="btn _guardar" [disabled]="!puedeGuardar">Guardar</button>
@@ -181,7 +180,7 @@
               [attr.data-registro-id]="registro.id"
             >
               <header class="registro-encabezado">
-                @if (!soloLectura) {
+                @if (puedeGestionar(registro.usuarioId)) {
                   <button
                     type="button"
                     class="registro-menu-trigger"
@@ -232,7 +231,7 @@
               </footer>
 
               <!-- Menú de opciones: flota sobre la tarjeta y no cambia su tamaño -->
-              @if (menuRegistroAbierto === registro.id && !soloLectura) {
+              @if (menuRegistroAbierto === registro.id && puedeGestionar(registro.usuarioId)) {
                 <div
                   class="registro-menu"
                   role="menu"
@@ -269,7 +268,7 @@
               }
             </article>
           } @empty {
-            <p class="monitoreo-vacio">Aún no hay registros de signos vitales para el paciente.</p>
+            <p class="monitoreo-vacio">Aǧn no hay registros de signos vitales para el paciente.</p>
           }
           }
         </div>
@@ -342,7 +341,7 @@
           </div>
 
           <div class="acciones-formulario monitoreo-acciones">
-            <button type="button" class="btn _cancelar" (click)="limpiarFormularioHidrico()">
+            <button type="button" class="btn _cancelar" (click)="cancelarRegistroHidrico()">
               Cancelar
             </button>
             <button type="submit" class="btn _guardar" [disabled]="!puedeGuardarHidrico">
@@ -419,7 +418,7 @@
                   <span class="hidrico-cantidad">{{ registro.cantidad }}<small>ml</small></span>
                 </div>
 
-                @if (!soloLectura) {
+                @if (puedeGestionar(registro.usuarioId)) {
                   <button
                     type="button"
                     class="registro-menu-trigger"
@@ -443,7 +442,7 @@
               </footer>
 
               <!-- Menú de opciones: flota sobre la tarjeta y no cambia su tamaño -->
-              @if (menuHidricoAbierto === registro.id && !soloLectura) {
+              @if (menuHidricoAbierto === registro.id && puedeGestionar(registro.usuarioId)) {
                 <div
                   class="registro-menu"
                   role="menu"
@@ -543,7 +542,7 @@
           </div>
 
           <div class="acciones-formulario monitoreo-acciones">
-            <button type="button" class="btn _cancelar" (click)="limpiarFormularioGlucosa()">
+            <button type="button" class="btn _cancelar" (click)="cancelarRegistroGlucosa()">
               Cancelar
             </button>
             <button type="submit" class="btn _guardar" [disabled]="!puedeGuardarGlucosa">
@@ -577,7 +576,7 @@
                   <span class="glucosa-tipo">{{ registro.tipo }}</span>
                 </div>
 
-                @if (!soloLectura) {
+                @if (puedeGestionar(registro.usuarioId)) {
                   <button
                     type="button"
                     class="registro-menu-trigger"
@@ -603,7 +602,7 @@
               </footer>
 
               <!-- Menú de opciones: flota sobre la tarjeta y no cambia su tamaño -->
-              @if (menuGlucosaAbierto === registro.id && !soloLectura) {
+              @if (menuGlucosaAbierto === registro.id && puedeGestionar(registro.usuarioId)) {
                 <div
                   class="registro-menu"
                   role="menu"
@@ -640,7 +639,7 @@
               }
             </article>
           } @empty {
-            <p class="monitoreo-vacio">Aún no hay registros de glucosa para el paciente.</p>
+            <p class="monitoreo-vacio">Aǧn no hay registros de glucosa para el paciente.</p>
           }
           }
         </div>

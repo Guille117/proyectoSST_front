@@ -425,9 +425,79 @@ tr.fila-bloqueada td {
   font-size: 12px;
 }
 
+.tabla-container,
+.table-container {
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+}
+
+@media (max-width: 1100px) {
+  .trabajoArea2,
+  .paso2 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 900px) {
+  .tabla-container > .table,
+  .table-container > .table {
+    min-width: 700px;
+  }
+
+  .indicador-pasos {
+    left: 0;
+    padding: 0.75rem 0 calc(1.25rem + env(safe-area-inset-bottom, 0px));
+  }
+}
+
 @media (max-width: 640px) {
+  .areaTrabajo-container {
+    padding-bottom: 130px;
+  }
+
   .fila > * {
     flex: 1 1 100%;
     max-width: 100%;
+  }
+
+  .seccionSuperior {
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .buscador-container,
+  .miniSub-container {
+    flex-basis: 100%;
+    height: auto;
+  }
+
+  .botones {
+    flex-wrap: wrap;
+  }
+
+  .botones > * {
+    flex: 1 1 auto;
+  }
+
+  .pasos-compra {
+    width: 100%;
+    max-width: 320px;
+  }
+
+  .paso-compra {
+    flex: 1 1 0;
+    width: auto;
+    min-width: 0;
+    padding: 4px 8px;
+  }
+
+  .boton-regresar {
+    margin-right: 0.5rem;
+  }
+
+  .contador-productos {
+    margin-left: 0.75rem;
   }
 }

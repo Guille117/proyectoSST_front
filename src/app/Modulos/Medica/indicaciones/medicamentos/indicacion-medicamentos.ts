@@ -1,12 +1,29 @@
 import { NgClass } from '@angular/common';
-import { ChangeDetectorRef, Component, OnDestroy, OnInit, inject } from '@angular/core';
+import {
+  ChangeDetectorRef,
+  Component,
+  OnDestroy,
+  OnInit,
+  inject,
+  viewChild,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { finalize, forkJoin, map, Subscription, timeout, TimeoutError } from 'rxjs';
+import {
+  finalize,
+  firstValueFrom,
+  forkJoin,
+  map,
+  Subscription,
+  timeout,
+  TimeoutError,
+} from 'rxjs';
 import { OpcionOtroComponent, OpcionOtroValor } from '../../../../shared/opcion-otro/opcion-otro';
+import { crearSeleccionesPendientes } from '../../../../shared/opcion-otro/crear-seleccion-pendiente';
 import { Paginacion } from '../../../../shared/paginacion/paginacion';
 import { PopUps } from '../../../../shared/popUps/popUpsService';
 import { CatalogoService } from '../../../Catalogos/data/serviceCatalogo';
 import { AuthService } from '../../../Auth/data/auth-service';
+import { PropiedadRegistroService } from '../../../Auth/data/propiedad-registro-service';
 import { EpisodioActivoService } from '../../data/episodio-activo-service';
 import { TIMEOUT_HTTP_MS } from '../../evaluacion/data/constantes-clinicas';
 import {
@@ -39,6 +56,7 @@ type FiltroIndicacion = 'todas' | 'activas' | 'finalizadas' | 'eliminadas';
 /** Indicación de medicamento lista para pintar la tarjeta del listado. */
 interface IndicacionMedicamentoVista extends DuracionVista {
   id: number;
+  usuarioId: number;
   medicamentoLogId: number | null;
   nombre: string;
   /** Texto libre cuando el medicamento no está registrado en el catálogo. */
@@ -78,6 +96,19 @@ interface FiltroIndicacionVista {
   estados: EstadoIndicacionMedicamento[];
 }
 
+/** Instantánea de los campos del formulario al iniciar la edición, para detectar cambios. */
+interface FormularioMedicamentoOriginal {
+  medicamentoElegidoId: number | null;
+  medicamentoLibre: string;
+  cantidad: number | null;
+  unidadMedida: string;
+  frecuencia: number | null;
+  duracionTipo: TipoDuracion | '';
+  duracionCantidad: number | null;
+  fechaInicio: string;
+  observaciones: string;
+}
+
 /**
  * Sección de medicamentos de las indicaciones médicas: registro de la indicación con la búsqueda del
  * medicamento en el catálogo y listado de los medicamentos indicados en el episodio. Las operaciones
@@ -97,6 +128,7 @@ export class IndicacionMedicamentos implements OnInit, OnDestroy {
   private readonly servicio = inject(MedicamentoIndicacionService);
   private readonly catalogoService = inject(CatalogoService);
   private readonly authService = inject(AuthService);
+  private readonly propiedadRegistro = inject(PropiedadRegistroService);
   private readonly episodioActivo = inject(EpisodioActivoService);
   private readonly registrosEnfermeria = inject(RegistrosEnfermeriaService);
   private readonly cdr = inject(ChangeDetectorRef);
@@ -117,6 +149,11 @@ export class IndicacionMedicamentos implements OnInit, OnDestroy {
     return this.episodioActivo.esSoloLectura();
   }
 
+  /** Solo el autor del registro (o un rol global) puede editarlo, eliminarlo o cambiar su estado. */
+  puedeGestionar(usuarioId: number): boolean {
+    return !this.soloLectura && this.propiedadRegistro.puedeGestionar(usuarioId);
+  }
+
   /** Campos del formulario de la indicación. */
   medicamento = '';
   /** Medicamento no registrado escrito por el usuario. */
@@ -126,7 +163,9 @@ export class IndicacionMedicamentos implements OnInit, OnDestroy {
   readonly opcionOtroId = '__otro__';
   mostrandoOtroUnidad = false;
   creandoUnidad = false;
+  preparandoSelecciones = false;
   private unidadAnterior = '';
+  private readonly unidadOtro = viewChild<OpcionOtroComponent>('unidadOtro');
   frecuencia: number | null = null;
   duracionTipo: TipoDuracion | '' = '';
   duracionCantidad: number | null = null;
@@ -158,14 +197,17 @@ export class IndicacionMedicamentos implements OnInit, OnDestroy {
   /** Indicación cuyos datos están cargados en el formulario; null al capturar una nueva. */
   indicacionEnEdicion: number | null = null;
 
+  /** Valores originales de la indicación en edición, para deshabilitar el botón sin cambios. */
+  private edicionOriginal: FormularioMedicamentoOriginal | null = null;
+
   /** Indicaciones del episodio con el filtro elegido, ya traducidas a la vista. */
   indicaciones: IndicacionMedicamentoVista[] = [];
 
   /** Tarjeta cuyos registros de Enfermería están desplegados; null si ninguno. */
   registrosIndicacionAbierta: number | null = null;
 
-  /** Observación que se muestra al pasar el puntero por un registro. */
-  observacionPopup: { texto: string; x: number; y: number } | null = null;
+  /** Registro cuyos detalles están desplegados en la tabla; null si ninguno. */
+  detalleAbierto: number | null = null;
 
   /** Aplicaciones de Enfermería cargadas por indicación. */
   private readonly registrosPorIndicacion = new Map<number, AplicacionMedicamentoVista[]>();
@@ -253,6 +295,7 @@ export class IndicacionMedicamentos implements OnInit, OnDestroy {
       Number.isInteger(this.frecuencia) &&
       this.frecuencia > 0 &&
       this.observaciones.length <= 2000 &&
+      !this.preparandoSelecciones &&
       !this.guardando &&
       !this.confirmando
     );
@@ -261,6 +304,28 @@ export class IndicacionMedicamentos implements OnInit, OnDestroy {
   /** Indicaciones que muestra el listado; el backend ya aplica el filtro elegido. */
   get indicacionesFiltradas(): IndicacionMedicamentoVista[] {
     return this.indicaciones;
+  }
+
+  /** Texto del botón de guardar: «Guardar cambios» al corregir una indicación existente. */
+  get textoBotonGuardar(): string {
+    return this.indicacionEnEdicion === null ? 'Guardar' : 'Guardar cambios';
+  }
+
+  /** Verdadero si la indicación en edición tiene al menos un campo modificado. */
+  get hayCambiosEnEdicion(): boolean {
+    if (this.edicionOriginal === null) return true;
+
+    return (
+      (this.medicamentoElegido?.id ?? null) !== this.edicionOriginal.medicamentoElegidoId ||
+      this.medicamentoLibre !== this.edicionOriginal.medicamentoLibre ||
+      this.cantidad !== this.edicionOriginal.cantidad ||
+      this.unidadMedida !== this.edicionOriginal.unidadMedida ||
+      this.frecuencia !== this.edicionOriginal.frecuencia ||
+      this.duracionTipo !== this.edicionOriginal.duracionTipo ||
+      this.duracionCantidad !== this.edicionOriginal.duracionCantidad ||
+      this.fechaInicio !== this.edicionOriginal.fechaInicio ||
+      this.observaciones !== this.edicionOriginal.observaciones
+    );
   }
 
   /** Texto del listado cuando el filtro elegido no tiene indicaciones. */
@@ -381,41 +446,56 @@ export class IndicacionMedicamentos implements OnInit, OnDestroy {
     this.unidadMedida = valor;
   }
 
-  crearUnidad(datos: OpcionOtroValor): void {
-    if (this.creandoUnidad || !datos.abreviatura) return;
+  async crearUnidad(datos: OpcionOtroValor): Promise<boolean> {
+    if (this.creandoUnidad || !datos.abreviatura) return false;
 
     this.creandoUnidad = true;
-    this.catalogoService
-      .guardarUnidadMedida(datos.nombre, datos.abreviatura)
-      .pipe(
-        timeout(TIMEOUT_HTTP_MS),
-        finalize(() => {
-          this.creandoUnidad = false;
-          if (!this.destruido) this.cdr.markForCheck();
-        }),
-      )
-      .subscribe({
-        next: (creada) => {
-          if (this.destruido) return;
+    try {
+      const creada = await firstValueFrom(
+        this.catalogoService
+          .guardarUnidadMedida(datos.nombre, datos.abreviatura)
+          .pipe(timeout(TIMEOUT_HTTP_MS)),
+      );
 
-          const nombre = creada.nombre?.trim() || datos.nombre;
-          this.abreviaturasUnidad.set(nombre, datos.abreviatura ?? '');
-          this.unidadesMedida = this.combinarUnidades([...this.unidadesMedida, nombre]);
-          this.unidadMedida = nombre;
-          this.mostrandoOtroUnidad = false;
-          this.cdr.markForCheck();
-        },
-        error: (error) => {
-          if (this.destruido) return;
+      if (this.destruido) return false;
 
-          this.popUps.errorDesdeBackend(error, 'No se pudo crear la unidad de medida.');
-        },
-      });
+      const nombre = creada.nombre?.trim() || datos.nombre;
+      this.abreviaturasUnidad.set(nombre, datos.abreviatura ?? '');
+      this.unidadesMedida = this.combinarUnidades([...this.unidadesMedida, nombre]);
+      this.unidadMedida = nombre;
+      this.mostrandoOtroUnidad = false;
+      return true;
+    } catch (error) {
+      if (!this.destruido) {
+        this.popUps.errorDesdeBackend(error, 'No se pudo crear la unidad de medida.');
+      }
+      return false;
+    } finally {
+      this.creandoUnidad = false;
+      if (!this.destruido) this.cdr.markForCheck();
+    }
   }
 
   cancelarUnidad(): void {
     this.mostrandoOtroUnidad = false;
     this.unidadMedida = this.unidadAnterior;
+  }
+
+  private resolverUnidadPendiente(): Promise<boolean> {
+    if (!this.mostrandoOtroUnidad) {
+      return Promise.resolve(true);
+    }
+
+    return crearSeleccionesPendientes(
+      [
+        {
+          etiqueta: 'Unidad de medida',
+          componente: this.unidadOtro,
+          crear: (datos) => this.crearUnidad(datos),
+        },
+      ],
+      (mensaje) => this.popUps.formIncompleto(mensaje),
+    );
   }
 
   /** Une las unidades del catálogo con «Gotas», sin repetir nombres equivalentes. */
@@ -489,6 +569,7 @@ export class IndicacionMedicamentos implements OnInit, OnDestroy {
         error: (error) => {
           if (this.destruido) return;
 
+          this.errorCarga = true;
           this.indicaciones = [];
           this.mostrarError(error, 'No se pudieron cargar las indicaciones. Intente nuevamente.');
         },
@@ -499,6 +580,7 @@ export class IndicacionMedicamentos implements OnInit, OnDestroy {
   seleccionarFiltroIndicacion(filtro: FiltroIndicacion): void {
     this.filtroIndicacion = filtro;
     this.cerrarMenuIndicacion();
+    this.cerrarDetalle();
     this.registrosIndicacionAbierta = null;
 
     // La indicación en edición puede quedar fuera del listado que se va a cargar
@@ -640,7 +722,7 @@ export class IndicacionMedicamentos implements OnInit, OnDestroy {
 
   /** Despliega u oculta los registros de Enfermería de la indicación. */
   alternarRegistros(indicacion: IndicacionMedicamentoVista): void {
-    this.ocultarObservacion();
+    this.cerrarDetalle();
 
     if (this.registrosIndicacionAbierta === indicacion.id) {
       this.registrosIndicacionAbierta = null;
@@ -651,37 +733,14 @@ export class IndicacionMedicamentos implements OnInit, OnDestroy {
     this.cargarRegistros(indicacion.id);
   }
 
-  /** Muestra la observación del registro junto al puntero. */
-  mostrarObservacion(evento: MouseEvent, observacion: string | null | undefined): void {
-    const texto = observacion?.trim();
-    if (!texto) {
-      this.observacionPopup = null;
-      return;
-    }
-
-    this.observacionPopup = { texto, ...this.posicionObservacion(evento) };
+  /** Despliega u oculta la observación del registro. */
+  verDetalle(registro: AplicacionMedicamentoVista): void {
+    this.detalleAbierto = this.detalleAbierto === registro.id ? null : registro.id;
   }
 
-  /** Mantiene el popup junto al puntero mientras recorre la fila. */
-  moverObservacion(evento: MouseEvent): void {
-    if (!this.observacionPopup) return;
-
-    this.observacionPopup = { ...this.observacionPopup, ...this.posicionObservacion(evento) };
-  }
-
-  /** Oculta la observación al salir de la fila. */
-  ocultarObservacion(): void {
-    this.observacionPopup = null;
-  }
-
-  private posicionObservacion(evento: MouseEvent): { x: number; y: number } {
-    const margen = 14;
-    const ancho = 320;
-
-    return {
-      x: Math.min(evento.clientX + margen, Math.max(8, window.innerWidth - ancho - 8)),
-      y: evento.clientY + margen,
-    };
+  /** Cierra el detalle abierto del historial. */
+  cerrarDetalle(): void {
+    this.detalleAbierto = null;
   }
 
   /** Registros de Enfermería ya cargados de una indicación. */
@@ -751,6 +810,7 @@ export class IndicacionMedicamentos implements OnInit, OnDestroy {
     if (this.guardando || this.eliminando || this.cambiandoEstado) return;
 
     this.cerrarMenuIndicacion();
+    this.cerrarDetalle();
     this.indicacionEnEdicion = indicacion.id;
 
     if (indicacion.medicamentoLogId === null) {
@@ -773,10 +833,23 @@ export class IndicacionMedicamentos implements OnInit, OnDestroy {
     this.busquedaMedicamentoRealizada = false;
     this.medicamentosEncontrados = [];
     this.paginaMedicamentos = 1;
+
+    this.edicionOriginal = {
+      medicamentoElegidoId: this.medicamentoElegido?.id ?? null,
+      medicamentoLibre: this.medicamentoLibre,
+      cantidad: this.cantidad,
+      unidadMedida: this.unidadMedida,
+      frecuencia: this.frecuencia,
+      duracionTipo: this.duracionTipo,
+      duracionCantidad: this.duracionCantidad,
+      fechaInicio: this.fechaInicio,
+      observaciones: this.observaciones,
+    };
   }
 
   /** Deja el formulario listo para capturar una indicación nueva. */
   limpiarFormulario(): void {
+    this.cerrarDetalle();
     this.medicamento = '';
     this.medicamentoLibre = '';
     this.cantidad = null;
@@ -787,6 +860,7 @@ export class IndicacionMedicamentos implements OnInit, OnDestroy {
     this.fechaInicio = this.fechaHoraLocalActual();
     this.observaciones = '';
     this.indicacionEnEdicion = null;
+    this.edicionOriginal = null;
     this.cerrarResultadosMedicamento();
   }
 
@@ -835,6 +909,18 @@ export class IndicacionMedicamentos implements OnInit, OnDestroy {
 
       if (!confirmado || this.destruido) return;
     }
+
+    this.preparandoSelecciones = true;
+    this.cdr.markForCheck();
+    let listo = false;
+    try {
+      listo = await this.resolverUnidadPendiente();
+    } finally {
+      this.preparandoSelecciones = false;
+      this.cdr.markForCheck();
+    }
+
+    if (!listo || this.destruido) return;
 
     const cuerpo: MedicamentoIndicacionRequest = {
       medicamentoLogId: elegido?.id ?? null,
@@ -1083,6 +1169,7 @@ export class IndicacionMedicamentos implements OnInit, OnDestroy {
 
     return {
       id: respuesta.id,
+      usuarioId: respuesta.usuarioId,
       medicamentoLogId: respuesta.medicamentoLogId,
       nombre: respuesta.medicamento,
       medicamentoLibre: respuesta.medicamentoLibre ?? '',

@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { NgForm, NgModel } from '@angular/forms';
 import { TabSwitch } from '../../../shared/tab-switch/tab-switch';
+import { OpcionOtroComponent } from '../../../shared/opcion-otro/opcion-otro';
 import { PopUps } from '../../../shared/popUps/popUpsService';
 import { ServicioMedicamento } from './data/servicio-medicamento';
 import { MedicamentoLogFiltros, MedicamentoLogRequest, MedicamentoLogResponse } from './data/interfaz-medicamento';
@@ -16,6 +17,12 @@ describe('Medicamentos', () => {
   let fixture: ComponentFixture<Medicamentos>;
   const catalogos = {
     listar: vi.fn<(recurso: string) => Observable<Inter_base[]>>(() => of([])),
+    crear: vi.fn<(recurso: string, datos: Inter_base) => Observable<Inter_base>>(
+      (_recurso, datos) => of({ id: 9, nombre: datos.nombre }),
+    ),
+    guardarUnidadMedida: vi.fn<(nombre: string, abreviatura: string) => Observable<Inter_unidadMedida>>(
+      (nombre, abreviatura) => of({ id: 10, nombre, abreviatura }),
+    ),
   };
   const servicioMedicamento = {
     traerMedicamentoLog: vi.fn<(activo: boolean) => Observable<MedicamentoLogResponse[]>>(() => of([])),
@@ -29,11 +36,19 @@ describe('Medicamentos', () => {
     confirmarToast: vi.fn<() => Promise<boolean>>(),
     exito: vi.fn(),
     errorDesdeBackend: vi.fn(),
+    error: vi.fn(),
+    formIncompleto: vi.fn(),
   };
 
   beforeEach(async () => {
     catalogos.listar.mockReset();
     catalogos.listar.mockReturnValue(of([]));
+    catalogos.crear.mockReset();
+    catalogos.crear.mockImplementation((_recurso, datos) => of({ id: 9, nombre: datos.nombre }));
+    catalogos.guardarUnidadMedida.mockReset();
+    catalogos.guardarUnidadMedida.mockImplementation((nombre, abreviatura) =>
+      of({ id: 10, nombre, abreviatura }),
+    );
     servicioMedicamento.traerMedicamentoLog.mockReset();
     servicioMedicamento.traerMedicamentoLog.mockReturnValue(of([]));
     servicioMedicamento.buscarMedicamentoLog.mockReset();
@@ -49,6 +64,8 @@ describe('Medicamentos', () => {
     popUp.confirmarToast.mockReset();
     popUp.confirmarToast.mockResolvedValue(true);
     popUp.errorDesdeBackend.mockReset();
+    popUp.error.mockReset();
+    popUp.formIncompleto.mockReset();
     await TestBed.configureTestingModule({
       imports: [Medicamentos],
       providers: [
@@ -651,5 +668,146 @@ describe('Medicamentos', () => {
     await fixture.whenStable();
     expect(component.mostrarActivos).toBe(true);
     expect(servicioMedicamento.traerMedicamentoLog).toHaveBeenLastCalledWith(true);
+  });
+
+  const abrirOtroMedicamento = (idSelect: string, placeholder: string): OpcionOtroComponent => {
+    const select: HTMLSelectElement = fixture.nativeElement.querySelector(`#${idSelect}`);
+    const opcion = Array.from(select.options).find(
+      (opcion) => opcion.textContent?.trim() === 'Otro',
+    );
+    select.selectedIndex = opcion?.index ?? -1;
+    select.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+    const componentes = fixture.debugElement
+      .queryAll(By.css('app-opcion-otro'))
+      .map((elemento) => elemento.componentInstance as OpcionOtroComponent);
+    return componentes.find((componente) => componente.placeholder() === placeholder)!;
+  };
+
+  it('crea los catálogos pendientes en orden antes de guardar y usa sus ids', async () => {
+    catalogos.guardarUnidadMedida.mockReturnValue(
+      of({ id: 30, nombre: 'Miligramo', abreviatura: 'mg' }),
+    );
+    catalogos.crear.mockImplementation((recurso, datos) => {
+      const id = recurso === 'viaAdmin' ? 31 : recurso === 'presentacion' ? 32 : 33;
+      return of({ id, nombre: datos.nombre });
+    });
+    component.medicamento = {
+      nombre: 'Medicamento',
+      dosis: 5,
+      unidadMedidaId: 0,
+      marcaId: 0,
+      presentacionId: 0,
+      viaAdminId: 0,
+    };
+
+    const unidad = abrirOtroMedicamento('unidadMedidaMedicamento', 'Escribe la unidad');
+    unidad.nombre = 'Miligramo';
+    unidad.abreviatura = 'mg';
+    const via = abrirOtroMedicamento(
+      'viaAdministracionMedicamento',
+      'Escribe la vía de administración',
+    );
+    via.nombre = 'Oral';
+    const presentacion = abrirOtroMedicamento(
+      'presentacionMedicamento',
+      'Escribe la presentación',
+    );
+    presentacion.nombre = 'Tableta';
+    const marca = abrirOtroMedicamento('fabricanteMedicamento', 'Escribe el fabricante');
+    marca.nombre = 'Genfar';
+    fixture.detectChanges();
+
+    await component.guardarMedicamento();
+
+    expect(catalogos.guardarUnidadMedida).toHaveBeenCalledWith('Miligramo', 'mg');
+    expect(catalogos.crear.mock.calls.map((llamada) => llamada[0])).toEqual([
+      'viaAdmin',
+      'presentacion',
+      'marca',
+    ]);
+    expect(catalogos.guardarUnidadMedida.mock.invocationCallOrder[0]).toBeLessThan(
+      catalogos.crear.mock.invocationCallOrder[0],
+    );
+    expect(catalogos.crear.mock.invocationCallOrder[0]).toBeLessThan(
+      catalogos.crear.mock.invocationCallOrder[1],
+    );
+    expect(servicioMedicamento.crearMedicamentoLog).toHaveBeenCalledWith({
+      nombre: 'Medicamento',
+      dosis: 5,
+      unidadMedidaId: 30,
+      viaAdminId: 31,
+      presentacionId: 32,
+      marcaId: 33,
+    });
+  });
+
+  it('no guarda el medicamento si falla la creación de un catálogo pendiente', async () => {
+    catalogos.guardarUnidadMedida.mockReturnValueOnce(throwError(() => new Error('fallo')));
+    component.medicamento = {
+      nombre: 'Medicamento',
+      dosis: 5,
+      unidadMedidaId: 0,
+      marcaId: 1,
+      presentacionId: 1,
+      viaAdminId: 1,
+    };
+    const unidad = abrirOtroMedicamento('unidadMedidaMedicamento', 'Escribe la unidad');
+    unidad.nombre = 'Miligramo';
+    unidad.abreviatura = 'mg';
+    fixture.detectChanges();
+
+    await component.guardarMedicamento();
+
+    expect(servicioMedicamento.crearMedicamentoLog).not.toHaveBeenCalled();
+    expect(popUp.errorDesdeBackend).toHaveBeenCalled();
+  });
+
+  it('no guarda si el catálogo pendiente está vacío y deja el botón habilitado', async () => {
+    catalogos.listar.mockImplementation((recurso) => {
+      switch (recurso) {
+        case 'unidadMedida':
+          return of([{ id: 11, nombre: 'Miligramos', abreviatura: 'mg' }]);
+        case 'marca':
+          return of([{ id: 12, nombre: 'Fabricante' }]);
+        case 'presentacion':
+          return of([{ id: 13, nombre: 'Tableta' }]);
+        default:
+          return of([{ id: 14, nombre: 'Oral' }]);
+      }
+    });
+    component.llenarSelects();
+    await fixture.whenStable();
+
+    const nombre: HTMLInputElement =
+      fixture.nativeElement.querySelector('#nombreMedicamento');
+    nombre.value = 'Medicamento';
+    nombre.dispatchEvent(new Event('input'));
+    const dosis: HTMLInputElement =
+      fixture.nativeElement.querySelector('#concentracionMedicamento');
+    dosis.value = '5';
+    dosis.dispatchEvent(new Event('input'));
+    for (const id of [
+      'viaAdministracionMedicamento',
+      'presentacionMedicamento',
+      'fabricanteMedicamento',
+    ]) {
+      const select: HTMLSelectElement = fixture.nativeElement.querySelector(`#${id}`);
+      select.selectedIndex = 1;
+      select.dispatchEvent(new Event('change'));
+    }
+    abrirOtroMedicamento('unidadMedidaMedicamento', 'Escribe la unidad');
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const guardar: HTMLButtonElement = fixture.nativeElement.querySelector('.btn._guardar');
+    expect(guardar.disabled).toBe(false);
+
+    await component.guardarMedicamento();
+
+    expect(servicioMedicamento.crearMedicamentoLog).not.toHaveBeenCalled();
+    expect(popUp.formIncompleto).toHaveBeenCalledWith(
+      'Completa el valor de «Unidad de medida» o cancélalo antes de guardar.',
+    );
   });
 });

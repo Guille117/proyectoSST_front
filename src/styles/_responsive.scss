@@ -1,0 +1,335 @@
+/* ==================== CAPA RESPONSIVA COMPARTIDA ==================== */
+/* Escala de ruptura del proyecto:
+   1280px  escritorio compacto
+   1100px  tablet horizontal / portátil pequeño
+   900px   tablet vertical (fin del riel lateral)
+   640px   teléfono
+   420px   teléfono estrecho
+   Las reglas se declaran después de los estilos base para conservar intacto el escritorio. */
+
+:root {
+  --touchTarget: 44px;
+  --espacioAreaTrabajo: 35px;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* El alto del área bajo la barra superior usa dvh cuando el navegador lo admite para evitar
+   saltos con la barra de direcciones del móvil. */
+@supports (height: 100dvh) {
+  :root {
+    --heightNavBar: calc(100dvh - var(--heightTopBar));
+  }
+}
+
+@media (max-width: 1100px) {
+  :root {
+    --espacioAreaTrabajo: 24px;
+  }
+}
+
+@media (max-width: 900px) {
+  :root {
+    --heightTopBar: 58px;
+    --heightNavBar: calc(100vh - var(--heightTopBar));
+    --widthNavBar: 0px;
+    --espacioAreaTrabajo: 16px;
+  }
+
+  @supports (height: 100dvh) {
+    :root {
+      --heightNavBar: calc(100dvh - var(--heightTopBar));
+    }
+  }
+
+  .areaTrabajo {
+    padding: var(--espacioAreaTrabajo);
+  }
+}
+
+@media (max-width: 640px) {
+  :root {
+    --espacioAreaTrabajo: 12px;
+  }
+
+  .areaTrabajo {
+    padding: var(--espacioAreaTrabajo);
+  }
+}
+
+/* ==================== ÁREAS DE TRABAJO ==================== */
+/* Base compartida para las pantallas que todavía usan el flex histórico. Las pantallas con grid
+   propio conservan su distribución y colapsan en sus archivos. */
+@media (max-width: 1100px) {
+  .trabajoArea {
+    gap: 28px;
+    padding: 24px;
+  }
+}
+
+@media (max-width: 900px) {
+  .trabajoArea {
+    flex-direction: column;
+    gap: 20px;
+    padding: 16px;
+  }
+
+  .trabajoArea > * {
+    flex: 0 0 auto;
+    width: 100%;
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 640px) {
+  .trabajoArea {
+    padding: 0;
+    border-radius: 20px;
+  }
+}
+
+/* ==================== FORMULARIOS ==================== */
+@media (max-width: 900px) {
+  .formulario,
+  .formulario-container {
+    height: auto;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .formulario-container > form,
+  .formulario > form {
+    overflow: visible;
+  }
+}
+
+@media (max-width: 640px) {
+  .formulario,
+  .f_formulario {
+    border-radius: 16px;
+  }
+
+  .titulo-formulario,
+  .f_header {
+    padding: 12px 16px;
+    border-radius: 16px 16px 0 0;
+    font-size: 1rem;
+  }
+
+  .formulario-container > form,
+  .formulario > form,
+  .f_body {
+    padding: 12px 14px;
+  }
+
+  .f_footer {
+    flex-wrap: wrap;
+    justify-content: stretch;
+    gap: 8px;
+    padding: 10px 14px;
+  }
+
+  .f_footer > * {
+    flex: 1 1 140px;
+  }
+}
+
+/* ==================== BOTONES Y ACCIONES ==================== */
+@media (max-width: 640px) {
+  .btn {
+    height: auto;
+    min-height: var(--touchTarget);
+    margin-bottom: 0;
+    padding: 10px 14px;
+    font-size: 1rem;
+    white-space: normal;
+  }
+
+  .acciones-formulario,
+  .botones {
+    justify-content: stretch;
+    flex-wrap: wrap;
+  }
+
+  .acciones-formulario > *,
+  .botones > * {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .btn,
+  .iconEditar,
+  .iconEliminar,
+  button,
+  [role='button'] {
+    min-height: var(--touchTarget);
+  }
+}
+
+/* ==================== BUSCADOR COMPARTIDO ==================== */
+@media (max-width: 640px) {
+  .buscador {
+    flex-wrap: wrap;
+    height: auto;
+    padding: 6px;
+  }
+
+  .buscador .selector,
+  .buscador .inputB {
+    min-height: var(--touchTarget);
+    height: auto;
+  }
+
+  .buscador .selector {
+    flex: 1 1 100%;
+    width: 100%;
+    border-right: 0;
+    border-bottom: 1px solid rgba(154, 152, 152, 0.601);
+  }
+
+  .buscador .inputB {
+    flex: 1 1 120px;
+    width: auto;
+  }
+
+  .buscador .btnLupa {
+    flex: 0 0 48px;
+    width: 48px;
+    min-height: var(--touchTarget);
+  }
+}
+
+/* ==================== SUBMENÚS DE MÓDULO ==================== */
+@media (max-width: 900px) {
+  .subMenuNav {
+    flex-wrap: nowrap;
+    gap: 0.25rem;
+    margin: 14px 0;
+    font-size: 1rem;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: thin;
+  }
+
+  .subMenuNav .option {
+    flex: 0 0 auto;
+    padding: 0 16px 8px;
+    white-space: nowrap;
+  }
+
+  .principal > .subMenuNav {
+    margin-top: -4px;
+  }
+}
+
+@media (max-width: 640px) {
+  .subMenuNav .option {
+    display: inline-flex;
+    align-items: center;
+    min-height: 40px;
+    padding: 0 12px 8px;
+  }
+}
+
+/* ==================== TABLAS ==================== */
+/* Las tablas conservan todos sus datos: el contenedor desplaza en horizontal y las acciones
+   permanecen visibles a la derecha. */
+@media (max-width: 900px) {
+  .tabla-container,
+  .table-container,
+  .tabla-detalle,
+  .resumen-tabla-container,
+  .tabla-scroll {
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+  }
+
+  .tabla-container > table,
+  .table-container > table,
+  .tabla-scroll > table {
+    min-width: 560px;
+  }
+
+  /* La tabla no debe interceptar el desplazamiento del contenedor ni romper las celdas fijas. */
+  table {
+    overflow: visible;
+  }
+
+  thead tr th {
+    font-size: 1rem;
+  }
+
+  tbody tr td {
+    font-size: 1rem;
+    padding: 10px 12px;
+  }
+
+  .celda-acciones {
+    position: sticky;
+    right: 0;
+    z-index: 1;
+    background: #fff;
+    box-shadow: -8px 0 10px -10px rgba(15, 23, 42, 0.45);
+  }
+
+  thead tr th.celda-acciones {
+    background: #f8fafc;
+  }
+
+  table tbody tr.selected-row td.celda-acciones {
+    background: #edf5ff;
+  }
+
+  .aplicaciones-tabla_acciones {
+    position: sticky;
+    right: 0;
+    z-index: 1;
+    background: #fff;
+    box-shadow: -8px 0 10px -10px rgba(15, 23, 42, 0.45);
+  }
+
+  thead .aplicaciones-tabla_acciones {
+    background: #f8fafc;
+  }
+}
+
+@media (max-width: 640px) {
+  .tabla-container > table,
+  .table-container > table,
+  .tabla-scroll > table {
+    min-width: 620px;
+  }
+
+  thead tr th,
+  tbody tr td {
+    padding: 10px;
+  }
+}
+
+/* ==================== TARJETAS ==================== */
+@media (max-width: 640px) {
+  .tarjeta {
+    grid-template-columns: 38px minmax(0, 1fr);
+    gap: 10px;
+    padding: 12px;
+  }
+
+  .tarjeta_icono {
+    font-size: 18px;
+  }
+
+  .tarjeta_titulo {
+    font-size: 1rem;
+  }
+
+  .tarjeta_descripcion {
+    font-size: 0.9rem;
+  }
+}

@@ -6,12 +6,14 @@ import {
   DestroyRef,
   OnInit,
   inject,
+  viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule, NgForm } from '@angular/forms';
 import { finalize, firstValueFrom, timeout } from 'rxjs';
 import { CampoValidado } from '../../../shared/campo-validado/campo-validado';
 import { OpcionOtroComponent, OpcionOtroValor } from '../../../shared/opcion-otro/opcion-otro';
+import { crearSeleccionesPendientes } from '../../../shared/opcion-otro/crear-seleccion-pendiente';
 import { Paginacion } from '../../../shared/paginacion/paginacion';
 import { PopUps } from '../../../shared/popUps/popUpsService';
 import { TabSwitch } from '../../../shared/tab-switch/tab-switch';
@@ -47,7 +49,9 @@ export class Insumos implements OnInit {
   readonly opcionOtroId = -1;
   mostrandoOtroMarca = false;
   creandoMarca = false;
+  preparandoSelecciones = false;
   private marcaAnterior = 0;
+  private readonly marcaOtro = viewChild<OpcionOtroComponent>('marcaOtro');
 
   private llenarSelects(): void {
     this.servicioCatalogos
@@ -76,31 +80,33 @@ export class Insumos implements OnInit {
     this.insumo.marcaId = valor;
   }
 
-  crearMarca(datos: OpcionOtroValor): void {
-    if (this.creandoMarca) return;
+  async crearMarca(datos: OpcionOtroValor): Promise<boolean> {
+    if (this.creandoMarca) return false;
 
     this.creandoMarca = true;
-    this.servicioCatalogos
-      .crear<Inter_base>('marca', { nombre: datos.nombre })
-      .pipe(
-        timeout(5000),
-        finalize(() => {
-          this.creandoMarca = false;
-          this.cdr.markForCheck();
-        }),
-        takeUntilDestroyed(this.destroyRef),
-      )
-      .subscribe({
-        next: (creada) => {
-          if (creada.id == null) return;
+    try {
+      const creada = await firstValueFrom(
+        this.servicioCatalogos
+          .crear<Inter_base>('marca', { nombre: datos.nombre })
+          .pipe(timeout(5000), takeUntilDestroyed(this.destroyRef)),
+      );
 
-          this.fabricantes = [...this.fabricantes, creada];
-          this.insumo.marcaId = creada.id;
-          this.mostrandoOtroMarca = false;
-          this.cdr.markForCheck();
-        },
-        error: (error) => this.popUp.errorDesdeBackend(error, 'No se pudo crear el fabricante.'),
-      });
+      if (creada.id == null) {
+        this.popUp.error('No se pudo crear el fabricante.');
+        return false;
+      }
+
+      this.fabricantes = [...this.fabricantes, creada];
+      this.insumo.marcaId = creada.id;
+      this.mostrandoOtroMarca = false;
+      return true;
+    } catch (error) {
+      this.popUp.errorDesdeBackend(error, 'No se pudo crear el fabricante.');
+      return false;
+    } finally {
+      this.creandoMarca = false;
+      this.cdr.markForCheck();
+    }
   }
 
   cancelarMarca(): void {
@@ -108,12 +114,42 @@ export class Insumos implements OnInit {
     this.insumo.marcaId = this.marcaAnterior;
   }
 
+  private resolverMarcaPendiente(): Promise<boolean> {
+    if (!this.mostrandoOtroMarca) {
+      return Promise.resolve(true);
+    }
+
+    return crearSeleccionesPendientes(
+      [
+        {
+          etiqueta: 'Fabricante',
+          componente: this.marcaOtro,
+          crear: (datos) => this.crearMarca(datos),
+        },
+      ],
+      (mensaje) => this.popUp.formIncompleto(mensaje),
+    );
+  }
+
   // ==================== GUARDAR ====================
   insumo = this.crearInsumoVacio();
   procesando = false;
 
   async guardarInsumo(formulario?: NgForm): Promise<void> {
-    if (this.procesando || !this.formularioValido(formulario)) return;
+    if (this.procesando || this.preparandoSelecciones || !this.formularioValido(formulario)) {
+      return;
+    }
+
+    this.preparandoSelecciones = true;
+    this.cdr.markForCheck();
+    try {
+      if (!(await this.resolverMarcaPendiente())) {
+        return;
+      }
+    } finally {
+      this.preparandoSelecciones = false;
+      this.cdr.markForCheck();
+    }
 
     this.procesando = true;
     this.cdr.markForCheck();
@@ -252,6 +288,7 @@ export class Insumos implements OnInit {
   async actualizarInsumo(formulario?: NgForm): Promise<void> {
     if (
       this.procesando ||
+      this.preparandoSelecciones ||
       !this.mostrarActivos ||
       !this.actualizar ||
       !this.formularioValido(formulario) ||
@@ -262,7 +299,6 @@ export class Insumos implements OnInit {
     }
 
     const id = this.idActualizar;
-    const insumo = { ...this.insumo };
     this.procesando = true;
     this.cdr.markForCheck();
     let solicitudIniciada = false;
@@ -274,6 +310,17 @@ export class Insumos implements OnInit {
         return;
       }
 
+      this.preparandoSelecciones = true;
+      let listo = false;
+      try {
+        listo = await this.resolverMarcaPendiente();
+      } finally {
+        this.preparandoSelecciones = false;
+        this.cdr.markForCheck();
+      }
+      if (!listo) return;
+
+      const insumo = { ...this.insumo };
       solicitudIniciada = true;
       this.servicioInsumos
         .actualizarInsumo(id, insumo)
@@ -298,6 +345,7 @@ export class Insumos implements OnInit {
     } catch (err) {
       this.popUp.errorDesdeBackend(err, 'Error al actualizar el insumo.');
     } finally {
+      this.preparandoSelecciones = false;
       if (!solicitudIniciada) {
         this.procesando = false;
         this.cdr.markForCheck();
@@ -411,6 +459,6 @@ export class Insumos implements OnInit {
   formularioValido(formulario?: NgForm): boolean {
     return (!formulario || !formulario.invalid)
       && this.insumo.nombre.trim().length > 0
-      && this.insumo.marcaId > 0;
+      && (this.insumo.marcaId > 0 || this.mostrandoOtroMarca);
   }
 }

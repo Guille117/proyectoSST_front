@@ -1,6 +1,8 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { Observable, TimeoutError, of, throwError } from 'rxjs';
 import { ModalService } from '../../../../modal-principal/modal-service';
+import { OpcionOtroComponent } from '../../../../shared/opcion-otro/opcion-otro';
 import { PopUps } from '../../../../shared/popUps/popUpsService';
 import { AuthService } from '../../../Auth/data/auth-service';
 import { CatalogoService } from '../../../Catalogos/data/serviceCatalogo';
@@ -17,6 +19,7 @@ describe('ModalBajaLote', () => {
 
   const catalogoService = {
     listar: vi.fn(() => of([{ id: 1, nombre: 'Producto dañado' }])),
+    crear: vi.fn(() => of({ id: 99, nombre: 'Nuevo motivo' })),
   };
   const servicioInventario = {
     registrarBaja: vi.fn<
@@ -56,6 +59,8 @@ describe('ModalBajaLote', () => {
   beforeEach(async () => {
     catalogoService.listar.mockReset();
     catalogoService.listar.mockReturnValue(of([{ id: 1, nombre: 'Producto dañado' }]));
+    catalogoService.crear.mockReset();
+    catalogoService.crear.mockReturnValue(of({ id: 99, nombre: 'Nuevo motivo' }));
     servicioInventario.registrarBaja.mockReset();
     servicioInventario.registrarBaja.mockReturnValue(of({} as BajaLoteResponse));
     authService.currentUser.mockReset();
@@ -195,6 +200,71 @@ describe('ModalBajaLote', () => {
 
     expect(popUps.error).toHaveBeenCalledWith(
       'Error de comunicación. El servidor no respondió dentro del tiempo esperado.',
+    );
+  });
+
+  const abrirOtroMotivo = (): OpcionOtroComponent => {
+    fixture.componentInstance.alElegirMotivo(fixture.componentInstance.opcionOtroId);
+    fixture.componentRef.changeDetectorRef.markForCheck();
+    fixture.detectChanges();
+    return fixture.debugElement.query(By.css('app-opcion-otro'))
+      .componentInstance as OpcionOtroComponent;
+  };
+
+  it('crea el motivo pendiente antes de registrar la baja y usa su id', async () => {
+    catalogoService.crear.mockReturnValue(of({ id: 99, nombre: 'Nuevo motivo' }));
+    fixture.componentRef.setInput('lote', lote);
+    fixture.detectChanges();
+    fixture.componentInstance.cantidad = 5;
+    const otro = abrirOtroMotivo();
+    otro.nombre = 'Nuevo motivo';
+    fixture.detectChanges();
+
+    await fixture.componentInstance.confirmar();
+
+    expect(catalogoService.crear).toHaveBeenCalledWith('motivoBaja', {
+      nombre: 'Nuevo motivo',
+    });
+    expect(catalogoService.crear.mock.invocationCallOrder[0]).toBeLessThan(
+      servicioInventario.registrarBaja.mock.invocationCallOrder[0],
+    );
+    expect(servicioInventario.registrarBaja).toHaveBeenCalledWith({
+      idLote: 1,
+      cantidad: 5,
+      idMotivoBaja: 99,
+      observacion: '',
+      idUsuario: 2,
+    });
+  });
+
+  it('no registra la baja si falla la creación del motivo pendiente', async () => {
+    catalogoService.crear.mockReturnValueOnce(throwError(() => new Error('fallo')));
+    fixture.componentRef.setInput('lote', lote);
+    fixture.detectChanges();
+    fixture.componentInstance.cantidad = 5;
+    const otro = abrirOtroMotivo();
+    otro.nombre = 'Nuevo motivo';
+    fixture.detectChanges();
+
+    await fixture.componentInstance.confirmar();
+
+    expect(servicioInventario.registrarBaja).not.toHaveBeenCalled();
+    expect(popUps.errorDesdeBackend).toHaveBeenCalled();
+  });
+
+  it('no registra la baja si el motivo pendiente está vacío', async () => {
+    fixture.componentRef.setInput('lote', lote);
+    fixture.detectChanges();
+    fixture.componentInstance.cantidad = 5;
+    abrirOtroMotivo();
+
+    expect(fixture.componentInstance.formularioValido()).toBe(true);
+
+    await fixture.componentInstance.confirmar();
+
+    expect(servicioInventario.registrarBaja).not.toHaveBeenCalled();
+    expect(popUps.formIncompleto).toHaveBeenCalledWith(
+      'Completa el valor de «Motivo de baja» o cancélalo antes de guardar.',
     );
   });
 });

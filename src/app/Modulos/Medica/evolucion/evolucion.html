@@ -27,6 +27,37 @@
         placeholder="Documentar decisiones clínicas y plan de seguimiento..."
       ></textarea>
 
+      <!-- Estado clínico del episodio: select del catálogo compartido, con opción "Otro" -->
+      <div class="evolucion-estado-clinico">
+        <label class="evolucion-etiqueta" for="estadoClinico">Estado clínico</label>
+
+        @if (mostrandoOtroEstado) {
+          <app-opcion-otro
+            #estadoOtro
+            [placeholder]="'Escribe el estado clínico'"
+            [creando]="creandoEstado"
+            (confirmar)="crearEstadoClinico($event)"
+            (cancelar)="cancelarEstadoClinico()"
+          ></app-opcion-otro>
+        } @else {
+          <select
+            class="evolucion-select"
+            id="estadoClinico"
+            name="estadoClinico"
+            [disabled]="soloLectura"
+            [(ngModel)]="estadoClinicoValor"
+            (ngModelChange)="alElegirEstadoClinico($event)"
+          >
+            <option value="" disabled>Seleccione el estado clínico</option>
+
+            @for (estado of estadosClinico; track estado.id) {
+              <option [value]="estado.id">{{ estado.nombre }}</option>
+            }
+            <option [value]="opcionOtroId">Otro</option>
+          </select>
+        }
+      </div>
+
       <!-- Acciones del registro: descartar lo capturado o guardar la evolución -->
       <div class="acciones-formulario evolucion-acciones">
         <button
@@ -95,7 +126,7 @@
               <span class="evolucion-titulo">Evolución clínica</span>
 
               <!-- Menú de opciones de la tarjeta: mismo despliegue del listado de indicaciones -->
-              @if (!soloLectura) {
+              @if (puedeGestionar(evolucion.usuarioId)) {
               <button
                 type="button"
                 class="evolucion-menu-trigger"
@@ -127,7 +158,7 @@
             </footer>
 
             <!-- Menú de opciones: se dibuja al final de la tarjeta y flota sobre ella -->
-            @if (menuEvolucionAbierta === evolucion.id && !soloLectura) {
+            @if (menuEvolucionAbierta === evolucion.id && puedeGestionar(evolucion.usuarioId)) {
               <div
                 class="evolucion-menu"
                 role="menu"
@@ -179,7 +210,5 @@
     [plegable]="true"
     [abierto]="pacienteAbierto"
     (abiertoCambia)="cambiarFichaPaciente($event)"
-    [cuerpoVisible]="datosPacienteVisibles"
-    (cuerpoVisibleCambia)="datosPacienteVisibles = $event"
   ></app-datos-paciente>
 </div>

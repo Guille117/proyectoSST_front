@@ -15,6 +15,7 @@ describe('HistoriaClinicaService', () => {
     descripcion: 'Paciente estable',
     episodioId: 1,
     usuarioId: 2,
+    estadoClinicoId: null,
   };
 
   beforeEach(() => {

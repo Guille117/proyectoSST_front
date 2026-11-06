@@ -1,0 +1,246 @@
+/* ==================== HISTORIAL DE REGISTROS ==================== */
+/* Estilos compartidos por las tablas de registros de Enfermería que se muestran dentro de las
+   tarjetas de indicaciones médicas. */
+
+.aplicaciones-historial {
+  margin-top: 10px;
+}
+
+.aplicaciones-tabla {
+  width: 100%;
+  border: 1px solid #e4ebf5;
+  border-spacing: 0;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: none;
+  table-layout: fixed;
+  overflow: hidden;
+}
+
+.aplicaciones-tabla th,
+.aplicaciones-tabla td {
+  padding: 8px;
+  border-bottom: 1px solid #eef2f8;
+  color: #1f2f45;
+  font-size: 1rem;
+  font-weight: 400;
+  line-height: 1.35;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
+.aplicaciones-tabla th {
+  background: #f8fafc;
+  color: #475569;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.aplicaciones-tabla tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.aplicaciones-tabla th + th,
+.aplicaciones-tabla td + td {
+  border-left: 1px solid #eef2f8;
+}
+
+.aplicaciones-tabla_numero {
+  width: 48px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.aplicaciones-tabla_fecha {
+  width: 22%;
+}
+
+.aplicaciones-tabla_usuario {
+  width: 18%;
+}
+
+.aplicaciones-tabla_acciones {
+  width: 120px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.aplicaciones-tabla_estado {
+  width: 60px;
+  text-align: center;
+}
+
+.aplicaciones-tabla_estado i {
+  font-size: 1.1rem;
+}
+
+.aplicaciones-tabla_estado .bi-check-circle-fill {
+  color: #15803d;
+}
+
+.aplicaciones-tabla_estado .bi-x-circle-fill {
+  color: #b42318;
+}
+
+/* El historial no se comporta como un control clicable */
+.aplicaciones-historial,
+.aplicaciones-tabla {
+  cursor: default;
+}
+
+/* Celdas de las aplicaciones que todavía no tienen registro */
+.aplicaciones-tabla_pendiente {
+  color: #93a3bb;
+  font-weight: 600;
+  text-align: center;
+}
+
+/* Acciones de cada aplicación: editar y eliminar */
+.aplicaciones-acciones {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.aplicaciones-accion {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  place-items: center;
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 6px rgba(26, 37, 53, 0.12);
+  font-size: 14px;
+  cursor: pointer;
+  transition:
+    color 0.2s ease,
+    background-color 0.2s ease,
+    transform 0.2s ease;
+
+  &:hover {
+    color: #fff;
+    transform: translateY(-1px);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--azulSecundario);
+    outline-offset: 2px;
+  }
+}
+
+.aplicaciones-accion--editar {
+  color: #f59e0b;
+
+  &:hover {
+    background: #f59e0b;
+  }
+
+  &:focus-visible {
+    outline-color: #f59e0b;
+  }
+}
+
+.aplicaciones-accion--eliminar {
+  color: #ed1a0f;
+
+  &:hover {
+    background: #ed1a0f;
+  }
+
+  &:focus-visible {
+    outline-color: #ed1a0f;
+  }
+}
+
+.aplicaciones-accion--resultados {
+  color: var(--azulSecundario);
+
+  &:hover {
+    background: var(--azulSecundario);
+  }
+
+  &:focus-visible {
+    outline-color: var(--azulSecundario);
+  }
+}
+
+/* Fila desplegable con los resultados del control */
+.aplicaciones-tabla tbody tr.aplicaciones-fila--resultados > td {
+  background: #eef6ff;
+  border-bottom-color: #d7e7fb;
+}
+
+.aplicaciones-tabla tbody tr.aplicaciones-fila--resultados > td:first-child {
+  box-shadow: inset 3px 0 0 var(--azulSecundario);
+}
+
+.aplicaciones-resultados > td {
+  padding: 0;
+  background: #f8fbff;
+  border-left: 3px solid var(--azulSecundario);
+}
+
+.resultado-control {
+  padding: 0.7rem 0.85rem 0.8rem;
+  border-top: 1px dashed #cfe2ff;
+}
+
+.resultado-control_observacion {
+  text-align: left;
+}
+
+.resultado-control_observacion-etiqueta {
+  display: block;
+  margin-bottom: 4px;
+  color: #344054;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.resultado-control_observacion p {
+  margin: 0;
+  color: #101828;
+  font-size: 1rem;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.resultado-control_estado {
+  margin: 0;
+  color: #5b6b85;
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.resultado-control_grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+  gap: 0.5rem 1rem;
+  justify-content: center;
+  margin: 0;
+  text-align: center;
+
+  div {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  dt {
+    color: #344054;
+    font-size: 0.9rem;
+    font-weight: 700;
+  }
+
+  dd {
+    margin: 0;
+    color: #101828;
+    font-size: 1rem;
+    overflow-wrap: anywhere;
+  }
+}

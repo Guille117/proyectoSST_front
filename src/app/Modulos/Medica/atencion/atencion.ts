@@ -50,6 +50,8 @@ interface PacienteAtencionVista {
   ubicacion: string;
   diagnostico: string;
   fechaIngreso: string;
+  /** Nombre del estado clínico vigente del episodio, si lo tiene. */
+  estadoClinicoNombre: string | null;
   /** El paciente viene del listado de altas recientes y su episodio ya está cerrado. */
   esAlta: boolean;
   /** Datos del egreso cuando el paciente viene del listado de altas recientes. */
@@ -495,14 +497,14 @@ export class Atencion implements OnInit, OnDestroy {
         );
         this.cdr.detectChanges();
       },
-      error: (error) => {
-        if (this.destruido || this.pacienteSeleccionado?.pacienteId !== pacienteId) return;
+        error: (error) => {
+          if (this.destruido || this.pacienteSeleccionado?.pacienteId !== pacienteId) return;
 
-        console.error('Error al cargar el detalle del paciente', error);
-        this.cargandoDetalle = false;
-        this.errorDetalle = this.mensajeError(error, 'No se pudo cargar el detalle del paciente.');
-        this.cdr.detectChanges();
-      },
+          console.error('Error al cargar el detalle del paciente', error);
+          this.cargandoDetalle = false;
+          this.errorDetalle = this.mensajeError(error, 'No se pudo cargar el detalle del paciente.');
+          this.cdr.detectChanges();
+        },
     });
   }
 
@@ -531,14 +533,14 @@ export class Atencion implements OnInit, OnDestroy {
         this.cargandoSignos = false;
         this.cdr.detectChanges();
       },
-      error: (error) => {
-        if (this.destruido) return;
+        error: (error) => {
+          if (this.destruido) return;
 
-        console.error('Error al cargar los signos vitales', error);
-        this.cargandoSignos = false;
-        this.errorSignos = this.mensajeError(error, 'No se pudieron cargar los signos vitales.');
-        this.cdr.detectChanges();
-      },
+          console.error('Error al cargar los signos vitales', error);
+          this.cargandoSignos = false;
+          this.errorSignos = this.mensajeError(error, 'No se pudieron cargar los signos vitales.');
+          this.cdr.detectChanges();
+        },
     });
   }
 
@@ -614,6 +616,7 @@ export class Atencion implements OnInit, OnDestroy {
       ubicacion: '',
       diagnostico: alta.diagnosticoEgreso,
       fechaIngreso: this.formatearFecha(fecha),
+      estadoClinicoNombre: null,
       esAlta: true,
       egreso: {
         tipoAlta: alta.tipoAlta,
@@ -658,6 +661,7 @@ export class Atencion implements OnInit, OnDestroy {
       diagnostico: '',
       tipoAtencion: paciente.tipoTratamiento,
       esAlta: false,
+      estadoClinicoNombre: paciente.estadoClinicoNombre ?? null,
       egreso: null,
       ...detalle,
     };

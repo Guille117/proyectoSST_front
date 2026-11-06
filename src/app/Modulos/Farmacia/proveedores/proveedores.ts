@@ -49,6 +49,7 @@ export class Proveedores implements OnInit, OnDestroy {
   readonly nombrePattern = /\S/;
   readonly telefonoPattern = /^[0-9]{8}$/;
   readonly emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  readonly nitPattern = /^(?:CF|\d{8}|\d{7,8}-[0-9Kk])$/i;
 
   get operacionPendiente(): boolean {
     return this.guardando || this.cambiandoEstado;
@@ -306,9 +307,16 @@ export class Proveedores implements OnInit, OnDestroy {
     return valorFiltrado;
   }
 
+  filtrarNit(event: Event): string {
+    const input = event.target as HTMLInputElement;
+    const valorFiltrado = input.value.replace(/[^0-9CFcf-]/g, '').slice(0, 10);
+    input.value = valorFiltrado;
+    return valorFiltrado;
+  }
+
   esNitValido(): boolean {
     const nit = this.proveedor.nit ?? '';
-    const nitRegex = /^(?:CF|[0-9]{7,8}-[0-9Kk])$/i;
+    const nitRegex = /^(?:CF|\d{8}|\d{7,8}-[0-9Kk])$/i;
     const nitValido = !nit.trim() || nitRegex.test(nit.trim());
     return nitValido;
   }
@@ -328,7 +336,7 @@ export class Proveedores implements OnInit, OnDestroy {
     this.popUps.error(
       this.esNitValido()
         ? 'Revise los campos del formulario.'
-        : 'NIT inválido. Use CF o 7 u 8 dígitos, un guion y un dígito o K.',
+        : 'NIT inválido. Use CF, 8 dígitos, o 7 u 8 dígitos con guion y verificador.',
     );
     return false;
   }

@@ -159,4 +159,34 @@ app-tab-switch:focus-visible {
   .buscador-container {
     flex-basis: 100%;
   }
+
+  .tabla-container > .table {
+    min-width: 640px;
+  }
+}
+
+@media (max-width: 640px) {
+  .trabajoArea {
+    gap: 20px;
+    padding: 0;
+  }
+
+  .seccionSuperior {
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .buscador-container,
+  .miniSub-container {
+    flex-basis: 100%;
+    height: auto;
+  }
+
+  .botones {
+    flex-wrap: wrap;
+  }
+
+  .botones > * {
+    flex: 1 1 auto;
+  }
 }

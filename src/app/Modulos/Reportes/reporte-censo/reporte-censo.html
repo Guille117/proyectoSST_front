@@ -1,0 +1,38 @@
+<div class="reporte areaTrabajo-container">
+  <div class="reporte-encabezado">
+    <h2 class="reporte-titulo">Censo de camas por área</h2>
+    <div class="filtros">
+      <button type="button" class="btn" (click)="exportarPdf()">PDF</button>
+      <button type="button" class="btn" (click)="exportarExcel()">Excel</button>
+    </div>
+  </div>
+
+  @if (cargando) {
+    <p class="reporte-vacio">Cargando reporte...</p>
+  } @else {
+    <div class="table-container">
+      <table class="table">
+        <thead>
+          <tr>
+            <th class="celda_izquierda">Área</th>
+            <th class="celda_izquierda">Estado</th>
+            <th class="celda_centrada">Cantidad</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (c of datos; track $index) {
+            <tr>
+              <td class="celda_izquierda">{{ c.area }}</td>
+              <td class="celda_izquierda">{{ c.estado }}</td>
+              <td class="celda_centrada">{{ c.cantidad }}</td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="3" class="celda_centrada">Sin datos.</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>

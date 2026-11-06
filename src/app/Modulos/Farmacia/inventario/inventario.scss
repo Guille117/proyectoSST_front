@@ -235,5 +235,40 @@ app-tab-switch {
 .table-container {
     margin-top: 10px;
     width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+}
+
+.table-container > .table {
+    min-width: 760px;
+}
+
+@media (max-width: 900px) {
+    .seccionSuperior {
+        gap: 12px;
+        margin-bottom: 16px;
+    }
+
+    .buscador-container {
+        flex-basis: 100%;
+        height: auto;
+    }
+
+    .estados-container {
+        width: 100%;
+    }
+}
+
+@media (max-width: 640px) {
+    .table-container > .table {
+        min-width: 700px;
+    }
+
+    .estado-chip {
+        min-height: var(--touchTarget, 44px);
+        font-size: 1rem;
+    }
 }
 

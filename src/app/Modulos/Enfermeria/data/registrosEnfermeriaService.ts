@@ -6,6 +6,7 @@ import { TIMEOUT_HTTP_MS } from '../../Medica/evaluacion/data/constantes-clinica
 import {
   AplicacionMedicamentoRequest,
   AplicacionMedicamentoResponse,
+  DisponibilidadMedicamentoResponse,
   EjecucionCuidadoRequest,
   EjecucionCuidadoResponse,
 } from './registrosEnfermeriaInterfaz';
@@ -20,8 +21,19 @@ import {
 export class RegistrosEnfermeriaService {
   private readonly aplicacionesUrl = `${environment.apiUrl}/enfermeria/aplicaciones-medicamento`;
   private readonly ejecucionesUrl = `${environment.apiUrl}/enfermeria/ejecuciones-cuidado`;
+  private readonly disponibilidadUrl = `${environment.apiUrl}/enfermeria/disponibilidad`;
 
   constructor(private readonly http: HttpClient) {}
+
+  /** Disponibilidad en piso de cada medicamento del catálogo dentro del episodio. */
+  buscarDisponibilidadPorEpisodio(
+    episodioId: number,
+  ): Observable<DisponibilidadMedicamentoResponse[]> {
+    const params = new HttpParams().set('episodioId', episodioId);
+    return this.http
+      .get<DisponibilidadMedicamentoResponse[]>(this.disponibilidadUrl, { params })
+      .pipe(timeout(TIMEOUT_HTTP_MS));
+  }
 
   // ------------------- APLICACIONES DE MEDICAMENTO -------------------
   buscarAplicacionesPorIndicacion(

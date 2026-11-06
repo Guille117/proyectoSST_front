@@ -1,8 +1,16 @@
-import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
+import {
+  ChangeDetectorRef,
+  Component,
+  OnDestroy,
+  OnInit,
+  viewChild,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { finalize, Subscription, switchMap, tap, TimeoutError } from 'rxjs';
+import { finalize, firstValueFrom, Subscription, switchMap, tap, timeout, TimeoutError } from 'rxjs';
 import { AuthService } from '../../Auth/data/auth-service';
+import { PropiedadRegistroService } from '../../Auth/data/propiedad-registro-service';
 import { OpcionOtroComponent, OpcionOtroValor } from '../../../shared/opcion-otro/opcion-otro';
+import { crearSeleccionesPendientes } from '../../../shared/opcion-otro/crear-seleccion-pendiente';
 import { PopUps } from '../../../shared/popUps/popUpsService';
 import { DatosPaciente } from '../datos-paciente/datos-paciente';
 import { EpisodioActivoService } from '../data/episodio-activo-service';
@@ -14,6 +22,7 @@ import {
   ExamenFisicoResponse,
   ParteCuerpoResponse,
 } from './data/examenFisicoInterfaz';
+import { TIMEOUT_HTTP_MS } from './data/constantes-clinicas';
 
 interface SeccionVista {
   id: string;
@@ -25,6 +34,7 @@ interface SeccionVista {
 /** Hallazgo registrado listo para la tarjeta de la lista: fecha y hora ya formateadas. */
 interface HallazgoVista {
   id: number;
+  usuarioId: number;
   parteCuerpoId: number;
   parteCuerpo: string;
   descripcion: string;
@@ -54,6 +64,7 @@ export class Evaluacion implements OnInit, OnDestroy {
   constructor(
     private examenFisicoService: ExamenFisicoService,
     private authService: AuthService,
+    private propiedadRegistro: PropiedadRegistroService,
     private episodioActivo: EpisodioActivoService,
     private popUps: PopUps,
     private cdr: ChangeDetectorRef,
@@ -69,8 +80,6 @@ export class Evaluacion implements OnInit, OnDestroy {
   /** La pestaña lateral del área de trabajo abre y cierra la ficha del paciente. */
   pacienteAbierto = false;
 
-  /** El chevron del encabezado pliega el cuerpo de la ficha sin ocultar el título. */
-  datosPacienteVisibles = true;
 
   /** Mientras están activos bloquean las acciones que ya tienen una petición en curso. */
   cargando = false;
@@ -84,7 +93,9 @@ export class Evaluacion implements OnInit, OnDestroy {
   readonly opcionOtroId = -1;
   mostrandoOtroParte = false;
   creandoParte = false;
+  preparandoSelecciones = false;
   private parteAnterior: number | null = null;
+  private readonly parteOtro = viewChild<OpcionOtroComponent>('parteOtro');
 
   /** Hallazgos registrados del episodio, del más reciente al más antiguo. */
   hallazgos: HallazgoVista[] = [];
@@ -114,13 +125,15 @@ export class Evaluacion implements OnInit, OnDestroy {
    * parte del cuerpo seleccionada y, en edición, exige que la descripción o la parte hayan cambiado.
    */
   get puedeGuardar(): boolean {
-    if (this.cargando || this.guardando || this.eliminando) return false;
+    if (this.cargando || this.guardando || this.eliminando || this.preparandoSelecciones) {
+      return false;
+    }
 
     const descripcion = this.hallazgoActual.trim();
     if (!descripcion) return false;
 
     if (this.hallazgoEnEdicion === null) {
-      return this.parteSeleccionadaId !== null;
+      return this.parteSeleccionadaId !== null || this.mostrandoOtroParte;
     }
 
     return (
@@ -156,15 +169,20 @@ export class Evaluacion implements OnInit, OnDestroy {
     return this.episodioActivo.esSoloLectura();
   }
 
-  /** Las secciones de historia clínica y diagnóstico muestran siempre el bloque de datos del paciente. */
+  /** Solo el autor del registro (o un rol global) puede editarlo o eliminarlo. */
+  puedeGestionar(usuarioId: number): boolean {
+    return !this.soloLectura && this.propiedadRegistro.puedeGestionar(usuarioId);
+  }
+
+  /** Solo historia clínica muestra siempre el bloque de datos; el resto usa la ficha plegable. */
   get seccionConDatosPaciente(): boolean {
-    return this.seccionActiva !== 'examen-fisico';
+    return this.seccionActiva === 'historia-clinica';
   }
 
   /**
-   * La ficha con los datos del paciente está desplegada: en el examen físico la abre su pestaña
-   * lateral y en historia clínica y diagnóstico, que siempre muestran los datos, se dibuja desplegada
-   * y sin pestaña.
+   * La ficha con los datos del paciente está desplegada: en el examen físico y en diagnóstico la abre
+   * su pestaña lateral y en historia clínica, que siempre muestra los datos, se dibuja desplegada y
+   * sin pestaña.
    */
   get fichaAbierta(): boolean {
     return this.pacienteAbierto || this.seccionConDatosPaciente;
@@ -253,6 +271,7 @@ export class Evaluacion implements OnInit, OnDestroy {
 
     return {
       id: examen.id,
+      usuarioId: examen.usuarioId,
       parteCuerpoId: examen.parteCuerpoId,
       parteCuerpo: examen.parteCuerpoNombre,
       descripcion: examen.descripcion,
@@ -316,15 +335,11 @@ export class Evaluacion implements OnInit, OnDestroy {
    */
   cambiarFicha(abierto: boolean): void {
     this.pacienteAbierto = abierto;
-
-    if (abierto) {
-      this.datosPacienteVisibles = true;
-    }
   }
 
   /**
-   * Cambia la sección del área central. La ficha plegable se cierra porque las secciones de historia
-   * clínica y diagnóstico muestran su propio bloque de datos del paciente.
+   * Cambia la sección del área central. La ficha plegable se cierra porque historia clínica muestra su
+   * propio bloque de datos del paciente.
    */
   seleccionarSeccion(id: string): void {
     this.seccionActiva = id;
@@ -355,38 +370,56 @@ export class Evaluacion implements OnInit, OnDestroy {
     this.seleccionarParteCuerpo(valor);
   }
 
-  crearParte(datos: OpcionOtroValor): void {
-    if (this.creandoParte) return;
+  async crearParte(datos: OpcionOtroValor): Promise<boolean> {
+    if (this.creandoParte) return false;
 
     this.creandoParte = true;
-    this.examenFisicoService
-      .postParteCuerpo(datos.nombre)
-      .pipe(
-        finalize(() => {
-          this.creandoParte = false;
-          if (!this.destruido) this.cdr.markForCheck();
-        }),
-      )
-      .subscribe({
-        next: (creada) => {
-          if (this.destruido) return;
+    try {
+      const creada = await firstValueFrom(
+        this.examenFisicoService.postParteCuerpo(datos.nombre).pipe(timeout(TIMEOUT_HTTP_MS)),
+      );
 
-          this.partesCuerpo = [...this.partesCuerpo, creada];
-          this.parteSeleccionadaId = creada.id;
-          this.mostrandoOtroParte = false;
-          this.cdr.markForCheck();
-        },
-        error: (error) => {
-          if (this.destruido) return;
+      if (this.destruido) return false;
+      if (creada.id == null) {
+        this.popUps.error('No se pudo crear la parte del cuerpo.');
+        return false;
+      }
 
-          this.popUps.errorDesdeBackend(error, 'No se pudo crear la parte del cuerpo.');
-        },
-      });
+      this.partesCuerpo = [...this.partesCuerpo, creada];
+      this.parteSeleccionadaId = creada.id;
+      this.mostrandoOtroParte = false;
+      return true;
+    } catch (error) {
+      if (!this.destruido) {
+        this.mostrarError(error, 'No se pudo crear la parte del cuerpo.');
+      }
+      return false;
+    } finally {
+      this.creandoParte = false;
+      if (!this.destruido) this.cdr.markForCheck();
+    }
   }
 
   cancelarParte(): void {
     this.mostrandoOtroParte = false;
     this.parteSeleccionadaId = this.parteAnterior;
+  }
+
+  private resolverPartePendiente(): Promise<boolean> {
+    if (!this.mostrandoOtroParte) {
+      return Promise.resolve(true);
+    }
+
+    return crearSeleccionesPendientes(
+      [
+        {
+          etiqueta: 'Parte del cuerpo',
+          componente: this.parteOtro,
+          crear: (datos) => this.crearParte(datos),
+        },
+      ],
+      (mensaje) => this.popUps.formIncompleto(mensaje),
+    );
   }
 
   /** Muestra u oculta el menú de opciones de la tarjeta de hallazgo pulsada. */
@@ -436,15 +469,18 @@ export class Evaluacion implements OnInit, OnDestroy {
    * guardar para la siguiente captura.
    */
   async guardarHallazgo(): Promise<void> {
-    if (this.destruido || this.cargando || this.guardando || this.eliminando) return;
+    if (
+      this.destruido ||
+      this.cargando ||
+      this.guardando ||
+      this.eliminando ||
+      this.preparandoSelecciones
+    ) {
+      return;
+    }
     if (!this.puedeGuardar) return;
 
     const enEdicion = this.hallazgoEnEdicion;
-    const parteCuerpoId = this.parteSeleccionadaId;
-    if (parteCuerpoId === null) {
-      this.popUps.error('Seleccione la parte del cuerpo del hallazgo.');
-      return;
-    }
 
     const descripcion = this.hallazgoActual.trim();
     if (!descripcion) {
@@ -475,6 +511,22 @@ export class Evaluacion implements OnInit, OnDestroy {
       if (!confirmado || this.destruido) {
         return;
       }
+    }
+
+    this.preparandoSelecciones = true;
+    this.cdr.markForCheck();
+    try {
+      if (!(await this.resolverPartePendiente())) return;
+    } finally {
+      this.preparandoSelecciones = false;
+      if (!this.destruido) this.cdr.markForCheck();
+    }
+    if (this.destruido) return;
+
+    const parteCuerpoId = this.parteSeleccionadaId;
+    if (parteCuerpoId === null) {
+      this.popUps.error('Seleccione la parte del cuerpo del hallazgo.');
+      return;
     }
 
     const cuerpo: ExamenFisicoRequest = {

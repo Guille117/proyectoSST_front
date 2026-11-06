@@ -1,6 +1,8 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { of, throwError, TimeoutError } from 'rxjs';
 
+import { OpcionOtroComponent } from '../../../../../shared/opcion-otro/opcion-otro';
 import { PopUps } from '../../../../../shared/popUps/popUpsService';
 import { CatalogoService } from '../../../../Catalogos/data/serviceCatalogo';
 import { MedicamentoCatalogoResponse } from '../data/medicamentoInterfaz';
@@ -87,8 +89,8 @@ describe('MedicamentoIndicacion', () => {
   ];
 
   const medicamentoService = { buscarCatalogo: vi.fn() };
-  const catalogoService = { listarUnidadMedida: vi.fn() };
-  const popUps = { error: vi.fn(), errorDesdeBackend: vi.fn() };
+  const catalogoService = { listarUnidadMedida: vi.fn(), guardarUnidadMedida: vi.fn() };
+  const popUps = { error: vi.fn(), errorDesdeBackend: vi.fn(), formIncompleto: vi.fn() };
 
   beforeEach(async () => {
     vi.resetAllMocks();
@@ -106,6 +108,9 @@ describe('MedicamentoIndicacion', () => {
     });
     catalogoService.listarUnidadMedida.mockReturnValue(
       of([{ id: 1, nombre: 'Tabletas', abreviatura: 'tab' }]),
+    );
+    catalogoService.guardarUnidadMedida.mockReturnValue(
+      of({ id: 2, nombre: 'Mililitros', abreviatura: 'ml' }),
     );
 
     await TestBed.configureTestingModule({
@@ -163,6 +168,25 @@ describe('MedicamentoIndicacion', () => {
     await escribir('#medicamentoTratamiento', texto);
     botonBuscar().click();
     await fixture.whenStable();
+  };
+
+  const abrirOtroUnidad = (): OpcionOtroComponent => {
+    const select = elemento<HTMLSelectElement>('#unidadMedidaTratamiento');
+    const opcionOtro = Array.from(select.options).find(
+      (opcion) => opcion.textContent?.trim() === 'Otro',
+    );
+    select.selectedIndex = opcionOtro?.index ?? -1;
+    select.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+    return fixture.debugElement.query(By.css('app-opcion-otro'))
+      .componentInstance as OpcionOtroComponent;
+  };
+
+  const completarCaptura = async (): Promise<void> => {
+    await elegirMedicamento('amoxicilina', 0);
+    await escribir('#cantidadTratamiento', '2');
+    await escribir('#frecuenciaTratamiento', '8');
+    await elegir('#duracionTipoTratamiento', 'indefinida');
   };
 
   const paginaSiguiente = async (): Promise<void> => {
@@ -409,6 +433,67 @@ describe('MedicamentoIndicacion', () => {
 
     expect(popUps.error).toHaveBeenCalledWith(
       'Error de comunicación. El servidor no respondió dentro del tiempo esperado.',
+    );
+  });
+
+  it('crea la unidad pendiente antes de emitir el medicamento con su nombre', async () => {
+    const orden: string[] = [];
+    catalogoService.guardarUnidadMedida.mockImplementation(() => {
+      orden.push('unidad');
+      return of({ id: 2, nombre: 'Mililitros', abreviatura: 'ml' });
+    });
+    await completarCaptura();
+    const otro = abrirOtroUnidad();
+    otro.nombre = 'Mililitros';
+    otro.abreviatura = 'ml';
+    fixture.detectChanges();
+
+    let agregado: MedicamentoTratamiento | undefined;
+    component.medicamentoAgregado.subscribe((medicamento) => {
+      orden.push('emitir');
+      agregado = medicamento;
+    });
+
+    await component.agregarMedicamento();
+
+    expect(catalogoService.guardarUnidadMedida).toHaveBeenCalledWith('Mililitros', 'ml');
+    expect(orden).toEqual(['unidad', 'emitir']);
+    expect(agregado?.unidadMedida).toBe('Mililitros');
+  });
+
+  it('no emite el medicamento si falla la creación de la unidad pendiente', async () => {
+    catalogoService.guardarUnidadMedida.mockReturnValue(throwError(() => new Error('fallo')));
+    await completarCaptura();
+    const otro = abrirOtroUnidad();
+    otro.nombre = 'Mililitros';
+    otro.abreviatura = 'ml';
+    fixture.detectChanges();
+
+    let agregado: MedicamentoTratamiento | undefined;
+    component.medicamentoAgregado.subscribe((medicamento) => (agregado = medicamento));
+
+    await component.agregarMedicamento();
+
+    expect(agregado).toBeUndefined();
+    expect(popUps.errorDesdeBackend).toHaveBeenCalledWith(
+      expect.any(Error),
+      'No se pudo crear la unidad de medida.',
+    );
+  });
+
+  it('no emite el medicamento si la unidad pendiente está vacía', async () => {
+    await completarCaptura();
+    abrirOtroUnidad();
+
+    let agregado: MedicamentoTratamiento | undefined;
+    component.medicamentoAgregado.subscribe((medicamento) => (agregado = medicamento));
+
+    await component.agregarMedicamento();
+
+    expect(catalogoService.guardarUnidadMedida).not.toHaveBeenCalled();
+    expect(agregado).toBeUndefined();
+    expect(popUps.formIncompleto).toHaveBeenCalledWith(
+      'Completa el valor de «Unidad de medida» o cancélalo antes de guardar.',
     );
   });
 });

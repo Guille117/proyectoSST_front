@@ -1,10 +1,21 @@
-import { ChangeDetectorRef, Component, OnDestroy, OnInit, inject } from '@angular/core';
+﻿import {
+  ChangeDetectorRef,
+  Component,
+  OnDestroy,
+  OnInit,
+  inject,
+  viewChild,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { finalize, Subscription, TimeoutError } from 'rxjs';
+import { finalize, firstValueFrom, Subscription, timeout, TimeoutError } from 'rxjs';
+import { TIMEOUT_HTTP_MS } from '../evaluacion/data/constantes-clinicas';
 import { OpcionOtroComponent, OpcionOtroValor } from '../../../shared/opcion-otro/opcion-otro';
+import { crearSeleccionesPendientes } from '../../../shared/opcion-otro/crear-seleccion-pendiente';
 import { PopUps } from '../../../shared/popUps/popUpsService';
 import { TabSwitch } from '../../../shared/tab-switch/tab-switch';
+import { DatosPaciente } from '../datos-paciente/datos-paciente';
 import { AuthService } from '../../Auth/data/auth-service';
+import { PropiedadRegistroService } from '../../Auth/data/propiedad-registro-service';
 import { EpisodioActivoService } from '../data/episodio-activo-service';
 import { ProcedimientoMedicoService } from './data/procedimiento-medico-service';
 import {
@@ -54,6 +65,7 @@ interface RecursoUtilizado {
 /** Procedimiento del listado y de las tarjetas de resumen. */
 interface ProcedimientoVista {
   id: number;
+  usuarioId: number;
   /** Identificador del tipo de procedimiento en el catálogo. */
   tipoProcedimientoId: number;
   /** Título de la tarjeta: nombre del tipo de procedimiento. */
@@ -66,15 +78,15 @@ interface ProcedimientoVista {
   profesional: string;
   estado: EstadoProcedimiento;
   recursos: RecursoUtilizado[];
+  requiereAutorizacion: boolean;
 }
 
-/**
- * Procedimiento médico del episodio: rail de opciones, registro del procedimiento y sus recursos,
+/** Procedimiento médico del episodio: rail de opciones, registro del procedimiento y sus recursos,
  * y consulta de los procedimientos realizados con el detalle de lo utilizado.
  */
 @Component({
   selector: 'app-procedimiento-medico',
-  imports: [FormsModule, OpcionOtroComponent, TabSwitch],
+  imports: [FormsModule, OpcionOtroComponent, TabSwitch, DatosPaciente],
   templateUrl: './procedimiento-medico.html',
   styleUrl: './procedimiento-medico.scss',
   host: {
@@ -84,6 +96,7 @@ interface ProcedimientoVista {
 export class ProcedimientoMedico implements OnInit, OnDestroy {
   private readonly popUps = inject(PopUps);
   private readonly authService = inject(AuthService);
+  private readonly propiedadRegistro = inject(PropiedadRegistroService);
   private readonly servicio = inject(ProcedimientoMedicoService);
   private readonly episodioActivo = inject(EpisodioActivoService);
   private readonly cdr = inject(ChangeDetectorRef);
@@ -98,6 +111,10 @@ export class ProcedimientoMedico implements OnInit, OnDestroy {
   /** Opción del rail que se muestra en el área central y en el panel derecho. */
   seccionActiva: SeccionProcedimiento = 'registrar';
 
+  /** La ficha con los datos del paciente está desplegada; la abre su pestaña lateral. */
+  pacienteAbierto = false;
+
+
   /** Filtro de las tarjetas de procedimientos realizados. */
   filtroProcedimiento: FiltroProcedimiento = 'todos';
 
@@ -106,11 +123,17 @@ export class ProcedimientoMedico implements OnInit, OnDestroy {
   readonly opcionOtroId = -1;
   mostrandoOtroTipo = false;
   creandoTipo = false;
+  preparandoSelecciones = false;
   private tipoAnterior: number | null = null;
+  private readonly tipoOtro = viewChild<OpcionOtroComponent>('tipoOtro');
   descripcion = '';
   resultado = '';
   inicio = '';
   fin = '';
+
+  /** Indica si el procedimiento requiere autorización del paciente o del familiar
+   * responsable para generar el documento. Solo selección visual por ahora. */
+  requiereAutorizacion = false;
 
   /** Estado del buscador y de la selección de recursos. */
   tipoRecurso: TipoRecurso = 'medicamento';
@@ -162,9 +185,9 @@ export class ProcedimientoMedico implements OnInit, OnDestroy {
       this.filtroProcedimiento = 'realizados';
     }
 
-    // El formulario arranca con la fecha y hora actuales; el usuario puede cambiarlas.
+    // El formulario arranca con la fecha de inicio actual y sin finalizar.
     this.inicio = this.fechaHoraActualLocal();
-    this.fin = this.fechaHoraActualLocal();
+    this.fin = '';
 
     this.cargarTiposProcedimiento();
     this.cargarProcedimientos();
@@ -182,6 +205,17 @@ export class ProcedimientoMedico implements OnInit, OnDestroy {
   /** El episodio está cerrado: solo se muestran los procedimientos realizados. */
   get soloLectura(): boolean {
     return this.episodioActivo.esSoloLectura();
+  }
+
+  /** Solo el autor del registro (o un rol global) puede editarlo o eliminarlo. */
+  puedeGestionar(usuarioId: number): boolean {
+    return !this.soloLectura && this.propiedadRegistro.puedeGestionar(usuarioId);
+  }
+
+  /** Abre o cierra la ficha con los datos del paciente desde la pestaña lateral del bloque
+   * compartido, igual que en evaluación clínica y en indicaciones médicas. */
+  cambiarFichaPaciente(abierto: boolean): void {
+    this.pacienteAbierto = abierto;
   }
 
   /** Secciones del rail; en solo lectura únicamente queda la consulta de realizados. */
@@ -248,10 +282,30 @@ export class ProcedimientoMedico implements OnInit, OnDestroy {
       !this.soloLectura &&
       !this.sinEpisodioActivo &&
       !this.guardando &&
-      this.tipoProcedimiento !== null &&
+      !this.preparandoSelecciones &&
+      (this.tipoProcedimiento !== null || this.mostrandoOtroTipo) &&
       this.descripcion.trim().length > 0 &&
       this.fechasValidas
     );
+  }
+
+  /** En el registro está finalizado cuando tiene fecha de fin; en la consulta refleja el
+   * estado del procedimiento seleccionado. */
+  get procedimientoFinalizado(): boolean {
+    if (this.esRegistrar) return this.fin.trim().length > 0;
+
+    return Boolean(this.procedimientoActivo?.fin);
+  }
+
+  get textoFinalizado(): string {
+    return this.procedimientoFinalizado ? 'Finalizado' : 'Marcar como finalizado';
+  }
+
+  /** Marca o retira la finalización del formulario actualizando su fecha de fin. */
+  alternarFinalizado(): void {
+    if (!this.esRegistrar || this.soloLectura || this.guardando) return;
+
+    this.fin = this.procedimientoFinalizado ? '' : this.fechaHoraActualLocal();
   }
 
   get cantidadMaximaRecurso(): number {
@@ -333,41 +387,59 @@ export class ProcedimientoMedico implements OnInit, OnDestroy {
     this.tipoProcedimiento = valor;
   }
 
-  crearTipo(datos: OpcionOtroValor): void {
-    if (this.creandoTipo) return;
+  async crearTipo(datos: OpcionOtroValor): Promise<boolean> {
+    if (this.creandoTipo) return false;
 
     this.creandoTipo = true;
-    this.servicio
-      .postTipoProcedimiento(datos.nombre)
-      .pipe(
-        finalize(() => {
-          this.creandoTipo = false;
-          if (!this.destruido) this.cdr.markForCheck();
-        }),
-      )
-      .subscribe({
-        next: (creado) => {
-          if (this.destruido) return;
+    try {
+      const creado = await firstValueFrom(
+        this.servicio.postTipoProcedimiento(datos.nombre).pipe(timeout(TIMEOUT_HTTP_MS)),
+      );
 
-          this.tiposProcedimiento = [
-            ...this.tiposProcedimiento,
-            { id: creado.id, nombre: creado.nombre },
-          ];
-          this.tipoProcedimiento = creado.id;
-          this.mostrandoOtroTipo = false;
-          this.cdr.markForCheck();
-        },
-        error: (error) => {
-          if (this.destruido) return;
+      if (this.destruido) return false;
+      if (creado.id == null) {
+        this.popUps.error('No se pudo crear el tipo de procedimiento.');
+        return false;
+      }
 
-          this.mostrarError(error, 'No se pudo crear el tipo de procedimiento.');
-        },
-      });
+      this.tiposProcedimiento = [
+        ...this.tiposProcedimiento,
+        { id: creado.id, nombre: creado.nombre },
+      ];
+      this.tipoProcedimiento = creado.id;
+      this.mostrandoOtroTipo = false;
+      return true;
+    } catch (error) {
+      if (!this.destruido) {
+        this.mostrarError(error, 'No se pudo crear el tipo de procedimiento.');
+      }
+      return false;
+    } finally {
+      this.creandoTipo = false;
+      if (!this.destruido) this.cdr.markForCheck();
+    }
   }
 
   cancelarTipo(): void {
     this.mostrandoOtroTipo = false;
     this.tipoProcedimiento = this.tipoAnterior;
+  }
+
+  private resolverTipoPendiente(): Promise<boolean> {
+    if (!this.mostrandoOtroTipo) {
+      return Promise.resolve(true);
+    }
+
+    return crearSeleccionesPendientes(
+      [
+        {
+          etiqueta: 'Tipo de procedimiento',
+          componente: this.tipoOtro,
+          crear: (datos) => this.crearTipo(datos),
+        },
+      ],
+      (mensaje) => this.popUps.formIncompleto(mensaje),
+    );
   }
 
   /** Carga los procedimientos del episodio activo y conserva la selección indicada. */
@@ -447,7 +519,7 @@ export class ProcedimientoMedico implements OnInit, OnDestroy {
     this.procedimientoSeleccionado = id;
   }
 
-  /** Muestra u oculta el menú de opciones de la tarjeta. */
+  /** Muestra u oculta el menú de opciones de la tarjeta pulsada. */
   alternarMenuProcedimiento(id: number): void {
     if (this.soloLectura) return;
 
@@ -492,6 +564,7 @@ export class ProcedimientoMedico implements OnInit, OnDestroy {
     this.resultado = procedimiento.resultado;
     this.inicio = procedimiento.inicio;
     this.fin = procedimiento.fin;
+    this.requiereAutorizacion = procedimiento.requiereAutorizacion;
     this.recursosAgregados = procedimiento.recursos.map((recurso) => ({ ...recurso }));
     this.cancelarSeleccionRecurso();
     this.procedimientoEnEdicion = procedimiento.id;
@@ -508,7 +581,7 @@ export class ProcedimientoMedico implements OnInit, OnDestroy {
     this.confirmando = true;
     this.cdr.markForCheck();
     const confirmado = await this.popUps
-      .confirmarToast(`¿Está seguro de eliminar el procedimiento "${procedimiento.tipo}"?`)
+      .confirmarToast(`¿Estás seguro de eliminar el procedimiento "${procedimiento.tipo}"?`)
       .catch(() => false);
     this.confirmando = false;
     this.cdr.markForCheck();
@@ -548,7 +621,15 @@ export class ProcedimientoMedico implements OnInit, OnDestroy {
 
   /** Registra o actualiza el procedimiento con sus fechas y los recursos agregados. */
   async registrarProcedimiento(): Promise<void> {
-    if (this.destruido || this.guardando || this.eliminando || this.confirmando) return;
+    if (
+      this.destruido ||
+      this.guardando ||
+      this.eliminando ||
+      this.confirmando ||
+      this.preparandoSelecciones
+    ) {
+      return;
+    }
 
     if (this.soloLectura) {
       this.popUps.advertencia('El episodio está cerrado y no permite registrar procedimientos.');
@@ -576,12 +657,13 @@ export class ProcedimientoMedico implements OnInit, OnDestroy {
       return;
     }
 
-    const tipoProcedimientoId = this.tipoProcedimiento;
     const inicio = this.aLocalDateTime(this.inicio);
-    if (tipoProcedimientoId === null || !inicio) return;
+    if (!inicio) return;
 
     const idEdicion = this.procedimientoEnEdicion;
-    const tipo = this.tiposProcedimiento.find((opcion) => opcion.id === tipoProcedimientoId);
+    const tipo = this.tiposProcedimiento.find(
+      (opcion) => opcion.id === this.tipoProcedimiento,
+    );
 
     if (idEdicion !== null) {
       this.confirmando = true;
@@ -597,6 +679,19 @@ export class ProcedimientoMedico implements OnInit, OnDestroy {
       if (!confirmado || this.destruido) return;
     }
 
+    this.preparandoSelecciones = true;
+    this.cdr.markForCheck();
+    try {
+      if (!(await this.resolverTipoPendiente())) return;
+    } finally {
+      this.preparandoSelecciones = false;
+      if (!this.destruido) this.cdr.markForCheck();
+    }
+    if (this.destruido) return;
+
+    const tipoProcedimientoId = this.tipoProcedimiento;
+    if (tipoProcedimientoId === null) return;
+
     const request: ProcedimientoMedicoRequest = {
       tipoProcedimientoId,
       descripcion: this.descripcion.trim(),
@@ -610,6 +705,7 @@ export class ProcedimientoMedico implements OnInit, OnDestroy {
         referenciaId: recurso.referenciaId,
         cantidad: recurso.cantidad,
       })),
+      requiereAutorizacion: this.requiereAutorizacion,
     };
 
     this.peticionAccion?.unsubscribe();
@@ -802,6 +898,7 @@ export class ProcedimientoMedico implements OnInit, OnDestroy {
   private aVista(respuesta: ProcedimientoMedicoResponse): ProcedimientoVista {
     return {
       id: respuesta.id,
+      usuarioId: respuesta.usuarioId,
       tipoProcedimientoId: respuesta.tipoProcedimientoId,
       tipo: respuesta.tipoProcedimientoNombre,
       descripcion: respuesta.descripcion,
@@ -816,6 +913,7 @@ export class ProcedimientoMedico implements OnInit, OnDestroy {
         nombre: recurso.nombre,
         cantidad: recurso.cantidad,
       })),
+      requiereAutorizacion: respuesta.requiereAutorizacion,
     };
   }
 
@@ -844,13 +942,14 @@ export class ProcedimientoMedico implements OnInit, OnDestroy {
     return texto.length === 16 ? `${texto}:00` : texto;
   }
 
-  /** Deja el formulario listo para un procedimiento nuevo, con las fechas actuales. */
+  /** Deja el formulario listo para un procedimiento nuevo, con la fecha de inicio actual. */
   private limpiarFormulario(): void {
     this.tipoProcedimiento = null;
     this.descripcion = '';
     this.resultado = '';
     this.inicio = this.fechaHoraActualLocal();
-    this.fin = this.fechaHoraActualLocal();
+    this.fin = '';
+    this.requiereAutorizacion = false;
     this.procedimientoEnEdicion = null;
   }
 

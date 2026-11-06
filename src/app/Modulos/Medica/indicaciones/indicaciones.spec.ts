@@ -409,16 +409,16 @@ describe('Indicaciones', () => {
     expect(elemento('#nombreExamen')).toBeNull();
   });
 
-  it('abre la sección de Cuidados desde su tarjeta del rail', async () => {
+  it('abre la sección de Atenciones desde su tarjeta del rail', async () => {
     expect(elementos<HTMLElement>('.panel-secciones .tarjeta').length).toBe(3);
     expect(tarjetaDelRail('Medicamentos')?.disabled).toBe(false);
     expect(tarjetaDelRail('Exámenes')?.disabled).toBe(false);
-    expect(tarjetaDelRail('Cuidados')?.disabled).toBe(false);
+    expect(tarjetaDelRail('Atenciones')?.disabled).toBe(false);
 
-    await irASeccion('Cuidados');
+    await irASeccion('Atenciones');
 
     expect(component.seccionActiva).toBe('cuidados');
-    expect(elemento<HTMLElement>('.tarjeta--activa').textContent).toContain('Cuidados');
+    expect(elemento<HTMLElement>('.tarjeta--activa').textContent).toContain('Atenciones');
     expect(elemento('#nombreCuidado')).not.toBeNull();
     expect(elemento('#medicamentoIndicado')).toBeNull();
     expect(elemento('#nombreExamen')).toBeNull();
@@ -456,7 +456,7 @@ describe('Indicaciones', () => {
 
   // ------------------- CUIDADOS INDICADOS -------------------
   it('muestra el registro del cuidado con sus cuatro campos y sus obligatorios', async () => {
-    await irASeccion('Cuidados');
+    await irASeccion('Atenciones');
 
     const etiquetas = [...elementos<HTMLElement>('.panel-seccion .indicacion-etiqueta')].map(
       (etiqueta) => etiqueta.textContent?.trim(),
@@ -466,26 +466,26 @@ describe('Indicaciones', () => {
     expect(etiquetas.length).toBe(6);
     expect(etiquetas[0]).toContain('Nombre de cuidado');
     expect(etiquetas[1]).toContain('Frecuencia (horas)');
-    expect(etiquetas[2]).toContain('Fecha y hora de inicio');
-    expect(etiquetas[3]).toContain('Duraci');
-    expect(etiquetas[4]).toContain('Tipo de duraci');
+    expect(etiquetas[2]).toContain('Duraci');
+    expect(etiquetas[3]).toContain('Tipo de duraci');
+    expect(etiquetas[4]).toContain('Fecha y hora de inicio');
     expect(etiquetas[5]).toBe('Observaciones');
 
-    // Los cinco campos del cuidado están en el formulario
+    // Los cinco campos del cuidado estǭn en el formulario
     expect(elemento('#nombreCuidado')).not.toBeNull();
     expect(elemento('#frecuenciaCuidado')).not.toBeNull();
     expect(elemento('#fechaInicioCuidado')).not.toBeNull();
     expect(elemento('#duracionCuidado')).not.toBeNull();
     expect(elemento('#observacionesCuidado')).not.toBeNull();
 
-    // El nombre, la frecuencia, la fecha de inicio y el tipo de duración son obligatorios
+    // El nombre, la frecuencia, la fecha de inicio y el tipo de duraci��n son obligatorios
     expect(elementos<HTMLElement>('.indicacion-obligatorio').length).toBe(4);
     expect(obligatorio.closest('label')?.textContent).toContain('Nombre de cuidado');
     expect(botonGuardar().disabled).toBe(true);
   });
 
   it('habilita Guardar con los datos del cuidado y lo registra con sus datos', async () => {
-    await irASeccion('Cuidados');
+    await irASeccion('Atenciones');
 
     await escribir('#nombreCuidado', 'Dieta blanda');
 
@@ -525,7 +525,7 @@ describe('Indicaciones', () => {
   });
 
   it('exige la cantidad de días cuando la duración del cuidado se marca en días', async () => {
-    await irASeccion('Cuidados');
+    await irASeccion('Atenciones');
 
     await escribir('#nombreCuidado', 'Dieta blanda');
     await escribir('#frecuenciaCuidado', '6');
@@ -553,7 +553,7 @@ describe('Indicaciones', () => {
   });
 
   it('muestra que el cuidado se realiza una sola vez cuando es dosis única', async () => {
-    await irASeccion('Cuidados');
+    await irASeccion('Atenciones');
 
     await escribir('#nombreCuidado', 'Aplicar vacuna');
     await escribir('#frecuenciaCuidado', '1');
@@ -576,7 +576,7 @@ describe('Indicaciones', () => {
   });
 
   it('no agrega nada cuando el nombre del cuidado está vacío', async () => {
-    await irASeccion('Cuidados');
+    await irASeccion('Atenciones');
 
     await escribir('#nombreCuidado', '   ');
 
@@ -589,7 +589,7 @@ describe('Indicaciones', () => {
   });
 
   it('cancela la captura del cuidado sin registrar nada', async () => {
-    await irASeccion('Cuidados');
+    await irASeccion('Atenciones');
 
     await escribir('#nombreCuidado', 'Dieta blanda');
     await escribir('#frecuenciaCuidado', '6');
@@ -607,7 +607,7 @@ describe('Indicaciones', () => {
   });
 
   it('abre el listado de cuidados con el filtro Todas y deja fuera los eliminados', async () => {
-    await irASeccion('Cuidados');
+    await irASeccion('Atenciones');
 
     expect([...filtrosIndicados()].map((filtro) => filtro.textContent?.trim())).toEqual([
       'Todas',
@@ -628,7 +628,7 @@ describe('Indicaciones', () => {
   });
 
   it('muestra solo los cuidados del estado elegido', async () => {
-    await irASeccion('Cuidados');
+    await irASeccion('Atenciones');
 
     await elegirFiltro('Completadas');
 
@@ -652,7 +652,7 @@ describe('Indicaciones', () => {
   });
 
   it('pinta el borde izquierdo de cada cuidado con el color de su estado', async () => {
-    await irASeccion('Cuidados');
+    await irASeccion('Atenciones');
 
     // En proceso en naranja, completado en verde y ningún cuidado con el gris de lo eliminado
     expect(elementos<HTMLElement>('.indicacion-card--naranja').length).toBe(3);
@@ -676,7 +676,7 @@ describe('Indicaciones', () => {
   });
 
   it('registra el cuidado nuevo en proceso y lo lista con ese filtro', async () => {
-    await irASeccion('Cuidados');
+    await irASeccion('Atenciones');
     await elegirFiltro('En proceso');
 
     await escribir('#nombreCuidado', 'Dieta blanda');
@@ -691,7 +691,7 @@ describe('Indicaciones', () => {
   });
 
   it('pasa el cuidado eliminado al filtro Eliminadas con el borde rojo', async () => {
-    await irASeccion('Cuidados');
+    await irASeccion('Atenciones');
 
     await abrirMenu(0);
     botonEliminarDelMenu().click();
@@ -715,7 +715,7 @@ describe('Indicaciones', () => {
   });
 
   it('conserva el cuidado si la confirmación de la eliminación se cancela', async () => {
-    await irASeccion('Cuidados');
+    await irASeccion('Atenciones');
     popUps.confirmarToast.mockResolvedValue(false);
 
     await abrirMenu(0);
@@ -727,7 +727,7 @@ describe('Indicaciones', () => {
   });
 
   it('muestra el estado vacío del filtro cuando no hay cuidados en ese estado', async () => {
-    await irASeccion('Cuidados');
+    await irASeccion('Atenciones');
     await elegirFiltro('Completadas');
 
     await abrirMenu(0);
@@ -741,7 +741,7 @@ describe('Indicaciones', () => {
   });
 
   it('detalla el cuidado en su tarjeta con las insignias, las observaciones y el pie', async () => {
-    await irASeccion('Cuidados');
+    await irASeccion('Atenciones');
 
     const tarjeta = tarjetas()[0];
     const pie = tarjeta.querySelector<HTMLElement>('.indicacion-meta');
@@ -771,7 +771,7 @@ describe('Indicaciones', () => {
   });
 
   it('despliega el menú del cuidado y lo cierra al pulsar fuera de su tarjeta', async () => {
-    await irASeccion('Cuidados');
+    await irASeccion('Atenciones');
 
     await abrirMenu(0);
 
@@ -786,7 +786,7 @@ describe('Indicaciones', () => {
   });
 
   it('carga en el formulario el cuidado elegido y guarda sobre la misma tarjeta', async () => {
-    await irASeccion('Cuidados');
+    await irASeccion('Atenciones');
 
     await abrirMenu(0);
     botonEditarDelMenu().click();
@@ -835,7 +835,7 @@ describe('Indicaciones', () => {
   });
 
   it('conserva el cuidado sin actualizar si la confirmación de los cambios se cancela', async () => {
-    await irASeccion('Cuidados');
+    await irASeccion('Atenciones');
 
     await abrirMenu(0);
     botonEditarDelMenu().click();
@@ -851,7 +851,7 @@ describe('Indicaciones', () => {
   });
 
   it('libera el formulario cuando se elimina el cuidado en edición', async () => {
-    await irASeccion('Cuidados');
+    await irASeccion('Atenciones');
 
     await abrirMenu(0);
     botonEditarDelMenu().click();
@@ -868,7 +868,7 @@ describe('Indicaciones', () => {
   });
 
   it('cierra el menú del cuidado y suelta su edición al cambiar de filtro', async () => {
-    await irASeccion('Cuidados');
+    await irASeccion('Atenciones');
 
     await abrirMenu(0);
 
@@ -940,7 +940,7 @@ describe('Indicaciones', () => {
     botonPestanaPaciente().click();
     await fixture.whenStable();
 
-    await irASeccion('Cuidados');
+    await irASeccion('Atenciones');
 
     // La ficha es común a las tres secciones del rail: el cambio de sección no la repliega
     expect(component.seccionActiva).toBe('cuidados');
@@ -956,7 +956,7 @@ describe('Indicaciones', () => {
     expect([...titulos].map((titulo) => titulo.textContent?.trim())).toEqual([
       'Medicamentos',
       'Exámenes',
-      'Cuidados',
+      'Atenciones',
     ]);
     expect(elementos<HTMLElement>('.panel-secciones .tarjeta_icono i').length).toBe(3);
   });

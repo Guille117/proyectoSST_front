@@ -34,10 +34,11 @@ export interface PersonaDatos {
 export interface UsuarioRequest {
   persona: PersonaDatos;
   puestoId: number;
-  horarioId: number;
+  horarioId: number | null;
   rolIds: number[];
   username: string;
   especialidadId?: number;
+  inicioGuardia?: string | null;
   estado?: boolean;
 }
 
@@ -73,6 +74,7 @@ export interface UsuarioResponse {
   puestoNombre?: string;
   horario?: CatalogoReferencia;
   horarioNombre?: string;
+  inicioGuardia?: string | null;
   rol?: CatalogoOpcion;
   rolNombre?: string;
   roles?: CatalogoOpcion[];

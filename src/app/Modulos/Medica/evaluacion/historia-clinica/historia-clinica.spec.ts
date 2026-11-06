@@ -7,6 +7,7 @@ import { EpisodioActivoService } from '../../data/episodio-activo-service';
 import { HistoriaClinicaResponse } from '../data/historiaClinicaInterfaz';
 import { AuthService } from '../../../Auth/data/auth-service';
 import { PopUps } from '../../../../shared/popUps/popUpsService';
+import { CatalogoService } from '../../../Catalogos/data/serviceCatalogo';
 
 const EPISODIO_ID = 1;
 
@@ -39,19 +40,28 @@ describe('HistoriaClinica', () => {
     usuarioNombre: 'Carlos Mendez',
     fecha: '2026-10-16T09:30:00',
     estado: true,
+    estadoClinicoId: 1,
+    estadoClinicoNombre: 'Estable',
   });
+
+  const catalogo = {
+    listar: vi.fn(),
+    crear: vi.fn(),
+  };
 
   beforeEach(async () => {
     vi.resetAllMocks();
     servicio.getHistoriasPorEpisodio.mockReturnValue(of([]));
     servicio.postHistoria.mockReturnValue(of(historia(10, 'Paciente estable')));
     servicio.putHistoria.mockReturnValue(of(historia(7, 'Paciente en observacion')));
+    catalogo.listar.mockReturnValue(of([]));
     auth.currentUser.mockReturnValue({ id: 2 });
 
     await TestBed.configureTestingModule({
       imports: [HistoriaClinica],
       providers: [
         { provide: HistoriaClinicaService, useValue: servicio },
+        { provide: CatalogoService, useValue: catalogo },
         { provide: AuthService, useValue: auth },
         { provide: EpisodioActivoService, useValue: episodioActivo },
         { provide: PopUps, useValue: popUps },
@@ -188,6 +198,7 @@ describe('HistoriaClinica', () => {
     await render();
     await escribir('Paciente estable');
 
+    component.estadoClinicoValor = '1';
     botonGuardar().click();
     await fixture.whenStable();
 
@@ -195,6 +206,7 @@ describe('HistoriaClinica', () => {
       descripcion: 'Paciente estable',
       episodioId: EPISODIO_ID,
       usuarioId: 2,
+      estadoClinicoId: 1,
     });
     expect(servicio.putHistoria).not.toHaveBeenCalled();
     expect(component.idHistoriaActual).toBe(10);
@@ -212,6 +224,7 @@ describe('HistoriaClinica', () => {
     await pulsarEditar();
     await escribir('Paciente en observacion');
 
+    component.estadoClinicoValor = '1';
     botonGuardar().click();
     await fixture.whenStable();
 
@@ -219,6 +232,7 @@ describe('HistoriaClinica', () => {
       descripcion: 'Paciente en observacion',
       episodioId: EPISODIO_ID,
       usuarioId: 2,
+      estadoClinicoId: 1,
     });
     expect(servicio.postHistoria).not.toHaveBeenCalled();
     expect(component.idHistoriaActual).toBe(7);
@@ -256,6 +270,7 @@ describe('HistoriaClinica', () => {
 
     await render();
     await escribir('Paciente estable');
+    component.estadoClinicoValor = '1';
 
     botonGuardar().click();
     await fixture.whenStable();
@@ -272,6 +287,7 @@ describe('HistoriaClinica', () => {
 
     await render();
     await escribir('Paciente estable');
+    component.estadoClinicoValor = '1';
 
     botonGuardar().click();
     await fixture.whenStable();

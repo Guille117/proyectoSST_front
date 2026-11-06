@@ -1,10 +1,22 @@
-import { ChangeDetectorRef, Component, OnDestroy, OnInit, inject } from '@angular/core';
+import {
+  ChangeDetectorRef,
+  Component,
+  OnDestroy,
+  OnInit,
+  inject,
+  viewChild,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { finalize, firstValueFrom, Subscription, timeout, TimeoutError } from 'rxjs';
 import { OpcionOtroComponent, OpcionOtroValor } from '../../../shared/opcion-otro/opcion-otro';
+import {
+  crearSeleccionesPendientes,
+  SeleccionPendiente,
+} from '../../../shared/opcion-otro/crear-seleccion-pendiente';
 import { TabSwitch } from '../../../shared/tab-switch/tab-switch';
 import { PopUps } from '../../../shared/popUps/popUpsService';
 import { AuthService } from '../../Auth/data/auth-service';
+import { PropiedadRegistroService } from '../../Auth/data/propiedad-registro-service';
 import { CatalogoService } from '../../Catalogos/data/serviceCatalogo';
 import { Inter_institucion } from '../../Catalogos/data/nombreInterfaz';
 import { EpisodioActivoService } from '../data/episodio-activo-service';
@@ -17,8 +29,14 @@ import {
 import {
   MedicamentoIndicacion,
   MedicamentoTratamiento,
-  textoDuracion,
 } from '../indicaciones/medicamentos/medicamento-indicacion/medicamento-indicacion';
+import { textoDuracion } from '../indicaciones/data/duracion';
+import {
+  ProcedimientoMedicoRequest,
+  ProcedimientoMedicoResponse,
+  TipoProcedimientoResponse,
+} from '../procedimiento-medico/data/procedimientoMedicoInterfaz';
+import { ProcedimientoMedicoService } from '../procedimiento-medico/data/procedimiento-medico-service';
 import {
   AltaRequest,
   AltaResponse,
@@ -78,7 +96,9 @@ interface CuidadoEnEdicion {
 export class Alta implements OnInit, OnDestroy {
   private readonly catalogoService = inject(CatalogoService);
   private readonly servicio = inject(AltaService);
+  private readonly servicioProcedimientos = inject(ProcedimientoMedicoService);
   private readonly authService = inject(AuthService);
+  private readonly propiedadRegistro = inject(PropiedadRegistroService);
   private readonly episodioActivo = inject(EpisodioActivoService);
   private readonly popUps = inject(PopUps);
   private readonly cdr = inject(ChangeDetectorRef);
@@ -87,12 +107,31 @@ export class Alta implements OnInit, OnDestroy {
   private peticionCondiciones?: Subscription;
   private peticionAlta?: Subscription;
   private peticionAccion?: Subscription;
+  private tiposSolicitud?: TipoProcedimientoResponse[];
   private destruido = false;
 
   // ------------------- ESTADO DE LA VISTA -------------------
   /** El episodio es un historial cerrado: se consulta, pero no se registran cambios. */
   get soloLectura(): boolean {
     return this.episodioActivo.esSoloLectura();
+  }
+
+  /** Solo el autor del alta (o un rol global) puede actualizarla. */
+  puedeGestionar(usuarioId: number): boolean {
+    return !this.soloLectura && this.propiedadRegistro.puedeGestionar(usuarioId);
+  }
+
+  /** El alta se puede anular aunque el episodio esté cerrado, dentro del plazo permitido. */
+  puedeAnularAltaDe(usuarioId: number | null | undefined): boolean {
+    return this.propiedadRegistro.puedeGestionar(usuarioId);
+  }
+
+  /** Se puede editar el alta cuando no hay una registrada o pertenece al usuario actual. */
+  get puedeEditarAlta(): boolean {
+    return (
+      !this.soloLectura &&
+      (!this.altaExistente || this.puedeGestionar(this.altaExistente.usuarioId))
+    );
   }
 
   /** Sección del egreso elegida en el panel de secciones. */
@@ -111,8 +150,11 @@ export class Alta implements OnInit, OnDestroy {
   mostrandoOtroInstitucion = false;
   creandoCondicion = false;
   creandoInstitucion = false;
+  preparandoSelecciones = false;
   private condicionAnterior = '';
   private institucionAnterior = '';
+  private readonly condicionOtro = viewChild<OpcionOtroComponent>('condicionOtro');
+  private readonly institucionOtro = viewChild<OpcionOtroComponent>('institucionOtro');
 
   /** Campos propios del retiro voluntario. */
   responsableRetiro: ResponsableRetiro = '';
@@ -150,11 +192,10 @@ export class Alta implements OnInit, OnDestroy {
   /** Cuidado cargado en el formulario para corregirlo; null al capturar uno nuevo. */
   cuidadoEnEdicion: CuidadoEnEdicion | null = null;
 
-  /** La ficha del paciente ocupa el panel derecho y se alterna con las tarjetas del tratamiento. */
-  pacienteAbierto = true;
+  /** La ficha del paciente se abre y se cierra desde su pestaña y se alterna con las tarjetas del
+   *  tratamiento. */
+  pacienteAbierto = false;
 
-  /** El cuerpo de la ficha del paciente está desplegado. */
-  cuerpoPacienteVisible = true;
 
   /** Estados de las peticiones: bloquean acciones incompatibles y muestran la carga. */
   cargando = false;
@@ -263,37 +304,39 @@ export class Alta implements OnInit, OnDestroy {
     this.condicionEgreso = valor;
   }
 
-  crearCondicion(datos: OpcionOtroValor): void {
-    if (this.creandoCondicion) return;
+  async crearCondicion(datos: OpcionOtroValor): Promise<boolean> {
+    if (this.creandoCondicion) return false;
 
     this.creandoCondicion = true;
-    this.catalogoService
-      .crear<CondicionEgresoResponse>(
-        'condicionesEgreso',
-        { nombre: datos.nombre } as CondicionEgresoResponse,
-      )
-      .pipe(
-        timeout(TIMEOUT_HTTP_MS),
-        finalize(() => {
-          this.creandoCondicion = false;
-          if (!this.destruido) this.cdr.markForCheck();
-        }),
-      )
-      .subscribe({
-        next: (creada) => {
-          if (this.destruido) return;
+    try {
+      const creada = await firstValueFrom(
+        this.catalogoService
+          .crear<CondicionEgresoResponse>(
+            'condicionesEgreso',
+            { nombre: datos.nombre } as CondicionEgresoResponse,
+          )
+          .pipe(timeout(TIMEOUT_HTTP_MS)),
+      );
 
-          this.condicionesEgreso = [...this.condicionesEgreso, creada];
-          this.condicionEgreso = String(creada.id);
-          this.mostrandoOtroCondicion = false;
-          this.cdr.markForCheck();
-        },
-        error: (error) => {
-          if (this.destruido) return;
+      if (this.destruido) return false;
+      if (creada.id == null) {
+        this.popUps.error('No se pudo crear la condición de egreso.');
+        return false;
+      }
 
-          this.mostrarError(error, 'No se pudo crear la condición de egreso.');
-        },
-      });
+      this.condicionesEgreso = [...this.condicionesEgreso, creada];
+      this.condicionEgreso = String(creada.id);
+      this.mostrandoOtroCondicion = false;
+      return true;
+    } catch (error) {
+      if (!this.destruido) {
+        this.mostrarError(error, 'No se pudo crear la condición de egreso.');
+      }
+      return false;
+    } finally {
+      this.creandoCondicion = false;
+      if (!this.destruido) this.cdr.markForCheck();
+    }
   }
 
   cancelarCondicion(): void {
@@ -312,42 +355,68 @@ export class Alta implements OnInit, OnDestroy {
     this.institucionReferencia = valor;
   }
 
-  crearInstitucion(datos: OpcionOtroValor): void {
-    if (this.creandoInstitucion) return;
+  async crearInstitucion(datos: OpcionOtroValor): Promise<boolean> {
+    if (this.creandoInstitucion) return false;
 
     this.creandoInstitucion = true;
-    this.catalogoService
-      .crear<Inter_institucion>(
-        'instituciones',
-        { nombre: datos.nombre } as Inter_institucion,
-      )
-      .pipe(
-        timeout(TIMEOUT_HTTP_MS),
-        finalize(() => {
-          this.creandoInstitucion = false;
-          if (!this.destruido) this.cdr.markForCheck();
-        }),
-      )
-      .subscribe({
-        next: (creada) => {
-          if (this.destruido) return;
+    try {
+      const creada = await firstValueFrom(
+        this.catalogoService
+          .crear<Inter_institucion>(
+            'instituciones',
+            { nombre: datos.nombre } as Inter_institucion,
+          )
+          .pipe(timeout(TIMEOUT_HTTP_MS)),
+      );
 
-          this.instituciones = [...this.instituciones, creada];
-          this.institucionReferencia = String(creada.id);
-          this.mostrandoOtroInstitucion = false;
-          this.cdr.markForCheck();
-        },
-        error: (error) => {
-          if (this.destruido) return;
+      if (this.destruido) return false;
+      if (creada.id == null) {
+        this.popUps.error('No se pudo crear la institución.');
+        return false;
+      }
 
-          this.mostrarError(error, 'No se pudo crear la institución.');
-        },
-      });
+      this.instituciones = [...this.instituciones, creada];
+      this.institucionReferencia = String(creada.id);
+      this.mostrandoOtroInstitucion = false;
+      return true;
+    } catch (error) {
+      if (!this.destruido) {
+        this.mostrarError(error, 'No se pudo crear la institución.');
+      }
+      return false;
+    } finally {
+      this.creandoInstitucion = false;
+      if (!this.destruido) this.cdr.markForCheck();
+    }
   }
 
   cancelarInstitucion(): void {
     this.mostrandoOtroInstitucion = false;
     this.institucionReferencia = this.institucionAnterior;
+  }
+
+  private resolverSeleccionesPendientes(): Promise<boolean> {
+    const selecciones: SeleccionPendiente[] = [];
+
+    if (this.mostrandoOtroCondicion) {
+      selecciones.push({
+        etiqueta: 'Condición de egreso',
+        componente: this.condicionOtro,
+        crear: (datos) => this.crearCondicion(datos),
+      });
+    }
+
+    if (this.mostrandoOtroInstitucion) {
+      selecciones.push({
+        etiqueta: 'Institución de referencia',
+        componente: this.institucionOtro,
+        crear: (datos) => this.crearInstitucion(datos),
+      });
+    }
+
+    return crearSeleccionesPendientes(selecciones, (mensaje) =>
+      this.popUps.formIncompleto(mensaje),
+    );
   }
 
   // ------------------- CARGA DEL ALTA -------------------
@@ -426,7 +495,8 @@ export class Alta implements OnInit, OnDestroy {
       this.guardando ||
       this.anulando ||
       this.confirmando ||
-      this.cargando
+      this.cargando ||
+      this.preparandoSelecciones
     ) {
       return false;
     }
@@ -438,7 +508,10 @@ export class Alta implements OnInit, OnDestroy {
     }
 
     if (this.esReferenciaTraslado) {
-      return this.institucionReferencia !== '' && this.motivoReferencia.trim().length > 0;
+      return (
+        (this.institucionReferencia !== '' || this.mostrandoOtroInstitucion) &&
+        this.motivoReferencia.trim().length > 0
+      );
     }
 
     return true;
@@ -454,9 +527,9 @@ export class Alta implements OnInit, OnDestroy {
     return this.tipoTratamiento === 'medicamentos';
   }
 
-  /** La ficha del paciente ocupa el panel derecho; sin tratamiento permanece siempre visible. */
+  /** La ficha del paciente ocupa el panel derecho solo cuando la abre su pestaña. */
   get pacienteVisible(): boolean {
-    return !this.hayTratamiento || this.pacienteAbierto;
+    return this.pacienteAbierto;
   }
 
   /** Las tarjetas del tratamiento ocupan el panel derecho cuando la ficha está contraída. */
@@ -464,15 +537,6 @@ export class Alta implements OnInit, OnDestroy {
     return this.hayTratamiento && !this.pacienteAbierto;
   }
 
-  /** El cuerpo de la ficha se dibuja desplegado mientras no haya tratamiento. */
-  get cuerpoPacienteExpandido(): boolean {
-    return !this.hayTratamiento || this.cuerpoPacienteVisible;
-  }
-
-  /** Cantidad total de indicaciones del tratamiento. */
-  get totalTratamiento(): number {
-    return this.tratamientoMedicamentos.length + this.tratamientoCuidados.length;
-  }
 
   /** Hay un alta vigente cargada: se puede anular o actualizar. */
   get hayAltaExistente(): boolean {
@@ -649,21 +713,9 @@ export class Alta implements OnInit, OnDestroy {
 
   /** Abre la ficha del paciente o vuelve a las tarjetas del tratamiento, según su estado. */
   cambiarPanelPaciente(abierto: boolean): void {
-    if (!this.hayTratamiento) return;
-
     this.pacienteAbierto = abierto;
-
-    if (abierto) {
-      this.cuerpoPacienteVisible = true;
-    }
   }
 
-  /** Pliega o despliega el cuerpo de la ficha sin ocultar su panel. */
-  cambiarCuerpoPaciente(visible: boolean): void {
-    if (!this.hayTratamiento) return;
-
-    this.cuerpoPacienteVisible = visible;
-  }
 
   // ------------------- GUARDADO Y ANULACIÓN -------------------
   /**
@@ -671,7 +723,15 @@ export class Alta implements OnInit, OnDestroy {
    * los campos de la sección; al guardar, el backend cierra el episodio.
    */
   async guardarEgreso(): Promise<void> {
-    if (this.destruido || this.guardando || this.anulando || this.confirmando) return;
+    if (
+      this.destruido ||
+      this.guardando ||
+      this.anulando ||
+      this.confirmando ||
+      this.preparandoSelecciones
+    ) {
+      return;
+    }
 
     if (!this.puedeGuardar) {
       this.avisarValidacion();
@@ -709,18 +769,48 @@ export class Alta implements OnInit, OnDestroy {
       if (!confirmado || this.destruido) return;
     }
 
+    this.preparandoSelecciones = true;
+    this.cdr.markForCheck();
+    try {
+      if (!(await this.resolverSeleccionesPendientes())) return;
+    } finally {
+      this.preparandoSelecciones = false;
+      if (!this.destruido) this.cdr.markForCheck();
+    }
+    if (this.destruido) return;
+
     const cuerpo = this.construirRequest(episodioId, usuarioId);
 
     this.guardando = true;
     this.cdr.markForCheck();
     this.peticionAccion?.unsubscribe();
 
+    let solicitudFarmacia: ProcedimientoMedicoResponse | null = null;
+
     try {
-      const respuesta = await firstValueFrom(
-        idEditado === null
-          ? this.servicio.crear(cuerpo)
-          : this.servicio.actualizar(idEditado, cuerpo),
-      );
+      // La solicitud debe crearse antes del alta: al guardarla, el backend cierra el episodio.
+      if (idEditado === null) {
+        solicitudFarmacia = await this.crearSolicitudFarmacia(episodioId, usuarioId);
+        if (this.destruido) {
+          if (solicitudFarmacia) await this.cancelarSolicitudFarmacia(solicitudFarmacia.id);
+          return;
+        }
+      }
+
+      let respuesta: AltaResponse;
+      try {
+        respuesta = await firstValueFrom(
+          idEditado === null
+            ? this.servicio.crear(cuerpo)
+            : this.servicio.actualizar(idEditado, cuerpo),
+        );
+      } catch (error) {
+        if (solicitudFarmacia) await this.cancelarSolicitudFarmacia(solicitudFarmacia.id);
+        if (!this.destruido) {
+          this.mostrarError(error, 'No se pudo guardar el alta. Intente nuevamente.');
+        }
+        return;
+      }
 
       if (this.destruido) return;
 
@@ -729,16 +819,107 @@ export class Alta implements OnInit, OnDestroy {
       this.sinEpisodioActivo = false;
       this.popUps.exito(
         idEditado === null
-          ? 'Alta registrada exitosamente.'
+          ? solicitudFarmacia
+            ? 'Alta registrada exitosamente. Solicitud de medicamento enviada a farmacia.'
+            : 'Alta registrada exitosamente.'
           : 'Alta actualizada exitosamente.',
       );
-    } catch (error) {
-      if (!this.destruido) {
-        this.mostrarError(error, 'No se pudo guardar el alta. Intente nuevamente.');
-      }
     } finally {
       this.guardando = false;
       if (!this.destruido) this.cdr.markForCheck();
+    }
+  }
+
+  /** Crea una única solicitud de farmacia con todos los medicamentos de catálogo del alta. */
+  private async crearSolicitudFarmacia(
+    episodioId: number,
+    usuarioId: number,
+  ): Promise<ProcedimientoMedicoResponse | null> {
+    const recursos = this.tratamientoMedicamentos
+      .filter(
+        (medicamento) =>
+          medicamento.medicamentoLogId !== null && (medicamento.cantidad ?? 0) > 0,
+      )
+      .map((medicamento) => ({
+        referenciaId: medicamento.medicamentoLogId!,
+        cantidad: medicamento.cantidad!,
+      }));
+
+    if (!recursos.length) return null;
+
+    const tipo = await this.obtenerTipoSolicitudFarmacia();
+    if (!tipo) return null;
+
+    const request: ProcedimientoMedicoRequest = {
+      tipoProcedimientoId: tipo.id,
+      descripcion: 'Solicitud de medicamento a farmacia',
+      resultado: null,
+      inicio: this.fechaHoraActual(),
+      fin: null,
+      episodioId,
+      usuarioId,
+      recursos: recursos.map((recurso) => ({
+        tipo: 'MEDICAMENTO' as const,
+        referenciaId: recurso.referenciaId,
+        cantidad: recurso.cantidad,
+      })),
+      requiereAutorizacion: false,
+    };
+
+    try {
+      return await firstValueFrom(this.servicioProcedimientos.crearProcedimiento(request));
+    } catch (error) {
+      if (!this.destruido) {
+        this.mostrarError(
+          error,
+          'No se pudo generar la solicitud de medicamento a farmacia.',
+        );
+      }
+      return null;
+    }
+  }
+
+  /** Tipo de procedimiento con el que se envían las solicitudes a farmacia. */
+  private async obtenerTipoSolicitudFarmacia(): Promise<TipoProcedimientoResponse | null> {
+    let tipos = this.tiposSolicitud;
+
+    if (!tipos) {
+      try {
+        tipos = await firstValueFrom(this.servicioProcedimientos.getTiposProcedimiento());
+        this.tiposSolicitud = tipos;
+      } catch (error) {
+        if (!this.destruido) {
+          this.mostrarError(error, 'No se pudieron consultar los tipos de solicitud.');
+        }
+        return null;
+      }
+    }
+
+    const activos = tipos.filter((tipo) => tipo.estado !== false);
+    const tipo =
+      activos.find(
+        (opcion) => /solicitud/i.test(opcion.nombre) && /medicamento/i.test(opcion.nombre),
+      ) ??
+      activos.find((opcion) => /solicitud/i.test(opcion.nombre)) ??
+      null;
+
+    if (!tipo) {
+      this.popUps.advertencia(
+        'No hay un tipo de solicitud de medicamento configurado en el catálogo de procedimientos.',
+      );
+    }
+
+    return tipo;
+  }
+
+  /** Cancela el procedimiento si el alta no pudo guardarse después de crear la solicitud. */
+  private async cancelarSolicitudFarmacia(procedimientoId: number): Promise<void> {
+    try {
+      await firstValueFrom(this.servicioProcedimientos.eliminarProcedimiento(procedimientoId));
+    } catch (error) {
+      if (!this.destruido) {
+        this.mostrarError(error, 'No se pudo cancelar la solicitud de farmacia generada.');
+      }
     }
   }
 
@@ -851,8 +1032,7 @@ export class Alta implements OnInit, OnDestroy {
     this.medicamentoEnEdicion = null;
     this.cuidadoEnEdicion = null;
     this.mostrandoTratamiento = false;
-    this.pacienteAbierto = !this.hayTratamiento;
-    this.cuerpoPacienteVisible = true;
+    this.pacienteAbierto = false;
     this.cdr.markForCheck();
   }
 
@@ -879,8 +1059,7 @@ export class Alta implements OnInit, OnDestroy {
     this.cuidadoEnEdicion = null;
     this.mostrandoTratamiento = false;
     this.altaExistente = null;
-    this.pacienteAbierto = true;
-    this.cuerpoPacienteVisible = true;
+    this.pacienteAbierto = false;
   }
 
   /** Suelta los datos que estaban cargados en los formularios del tratamiento. */
@@ -993,6 +1172,16 @@ export class Alta implements OnInit, OnDestroy {
   private aIdCatalogo(valor: string): number | null {
     const id = Number(valor);
     return Number.isInteger(id) && id > 0 ? id : null;
+  }
+
+  /** Fecha y hora local en el formato ISO que espera el backend. */
+  private fechaHoraActual(): string {
+    const ahora = new Date();
+    const dosDigitos = (valor: number): string => `${valor}`.padStart(2, '0');
+
+    return `${ahora.getFullYear()}-${dosDigitos(ahora.getMonth() + 1)}-${dosDigitos(
+      ahora.getDate(),
+    )}T${dosDigitos(ahora.getHours())}:${dosDigitos(ahora.getMinutes())}:00`;
   }
 
   private formatearFecha(fechaIso: string): string {
