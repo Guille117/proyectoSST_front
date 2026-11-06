@@ -1,0 +1,401 @@
+<div class="contenedorConfiguracion">
+  <header class="encabezadoConfiguracion">
+    <h1>Mi configuración</h1>
+    <p>Administra tus datos personales y las credenciales de tu cuenta.</p>
+  </header>
+
+  @if (cargando) {
+    <div class="mensaje-estado" role="status">Cargando tu información...</div>
+  } @else if (perfil) {
+    <div class="paneles trabajoArea">
+      <!-- ==================== DATOS PERSONALES ==================== -->
+      <section class="panel panel--perfil">
+        <div class="perfil-cabecera">
+          <div class="avatar" aria-hidden="true">{{ iniciales }}</div>
+          <div class="perfil-identidad">
+            <h2>{{ nombreCompleto }}</h2>
+            <div class="meta">
+              <span class="codigo">{{ perfil.codigo }}</span>
+              <span
+                class="estado"
+                [class.estado--activo]="perfil.estado"
+                [class.estado--inactivo]="!perfil.estado"
+              >
+                {{ perfil.estado ? 'Activo' : 'Inactivo' }}
+              </span>
+            </div>
+            <span class="rol">{{ rolesTexto }}</span>
+          </div>
+        </div>
+
+        <h3 class="titulo-seccion">Datos personales</h3>
+
+        <form #datosForm="ngForm" (ngSubmit)="guardarPerfil()" novalidate>
+          <div class="fila">
+            <app-campo-validado
+              [label]="'Nombres'"
+              [fieldId]="'nombres'"
+              [required]="true"
+              [showError]="!!(nombres.touched && nombres.invalid)"
+              [errorMessage]="'Debe ingresar los nombres'"
+            >
+              <input
+                id="nombres"
+                type="text"
+                name="nombres"
+                placeholder="Nombres"
+                required
+                pattern="^[A-Za-zÁÉÍÓÚáéíóúÑñ ]+$"
+                autocomplete="given-name"
+                [(ngModel)]="datosPersonales.nombres"
+                #nombres="ngModel"
+                [class.input-invalid]="nombres.touched && nombres.invalid"
+              >
+            </app-campo-validado>
+
+            <app-campo-validado
+              [label]="'Apellidos'"
+              [fieldId]="'apellidos'"
+              [required]="true"
+              [showError]="!!(apellidos.touched && apellidos.invalid)"
+              [errorMessage]="'Debe ingresar los apellidos'"
+            >
+              <input
+                id="apellidos"
+                type="text"
+                name="apellidos"
+                placeholder="Apellidos"
+                required
+                pattern="^[A-Za-zÁÉÍÓÚáéíóúÑñ ]+$"
+                autocomplete="family-name"
+                [(ngModel)]="datosPersonales.apellidos"
+                #apellidos="ngModel"
+                [class.input-invalid]="apellidos.touched && apellidos.invalid"
+              >
+            </app-campo-validado>
+          </div>
+
+          <div class="fila">
+            <app-campo-validado
+              [label]="'CUI'"
+              [fieldId]="'cui'"
+              [required]="true"
+              [showError]="!!(cui.touched && cui.invalid)"
+              [errorMessage]="'Debe ingresar un CUI válido'"
+            >
+              <input
+                id="cui"
+                type="text"
+                name="cui"
+                placeholder="CUI"
+                required
+                pattern="[0-9]{13}"
+                maxlength="13"
+                inputmode="numeric"
+                autocomplete="off"
+                [(ngModel)]="datosPersonales.cui"
+                #cui="ngModel"
+                [class.input-invalid]="cui.touched && cui.invalid"
+              >
+            </app-campo-validado>
+
+            <app-campo-validado
+              [label]="'Sexo'"
+              [fieldId]="'sexo'"
+              [required]="true"
+              [showError]="!!(sexo.touched && sexo.invalid)"
+              [errorMessage]="'Debe seleccionar un sexo'"
+            >
+              <select
+                id="sexo"
+                name="sexo"
+                required
+                [(ngModel)]="datosPersonales.sexo"
+                #sexo="ngModel"
+                [class.input-invalid]="sexo.touched && sexo.invalid"
+              >
+                <option value="" disabled>Seleccione un sexo</option>
+                <option value="MASCULINO">Masculino</option>
+                <option value="FEMENINO">Femenino</option>
+              </select>
+            </app-campo-validado>
+          </div>
+
+          <div class="fila">
+            <app-campo-validado
+              [label]="'Fecha de nacimiento'"
+              [fieldId]="'fechaNacimiento'"
+              [required]="true"
+              [showError]="!!(fechaNacimiento.touched && fechaNacimiento.invalid)"
+              [errorMessage]="'Debe ingresar una fecha de nacimiento'"
+            >
+              <input
+                id="fechaNacimiento"
+                type="date"
+                name="fechaNacimiento"
+                required
+                autocomplete="bday"
+                [(ngModel)]="datosPersonales.fechaNacimiento"
+                #fechaNacimiento="ngModel"
+                [class.input-invalid]="fechaNacimiento.touched && fechaNacimiento.invalid"
+              >
+            </app-campo-validado>
+
+            <app-campo-validado
+              [label]="'Teléfono'"
+              [fieldId]="'telefono'"
+              [required]="true"
+              [showError]="!!(telefono.touched && telefono.invalid)"
+              [errorMessage]="'Debe ingresar un teléfono de 8 dígitos'"
+            >
+              <input
+                id="telefono"
+                type="tel"
+                name="telefono"
+                placeholder="Teléfono"
+                required
+                pattern="[0-9]{8}"
+                maxlength="8"
+                inputmode="numeric"
+                autocomplete="tel"
+                [(ngModel)]="datosPersonales.telefono"
+                #telefono="ngModel"
+                [class.input-invalid]="telefono.touched && telefono.invalid"
+              >
+            </app-campo-validado>
+          </div>
+
+          <div class="fila fila--una">
+            <app-campo-validado
+              [label]="'Email'"
+              [fieldId]="'email'"
+              [showError]="!!(email.touched && email.invalid)"
+              [errorMessage]="'Formato de email inválido'"
+            >
+              <input
+                id="email"
+                type="email"
+                name="email"
+                placeholder="Email"
+                email
+                autocomplete="email"
+                [(ngModel)]="datosPersonales.email"
+                #email="ngModel"
+                [class.input-invalid]="email.touched && email.invalid"
+              >
+            </app-campo-validado>
+          </div>
+
+          <div class="acciones-formulario">
+            <button
+              type="button"
+              class="btn _cancelarModal"
+              [disabled]="!hayCambiosPerfil || guardandoPerfil"
+              (click)="descartarCambiosPerfil()"
+            >
+              Descartar
+            </button>
+            <button
+              type="submit"
+              class="btn _guardar"
+              [disabled]="datosForm.invalid || !hayCambiosPerfil || guardandoPerfil"
+            >
+              {{ guardandoPerfil ? 'Guardando...' : 'Guardar cambios' }}
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <!-- ==================== CUENTA Y SEGURIDAD ==================== -->
+      <section class="panel panel--cuenta">
+        <h3 class="titulo-seccion">Cuenta y seguridad</h3>
+
+        <div class="resumen-cuenta">
+          <div class="dato">
+            <span class="dato__etiqueta">Usuario</span>
+            <span class="dato__valor">{{ perfil.username }}</span>
+          </div>
+          <div class="dato">
+            <span class="dato__etiqueta">Código</span>
+            <span class="dato__valor">{{ perfil.codigo }}</span>
+          </div>
+          <div class="dato">
+            <span class="dato__etiqueta">Puesto</span>
+            <span class="dato__valor">{{ puestoTexto }}</span>
+          </div>
+          <div class="dato">
+            <span class="dato__etiqueta">Horario</span>
+            <span class="dato__valor">{{ horarioTexto }}</span>
+          </div>
+          <div class="dato">
+            <span class="dato__etiqueta">Roles</span>
+            <span class="dato__valor">{{ rolesTexto }}</span>
+          </div>
+          <div class="dato">
+            <span class="dato__etiqueta">Estado</span>
+            <span class="dato__valor">{{ perfil.estado ? 'Activo' : 'Inactivo' }}</span>
+          </div>
+        </div>
+
+        <h4 class="subtitulo">Nombre de usuario</h4>
+
+        <form #nombreUsuarioForm="ngForm" (ngSubmit)="actualizarUsuario()" novalidate>
+          <app-campo-validado
+            [label]="'Usuario'"
+            [fieldId]="'username'"
+            [required]="true"
+            [showError]="!!(username.touched && username.invalid)"
+            [errorMessage]="'El usuario debe tener entre 3 y 50 caracteres'"
+          >
+            <input
+              id="username"
+              type="text"
+              name="username"
+              placeholder="Nombre de usuario"
+              required
+              minlength="3"
+              maxlength="50"
+              autocomplete="username"
+              [(ngModel)]="usuarioForm.username"
+              #username="ngModel"
+              [class.input-invalid]="username.touched && username.invalid"
+            >
+          </app-campo-validado>
+
+          <p class="ayuda">Con este usuario iniciarás sesión. La sesión se actualiza al guardar.</p>
+
+          <div class="acciones-formulario">
+            <button
+              type="submit"
+              class="btn _principal"
+              [disabled]="nombreUsuarioForm.invalid || !hayCambiosUsuario || actualizandoUsuario"
+            >
+              {{ actualizandoUsuario ? 'Actualizando...' : 'Actualizar usuario' }}
+            </button>
+          </div>
+        </form>
+
+        <div class="separador"></div>
+
+        <h4 class="subtitulo">Cambiar contraseña</h4>
+
+        <form #contrasenaForm="ngForm" (ngSubmit)="cambiarPassword()" novalidate>
+          <app-campo-validado
+            class="campo-password"
+            [label]="'Contraseña actual'"
+            [fieldId]="'passwordActual'"
+            [required]="true"
+            [showError]="!!(passwordActual.touched && passwordActual.invalid)"
+            [errorMessage]="'Debe ingresar tu contraseña actual'"
+          >
+            <div class="campo-password__control">
+              <input
+                id="passwordActual"
+                name="passwordActual"
+                placeholder="Contraseña actual"
+                required
+                autocomplete="current-password"
+                [type]="mostrarPasswordActual ? 'text' : 'password'"
+                [(ngModel)]="passwordForm.passwordActual"
+                #passwordActual="ngModel"
+                [class.input-invalid]="passwordActual.touched && passwordActual.invalid"
+              >
+              <button
+                type="button"
+                class="campo-password__toggle"
+                [attr.aria-label]="mostrarPasswordActual ? 'Ocultar contraseña actual' : 'Mostrar contraseña actual'"
+                (click)="togglePasswordActual()"
+              >
+                <i class="bi" [class.bi-eye]="!mostrarPasswordActual" [class.bi-eye-slash]="mostrarPasswordActual"></i>
+              </button>
+            </div>
+          </app-campo-validado>
+
+          <app-campo-validado
+            class="campo-password"
+            [label]="'Nueva contraseña'"
+            [fieldId]="'passwordNueva'"
+            [required]="true"
+            [showError]="!!(passwordNueva.touched && passwordNueva.invalid)"
+            [errorMessage]="'La contraseña debe tener al menos 8 caracteres'"
+          >
+            <div class="campo-password__control">
+              <input
+                id="passwordNueva"
+                name="passwordNueva"
+                placeholder="Nueva contraseña"
+                required
+                minlength="8"
+                autocomplete="new-password"
+                [type]="mostrarPasswordNueva ? 'text' : 'password'"
+                [(ngModel)]="passwordForm.passwordNueva"
+                #passwordNueva="ngModel"
+                [class.input-invalid]="passwordNueva.touched && passwordNueva.invalid"
+              >
+              <button
+                type="button"
+                class="campo-password__toggle"
+                [attr.aria-label]="mostrarPasswordNueva ? 'Ocultar nueva contraseña' : 'Mostrar nueva contraseña'"
+                (click)="togglePasswordNueva()"
+              >
+                <i class="bi" [class.bi-eye]="!mostrarPasswordNueva" [class.bi-eye-slash]="mostrarPasswordNueva"></i>
+              </button>
+            </div>
+          </app-campo-validado>
+
+          <app-campo-validado
+            class="campo-password"
+            [label]="'Confirmar contraseña'"
+            [fieldId]="'confirmarPassword'"
+            [required]="true"
+            [showError]="!!(confirmarPassword.touched && (confirmarPassword.invalid || passwordsDistintas))"
+            [errorMessage]="passwordsDistintas ? 'Las contraseñas no coinciden' : 'Debe confirmar la contraseña'"
+          >
+            <div class="campo-password__control">
+              <input
+                id="confirmarPassword"
+                name="confirmarPassword"
+                placeholder="Repite la nueva contraseña"
+                required
+                autocomplete="new-password"
+                [type]="mostrarConfirmarPassword ? 'text' : 'password'"
+                [(ngModel)]="passwordForm.confirmarPassword"
+                #confirmarPassword="ngModel"
+                [class.input-invalid]="confirmarPassword.touched && (confirmarPassword.invalid || passwordsDistintas)"
+              >
+              <button
+                type="button"
+                class="campo-password__toggle"
+                [attr.aria-label]="mostrarConfirmarPassword ? 'Ocultar confirmación' : 'Mostrar confirmación'"
+                (click)="toggleConfirmarPassword()"
+              >
+                <i class="bi" [class.bi-eye]="!mostrarConfirmarPassword" [class.bi-eye-slash]="mostrarConfirmarPassword"></i>
+              </button>
+            </div>
+          </app-campo-validado>
+
+          @if (passwordCorta) {
+            <p class="ayuda ayuda--error" role="alert">
+              La contraseña debe tener al menos {{ passwordMinLength }} caracteres.
+            </p>
+          }
+          @if (passwordsDistintas) {
+            <p class="ayuda ayuda--error" role="alert">Las contraseñas no coinciden.</p>
+          }
+
+          <div class="acciones-formulario">
+            <button
+              type="submit"
+              class="btn _principal"
+              [disabled]="contrasenaForm.invalid || !passwordsValidas || cambiandoPassword"
+            >
+              {{ cambiandoPassword ? 'Cambiando...' : 'Cambiar contraseña' }}
+            </button>
+          </div>
+        </form>
+      </section>
+    </div>
+  } @else {
+    <div class="mensaje-estado">No se pudo cargar tu información.</div>
+  }
+</div>

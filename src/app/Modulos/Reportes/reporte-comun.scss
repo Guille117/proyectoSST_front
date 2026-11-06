@@ -103,11 +103,20 @@
 }
 
 .table-container {
+  width: 100%;
+  max-width: 760px;
   overflow-x: auto;
 }
 
 .grafica {
-  height: 320px;
+  width: 100%;
+  max-width: 760px;
+  height: 380px;
+  padding: 18px 20px;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
 }
 
 .seccion-titulo {
@@ -188,7 +197,8 @@
   }
 
   .grafica {
-    height: 260px;
+    height: 300px;
+    padding: 14px;
   }
 
   .kpis {

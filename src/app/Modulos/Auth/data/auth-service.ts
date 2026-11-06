@@ -100,6 +100,23 @@ export class AuthService {
     return localStorage.getItem('auth_token');
   }
 
+  /** Actualiza la sesión guardada tras un cambio de perfil o de nombre de usuario. */
+  actualizarSesion(cambios: Partial<LoginResponse>, token?: string): void {
+    const actual = this.currentUser();
+    if (!actual) {
+      return;
+    }
+
+    const actualizado: LoginResponse = { ...actual, ...cambios };
+    if (token) {
+      localStorage.setItem('auth_token', token);
+      actualizado.token = token;
+    }
+
+    localStorage.setItem('auth_user', JSON.stringify(actualizado));
+    this.currentUser.set(actualizado);
+  }
+
   private obtenerUsuarioGuardado(): LoginResponse | null {
     try {
       const saved = localStorage.getItem('auth_user');

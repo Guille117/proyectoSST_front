@@ -15,6 +15,7 @@ const TITULOS_MODULO: Record<string, string> = {
   medica: 'Módulo Médico',
   enfermeria: 'Módulo de Enfermería',
   expediente: 'Expediente clínico',
+  configuracion: 'Configuración',
 };
 
 @Component({

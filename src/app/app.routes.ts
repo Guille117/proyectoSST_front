@@ -90,6 +90,13 @@ export const routes: Routes = [
         loadChildren: () =>
           import('./Modulos/Reportes/rutasReportes').then((m) => m.rutasReportes),
       },
+      {
+        path: 'configuracion',
+        loadComponent: () =>
+          import('./Modulos/Configuracion/configuracion/configuracion').then(
+            (m) => m.Configuracion,
+          ),
+      },
     ],
   },
   {

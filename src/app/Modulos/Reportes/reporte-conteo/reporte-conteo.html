@@ -20,16 +20,6 @@
   @if (cargando) {
     <p class="reporte-vacio">Cargando reporte...</p>
   } @else {
-    @if (config.conGrafica && datos.length) {
-      <div class="grafica">
-        <app-grafica-barras
-          [etiquetas]="etiquetas()"
-          [valores]="valores()"
-          [titulo]="config.graficaTitulo ?? config.titulo"
-        ></app-grafica-barras>
-      </div>
-    }
-
     <div class="table-container">
       <table class="table">
         <thead>
@@ -52,5 +42,15 @@
         </tbody>
       </table>
     </div>
+
+    @if (config.conGrafica && datos.length) {
+      <div class="grafica">
+        <app-grafica-barras
+          [etiquetas]="etiquetas()"
+          [valores]="valores()"
+          [titulo]="config.graficaTitulo ?? config.titulo"
+        ></app-grafica-barras>
+      </div>
+    }
   }
 </div>
