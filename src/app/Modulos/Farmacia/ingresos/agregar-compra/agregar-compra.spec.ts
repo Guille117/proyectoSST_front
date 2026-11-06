@@ -1,7 +1,8 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { NgForm } from '@angular/forms';
+import { NgForm, NgModel } from '@angular/forms';
 import { By } from '@angular/platform-browser';
 import { Observable, Subject, of, throwError } from 'rxjs';
+import { OpcionOtroComponent } from '../../../../shared/opcion-otro/opcion-otro';
 import { PopUps } from '../../../../shared/popUps/popUpsService';
 import { Insumo } from '../../insumos/data/interfazInsumo';
 import { ServicioInsumos } from '../../insumos/data/servicio-insumos';
@@ -43,6 +44,9 @@ describe('AgregarCompra', () => {
   };
   const servicioProveedor = {
     getProveedores: vi.fn<(activos: boolean) => Observable<proveedorResponse[]>>(() => of([])),
+    postProveedor: vi.fn<(datos: { nombre: string }) => Observable<proveedorResponse>>(
+      (datos) => of({ ...otroProveedor, nombre: datos.nombre }),
+    ),
   };
   const popUp = {
     exito: vi.fn(),
@@ -102,6 +106,10 @@ describe('AgregarCompra', () => {
     servicioCompra.actualizarCompra.mockReturnValue(of(void 0));
     servicioProveedor.getProveedores.mockReset();
     servicioProveedor.getProveedores.mockReturnValue(of([]));
+    servicioProveedor.postProveedor.mockReset();
+    servicioProveedor.postProveedor.mockImplementation((datos) =>
+      of({ ...otroProveedor, nombre: datos.nombre }),
+    );
     popUp.exito.mockReset();
     popUp.advertencia.mockReset();
     popUp.formIncompleto.mockReset();
@@ -736,7 +744,7 @@ describe('AgregarCompra', () => {
     expect(component.lotes).toEqual([loteVista]);
   });
 
-  it('informa el error del backend al registrar la compra', () => {
+  it('informa el error del backend al registrar la compra', async () => {
     const error = new Error('Fallo el registro');
 
     cargarMedicamentos();
@@ -748,7 +756,7 @@ describe('AgregarCompra', () => {
     fixture.detectChanges();
 
     servicioCompra.registrarCompra.mockReturnValueOnce(throwError(() => error));
-    component.guardarCompra(formularioVisible());
+    await component.guardarCompra(formularioVisible());
 
     expect(popUp.errorDesdeBackend).toHaveBeenCalledWith(error, 'No se pudo registrar la compra.');
     expect(popUp.exito).not.toHaveBeenCalled();
@@ -1168,5 +1176,74 @@ describe('AgregarCompra', () => {
     );
 
     editFixture.destroy();
+  });
+
+  const prepararPaso2 = (): void => {
+    cargarMedicamentos();
+    component.seleccionarProducto(medicamento.id);
+    escribirLote(loteCompleto);
+    component.agregarLote(formularioVisible());
+    component.avanzarAlPaso2();
+    fixture.detectChanges();
+  };
+
+  const abrirOtroProveedor = (): OpcionOtroComponent => {
+    const selector = fixture.debugElement.query(By.css('#proveedorCompra'));
+    selector.injector.get(NgModel).viewToModelUpdate(component.opcionOtroId);
+    fixture.componentRef.changeDetectorRef.markForCheck();
+    fixture.detectChanges();
+    return fixture.debugElement.query(By.css('app-opcion-otro'))
+      .componentInstance as OpcionOtroComponent;
+  };
+
+  it('crea el proveedor pendiente antes de registrar la compra y usa su id', async () => {
+    servicioProveedor.postProveedor.mockReturnValue(of(otroProveedor));
+    prepararPaso2();
+    const otro = abrirOtroProveedor();
+    otro.nombre = 'Farmacia Central';
+    fixture.detectChanges();
+
+    expect(component.puedeGuardar).toBe(true);
+    await component.guardarCompra(formularioVisible());
+
+    expect(servicioProveedor.postProveedor).toHaveBeenCalledWith({ nombre: 'Farmacia Central' });
+    expect(servicioProveedor.postProveedor.mock.invocationCallOrder[0]).toBeLessThan(
+      servicioCompra.registrarCompra.mock.invocationCallOrder[0],
+    );
+    expect(servicioCompra.registrarCompra).toHaveBeenCalledWith({
+      request: { proveedorId: otroProveedor.id, lotes: [loteEsperado] },
+      comprobante: null,
+    });
+  });
+
+  it('no registra la compra si falla la creación del proveedor pendiente', async () => {
+    servicioProveedor.postProveedor.mockReturnValueOnce(throwError(() => new Error('fallo')));
+    prepararPaso2();
+    const otro = abrirOtroProveedor();
+    otro.nombre = 'Farmacia Central';
+    fixture.detectChanges();
+
+    await component.guardarCompra(formularioVisible());
+
+    expect(servicioCompra.registrarCompra).not.toHaveBeenCalled();
+    expect(popUp.errorDesdeBackend).toHaveBeenCalled();
+    expect(component.guardando).toBe(false);
+  });
+
+  it('no registra la compra si el proveedor pendiente está vacío y deja el botón habilitado', async () => {
+    prepararPaso2();
+    abrirOtroProveedor();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const guardar: HTMLButtonElement = fixture.nativeElement.querySelector('.btn._guardar');
+    expect(guardar.disabled).toBe(false);
+
+    await component.guardarCompra(formularioVisible());
+
+    expect(servicioCompra.registrarCompra).not.toHaveBeenCalled();
+    expect(popUp.formIncompleto).toHaveBeenCalledWith(
+      'Completa el valor de «Proveedor» o cancélalo antes de guardar.',
+    );
   });
 });

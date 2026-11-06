@@ -1,8 +1,24 @@
 import { NgClass } from '@angular/common';
-import { ChangeDetectorRef, Component, OnDestroy, OnInit, inject } from '@angular/core';
+import {
+  ChangeDetectorRef,
+  Component,
+  OnDestroy,
+  OnInit,
+  inject,
+  viewChild,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { finalize, forkJoin, map, Subscription, timeout, TimeoutError } from 'rxjs';
+import {
+  finalize,
+  firstValueFrom,
+  forkJoin,
+  map,
+  Subscription,
+  timeout,
+  TimeoutError,
+} from 'rxjs';
 import { OpcionOtroComponent, OpcionOtroValor } from '../../../../shared/opcion-otro/opcion-otro';
+import { crearSeleccionesPendientes } from '../../../../shared/opcion-otro/crear-seleccion-pendiente';
 import { Paginacion } from '../../../../shared/paginacion/paginacion';
 import { PopUps } from '../../../../shared/popUps/popUpsService';
 import { CatalogoService } from '../../../Catalogos/data/serviceCatalogo';
@@ -139,7 +155,9 @@ export class IndicacionMedicamentos implements OnInit, OnDestroy {
   readonly opcionOtroId = '__otro__';
   mostrandoOtroUnidad = false;
   creandoUnidad = false;
+  preparandoSelecciones = false;
   private unidadAnterior = '';
+  private readonly unidadOtro = viewChild<OpcionOtroComponent>('unidadOtro');
   frecuencia: number | null = null;
   duracionTipo: TipoDuracion | '' = '';
   duracionCantidad: number | null = null;
@@ -269,6 +287,7 @@ export class IndicacionMedicamentos implements OnInit, OnDestroy {
       Number.isInteger(this.frecuencia) &&
       this.frecuencia > 0 &&
       this.observaciones.length <= 2000 &&
+      !this.preparandoSelecciones &&
       !this.guardando &&
       !this.confirmando
     );
@@ -419,41 +438,56 @@ export class IndicacionMedicamentos implements OnInit, OnDestroy {
     this.unidadMedida = valor;
   }
 
-  crearUnidad(datos: OpcionOtroValor): void {
-    if (this.creandoUnidad || !datos.abreviatura) return;
+  async crearUnidad(datos: OpcionOtroValor): Promise<boolean> {
+    if (this.creandoUnidad || !datos.abreviatura) return false;
 
     this.creandoUnidad = true;
-    this.catalogoService
-      .guardarUnidadMedida(datos.nombre, datos.abreviatura)
-      .pipe(
-        timeout(TIMEOUT_HTTP_MS),
-        finalize(() => {
-          this.creandoUnidad = false;
-          if (!this.destruido) this.cdr.markForCheck();
-        }),
-      )
-      .subscribe({
-        next: (creada) => {
-          if (this.destruido) return;
+    try {
+      const creada = await firstValueFrom(
+        this.catalogoService
+          .guardarUnidadMedida(datos.nombre, datos.abreviatura)
+          .pipe(timeout(TIMEOUT_HTTP_MS)),
+      );
 
-          const nombre = creada.nombre?.trim() || datos.nombre;
-          this.abreviaturasUnidad.set(nombre, datos.abreviatura ?? '');
-          this.unidadesMedida = this.combinarUnidades([...this.unidadesMedida, nombre]);
-          this.unidadMedida = nombre;
-          this.mostrandoOtroUnidad = false;
-          this.cdr.markForCheck();
-        },
-        error: (error) => {
-          if (this.destruido) return;
+      if (this.destruido) return false;
 
-          this.popUps.errorDesdeBackend(error, 'No se pudo crear la unidad de medida.');
-        },
-      });
+      const nombre = creada.nombre?.trim() || datos.nombre;
+      this.abreviaturasUnidad.set(nombre, datos.abreviatura ?? '');
+      this.unidadesMedida = this.combinarUnidades([...this.unidadesMedida, nombre]);
+      this.unidadMedida = nombre;
+      this.mostrandoOtroUnidad = false;
+      return true;
+    } catch (error) {
+      if (!this.destruido) {
+        this.popUps.errorDesdeBackend(error, 'No se pudo crear la unidad de medida.');
+      }
+      return false;
+    } finally {
+      this.creandoUnidad = false;
+      if (!this.destruido) this.cdr.markForCheck();
+    }
   }
 
   cancelarUnidad(): void {
     this.mostrandoOtroUnidad = false;
     this.unidadMedida = this.unidadAnterior;
+  }
+
+  private resolverUnidadPendiente(): Promise<boolean> {
+    if (!this.mostrandoOtroUnidad) {
+      return Promise.resolve(true);
+    }
+
+    return crearSeleccionesPendientes(
+      [
+        {
+          etiqueta: 'Unidad de medida',
+          componente: this.unidadOtro,
+          crear: (datos) => this.crearUnidad(datos),
+        },
+      ],
+      (mensaje) => this.popUps.formIncompleto(mensaje),
+    );
   }
 
   /** Une las unidades del catálogo con «Gotas», sin repetir nombres equivalentes. */
@@ -527,6 +561,7 @@ export class IndicacionMedicamentos implements OnInit, OnDestroy {
         error: (error) => {
           if (this.destruido) return;
 
+          this.errorCarga = true;
           this.indicaciones = [];
           this.mostrarError(error, 'No se pudieron cargar las indicaciones. Intente nuevamente.');
         },
@@ -886,6 +921,18 @@ export class IndicacionMedicamentos implements OnInit, OnDestroy {
 
       if (!confirmado || this.destruido) return;
     }
+
+    this.preparandoSelecciones = true;
+    this.cdr.markForCheck();
+    let listo = false;
+    try {
+      listo = await this.resolverUnidadPendiente();
+    } finally {
+      this.preparandoSelecciones = false;
+      this.cdr.markForCheck();
+    }
+
+    if (!listo || this.destruido) return;
 
     const cuerpo: MedicamentoIndicacionRequest = {
       medicamentoLogId: elegido?.id ?? null,

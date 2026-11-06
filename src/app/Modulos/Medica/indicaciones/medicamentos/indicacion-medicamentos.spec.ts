@@ -1,6 +1,8 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { of, throwError, TimeoutError } from 'rxjs';
 
+import { OpcionOtroComponent } from '../../../../shared/opcion-otro/opcion-otro';
 import { IndicacionMedicamentos } from './indicacion-medicamentos';
 import { MedicamentoIndicacionService } from './data/medicamento-service';
 import {
@@ -75,9 +77,11 @@ describe('IndicacionMedicamentos', () => {
     errorDesdeBackend: vi.fn(),
     advertencia: vi.fn(),
     confirmarToast: vi.fn(),
+    formIncompleto: vi.fn(),
   };
   const catalogoService = {
     listarUnidadMedida: vi.fn(),
+    guardarUnidadMedida: vi.fn(),
   };
   const registrosEnfermeria = {
     buscarAplicacionesPorIndicacion: vi.fn(),
@@ -92,6 +96,9 @@ describe('IndicacionMedicamentos', () => {
     servicio.cambiarEstado.mockReturnValue(of(indicacion({ estado: 'FINALIZADO' })));
     servicio.eliminarIndicacion.mockReturnValue(of(void 0));
     catalogoService.listarUnidadMedida.mockReturnValue(of([]));
+    catalogoService.guardarUnidadMedida.mockReturnValue(
+      of({ id: 2, nombre: 'Mililitros', abreviatura: 'ml' }),
+    );
     registrosEnfermeria.buscarAplicacionesPorIndicacion.mockReturnValue(of([]));
     popUps.confirmarToast.mockResolvedValue(true);
     episodio.obtener.mockReturnValue(1);
@@ -136,6 +143,18 @@ describe('IndicacionMedicamentos', () => {
 
   const botonGuardar = (): HTMLButtonElement =>
     elemento<HTMLButtonElement>('.indicacion-acciones button[type="submit"]');
+
+  const abrirOtroUnidad = (): OpcionOtroComponent => {
+    const select = elemento<HTMLSelectElement>('#unidadMedidaIndicada');
+    const opcionOtro = Array.from(select.options).find(
+      (opcion) => opcion.textContent?.trim() === 'Otro',
+    );
+    select.selectedIndex = opcionOtro?.index ?? -1;
+    select.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+    return fixture.debugElement.query(By.css('app-opcion-otro'))
+      .componentInstance as OpcionOtroComponent;
+  };
 
   const buscarMedicamento = async (texto: string): Promise<void> => {
     await escribir('#medicamentoIndicado', texto);
@@ -433,6 +452,7 @@ describe('IndicacionMedicamentos', () => {
     expect(component.medicamentoElegido).toBeNull();
     expect(component.medicamentoLibre).toBe('Aspirina 500 mg');
 
+    await escribir('#observacionesIndicadas', 'Observación actualizada');
     botonGuardar().click();
     await fixture.whenStable();
 
@@ -651,5 +671,62 @@ describe('IndicacionMedicamentos', () => {
       'Abra un episodio para consultar sus indicaciones.',
     );
     expect(servicio.getIndicacionesPorEpisodio).toHaveBeenCalledTimes(2);
+  });
+
+  it('crea la unidad pendiente antes de guardar y usa su abreviatura', async () => {
+    const orden: string[] = [];
+    catalogoService.guardarUnidadMedida.mockImplementation(() => {
+      orden.push('unidad');
+      return of({ id: 2, nombre: 'Mililitros', abreviatura: 'ml' });
+    });
+    servicio.postIndicacion.mockImplementation(() => {
+      orden.push('guardar');
+      return of(indicacion());
+    });
+
+    await completarFormulario();
+    const otro = abrirOtroUnidad();
+    otro.nombre = 'Mililitros';
+    otro.abreviatura = 'ml';
+    fixture.detectChanges();
+
+    await component.agregarIndicacion();
+
+    expect(catalogoService.guardarUnidadMedida).toHaveBeenCalledWith('Mililitros', 'ml');
+    expect(orden).toEqual(['unidad', 'guardar']);
+    expect(servicio.postIndicacion).toHaveBeenCalledWith(
+      expect.objectContaining({ presentacion: 'ml' }),
+    );
+  });
+
+  it('no guarda la indicación si falla la creación de la unidad pendiente', async () => {
+    catalogoService.guardarUnidadMedida.mockReturnValue(throwError(() => new Error('fallo')));
+
+    await completarFormulario();
+    const otro = abrirOtroUnidad();
+    otro.nombre = 'Mililitros';
+    otro.abreviatura = 'ml';
+    fixture.detectChanges();
+
+    await component.agregarIndicacion();
+
+    expect(servicio.postIndicacion).not.toHaveBeenCalled();
+    expect(popUps.errorDesdeBackend).toHaveBeenCalledWith(
+      expect.any(Error),
+      'No se pudo crear la unidad de medida.',
+    );
+  });
+
+  it('no guarda la indicación si la unidad pendiente está vacía', async () => {
+    await completarFormulario();
+    abrirOtroUnidad();
+
+    await component.agregarIndicacion();
+
+    expect(catalogoService.guardarUnidadMedida).not.toHaveBeenCalled();
+    expect(servicio.postIndicacion).not.toHaveBeenCalled();
+    expect(popUps.formIncompleto).toHaveBeenCalledWith(
+      'Completa el valor de «Unidad de medida» o cancélalo antes de guardar.',
+    );
   });
 });

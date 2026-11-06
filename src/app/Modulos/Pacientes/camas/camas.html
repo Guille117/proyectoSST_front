@@ -191,6 +191,7 @@
 					<label for="area">Área</label>
 					@if (mostrandoOtroArea) {
 						<app-opcion-otro
+							#areaOtro
 							[placeholder]="'Escribe el área'"
 							[creando]="creandoArea"
 							(confirmar)="crearArea($event)"
@@ -211,6 +212,7 @@
 					<label for="tipoCama">Tipo de cama</label>
 					@if (mostrandoOtroTipoCama) {
 						<app-opcion-otro
+							#tipoCamaOtro
 							[placeholder]="'Escribe el tipo de cama'"
 							[creando]="creandoTipoCama"
 							(confirmar)="crearTipoCama($event)"
@@ -231,6 +233,7 @@
 					<label for="habitacion">Habitación</label>
 					@if (mostrandoOtroHabitacion) {
 						<app-opcion-otro
+							#habitacionOtro
 							[placeholder]="'Escribe la habitación'"
 							[creando]="creandoHabitacion"
 							(confirmar)="crearHabitacion($event)"
@@ -267,7 +270,7 @@
 			<button
 				type="submit"
 				class="btn _guardar"
-				[disabled]="!puedeGuardar()"
+				[disabled]="guardando || preparandoSelecciones || !puedeGuardar()"
 				(click)=  "isEditing ? actualizarCama() : crearCama()"
 			>
 				{{isEditing ? 'Guardar Cambios' : 'Guardar'}}

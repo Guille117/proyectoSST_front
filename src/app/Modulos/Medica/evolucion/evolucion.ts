@@ -85,8 +85,6 @@ export class Evolucion implements OnInit, OnDestroy {
   /** La ficha con los datos del paciente está desplegada; la abre su pestaña lateral. */
   pacienteAbierto = false;
 
-  /** El cuerpo de la ficha del paciente está desplegado; el chevron de su encabezado lo pliega. */
-  datosPacienteVisibles = true;
 
   /** Tarjeta del historial con su menú de opciones desplegado; null si no hay ninguna. */
   menuEvolucionAbierta: number | null = null;
@@ -224,10 +222,6 @@ export class Evolucion implements OnInit, OnDestroy {
    */
   cambiarFichaPaciente(abierto: boolean): void {
     this.pacienteAbierto = abierto;
-
-    if (abierto) {
-      this.datosPacienteVisibles = true;
-    }
   }
 
   // ------------------- MENÚ DE LA TARJETA -------------------

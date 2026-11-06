@@ -34,8 +34,6 @@ export class Indicaciones {
   /** La ficha con los datos del paciente está desplegada; la abre su pestaña lateral. */
   pacienteAbierto = false;
 
-  /** El cuerpo de la ficha del paciente está desplegado; el chevron de su encabezado lo pliega. */
-  datosPacienteVisibles = true;
 
   // ------------------- MOCK: datos temporales para diseño -------------------
   /** Secciones del rail de indicaciones; las tres están desarrolladas en la maqueta. */
@@ -77,9 +75,5 @@ export class Indicaciones {
    */
   cambiarFichaPaciente(abierto: boolean): void {
     this.pacienteAbierto = abierto;
-
-    if (abierto) {
-      this.datosPacienteVisibles = true;
-    }
   }
 }

@@ -386,6 +386,7 @@
                 <app-campo-validado label="Proveedor" fieldId="proveedorCompra" [required]="true">
                     @if (mostrandoOtroProveedor) {
                         <app-opcion-otro
+                            #proveedorOtro
                             [placeholder]="'Escribe el proveedor'"
                             [creando]="creandoProveedor"
                             (confirmar)="crearProveedor($event)"

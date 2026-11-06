@@ -1,10 +1,12 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { of, Subject } from 'rxjs';
+import { By } from '@angular/platform-browser';
+import { of, Subject, throwError } from 'rxjs';
 
 import { ProcedimientoMedico } from './procedimiento-medico';
 import { ProcedimientoMedicoService } from './data/procedimiento-medico-service';
 import { EpisodioActivoService } from '../data/episodio-activo-service';
 import { AuthService } from '../../Auth/data/auth-service';
+import { OpcionOtroComponent } from '../../../shared/opcion-otro/opcion-otro';
 import { PopUps } from '../../../shared/popUps/popUpsService';
 
 describe('ProcedimientoMedico', () => {
@@ -15,6 +17,7 @@ describe('ProcedimientoMedico', () => {
   const servicio = {
     getTiposProcedimiento: vi.fn(),
     getProcedimientos: vi.fn(),
+    postTipoProcedimiento: vi.fn(),
     crearProcedimiento: vi.fn(),
     actualizarProcedimiento: vi.fn(),
     eliminarProcedimiento: vi.fn(),
@@ -37,6 +40,7 @@ describe('ProcedimientoMedico', () => {
     advertencia: vi.fn(),
     error: vi.fn(),
     errorDesdeBackend: vi.fn(),
+    formIncompleto: vi.fn(),
   };
 
   const procedimiento = {
@@ -61,6 +65,9 @@ describe('ProcedimientoMedico', () => {
       of([{ id: 1, nombre: 'Sutura', estado: true }]),
     );
     servicio.getProcedimientos.mockReturnValue(of([procedimiento]));
+    servicio.postTipoProcedimiento.mockReturnValue(
+      of({ id: 9, nombre: 'Nuevo tipo', estado: true }),
+    );
     servicio.buscarRecursos.mockReturnValue(
       of([{ id: 4, nombre: 'Amoxicilina Bayer tabletas', disponible: 5 }]),
     );
@@ -80,6 +87,20 @@ describe('ProcedimientoMedico', () => {
     component = fixture.componentInstance;
     await fixture.whenStable();
   });
+
+  function abrirOtroTipo(): OpcionOtroComponent {
+    const select: HTMLSelectElement = fixture.nativeElement.querySelector(
+      '#tipoProcedimientoMedico',
+    );
+    const opcionOtro = Array.from(select.options).find(
+      (opcion) => opcion.textContent?.trim() === 'Otro',
+    );
+    select.selectedIndex = opcionOtro?.index ?? -1;
+    select.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+    return fixture.debugElement.query(By.css('app-opcion-otro'))
+      .componentInstance as OpcionOtroComponent;
+  }
 
   it('carga los tipos y los procedimientos del episodio activo', () => {
     expect(servicio.getTiposProcedimiento).toHaveBeenCalled();
@@ -170,5 +191,57 @@ describe('ProcedimientoMedico', () => {
       requiereAutorizacion: false,
     });
     expect(popUps.exito).toHaveBeenCalledWith('Procedimiento registrado exitosamente.');
+  });
+
+  it('crea el tipo pendiente antes de registrar el procedimiento y usa su id', async () => {
+    servicio.crearProcedimiento.mockReturnValue(of(procedimiento));
+    component.descripcion = 'Sutura de herida en el antebrazo.';
+    component.inicio = '2026-10-19T11:00';
+    component.fin = '';
+    const otro = abrirOtroTipo();
+    otro.nombre = 'Nuevo tipo';
+    fixture.detectChanges();
+
+    expect(component.puedeRegistrarProcedimiento).toBe(true);
+    await component.registrarProcedimiento();
+
+    expect(servicio.postTipoProcedimiento).toHaveBeenCalledWith('Nuevo tipo');
+    expect(servicio.crearProcedimiento).toHaveBeenCalledWith(
+      expect.objectContaining({ tipoProcedimientoId: 9 }),
+    );
+    expect(servicio.postTipoProcedimiento.mock.invocationCallOrder[0]).toBeLessThan(
+      servicio.crearProcedimiento.mock.invocationCallOrder[0],
+    );
+  });
+
+  it('no registra el procedimiento si falla la creación del tipo pendiente', async () => {
+    servicio.postTipoProcedimiento.mockReturnValue(throwError(() => new Error('fallo')));
+    component.descripcion = 'Sutura de herida en el antebrazo.';
+    component.inicio = '2026-10-19T11:00';
+    component.fin = '';
+    const otro = abrirOtroTipo();
+    otro.nombre = 'Nuevo tipo';
+    fixture.detectChanges();
+
+    await component.registrarProcedimiento();
+
+    expect(servicio.crearProcedimiento).not.toHaveBeenCalled();
+    expect(popUps.errorDesdeBackend).toHaveBeenCalled();
+  });
+
+  it('no registra el procedimiento si el tipo pendiente está vacío y avisa con el formulario incompleto', async () => {
+    component.descripcion = 'Sutura de herida en el antebrazo.';
+    component.inicio = '2026-10-19T11:00';
+    component.fin = '';
+    abrirOtroTipo();
+
+    expect(component.puedeRegistrarProcedimiento).toBe(true);
+    await component.registrarProcedimiento();
+
+    expect(servicio.postTipoProcedimiento).not.toHaveBeenCalled();
+    expect(servicio.crearProcedimiento).not.toHaveBeenCalled();
+    expect(popUps.formIncompleto).toHaveBeenCalledWith(
+      'Completa el valor de «Tipo de procedimiento» o cancélalo antes de guardar.',
+    );
   });
 });

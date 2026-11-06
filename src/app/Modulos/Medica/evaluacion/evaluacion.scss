@@ -34,8 +34,8 @@
   padding-right: calc(var(--ficha-ancho) + 1.5rem);
 }
 
-/* Secciones que muestran siempre el bloque de datos del paciente (historia clínica y diagnóstico): el
-   bloque compartido se dibuja desplegado y sin pestaña, y la rejilla le reserva su ancho. */
+/* Sección que muestra siempre el bloque de datos del paciente (historia clínica): el bloque
+   compartido se dibuja desplegado y sin pestaña, y la rejilla le reserva su ancho. */
 .evaluacion--datos-paciente {
   padding-right: calc(var(--ficha-ancho) + 1.5rem);
 }

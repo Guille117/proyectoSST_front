@@ -1,7 +1,16 @@
-﻿import { ChangeDetectorRef, Component, OnDestroy, OnInit, inject } from '@angular/core';
+﻿import {
+  ChangeDetectorRef,
+  Component,
+  OnDestroy,
+  OnInit,
+  inject,
+  viewChild,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { finalize, Subscription, TimeoutError } from 'rxjs';
+import { finalize, firstValueFrom, Subscription, timeout, TimeoutError } from 'rxjs';
+import { TIMEOUT_HTTP_MS } from '../evaluacion/data/constantes-clinicas';
 import { OpcionOtroComponent, OpcionOtroValor } from '../../../shared/opcion-otro/opcion-otro';
+import { crearSeleccionesPendientes } from '../../../shared/opcion-otro/crear-seleccion-pendiente';
 import { PopUps } from '../../../shared/popUps/popUpsService';
 import { TabSwitch } from '../../../shared/tab-switch/tab-switch';
 import { DatosPaciente } from '../datos-paciente/datos-paciente';
@@ -102,8 +111,6 @@ export class ProcedimientoMedico implements OnInit, OnDestroy {
   /** La ficha con los datos del paciente está desplegada; la abre su pestaña lateral. */
   pacienteAbierto = false;
 
-  /** El cuerpo de la ficha del paciente está desplegado; el chevron de su encabezado lo pliega. */
-  datosPacienteVisibles = true;
 
   /** Filtro de las tarjetas de procedimientos realizados. */
   filtroProcedimiento: FiltroProcedimiento = 'todos';
@@ -113,7 +120,9 @@ export class ProcedimientoMedico implements OnInit, OnDestroy {
   readonly opcionOtroId = -1;
   mostrandoOtroTipo = false;
   creandoTipo = false;
+  preparandoSelecciones = false;
   private tipoAnterior: number | null = null;
+  private readonly tipoOtro = viewChild<OpcionOtroComponent>('tipoOtro');
   descripcion = '';
   resultado = '';
   inicio = '';
@@ -199,10 +208,6 @@ export class ProcedimientoMedico implements OnInit, OnDestroy {
    * compartido, igual que en evaluación clínica y en indicaciones médicas. */
   cambiarFichaPaciente(abierto: boolean): void {
     this.pacienteAbierto = abierto;
-
-    if (abierto) {
-      this.datosPacienteVisibles = true;
-    }
   }
 
   /** Secciones del rail; en solo lectura únicamente queda la consulta de realizados. */
@@ -269,7 +274,8 @@ export class ProcedimientoMedico implements OnInit, OnDestroy {
       !this.soloLectura &&
       !this.sinEpisodioActivo &&
       !this.guardando &&
-      this.tipoProcedimiento !== null &&
+      !this.preparandoSelecciones &&
+      (this.tipoProcedimiento !== null || this.mostrandoOtroTipo) &&
       this.descripcion.trim().length > 0 &&
       this.fechasValidas
     );
@@ -373,41 +379,59 @@ export class ProcedimientoMedico implements OnInit, OnDestroy {
     this.tipoProcedimiento = valor;
   }
 
-  crearTipo(datos: OpcionOtroValor): void {
-    if (this.creandoTipo) return;
+  async crearTipo(datos: OpcionOtroValor): Promise<boolean> {
+    if (this.creandoTipo) return false;
 
     this.creandoTipo = true;
-    this.servicio
-      .postTipoProcedimiento(datos.nombre)
-      .pipe(
-        finalize(() => {
-          this.creandoTipo = false;
-          if (!this.destruido) this.cdr.markForCheck();
-        }),
-      )
-      .subscribe({
-        next: (creado) => {
-          if (this.destruido) return;
+    try {
+      const creado = await firstValueFrom(
+        this.servicio.postTipoProcedimiento(datos.nombre).pipe(timeout(TIMEOUT_HTTP_MS)),
+      );
 
-          this.tiposProcedimiento = [
-            ...this.tiposProcedimiento,
-            { id: creado.id, nombre: creado.nombre },
-          ];
-          this.tipoProcedimiento = creado.id;
-          this.mostrandoOtroTipo = false;
-          this.cdr.markForCheck();
-        },
-        error: (error) => {
-          if (this.destruido) return;
+      if (this.destruido) return false;
+      if (creado.id == null) {
+        this.popUps.error('No se pudo crear el tipo de procedimiento.');
+        return false;
+      }
 
-          this.mostrarError(error, 'No se pudo crear el tipo de procedimiento.');
-        },
-      });
+      this.tiposProcedimiento = [
+        ...this.tiposProcedimiento,
+        { id: creado.id, nombre: creado.nombre },
+      ];
+      this.tipoProcedimiento = creado.id;
+      this.mostrandoOtroTipo = false;
+      return true;
+    } catch (error) {
+      if (!this.destruido) {
+        this.mostrarError(error, 'No se pudo crear el tipo de procedimiento.');
+      }
+      return false;
+    } finally {
+      this.creandoTipo = false;
+      if (!this.destruido) this.cdr.markForCheck();
+    }
   }
 
   cancelarTipo(): void {
     this.mostrandoOtroTipo = false;
     this.tipoProcedimiento = this.tipoAnterior;
+  }
+
+  private resolverTipoPendiente(): Promise<boolean> {
+    if (!this.mostrandoOtroTipo) {
+      return Promise.resolve(true);
+    }
+
+    return crearSeleccionesPendientes(
+      [
+        {
+          etiqueta: 'Tipo de procedimiento',
+          componente: this.tipoOtro,
+          crear: (datos) => this.crearTipo(datos),
+        },
+      ],
+      (mensaje) => this.popUps.formIncompleto(mensaje),
+    );
   }
 
   /** Carga los procedimientos del episodio activo y conserva la selección indicada. */
@@ -589,7 +613,15 @@ export class ProcedimientoMedico implements OnInit, OnDestroy {
 
   /** Registra o actualiza el procedimiento con sus fechas y los recursos agregados. */
   async registrarProcedimiento(): Promise<void> {
-    if (this.destruido || this.guardando || this.eliminando || this.confirmando) return;
+    if (
+      this.destruido ||
+      this.guardando ||
+      this.eliminando ||
+      this.confirmando ||
+      this.preparandoSelecciones
+    ) {
+      return;
+    }
 
     if (this.soloLectura) {
       this.popUps.advertencia('El episodio está cerrado y no permite registrar procedimientos.');
@@ -617,12 +649,13 @@ export class ProcedimientoMedico implements OnInit, OnDestroy {
       return;
     }
 
-    const tipoProcedimientoId = this.tipoProcedimiento;
     const inicio = this.aLocalDateTime(this.inicio);
-    if (tipoProcedimientoId === null || !inicio) return;
+    if (!inicio) return;
 
     const idEdicion = this.procedimientoEnEdicion;
-    const tipo = this.tiposProcedimiento.find((opcion) => opcion.id === tipoProcedimientoId);
+    const tipo = this.tiposProcedimiento.find(
+      (opcion) => opcion.id === this.tipoProcedimiento,
+    );
 
     if (idEdicion !== null) {
       this.confirmando = true;
@@ -637,6 +670,19 @@ export class ProcedimientoMedico implements OnInit, OnDestroy {
 
       if (!confirmado || this.destruido) return;
     }
+
+    this.preparandoSelecciones = true;
+    this.cdr.markForCheck();
+    try {
+      if (!(await this.resolverTipoPendiente())) return;
+    } finally {
+      this.preparandoSelecciones = false;
+      if (!this.destruido) this.cdr.markForCheck();
+    }
+    if (this.destruido) return;
+
+    const tipoProcedimientoId = this.tipoProcedimiento;
+    if (tipoProcedimientoId === null) return;
 
     const request: ProcedimientoMedicoRequest = {
       tipoProcedimientoId,

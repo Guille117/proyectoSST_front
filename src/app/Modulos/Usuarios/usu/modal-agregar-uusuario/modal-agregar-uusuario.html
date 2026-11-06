@@ -181,6 +181,7 @@
                 [required]="true"
             >
                 <app-opcion-otro
+                    #puestoOtro
                     [placeholder]="'Escribe el puesto'"
                     [creando]="creandoPuesto"
                     (confirmar)="crearPuesto($event)"
@@ -248,6 +249,7 @@
                     [required]="true"
                 >
                     <app-opcion-otro
+                        #especialidadOtro
                         [placeholder]="'Escribe la especialidad'"
                         [creando]="creandoEspecialidad"
                         (confirmar)="crearEspecialidad($event)"

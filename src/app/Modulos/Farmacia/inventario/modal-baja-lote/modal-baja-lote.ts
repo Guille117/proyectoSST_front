@@ -5,13 +5,15 @@ import {
   Input,
   OnInit,
   inject,
+  viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
-import { TimeoutError, finalize, timeout } from 'rxjs';
+import { TimeoutError, finalize, firstValueFrom, timeout } from 'rxjs';
 import { ModalAction, ModalService } from '../../../../modal-principal/modal-service';
 import { CampoValidado } from '../../../../shared/campo-validado/campo-validado';
 import { OpcionOtroComponent, OpcionOtroValor } from '../../../../shared/opcion-otro/opcion-otro';
+import { crearSeleccionesPendientes } from '../../../../shared/opcion-otro/crear-seleccion-pendiente';
 import { PopUps } from '../../../../shared/popUps/popUpsService';
 import { AuthService } from '../../../Auth/data/auth-service';
 import { Inter_base } from '../../../Catalogos/data/nombreInterfaz';
@@ -49,7 +51,9 @@ export class ModalBajaLote implements OnInit {
   readonly opcionOtroId = -1;
   mostrandoOtroMotivo = false;
   creandoMotivo = false;
+  preparandoSelecciones = false;
   private motivoAnterior: number | null = null;
+  private readonly motivoOtro = viewChild<OpcionOtroComponent>('motivoOtro');
 
   private readonly meses = [
     'enero',
@@ -79,7 +83,7 @@ export class ModalBajaLote implements OnInit {
         label: 'Registrar baja',
         className: '_guardar',
         onClick: () => this.confirmar(),
-        disabled: () => !this.formularioValido(),
+        disabled: () => !this.formularioValido() || this.preparandoSelecciones,
       },
     ];
   }
@@ -93,7 +97,7 @@ export class ModalBajaLote implements OnInit {
       Number.isInteger(cantidad) &&
       cantidad > 0 &&
       cantidad <= disponible &&
-      this.motivoBajaId !== null
+      (this.motivoBajaId !== null || this.mostrandoOtroMotivo)
     );
   }
 
@@ -155,9 +159,9 @@ export class ModalBajaLote implements OnInit {
     );
   }
 
-  confirmar(): void {
+  async confirmar(): Promise<void> {
     const lote = this.lote;
-    if (!lote || this.guardando) return;
+    if (!lote || this.guardando || this.preparandoSelecciones) return;
 
     const cantidad = Number(this.cantidad);
     if (!Number.isInteger(cantidad) || cantidad <= 0) {
@@ -171,6 +175,28 @@ export class ModalBajaLote implements OnInit {
       );
       return;
     }
+
+    this.preparandoSelecciones = true;
+    this.cdr.markForCheck();
+    let listo = true;
+    try {
+      if (this.mostrandoOtroMotivo) {
+        listo = await crearSeleccionesPendientes(
+          [
+            {
+              etiqueta: 'Motivo de baja',
+              componente: this.motivoOtro,
+              crear: (datos) => this.crearMotivo(datos),
+            },
+          ],
+          (mensaje) => this.popUps.formIncompleto(mensaje),
+        );
+      }
+    } finally {
+      this.preparandoSelecciones = false;
+      this.cdr.markForCheck();
+    }
+    if (!listo) return;
 
     if (this.motivoBajaId === null) {
       this.popUps.formIncompleto('Seleccione un motivo de baja.');
@@ -298,31 +324,30 @@ export class ModalBajaLote implements OnInit {
     this.motivoBajaId = valor;
   }
 
-  crearMotivo(datos: OpcionOtroValor): void {
-    if (this.creandoMotivo) return;
+  async crearMotivo(datos: OpcionOtroValor): Promise<boolean> {
+    if (this.creandoMotivo) return false;
 
     this.creandoMotivo = true;
-    this.catalogoService
-      .crear<Inter_base>('motivoBaja', { nombre: datos.nombre })
-      .pipe(
-        timeout(5000),
-        finalize(() => {
-          this.creandoMotivo = false;
-          this.cdr.markForCheck();
-        }),
-        takeUntilDestroyed(this.destroyRef),
-      )
-      .subscribe({
-        next: (creado) => {
-          if (creado.id == null) return;
+    try {
+      const creado = await firstValueFrom(
+        this.catalogoService
+          .crear<Inter_base>('motivoBaja', { nombre: datos.nombre })
+          .pipe(timeout(5000), takeUntilDestroyed(this.destroyRef)),
+      );
 
-          this.motivos = [...this.motivos, creado];
-          this.motivoBajaId = creado.id;
-          this.mostrandoOtroMotivo = false;
-          this.cdr.markForCheck();
-        },
-        error: (error) => this.popUps.errorDesdeBackend(error, 'No se pudo crear el motivo de baja.'),
-      });
+      if (creado.id == null) return false;
+
+      this.motivos = [...this.motivos, creado];
+      this.motivoBajaId = creado.id;
+      this.mostrandoOtroMotivo = false;
+      return true;
+    } catch (error) {
+      this.popUps.errorDesdeBackend(error, 'No se pudo crear el motivo de baja.');
+      return false;
+    } finally {
+      this.creandoMotivo = false;
+      this.cdr.markForCheck();
+    }
   }
 
   cancelarMotivo(): void {

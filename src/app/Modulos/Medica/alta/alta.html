@@ -129,6 +129,7 @@
 
               @if (mostrandoOtroCondicion) {
                 <app-opcion-otro
+                  #condicionOtro
                   [placeholder]="'Escribe la condición de egreso'"
                   [creando]="creandoCondicion"
                   (confirmar)="crearCondicion($event)"
@@ -261,6 +262,7 @@
 
                   @if (mostrandoOtroInstitucion) {
                     <app-opcion-otro
+                      #institucionOtro
                       [placeholder]="'Escribe la institución'"
                       [creando]="creandoInstitucion"
                       (confirmar)="crearInstitucion($event)"
@@ -501,14 +503,11 @@
     </aside>
   }
 
-  <!-- Datos del paciente: bloque compartido con las demás pantallas del módulo. Solo la pantalla
-       decide cuándo se contrae; el usuario no puede plegarlo con un clic. -->
+  <!-- Datos del paciente: bloque compartido con las demás pantallas del módulo. Se abre y se cierra
+       con su pestaña lateral y se alterna con las tarjetas del tratamiento. -->
   <app-datos-paciente
     [plegable]="true"
-    [permitirAlternar]="hayTratamiento"
     [abierto]="pacienteVisible"
-    [cuerpoVisible]="cuerpoPacienteExpandido"
     (abiertoCambia)="cambiarPanelPaciente($event)"
-    (cuerpoVisibleCambia)="cambiarCuerpoPaciente($event)"
   ></app-datos-paciente>
 </div>

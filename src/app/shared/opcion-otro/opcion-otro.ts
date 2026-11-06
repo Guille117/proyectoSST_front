@@ -46,6 +46,18 @@ export class OpcionOtroComponent implements AfterViewInit {
     return !!nombre && (!this.requiereAbreviatura() || !!abreviatura);
   }
 
+  /** Valor listo para crear sin pasar por el botón de confirmar del componente. */
+  valorPendiente(): OpcionOtroValor | null {
+    if (!this.completo) {
+      return null;
+    }
+
+    return {
+      nombre: this.nombre.trim(),
+      abreviatura: this.requiereAbreviatura() ? this.abreviatura.trim() : undefined,
+    };
+  }
+
   confirmarOpcion(evento?: Event): void {
     evento?.preventDefault();
 

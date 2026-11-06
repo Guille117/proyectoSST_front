@@ -501,6 +501,7 @@
                     <td class="celda_centrada">
                       @if (detalleEditandoMotivo === detalle) {
                         <app-opcion-otro
+                          #motivoOtro
                           [placeholder]="'Escribe el motivo'"
                           [creando]="creandoMotivo"
                           (confirmar)="crearMotivo(detalle, $event)"

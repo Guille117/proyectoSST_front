@@ -7,13 +7,15 @@ import {
   Input,
   ChangeDetectorRef,
   inject,
+  viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { finalize, timeout } from 'rxjs';
+import { firstValueFrom, timeout } from 'rxjs';
 import { CampoValidado } from "../../../../shared/campo-validado/campo-validado";
 import { OpcionOtroComponent, OpcionOtroValor } from '../../../../shared/opcion-otro/opcion-otro';
+import { crearSeleccionesPendientes, SeleccionPendiente } from '../../../../shared/opcion-otro/crear-seleccion-pendiente';
 import { PuestoService } from '../data/puesto-service';
 import { UsuarioService } from '../data/usuario-service';
 import { HorarioService } from '../../horarios/data/horario-service';
@@ -46,9 +48,13 @@ export class ModalAgregarUusuario implements OnInit, OnChanges {
   mostrandoOtroEspecialidad = false;
   creandoPuesto = false;
   creandoEspecialidad = false;
+  preparandoSelecciones = false;
+  guardando = false;
   private puestoAnterior = 0;
   private especialidadAnterior = 0;
   private readonly destroyRef = inject(DestroyRef);
+  private readonly puestoOtro = viewChild<OpcionOtroComponent>('puestoOtro');
+  private readonly especialidadOtro = viewChild<OpcionOtroComponent>('especialidadOtro');
 
   puestos: PuestoResponse[] = [];
   horarios: HorarioResponse[] = [];
@@ -100,7 +106,7 @@ export class ModalAgregarUusuario implements OnInit, OnChanges {
           label: this.isEditing ? 'Guardar cambios' : 'Guardar',
           className: '_guardar',
           onClick: () => this.guardarUsuario(),
-          disabled: () => !this.puedeGuardarPaso2,
+          disabled: () => this.guardando || this.preparandoSelecciones || !this.puedeGuardarPaso2,
         },
       );
     } else {
@@ -128,28 +134,35 @@ export class ModalAgregarUusuario implements OnInit, OnChanges {
     this.usuarioReq.puestoId = valor;
   }
 
-  crearPuesto(datos: OpcionOtroValor): void {
+  async crearPuesto(datos: OpcionOtroValor): Promise<boolean> {
     if (this.creandoPuesto) {
-      return;
+      return false;
     }
 
     this.creandoPuesto = true;
-    this.puestoService
-      .postPuesto(datos.nombre)
-      .pipe(
-        finalize(() => {
-          this.creandoPuesto = false;
-        }),
-        takeUntilDestroyed(this.destroyRef),
-      )
-      .subscribe({
-        next: (puesto) => {
-          this.puestos = [...this.puestos, puesto];
-          this.usuarioReq.puestoId = puesto.id;
-          this.mostrandoOtroPuesto = false;
-        },
-        error: (error) => this.popUps.errorDesdeBackend(error, 'No se pudo crear el puesto.'),
-      });
+    try {
+      const puesto = await firstValueFrom(
+        this.puestoService
+          .postPuesto(datos.nombre)
+          .pipe(timeout(TIEMPO_ESPERA_MS), takeUntilDestroyed(this.destroyRef)),
+      );
+
+      if (!puesto || !puesto.id) {
+        this.popUps.error('No se pudo crear el puesto.');
+        return false;
+      }
+
+      this.puestos = [...this.puestos, puesto];
+      this.usuarioReq.puestoId = puesto.id;
+      this.mostrandoOtroPuesto = false;
+      return true;
+    } catch (error) {
+      this.popUps.errorDesdeBackend(error, 'No se pudo crear el puesto.');
+      return false;
+    } finally {
+      this.creandoPuesto = false;
+      this.cdr.markForCheck();
+    }
   }
 
   cancelarPuesto(): void {
@@ -168,39 +181,64 @@ export class ModalAgregarUusuario implements OnInit, OnChanges {
     this.usuarioReq.especialidadId = valor;
   }
 
-  crearEspecialidad(datos: OpcionOtroValor): void {
+  async crearEspecialidad(datos: OpcionOtroValor): Promise<boolean> {
     if (this.creandoEspecialidad) {
-      return;
+      return false;
     }
 
     this.creandoEspecialidad = true;
-    this.servicioCatalogo
-      .crear<Inter_base>('especialidades', { nombre: datos.nombre })
-      .pipe(
-        timeout(TIEMPO_ESPERA_MS),
-        finalize(() => {
-          this.creandoEspecialidad = false;
-        }),
-        takeUntilDestroyed(this.destroyRef),
-      )
-      .subscribe({
-        next: (especialidad) => {
-          if (especialidad.id == null) {
-            return;
-          }
+    try {
+      const especialidad = await firstValueFrom(
+        this.servicioCatalogo
+          .crear<Inter_base>('especialidades', { nombre: datos.nombre })
+          .pipe(timeout(TIEMPO_ESPERA_MS), takeUntilDestroyed(this.destroyRef)),
+      );
 
-          this.especialidades = [...this.especialidades, especialidad];
-          this.usuarioReq.especialidadId = especialidad.id;
-          this.mostrandoOtroEspecialidad = false;
-        },
-        error: (error) =>
-          this.popUps.errorDesdeBackend(error, 'No se pudo crear la especialidad.'),
-      });
+      if (especialidad.id == null) {
+        this.popUps.error('No se pudo crear la especialidad.');
+        return false;
+      }
+
+      this.especialidades = [...this.especialidades, especialidad];
+      this.usuarioReq.especialidadId = especialidad.id;
+      this.mostrandoOtroEspecialidad = false;
+      return true;
+    } catch (error) {
+      this.popUps.errorDesdeBackend(error, 'No se pudo crear la especialidad.');
+      return false;
+    } finally {
+      this.creandoEspecialidad = false;
+      this.cdr.markForCheck();
+    }
   }
 
   cancelarEspecialidad(): void {
     this.mostrandoOtroEspecialidad = false;
     this.usuarioReq.especialidadId = this.especialidadAnterior;
+  }
+
+  private resolverSeleccionesPendientes(): Promise<boolean> {
+    const selecciones: SeleccionPendiente[] = [];
+
+    if (this.mostrandoOtroPuesto) {
+      selecciones.push({
+        etiqueta: 'Puesto',
+        componente: () => this.puestoOtro(),
+        crear: (datos: OpcionOtroValor) => this.crearPuesto(datos),
+      });
+    }
+
+    if (this.mostrandoOtroEspecialidad) {
+      selecciones.push({
+        etiqueta: 'Especialidad',
+        componente: () => this.especialidadOtro(),
+        crear: (datos: OpcionOtroValor) => this.crearEspecialidad(datos),
+      });
+    }
+
+    return crearSeleccionesPendientes(selecciones, (mensaje) =>
+      this.popUps.formIncompleto(mensaje),
+    );
   }
 
   alternarRol(rolId: number): void {
@@ -260,12 +298,15 @@ export class ModalAgregarUusuario implements OnInit, OnChanges {
   }
 
   get puedeGuardarPaso2(): boolean {
+    const puestoValido = !!this.usuarioReq.puestoId || this.mostrandoOtroPuesto;
+    const especialidadValida = !!this.usuarioReq.especialidadId || this.mostrandoOtroEspecialidad;
+
     return !!(
-      this.usuarioReq.puestoId &&
+      puestoValido &&
       this.usuarioReq.horarioId &&
       this.usuarioReq.rolIds?.length &&
       this.usuarioReq.username?.trim() &&
-      (!this.esMedico || this.usuarioReq.especialidadId) &&
+      (!this.esMedico || especialidadValida) &&
       (!this.isEditing || this.hayCambios)
     );
   }
@@ -439,6 +480,9 @@ export class ModalAgregarUusuario implements OnInit, OnChanges {
   }
 
   async guardarUsuario(): Promise<void> {
+    if (this.guardando || this.preparandoSelecciones) {
+      return;
+    }
     if (!this.puedeAvanzarPaso1) {
       this.contador = 0;
       this.popUps.formIncompleto('Completa correctamente los datos personales.');
@@ -447,6 +491,28 @@ export class ModalAgregarUusuario implements OnInit, OnChanges {
     if (!this.puedeGuardarPaso2) {
       this.popUps.formIncompleto('Completa correctamente los datos de usuario.');
       return;
+    }
+
+    if (this.isEditing && this.usuarioToEdit) {
+      const confirmado = await this.popUps.confirmarToast(
+        '¿Desea guardar los cambios realizados en este usuario?',
+        'Confirmar cambios',
+      );
+
+      if (!confirmado) {
+        return;
+      }
+    }
+
+    this.preparandoSelecciones = true;
+    this.cdr.markForCheck();
+    try {
+      if (!(await this.resolverSeleccionesPendientes())) {
+        return;
+      }
+    } finally {
+      this.preparandoSelecciones = false;
+      this.cdr.markForCheck();
     }
 
     const datosPersonales: PersonaDatos = {
@@ -469,16 +535,10 @@ export class ModalAgregarUusuario implements OnInit, OnChanges {
       estado: this.usuarioReq.estado ?? true,
     };
 
+    this.guardando = true;
+    this.cdr.markForCheck();
+
     if (this.isEditing && this.usuarioToEdit) {
-      const confirmado = await this.popUps.confirmarToast(
-        '¿Desea guardar los cambios realizados en este usuario?',
-        'Confirmar cambios',
-      );
-
-      if (!confirmado) {
-        return;
-      }
-
       this.usuarioService.putUsuario(this.usuarioToEdit.id, payload).subscribe({
         next: () => {
           this.popUps.exito('Usuario actualizado exitosamente.', '¡Éxito!', 1800);
@@ -489,7 +549,11 @@ export class ModalAgregarUusuario implements OnInit, OnChanges {
         },
         error: (err) => {
           this.popUps.errorDesdeBackend(err, 'No se pudo actualizar el usuario.');
-        }
+        },
+        complete: () => {
+          this.guardando = false;
+          this.cdr.markForCheck();
+        },
       });
     } else {
       this.usuarioService.postUsuario(payload).subscribe({
@@ -499,9 +563,14 @@ export class ModalAgregarUusuario implements OnInit, OnChanges {
           window.setTimeout(() => this.onSuccess?.(), 550);
         },
         error: (err) => {
-          console.log(payload);
           this.popUps.errorDesdeBackend(err, 'No se pudo guardar el usuario.');
-        }
+          this.guardando = false;
+          this.cdr.markForCheck();
+        },
+        complete: () => {
+          this.guardando = false;
+          this.cdr.markForCheck();
+        },
       });
     }
   }

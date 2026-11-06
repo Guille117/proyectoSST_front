@@ -6,15 +6,13 @@
   [class.evaluacion--sin-hallazgos]="!mostrarHallazgos"
 >
   <!-- Datos del paciente: bloque compartido con las demás pantallas del módulo, pegado al borde
-       derecho de la pantalla. En el examen físico lo abre y lo cierra la pestaña lateral y en
-       historia clínica y diagnóstico, que siempre muestran los datos, se dibuja desplegado y sin
+       derecho de la pantalla. En el examen físico y en diagnóstico lo abre y lo cierra la pestaña
+       lateral y en historia clínica, que siempre muestra los datos, se dibuja desplegado y sin
        pestaña. -->
   <app-datos-paciente
     [plegable]="!seccionConDatosPaciente"
     [abierto]="fichaAbierta"
     (abiertoCambia)="cambiarFicha($event)"
-    [cuerpoVisible]="datosPacienteVisibles"
-    (cuerpoVisibleCambia)="datosPacienteVisibles = $event"
   ></app-datos-paciente>
 
   <!-- Secciones de la evaluación -->
@@ -69,6 +67,7 @@
 
             @if (mostrandoOtroParte) {
               <app-opcion-otro
+                #parteOtro
                 [placeholder]="'Escribe la parte del cuerpo'"
                 [creando]="creandoParte"
                 (confirmar)="crearParte($event)"

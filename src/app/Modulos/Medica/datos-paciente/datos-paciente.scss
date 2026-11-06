@@ -22,10 +22,6 @@
   box-shadow: -4px 0 14px rgba(15, 23, 42, 0.06);
 }
 
-/* El cuerpo plegado se oculta; la pestaña lateral abre y cierra el bloque completo. */
-.ficha-cuerpo--plegado {
-  display: none;
-}
 
 /* Pestaña pegada al borde derecho de la pantalla: abre y cierra la ficha del paciente. Se centra
    verticalmente en la ventana y, como está fuera del flujo de la rejilla, no consume ancho ni

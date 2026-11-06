@@ -1,10 +1,11 @@
-import { ChangeDetectorRef, Component, DestroyRef, Input, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, DestroyRef, Input, inject, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatSelectModule } from '@angular/material/select';
-import { concatMap, finalize, tap, timeout, Observable, TimeoutError } from 'rxjs';
+import { concatMap, finalize, tap, timeout, Observable, TimeoutError, firstValueFrom } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CampoValidado } from '../../../../shared/campo-validado/campo-validado';
 import { OpcionOtroComponent, OpcionOtroValor } from '../../../../shared/opcion-otro/opcion-otro';
+import { crearSeleccionesPendientes, SeleccionPendiente } from '../../../../shared/opcion-otro/crear-seleccion-pendiente';
 import { TabSwitch } from '../../../../shared/tab-switch/tab-switch';
 import { ArchivoService } from '../../../../shared/archivos/archivoService';
 import { PersonaDatos, Sexo } from '../../../Usuarios/usu/data/usuarioInterfaz';
@@ -107,8 +108,13 @@ export class ModalAgregarPaciente {
   creandoInstitucion = false;
   creandoEnfermedad = false;
   creandoAlergia = false;
+  preparandoSelecciones = false;
   private parentescoAnterior: number | null = null;
   private institucionAnterior: Inter_institucion | null = null;
+  private readonly parentescoOtro = viewChild<OpcionOtroComponent>('parentescoOtro');
+  private readonly institucionOtro = viewChild<OpcionOtroComponent>('institucionOtro');
+  private readonly enfermedadOtro = viewChild<OpcionOtroComponent>('enfermedadOtro');
+  private readonly alergiaOtro = viewChild<OpcionOtroComponent>('alergiaOtro');
 
   llenarSelects(){
     this.cargarParentescos();
@@ -223,30 +229,34 @@ export class ModalAgregarPaciente {
     this.responsableForm.parentescoId = valor;
   }
 
-  crearParentesco(datos: OpcionOtroValor): void {
-    if (this.creandoParentesco) return;
+  async crearParentesco(datos: OpcionOtroValor): Promise<boolean> {
+    if (this.creandoParentesco) return false;
 
     this.creandoParentesco = true;
-    this.servicioCatalogo
-      .crear<Inter_base>('parentescos', { nombre: datos.nombre })
-      .pipe(
-        timeout(5000),
-        finalize(() => {
-          this.creandoParentesco = false;
-        }),
-        takeUntilDestroyed(this.destroyRef),
-      )
-      .subscribe({
-        next: (creado) => {
-          if (creado.id == null) return;
+    try {
+      const creado = await firstValueFrom(
+        this.servicioCatalogo
+          .crear<Inter_base>('parentescos', { nombre: datos.nombre })
+          .pipe(timeout(5000), takeUntilDestroyed(this.destroyRef)),
+      );
 
-          this.parentesco = [...this.parentesco, creado];
-          this.responsableForm.parentescoId = creado.id;
-          this.parentescoSeleccionadoNombre = creado.nombre;
-          this.mostrandoOtroParentesco = false;
-        },
-        error: (error) => this.popUps.errorDesdeBackend(error, 'No se pudo crear el parentesco.'),
-      });
+      if (creado.id == null) {
+        this.popUps.error('No se pudo crear el parentesco.');
+        return false;
+      }
+
+      this.parentesco = [...this.parentesco, creado];
+      this.responsableForm.parentescoId = creado.id;
+      this.parentescoSeleccionadoNombre = creado.nombre;
+      this.mostrandoOtroParentesco = false;
+      return true;
+    } catch (error) {
+      this.popUps.errorDesdeBackend(error, 'No se pudo crear el parentesco.');
+      return false;
+    } finally {
+      this.creandoParentesco = false;
+      this.cdr.markForCheck();
+    }
   }
 
   cancelarParentesco(): void {
@@ -265,29 +275,33 @@ export class ModalAgregarPaciente {
     this.institucionSeleccionada = valor as Inter_institucion | null;
   }
 
-  crearInstitucion(datos: OpcionOtroValor): void {
-    if (this.creandoInstitucion) return;
+  async crearInstitucion(datos: OpcionOtroValor): Promise<boolean> {
+    if (this.creandoInstitucion) return false;
 
     this.creandoInstitucion = true;
-    this.servicioCatalogo
-      .crear<Inter_institucion>('instituciones', { nombre: datos.nombre } as Inter_institucion)
-      .pipe(
-        timeout(5000),
-        finalize(() => {
-          this.creandoInstitucion = false;
-        }),
-        takeUntilDestroyed(this.destroyRef),
-      )
-      .subscribe({
-        next: (creada) => {
-          if (creada.id == null) return;
+    try {
+      const creada = await firstValueFrom(
+        this.servicioCatalogo
+          .crear<Inter_institucion>('instituciones', { nombre: datos.nombre } as Inter_institucion)
+          .pipe(timeout(5000), takeUntilDestroyed(this.destroyRef)),
+      );
 
-          this.insituciones = [...this.insituciones, creada];
-          this.institucionSeleccionada = creada;
-          this.mostrandoOtroInstitucion = false;
-        },
-        error: (error) => this.popUps.errorDesdeBackend(error, 'No se pudo crear la institución.'),
-      });
+      if (creada.id == null) {
+        this.popUps.error('No se pudo crear la institución.');
+        return false;
+      }
+
+      this.insituciones = [...this.insituciones, creada];
+      this.institucionSeleccionada = creada;
+      this.mostrandoOtroInstitucion = false;
+      return true;
+    } catch (error) {
+      this.popUps.errorDesdeBackend(error, 'No se pudo crear la institución.');
+      return false;
+    } finally {
+      this.creandoInstitucion = false;
+      this.cdr.markForCheck();
+    }
   }
 
   cancelarInstitucion(): void {
@@ -306,29 +320,33 @@ export class ModalAgregarPaciente {
     this.mostrandoOtroEnfermedad = true;
   }
 
-  crearEnfermedad(datos: OpcionOtroValor): void {
-    if (this.creandoEnfermedad) return;
+  async crearEnfermedad(datos: OpcionOtroValor): Promise<boolean> {
+    if (this.creandoEnfermedad) return false;
 
     this.creandoEnfermedad = true;
-    this.servicioCatalogo
-      .crear<Inter_base>('enfermedades', { nombre: datos.nombre })
-      .pipe(
-        timeout(5000),
-        finalize(() => {
-          this.creandoEnfermedad = false;
-        }),
-        takeUntilDestroyed(this.destroyRef),
-      )
-      .subscribe({
-        next: (creada) => {
-          if (creada.id == null) return;
+    try {
+      const creada = await firstValueFrom(
+        this.servicioCatalogo
+          .crear<Inter_base>('enfermedades', { nombre: datos.nombre })
+          .pipe(timeout(5000), takeUntilDestroyed(this.destroyRef)),
+      );
 
-          this.enfermedades = [...this.enfermedades, creada];
-          this.enfermedadesSeleccionadas = [...this.enfermedadesSeleccionadas, creada.id];
-          this.mostrandoOtroEnfermedad = false;
-        },
-        error: (error) => this.popUps.errorDesdeBackend(error, 'No se pudo crear la enfermedad.'),
-      });
+      if (creada.id == null) {
+        this.popUps.error('No se pudo crear la enfermedad.');
+        return false;
+      }
+
+      this.enfermedades = [...this.enfermedades, creada];
+      this.enfermedadesSeleccionadas = [...this.enfermedadesSeleccionadas, creada.id];
+      this.mostrandoOtroEnfermedad = false;
+      return true;
+    } catch (error) {
+      this.popUps.errorDesdeBackend(error, 'No se pudo crear la enfermedad.');
+      return false;
+    } finally {
+      this.creandoEnfermedad = false;
+      this.cdr.markForCheck();
+    }
   }
 
   alCambiarAlergias(valores: number[]): void {
@@ -341,29 +359,73 @@ export class ModalAgregarPaciente {
     this.mostrandoOtroAlergia = true;
   }
 
-  crearAlergia(datos: OpcionOtroValor): void {
-    if (this.creandoAlergia) return;
+  async crearAlergia(datos: OpcionOtroValor): Promise<boolean> {
+    if (this.creandoAlergia) return false;
 
     this.creandoAlergia = true;
-    this.servicioCatalogo
-      .crear<Inter_base>('alergias', { nombre: datos.nombre })
-      .pipe(
-        timeout(5000),
-        finalize(() => {
-          this.creandoAlergia = false;
-        }),
-        takeUntilDestroyed(this.destroyRef),
-      )
-      .subscribe({
-        next: (creada) => {
-          if (creada.id == null) return;
+    try {
+      const creada = await firstValueFrom(
+        this.servicioCatalogo
+          .crear<Inter_base>('alergias', { nombre: datos.nombre })
+          .pipe(timeout(5000), takeUntilDestroyed(this.destroyRef)),
+      );
 
-          this.alergias = [...this.alergias, creada];
-          this.alergiasSeleccionadas = [...this.alergiasSeleccionadas, creada.id];
-          this.mostrandoOtroAlergia = false;
-        },
-        error: (error) => this.popUps.errorDesdeBackend(error, 'No se pudo crear la alergia.'),
+      if (creada.id == null) {
+        this.popUps.error('No se pudo crear la alergia.');
+        return false;
+      }
+
+      this.alergias = [...this.alergias, creada];
+      this.alergiasSeleccionadas = [...this.alergiasSeleccionadas, creada.id];
+      this.mostrandoOtroAlergia = false;
+      return true;
+    } catch (error) {
+      this.popUps.errorDesdeBackend(error, 'No se pudo crear la alergia.');
+      return false;
+    } finally {
+      this.creandoAlergia = false;
+      this.cdr.markForCheck();
+    }
+  }
+
+  private resolverSeleccionesPendientes(): Promise<boolean> {
+    const selecciones: SeleccionPendiente[] = [];
+
+    if (this.mostrandoOtroParentesco) {
+      selecciones.push({
+        etiqueta: 'Parentesco',
+        componente: () => this.parentescoOtro(),
+        crear: (datos) => this.crearParentesco(datos),
       });
+    }
+
+    if (this.mostrandoOtroInstitucion) {
+      selecciones.push({
+        etiqueta: 'Institución',
+        componente: () => this.institucionOtro(),
+        crear: (datos) => this.crearInstitucion(datos),
+      });
+    }
+
+    if (this.mostrandoOtroEnfermedad) {
+      selecciones.push({
+        etiqueta: 'Enfermedad',
+        componente: () => this.enfermedadOtro(),
+        crear: (datos) => this.crearEnfermedad(datos),
+      });
+    }
+
+    if (this.mostrandoOtroAlergia) {
+      selecciones.push({
+        etiqueta: 'Alergia',
+        componente: () => this.alergiaOtro(),
+        crear: (datos) => this.crearAlergia(datos),
+      });
+    }
+
+    return crearSeleccionesPendientes(selecciones, (mensaje) =>
+      this.popUps.formIncompleto(mensaje),
+    );
   }
 
   // ----------------------- PRECARGA DE EDICIÓN -----------------------
@@ -652,8 +714,9 @@ export class ModalAgregarPaciente {
 
 
     async guardarPaciente(): Promise<void> {
-      const request = this.validarPaciente();
-      if (!request) return;
+      if (this.guardando || this.preparandoSelecciones) return;
+
+      if (!this.validarPaciente()) return;
 
       if (this.isEditing) {
         const confirmado = await this.popUps.confirmarToast(
@@ -661,6 +724,17 @@ export class ModalAgregarPaciente {
         );
         if (!confirmado) return;
       }
+
+      this.preparandoSelecciones = true;
+      this.cdr.detectChanges();
+      try {
+        if (!(await this.resolverSeleccionesPendientes())) return;
+      } finally {
+        this.preparandoSelecciones = false;
+        this.cdr.detectChanges();
+      }
+
+      const request = this.construirSolicitudPaciente();
 
       this.guardando = true;
       this.cdr.detectChanges();
@@ -720,7 +794,7 @@ export class ModalAgregarPaciente {
       return edad < 18;
     }
 
-    private validarPaciente(): PacienteActualizacionRequest | null {
+    private validarPaciente(): boolean {
     const paciente = this.pacienteForm.persona;
     const nombresPaciente = paciente.nombres?.trim() ?? '';
     const apellidosPaciente = paciente.apellidos?.trim() ?? '';
@@ -732,24 +806,99 @@ export class ModalAgregarPaciente {
     if (!nombresPaciente || !apellidosPaciente || !paciente.sexo || !fechaNacimientoPaciente) {
       this.contador = 0;
       this.popUps.formIncompleto('Completa nombres, apellidos, sexo y fecha de nacimiento del paciente.');
-      return null;
+      return false;
     }
 
     if (cuiPaciente && !/^\d{13}$/.test(cuiPaciente)) {
       this.contador = 0;
       this.popUps.formIncompleto('El CUI del paciente debe contener exactamente 13 dígitos.');
-      return null;
+      return false;
     }
     if (telefonoPaciente && !/^\d{8}$/.test(telefonoPaciente)) {
       this.contador = 0;
       this.popUps.formIncompleto('El teléfono del paciente debe contener exactamente 8 dígitos.');
-      return null;
+      return false;
+    }
+
+    // Un paciente sin episodio activo solo puede actualizar sus datos personales.
+    if (this.soloDatosPersonales) {
+      return true;
     }
 
     const camaId = this.tipoAtencion === 'hospitalizacion'
       ? this.camaSeleccionada?.idCama ?? null
       : null;
+    const medicoId = this.medicoSeleccionado?.id;
+    const descripcion = this.descripcionAtencion.trim();
 
+    // Paso 3: médico y descripción siempre; cama solo para hospitalización.
+    if (medicoId == null || !descripcion) {
+      this.contador = 2;
+      this.popUps.formIncompleto('Selecciona un médico e ingresa la descripción de la atención.');
+      return false;
+    }
+    if (this.tipoAtencion === 'hospitalizacion' && camaId == null) {
+      this.contador = 2;
+      this.popUps.formIncompleto('Selecciona una cama para la hospitalización.');
+      return false;
+    }
+
+    const responsable = this.responsableForm;
+    const datosResponsable = responsable.persona;
+    const parentescoId = responsable.parentescoId;
+    const parentescoValido = parentescoId != null || this.mostrandoOtroParentesco;
+
+    // Paso 4: siempre aplica en hospitalización y en emergencia con paciente menor de edad.
+    // Si es opcional pero se empezó a llenar, se exige el mismo conjunto completo de datos.
+    if (this.responsableCamposRequeridos) {
+      const nombres = datosResponsable.nombres?.trim() ?? '';
+      const apellidos = datosResponsable.apellidos?.trim() ?? '';
+      const fechaNacimiento = datosResponsable.fechaNacimiento ?? '';
+      const cui = datosResponsable.cui?.trim() ?? '';
+      const telefono = datosResponsable.telefono?.trim() ?? '';
+
+      if (!nombres || !apellidos || !fechaNacimiento || !datosResponsable.sexo || !cui || !telefono || !parentescoValido) {
+        this.contador = 3;
+        this.popUps.formIncompleto('Completa nombre, apellidos, nacimiento, sexo, CUI, teléfono y parentesco del responsable.');
+        return false;
+      }
+
+      if (!/^\d{13}$/.test(cui)) {
+        this.contador = 3;
+        this.popUps.formIncompleto('El CUI del responsable debe contener exactamente 13 dígitos.');
+        return false;
+      }
+      if (!/^\d{8}$/.test(telefono)) {
+        this.contador = 3;
+        this.popUps.formIncompleto('El teléfono del responsable debe contener exactamente 8 dígitos.');
+        return false;
+      }
+    }
+
+    const institucionId = this.institucionSeleccionada?.id;
+    const hayReferencia = this.referenciaTieneDatos;
+    const institucionValida = institucionId != null || this.mostrandoOtroInstitucion;
+
+    // Paso 5: la referencia es opcional; si hay motivo o archivo, sí debe indicarse institución.
+    if (hayReferencia && !institucionValida) {
+      this.contador = 4;
+      this.popUps.formIncompleto('Selecciona la institución que refiere.');
+      return false;
+    }
+
+    return true;
+  }
+
+  private construirSolicitudPaciente(): PacienteActualizacionRequest {
+    const paciente = this.pacienteForm.persona;
+    const nombresPaciente = paciente.nombres?.trim() ?? '';
+    const apellidosPaciente = paciente.apellidos?.trim() ?? '';
+    const fechaNacimientoPaciente = paciente.fechaNacimiento ?? '';
+    const cuiPaciente = paciente.cui?.trim() ?? '';
+    const telefonoPaciente = paciente.telefono?.trim() ?? '';
+    const camaId = this.tipoAtencion === 'hospitalizacion'
+      ? this.camaSeleccionada?.idCama ?? null
+      : null;
     const pacienteId = this.isEditing ? this.pacienteId : this.pacienteIdSeleccionado;
     const pacienteDatos: PacienteDatos = {
       pacienteId,
@@ -758,7 +907,7 @@ export class ModalAgregarPaciente {
         nombres: nombresPaciente,
         apellidos: apellidosPaciente,
         fechaNacimiento: fechaNacimientoPaciente,
-        sexo: paciente.sexo,
+        sexo: paciente.sexo!,
         telefono: telefonoPaciente || null,
         email: paciente.email ?? null,
       },
@@ -775,28 +924,13 @@ export class ModalAgregarPaciente {
       return { paciente: pacienteDatos, episodio: null };
     }
 
-    const medicoId = this.medicoSeleccionado?.id;
+    const medicoId = this.medicoSeleccionado!.id;
     const descripcion = this.descripcionAtencion.trim();
-
-    // Paso 3: médico y descripción siempre; cama solo para hospitalización.
-    if (medicoId == null || !descripcion) {
-      this.contador = 2;
-      this.popUps.formIncompleto('Selecciona un médico e ingresa la descripción de la atención.');
-      return null;
-    }
-    if (this.tipoAtencion === 'hospitalizacion' && camaId == null) {
-      this.contador = 2;
-      this.popUps.formIncompleto('Selecciona una cama para la hospitalización.');
-      return null;
-    }
-
     const responsable = this.responsableForm;
     const datosResponsable = responsable.persona;
     const parentescoId = responsable.parentescoId;
     let responsableRequest: PacienteRequest['episodio']['responsable'] = null;
 
-    // Paso 4: siempre aplica en hospitalización y en emergencia con paciente menor de edad.
-    // Si es opcional pero se empezó a llenar, se exige el mismo conjunto completo de datos.
     if (this.responsableCamposRequeridos) {
       const nombres = datosResponsable.nombres?.trim() ?? '';
       const apellidos = datosResponsable.apellidos?.trim() ?? '';
@@ -804,33 +938,16 @@ export class ModalAgregarPaciente {
       const cui = datosResponsable.cui?.trim() ?? '';
       const telefono = datosResponsable.telefono?.trim() ?? '';
 
-      if (!nombres || !apellidos || !fechaNacimiento || !datosResponsable.sexo || !cui || !telefono || parentescoId == null) {
-        this.contador = 3;
-        this.popUps.formIncompleto('Completa nombre, apellidos, nacimiento, sexo, CUI, teléfono y parentesco del responsable.');
-        return null;
-      }
-
-      if (!/^\d{13}$/.test(cui)) {
-        this.contador = 3;
-        this.popUps.formIncompleto('El CUI del responsable debe contener exactamente 13 dígitos.');
-        return null;
-      }
-      if (!/^\d{8}$/.test(telefono)) {
-        this.contador = 3;
-        this.popUps.formIncompleto('El teléfono del responsable debe contener exactamente 8 dígitos.');
-        return null;
-      }
-
       responsableRequest = {
         persona: {
           cui,
           nombres,
           apellidos,
           fechaNacimiento,
-          sexo: datosResponsable.sexo,
+          sexo: datosResponsable.sexo!,
           telefono,
         },
-        parentescoId,
+        parentescoId: parentescoId!,
         direccion: responsable.direccion.trim() || null,
       };
     }
@@ -838,13 +955,6 @@ export class ModalAgregarPaciente {
     const motivoReferencia = this.motivoReferencia.trim();
     const institucionId = this.institucionSeleccionada?.id;
     const hayReferencia = this.referenciaTieneDatos;
-
-    // Paso 5: la referencia es opcional; si hay motivo o archivo, sí debe indicarse institución.
-    if (hayReferencia && institucionId == null) {
-      this.contador = 4;
-      this.popUps.formIncompleto('Selecciona la institución que refiere.');
-      return null;
-    }
 
     return {
       paciente: pacienteDatos,
@@ -1060,7 +1170,7 @@ export class ModalAgregarPaciente {
       persona.sexo &&
       this.esDigitosValidos(persona.cui, 13) &&
       this.esDigitosValidos(persona.telefono, 8) &&
-      this.responsableForm.parentescoId != null
+      (this.responsableForm.parentescoId != null || this.mostrandoOtroParentesco)
     );
   }
 

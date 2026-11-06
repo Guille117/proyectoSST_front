@@ -1,6 +1,8 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { of, throwError, TimeoutError } from 'rxjs';
 
+import { OpcionOtroComponent } from '../../../shared/opcion-otro/opcion-otro';
 import { PopUps } from '../../../shared/popUps/popUpsService';
 import { AuthService } from '../../Auth/data/auth-service';
 import { CatalogoService } from '../../Catalogos/data/serviceCatalogo';
@@ -93,6 +95,7 @@ describe('Alta', () => {
   const procedimientoCreado = { id: 77 } as ProcedimientoMedicoResponse;
   const catalogoService = {
     listar: vi.fn(),
+    crear: vi.fn(),
     listarUnidadMedida: vi.fn(() => of([])),
   };
   const episodioActivo = {
@@ -127,15 +130,22 @@ describe('Alta', () => {
     error: vi.fn(),
     errorDesdeBackend: vi.fn(),
     advertencia: vi.fn(),
+    formIncompleto: vi.fn(),
   };
 
   beforeEach(async () => {
     vi.resetAllMocks();
+    episodioActivo.esSoloLectura = () => false;
     catalogoService.listar.mockImplementation((recurso: string) => {
       if (recurso === 'condicionesEgreso') return of(condiciones);
       if (recurso === 'instituciones') return of(instituciones);
       return of([]);
     });
+    catalogoService.crear.mockImplementation((recurso: string) =>
+      recurso === 'instituciones'
+        ? of({ id: 8, nombre: 'Nueva institución', telefono: '', direccion: '' })
+        : of({ id: 9, nombre: 'Nueva condición', estado: true }),
+    );
     catalogoService.listarUnidadMedida.mockReturnValue(of([]));
     altaService.buscarPorEpisodio.mockReturnValue(of([]));
     altaService.crear.mockReturnValue(of(altaVigente));
@@ -187,6 +197,19 @@ describe('Alta', () => {
     control.value = valor;
     control.dispatchEvent(new Event('change'));
     await fixture.whenStable();
+  };
+
+  const abrirOtro = async (selector: string): Promise<OpcionOtroComponent> => {
+    const select = elemento<HTMLSelectElement>(selector);
+    const opcionOtro = Array.from(select.options).find(
+      (opcion) => opcion.textContent?.trim() === 'Otro',
+    );
+    select.selectedIndex = opcionOtro?.index ?? -1;
+    select.dispatchEvent(new Event('change'));
+    await fixture.whenStable();
+    fixture.detectChanges();
+    return fixture.debugElement.query(By.css('app-opcion-otro'))
+      .componentInstance as OpcionOtroComponent;
   };
 
   const botonGuardar = (): HTMLButtonElement =>
@@ -621,5 +644,74 @@ describe('Alta', () => {
 
     expect(botonAnular()).not.toBeNull();
     expect(elemento<HTMLInputElement>('#diagnosticoEgreso').disabled).toBe(true);
+  });
+
+  it('crea la condición pendiente antes de guardar el alta y usa su id', async () => {
+    await escribir('#diagnosticoEgreso', 'Nuevo diagnóstico');
+    const otro = await abrirOtro('#condicionEgreso');
+    otro.nombre = 'Nueva condición';
+    fixture.detectChanges();
+
+    expect(component.puedeGuardar).toBe(true);
+    await component.guardarEgreso();
+
+    expect(catalogoService.crear).toHaveBeenCalledWith('condicionesEgreso', {
+      nombre: 'Nueva condición',
+    });
+    expect(altaService.crear).toHaveBeenCalledWith(
+      expect.objectContaining({ condicionEgresoId: 9 }),
+    );
+    expect(catalogoService.crear.mock.invocationCallOrder[0]).toBeLessThan(
+      altaService.crear.mock.invocationCallOrder[0],
+    );
+  });
+
+  it('crea la institución pendiente antes de guardar la referencia y usa su id', async () => {
+    await irASeccion('Referencia / traslado');
+    await escribir('#diagnosticoEgreso', 'Diagnóstico de traslado');
+    await escribir('#motivoReferencia', 'Requiere valoración por especialidad');
+    const otro = await abrirOtro('#institucionReferencia');
+    otro.nombre = 'Nueva institución';
+    fixture.detectChanges();
+
+    expect(component.puedeGuardar).toBe(true);
+    await component.guardarEgreso();
+
+    expect(catalogoService.crear).toHaveBeenCalledWith('instituciones', {
+      nombre: 'Nueva institución',
+    });
+    expect(altaService.crear).toHaveBeenCalledWith(
+      expect.objectContaining({ institucionId: 8 }),
+    );
+    expect(catalogoService.crear.mock.invocationCallOrder[0]).toBeLessThan(
+      altaService.crear.mock.invocationCallOrder[0],
+    );
+  });
+
+  it('no guarda el alta si falla la creación del catálogo pendiente', async () => {
+    catalogoService.crear.mockReturnValue(throwError(() => new Error('fallo')));
+    await escribir('#diagnosticoEgreso', 'Nuevo diagnóstico');
+    const otro = await abrirOtro('#condicionEgreso');
+    otro.nombre = 'Nueva condición';
+    fixture.detectChanges();
+
+    await component.guardarEgreso();
+
+    expect(altaService.crear).not.toHaveBeenCalled();
+    expect(popUps.errorDesdeBackend).toHaveBeenCalled();
+  });
+
+  it('no guarda si la condición pendiente está vacía y avisa con el formulario incompleto', async () => {
+    await escribir('#diagnosticoEgreso', 'Nuevo diagnóstico');
+    await abrirOtro('#condicionEgreso');
+
+    expect(component.puedeGuardar).toBe(true);
+    await component.guardarEgreso();
+
+    expect(catalogoService.crear).not.toHaveBeenCalled();
+    expect(altaService.crear).not.toHaveBeenCalled();
+    expect(popUps.formIncompleto).toHaveBeenCalledWith(
+      'Completa el valor de «Condición de egreso» o cancélalo antes de guardar.',
+    );
   });
 });

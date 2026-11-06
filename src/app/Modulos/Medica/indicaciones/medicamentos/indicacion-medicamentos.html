@@ -194,6 +194,7 @@
           <label class="indicacion-etiqueta" for="unidadMedidaIndicada">Unidad de medida</label>
           @if (mostrandoOtroUnidad) {
             <app-opcion-otro
+              #unidadOtro
               [placeholder]="'Escribe la unidad'"
               [requiereAbreviatura]="true"
               [creando]="creandoUnidad"

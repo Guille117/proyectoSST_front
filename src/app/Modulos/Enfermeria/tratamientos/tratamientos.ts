@@ -219,8 +219,6 @@ export class Tratamientos implements OnInit, OnDestroy {
   /** La ficha con los datos del paciente está desplegada; la abre su pestaña lateral. */
   pacienteAbierto = false;
 
-  /** El cuerpo de la ficha del paciente está desplegado; el chevron de su encabezado lo pliega. */
-  datosPacienteVisibles = true;
 
   /** Sección del rail que se muestra en el área central. */
   seccionActiva: SeccionTratamiento = 'medicamentos';
@@ -999,10 +997,6 @@ export class Tratamientos implements OnInit, OnDestroy {
    */
   cambiarFichaPaciente(abierto: boolean): void {
     this.pacienteAbierto = abierto;
-
-    if (abierto) {
-      this.datosPacienteVisibles = true;
-    }
   }
 
   // ------------------- NAVEGACIÓN Y FILTROS -------------------

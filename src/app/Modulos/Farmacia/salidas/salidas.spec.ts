@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { of } from 'rxjs';
+import { By } from '@angular/platform-browser';
+import { of, throwError } from 'rxjs';
 
 import { Salidas } from './salidas';
 import { SalidasService } from './data/salidas-service';
@@ -8,6 +9,7 @@ import { AuthService } from '../../Auth/data/auth-service';
 import { PacienteService } from '../../Pacientes/paciente/data/paciente-service';
 import { ProcedimientoMedicoService } from '../../Medica/procedimiento-medico/data/procedimiento-medico-service';
 import { ServicioInventario } from '../inventario/data/servicio-inventario';
+import { OpcionOtroComponent } from '../../../shared/opcion-otro/opcion-otro';
 import { PopUps } from '../../../shared/popUps/popUpsService';
 
 describe('Salidas', () => {
@@ -95,6 +97,7 @@ describe('Salidas', () => {
 
   const catalogoService = {
     listar: vi.fn(),
+    crear: vi.fn(),
   };
 
   const pacienteService = {
@@ -118,6 +121,7 @@ describe('Salidas', () => {
     advertencia: vi.fn(),
     error: vi.fn(),
     errorDesdeBackend: vi.fn(),
+    formIncompleto: vi.fn(),
   };
 
   beforeEach(async () => {
@@ -129,6 +133,7 @@ describe('Salidas', () => {
     salidasService.crearDirecta.mockReturnValue(of(detalleConEntrega));
     salidasService.historial.mockReturnValue(of([]));
     catalogoService.listar.mockReturnValue(of([{ id: 7, nombre: 'Empaque dañado' }]));
+    catalogoService.crear.mockReturnValue(of({ id: 99, nombre: 'Nuevo motivo' }));
 
     await TestBed.configureTestingModule({
       imports: [Salidas],
@@ -404,6 +409,83 @@ describe('Salidas', () => {
     expect(component.historial.length).toBe(1);
     expect(fixture.nativeElement.textContent).toContain(
       'Se entregó 5 de Amoxicilina (LOTE-20)',
+    );
+  });
+
+  const abrirDevolucionConOtro = (): OpcionOtroComponent => {
+    salidasService.obtener.mockReturnValue(of(detalleConEntrega));
+    component.cargarDetalle(1);
+    fixture.detectChanges();
+    component.seleccionarVista(true);
+    fixture.detectChanges();
+
+    const detalle = component.solicitudSeleccionada!.detalles[0];
+    detalle.cantidadDevolver = 3;
+
+    const select: HTMLSelectElement =
+      fixture.nativeElement.querySelector('select.select-motivo');
+    const opcion = Array.from(select.options).find(
+      (opcion) => opcion.textContent?.trim() === 'Otro',
+    );
+    select.selectedIndex = opcion?.index ?? -1;
+    select.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+
+    return fixture.debugElement.query(By.css('app-opcion-otro'))
+      .componentInstance as OpcionOtroComponent;
+  };
+
+  it('crea el motivo pendiente antes de registrar la devolución y usa su id', async () => {
+    const otro = abrirDevolucionConOtro();
+    otro.nombre = 'Nuevo motivo';
+    fixture.detectChanges();
+
+    await component.devolver();
+
+    expect(catalogoService.crear).toHaveBeenCalledWith('motivoBaja', {
+      nombre: 'Nuevo motivo',
+    });
+    expect(catalogoService.crear.mock.invocationCallOrder[0]).toBeLessThan(
+      salidasService.devolver.mock.invocationCallOrder[0],
+    );
+    expect(salidasService.devolver).toHaveBeenCalledWith(1, {
+      usuarioId: 1,
+      lineas: [
+        {
+          detalleId: 10,
+          loteId: 20,
+          cantidad: 3,
+          condicion: 'APTO',
+          motivoBajaId: 99,
+          observacion: null,
+        },
+      ],
+    });
+  });
+
+  it('no registra la devolución si falla la creación del motivo pendiente', async () => {
+    catalogoService.crear.mockReturnValueOnce(throwError(() => new Error('fallo')));
+    const otro = abrirDevolucionConOtro();
+    otro.nombre = 'Nuevo motivo';
+    fixture.detectChanges();
+
+    await component.devolver();
+
+    expect(salidasService.devolver).not.toHaveBeenCalled();
+    expect(popUps.errorDesdeBackend).toHaveBeenCalled();
+  });
+
+  it('no registra la devolución si el motivo pendiente está vacío', async () => {
+    abrirDevolucionConOtro();
+    fixture.detectChanges();
+
+    expect(component.puedeGuardarDevolucion).toBe(true);
+
+    await component.devolver();
+
+    expect(salidasService.devolver).not.toHaveBeenCalled();
+    expect(popUps.formIncompleto).toHaveBeenCalledWith(
+      'Completa el valor de «Motivo de devolución» o cancélalo antes de guardar.',
     );
   });
 });

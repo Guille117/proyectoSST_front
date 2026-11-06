@@ -521,13 +521,17 @@ export class IndicacionExamenes implements OnInit, OnDestroy {
 
   /** Confirma y pasa el examen al estado eliminado; el listado se recarga. */
   async eliminarExamen(examen: ExamenVista): Promise<void> {
-    if (this.destruido || this.eliminando || this.guardando) return;
+    if (this.destruido || this.eliminando || this.guardando || this.confirmando) return;
 
     this.cerrarMenuIndicacion();
+    this.confirmando = true;
+    this.cdr.markForCheck();
 
     const confirmado = await this.popUps
       .confirmarToast(`¿Está seguro de eliminar el examen "${examen.nombre}"?`)
       .catch(() => false);
+
+    this.confirmando = false;
 
     if (!confirmado || this.destruido) return;
 

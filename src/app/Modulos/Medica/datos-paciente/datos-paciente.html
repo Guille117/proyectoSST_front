@@ -1,5 +1,5 @@
 <!-- Datos del paciente: bloque pegado al borde derecho de la pantalla. En su forma plegable lo abre
-     y lo cierra la pestaña lateral y su encabezado pliega el cuerpo con el chevron. -->
+     y lo cierra la pestaña lateral. -->
 @if (plegable && (permitirAlternar || !abierto)) {
   <!-- Pestaña lateral: abre y cierra la ficha del paciente -->
   <button
@@ -30,7 +30,6 @@
     <div
       class="ficha-cuerpo"
       id="fichaCuerpo"
-      [class.ficha-cuerpo--plegado]="plegable && !cuerpoVisible"
     >
       @if (cargando) {
         <p class="ficha-aviso">Cargando información del paciente...</p>

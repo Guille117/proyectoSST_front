@@ -27,12 +27,10 @@ interface SignoVitalVista {
  * superior hasta el borde inferior de la ventana, y tiene dos formas de uso:
  *
  * - Fija: el bloque se muestra siempre desplegado, sin pestaña ni controles para plegarlo.
- * - Plegable (plegable = true): una pestaña lateral lo abre y lo cierra y el chevron de su
- *   encabezado pliega el cuerpo dejando el título a la vista.
+ * - Plegable (plegable = true): una pestaña lateral lo abre y lo cierra.
  *
- * El estado lo controla la pantalla que lo usa: recibe abierto y cuerpoVisible y avisa de los
- * cambios con abiertoCambia y cuerpoVisibleCambia, de modo que puede reservar el ancho del bloque y
- * plegarlo desde su propio código.
+ * El estado lo controla la pantalla que lo usa: recibe abierto y avisa de los cambios con
+ * abiertoCambia, de modo que puede reservar el ancho del bloque.
  *
  * Los datos se consultan del episodio activo: el paciente guardado al abrir el episodio y sus
  * últimos signos vitales. No se muestran datos de más.
@@ -62,11 +60,6 @@ export class DatosPaciente implements OnInit, OnDestroy {
   /** Avisa del estado pedido desde la pestaña lateral del bloque plegable. */
   @Output() abiertoCambia = new EventEmitter<boolean>();
 
-  /** El cuerpo con los datos está desplegado; el título de la ficha se ve siempre. */
-  @Input() cuerpoVisible = true;
-
-  /** Avisa del estado pedido desde el chevron del encabezado. */
-  @Output() cuerpoVisibleCambia = new EventEmitter<boolean>();
 
   /** Detalle real del paciente del episodio activo. */
   detalle: PacienteDetalle | null = null;
@@ -110,11 +103,6 @@ export class DatosPaciente implements OnInit, OnDestroy {
     this.abiertoCambia.emit(!this.abierto);
   }
 
-  /** Pliega o despliega el cuerpo del bloque desde el chevron de su encabezado. */
-  alternarCuerpo(): void {
-    if (!this.permitirAlternar) return;
-    this.cuerpoVisibleCambia.emit(!this.cuerpoVisible);
-  }
 
   /** Vuelve a consultar la información del episodio activo. */
   recargar(): void {

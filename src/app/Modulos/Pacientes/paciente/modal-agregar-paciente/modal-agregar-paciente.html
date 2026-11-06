@@ -140,6 +140,7 @@
 			<app-campo-validado [label]="'Enfermedades confirmadas'" [fieldId]="'enfermedadesPaciente'">
 				@if (mostrandoOtroEnfermedad) {
 					<app-opcion-otro
+						#enfermedadOtro
 						[placeholder]="'Escribe la enfermedad'"
 						[creando]="creandoEnfermedad"
 						(confirmar)="crearEnfermedad($event)"
@@ -169,6 +170,7 @@
 			<app-campo-validado [label]="'Alergias'" [fieldId]="'alergiasPaciente'">
 				@if (mostrandoOtroAlergia) {
 					<app-opcion-otro
+						#alergiaOtro
 						[placeholder]="'Escribe la alergia'"
 						[creando]="creandoAlergia"
 						(confirmar)="crearAlergia($event)"
@@ -418,6 +420,7 @@
 					[required]="responsableCamposRequeridos"
 				>
 					<app-opcion-otro
+						#parentescoOtro
 						[placeholder]="'Escribe el parentesco'"
 						[creando]="creandoParentesco"
 						(confirmar)="crearParentesco($event)"
@@ -450,6 +453,7 @@
 		@if (mostrandoOtroInstitucion) {
 			<app-campo-validado [label]="'Institución que refiere'" [fieldId]="'institucionOtro'" [required]="referenciaTieneDatos">
 				<app-opcion-otro
+					#institucionOtro
 					[placeholder]="'Escribe la institución'"
 					[creando]="creandoInstitucion"
 					(confirmar)="crearInstitucion($event)"
@@ -558,7 +562,7 @@
 			<button
 				type="button"
 				class="btn _guardar"
-				[disabled]="guardando || (isEditing && !hayCambios)"
+				[disabled]="guardando || preparandoSelecciones"
 				(click)="guardarPaciente()"
 			>
 				{{ guardando ? 'Guardando...' : isEditing ? 'Guardar cambios' : 'Guardar' }}

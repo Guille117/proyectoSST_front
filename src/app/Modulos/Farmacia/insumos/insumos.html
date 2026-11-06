@@ -176,7 +176,7 @@
             type="text"
             placeholder="Nombre del insumo"
             required
-            [disabled]="procesando"
+            [disabled]="procesando || preparandoSelecciones"
             [(ngModel)]="insumo.nombre"
           />
         </app-campo-validado>
@@ -187,7 +187,7 @@
             name="detalle"
             type="text"
             placeholder="Detalle del insumo (opcional)"
-            [disabled]="procesando"
+            [disabled]="procesando || preparandoSelecciones"
             [(ngModel)]="insumo.detalle"
           />
         </app-campo-validado>
@@ -199,6 +199,7 @@
         >
           @if (mostrandoOtroMarca) {
             <app-opcion-otro
+              #marcaOtro
               [placeholder]="'Escribe el fabricante'"
               [creando]="creandoMarca"
               (confirmar)="crearMarca($event)"
@@ -209,7 +210,7 @@
               id="fabricanteInsumo"
               name="fabricante"
               required
-              [disabled]="procesando"
+              [disabled]="procesando || preparandoSelecciones"
               [ngModel]="insumo.marcaId"
               (ngModelChange)="alElegirMarca($event)"
             >
@@ -227,14 +228,14 @@
           <button
             type="button"
             class="btn _cancelar"
-            [disabled]="procesando"
+            [disabled]="procesando || preparandoSelecciones"
             (click)="cancelar(insumoForm)"
           >Cancelar</button>
           @if (!actualizar || mostrarActivos) {
             <button
               type="submit"
               class="btn _guardar"
-              [disabled]="procesando || !formularioValido(insumoForm) || (actualizar && !hayCambiosInsumo())"
+              [disabled]="procesando || preparandoSelecciones || !formularioValido(insumoForm) || (actualizar && !hayCambiosInsumo())"
             >{{ actualizar ? 'Actualizar' : 'Guardar' }}</button>
           }
         </div>

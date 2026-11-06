@@ -1,31 +1,30 @@
 @use '../panel-seccion';
 
 /* ==================== CONTENEDOR (SECCIONES / REGISTRO DEL EGRESO) ==================== */
-/* Rejilla de la pantalla: el panel de secciones a la izquierda y el registro del egreso, común a las
-   tres secciones, en el área central. Cada pista flexible lleva mínimo 0 para que la rejilla pueda
-   encogerse sin desbordar. */
+/* Rejilla de la pantalla: el panel de secciones a la izquierda, el registro del egreso en el centro
+   y una cuarta parte del espacio libre reservada a la derecha para la ficha del paciente o el
+   tratamiento. El formulario ocupa tres de las cuatro partes. */
 .alta {
   /* Ancho del bloque de datos del paciente: lo comparten el propio bloque y su pestaña */
   --ficha-ancho: 340px;
 
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  grid-template-areas: 'secciones registro';
+  grid-template-columns: auto minmax(0, 3fr) minmax(0, 1fr);
+  grid-template-areas: 'secciones registro .';
   gap: 1.25rem;
   box-sizing: border-box;
   width: 100%;
   padding: 1.5rem;
 }
 
-/* Ficha de los datos del paciente abierta: la rejilla le reserva a la derecha el ancho del bloque
-   compartido, que queda pegado al borde de la pantalla sin cubrir los paneles. */
+/* Con la ficha abierta el cuarto derecho ya está reservado por la rejilla; no se añade relleno. */
 .alta--ficha-abierta {
-  padding-right: calc(var(--ficha-ancho) + 1.5rem);
+  padding-right: 1.5rem;
 }
 
-/* Con tratamiento, las tarjetas ocupan el mismo borde derecho que la ficha del paciente. */
+/* Con tratamiento, el panel ocupa el cuarto derecho reservado por la rejilla. */
 .alta--tratamiento-abierto {
-  padding-right: calc(var(--ficha-ancho) + 1.5rem);
+  grid-template-areas: 'secciones registro tratamiento';
 }
 
 /* El panel de secciones es solo el contenedor de las tarjetas: sin fondo ni borde propios, para que
@@ -277,21 +276,17 @@ select.egreso-input {
 }
 
 /* ==================== TRATAMIENTO AGREGADO ==================== */
-/* Panel derecho: ocupa el lugar de la ficha del paciente cuando hay tratamiento */
+/* Panel derecho del tratamiento: ocupa el cuarto derecho del espacio flexible */
 .tratamiento-panel {
-  position: fixed;
-  top: var(--heightTopBar);
-  right: 0;
-  bottom: 0;
-  z-index: 4;
-  width: var(--ficha-ancho, 340px);
-  max-width: 100%;
-  padding: 1.5rem;
-  overflow-x: hidden;
-  overflow-y: auto;
-  border-left: 1px solid #dfe7f3;
+  grid-area: tratamiento;
+  box-sizing: border-box;
+  min-width: 0;
+  align-self: start;
+  padding: 1.25rem;
+  border: 1px solid #dfe7f3;
+  border-radius: 18px;
   background: #fff;
-  box-shadow: -4px 0 14px rgba(15, 23, 42, 0.06);
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
 }
 
 .tratamiento-panel_titulo {
@@ -451,6 +446,10 @@ select.egreso-input {
   }
 
   .alta--tratamiento-abierto {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      'secciones'
+      'registro';
     padding-right: 1rem;
   }
 
@@ -458,9 +457,20 @@ select.egreso-input {
     flex-wrap: wrap;
   }
 
+  /* En una sola columna el panel vuelve a ser un cajón fijo pegado al borde derecho */
   .tratamiento-panel {
+    position: fixed;
+    top: var(--heightTopBar);
+    right: 0;
+    bottom: 0;
+    z-index: 4;
     width: var(--ficha-ancho, 340px);
+    max-width: 100%;
     padding: 1rem;
+    overflow-x: hidden;
+    overflow-y: auto;
+    border: 0;
+    border-left: 1px solid #dfe7f3;
     border-radius: 18px 0 0 18px;
     box-shadow: -10px 0 30px rgba(15, 23, 42, 0.18);
   }

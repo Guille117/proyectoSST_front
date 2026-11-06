@@ -495,14 +495,14 @@ export class Atencion implements OnInit, OnDestroy {
         );
         this.cdr.detectChanges();
       },
-      error: (error) => {
-        if (this.destruido || this.pacienteSeleccionado?.pacienteId !== pacienteId) return;
+        error: (error) => {
+          if (this.destruido || this.pacienteSeleccionado?.pacienteId !== pacienteId) return;
 
-        console.error('Error al cargar el detalle del paciente', error);
-        this.cargandoDetalle = false;
-        this.errorDetalle = this.mensajeError(error, 'No se pudo cargar el detalle del paciente.');
-        this.cdr.detectChanges();
-      },
+          console.error('Error al cargar el detalle del paciente', error);
+          this.cargandoDetalle = false;
+          this.errorDetalle = this.mensajeError(error, 'No se pudo cargar el detalle del paciente.');
+          this.cdr.detectChanges();
+        },
     });
   }
 
@@ -531,14 +531,14 @@ export class Atencion implements OnInit, OnDestroy {
         this.cargandoSignos = false;
         this.cdr.detectChanges();
       },
-      error: (error) => {
-        if (this.destruido) return;
+        error: (error) => {
+          if (this.destruido) return;
 
-        console.error('Error al cargar los signos vitales', error);
-        this.cargandoSignos = false;
-        this.errorSignos = this.mensajeError(error, 'No se pudieron cargar los signos vitales.');
-        this.cdr.detectChanges();
-      },
+          console.error('Error al cargar los signos vitales', error);
+          this.cargandoSignos = false;
+          this.errorSignos = this.mensajeError(error, 'No se pudieron cargar los signos vitales.');
+          this.cdr.detectChanges();
+        },
     });
   }
 

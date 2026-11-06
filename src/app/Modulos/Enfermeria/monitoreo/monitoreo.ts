@@ -125,8 +125,6 @@ export class Monitoreo implements OnInit, OnDestroy {
   /** La ficha con los datos del paciente está desplegada; la abre su pestaña lateral. */
   pacienteAbierto = false;
 
-  /** El cuerpo de la ficha del paciente está desplegado; el chevron de su encabezado lo pliega. */
-  datosPacienteVisibles = true;
 
   /** Campos del formulario de signos vitales. */
   sistolica: number | null = null;
@@ -391,10 +389,6 @@ export class Monitoreo implements OnInit, OnDestroy {
    */
   cambiarFichaPaciente(abierto: boolean): void {
     this.pacienteAbierto = abierto;
-
-    if (abierto) {
-      this.datosPacienteVisibles = true;
-    }
   }
 
   // ------------------- CAPTURA Y EDICIÓN DE SIGNOS VITALES -------------------

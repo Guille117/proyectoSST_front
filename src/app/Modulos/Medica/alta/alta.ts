@@ -1,7 +1,18 @@
-import { ChangeDetectorRef, Component, OnDestroy, OnInit, inject } from '@angular/core';
+import {
+  ChangeDetectorRef,
+  Component,
+  OnDestroy,
+  OnInit,
+  inject,
+  viewChild,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { finalize, firstValueFrom, Subscription, timeout, TimeoutError } from 'rxjs';
 import { OpcionOtroComponent, OpcionOtroValor } from '../../../shared/opcion-otro/opcion-otro';
+import {
+  crearSeleccionesPendientes,
+  SeleccionPendiente,
+} from '../../../shared/opcion-otro/crear-seleccion-pendiente';
 import { TabSwitch } from '../../../shared/tab-switch/tab-switch';
 import { PopUps } from '../../../shared/popUps/popUpsService';
 import { AuthService } from '../../Auth/data/auth-service';
@@ -17,8 +28,8 @@ import {
 import {
   MedicamentoIndicacion,
   MedicamentoTratamiento,
-  textoDuracion,
 } from '../indicaciones/medicamentos/medicamento-indicacion/medicamento-indicacion';
+import { textoDuracion } from '../indicaciones/data/duracion';
 import {
   ProcedimientoMedicoRequest,
   ProcedimientoMedicoResponse,
@@ -119,8 +130,11 @@ export class Alta implements OnInit, OnDestroy {
   mostrandoOtroInstitucion = false;
   creandoCondicion = false;
   creandoInstitucion = false;
+  preparandoSelecciones = false;
   private condicionAnterior = '';
   private institucionAnterior = '';
+  private readonly condicionOtro = viewChild<OpcionOtroComponent>('condicionOtro');
+  private readonly institucionOtro = viewChild<OpcionOtroComponent>('institucionOtro');
 
   /** Campos propios del retiro voluntario. */
   responsableRetiro: ResponsableRetiro = '';
@@ -158,11 +172,10 @@ export class Alta implements OnInit, OnDestroy {
   /** Cuidado cargado en el formulario para corregirlo; null al capturar uno nuevo. */
   cuidadoEnEdicion: CuidadoEnEdicion | null = null;
 
-  /** La ficha del paciente ocupa el panel derecho y se alterna con las tarjetas del tratamiento. */
-  pacienteAbierto = true;
+  /** La ficha del paciente se abre y se cierra desde su pestaña y se alterna con las tarjetas del
+   *  tratamiento. */
+  pacienteAbierto = false;
 
-  /** El cuerpo de la ficha del paciente está desplegado. */
-  cuerpoPacienteVisible = true;
 
   /** Estados de las peticiones: bloquean acciones incompatibles y muestran la carga. */
   cargando = false;
@@ -271,37 +284,39 @@ export class Alta implements OnInit, OnDestroy {
     this.condicionEgreso = valor;
   }
 
-  crearCondicion(datos: OpcionOtroValor): void {
-    if (this.creandoCondicion) return;
+  async crearCondicion(datos: OpcionOtroValor): Promise<boolean> {
+    if (this.creandoCondicion) return false;
 
     this.creandoCondicion = true;
-    this.catalogoService
-      .crear<CondicionEgresoResponse>(
-        'condicionesEgreso',
-        { nombre: datos.nombre } as CondicionEgresoResponse,
-      )
-      .pipe(
-        timeout(TIMEOUT_HTTP_MS),
-        finalize(() => {
-          this.creandoCondicion = false;
-          if (!this.destruido) this.cdr.markForCheck();
-        }),
-      )
-      .subscribe({
-        next: (creada) => {
-          if (this.destruido) return;
+    try {
+      const creada = await firstValueFrom(
+        this.catalogoService
+          .crear<CondicionEgresoResponse>(
+            'condicionesEgreso',
+            { nombre: datos.nombre } as CondicionEgresoResponse,
+          )
+          .pipe(timeout(TIMEOUT_HTTP_MS)),
+      );
 
-          this.condicionesEgreso = [...this.condicionesEgreso, creada];
-          this.condicionEgreso = String(creada.id);
-          this.mostrandoOtroCondicion = false;
-          this.cdr.markForCheck();
-        },
-        error: (error) => {
-          if (this.destruido) return;
+      if (this.destruido) return false;
+      if (creada.id == null) {
+        this.popUps.error('No se pudo crear la condición de egreso.');
+        return false;
+      }
 
-          this.mostrarError(error, 'No se pudo crear la condición de egreso.');
-        },
-      });
+      this.condicionesEgreso = [...this.condicionesEgreso, creada];
+      this.condicionEgreso = String(creada.id);
+      this.mostrandoOtroCondicion = false;
+      return true;
+    } catch (error) {
+      if (!this.destruido) {
+        this.mostrarError(error, 'No se pudo crear la condición de egreso.');
+      }
+      return false;
+    } finally {
+      this.creandoCondicion = false;
+      if (!this.destruido) this.cdr.markForCheck();
+    }
   }
 
   cancelarCondicion(): void {
@@ -320,42 +335,68 @@ export class Alta implements OnInit, OnDestroy {
     this.institucionReferencia = valor;
   }
 
-  crearInstitucion(datos: OpcionOtroValor): void {
-    if (this.creandoInstitucion) return;
+  async crearInstitucion(datos: OpcionOtroValor): Promise<boolean> {
+    if (this.creandoInstitucion) return false;
 
     this.creandoInstitucion = true;
-    this.catalogoService
-      .crear<Inter_institucion>(
-        'instituciones',
-        { nombre: datos.nombre } as Inter_institucion,
-      )
-      .pipe(
-        timeout(TIMEOUT_HTTP_MS),
-        finalize(() => {
-          this.creandoInstitucion = false;
-          if (!this.destruido) this.cdr.markForCheck();
-        }),
-      )
-      .subscribe({
-        next: (creada) => {
-          if (this.destruido) return;
+    try {
+      const creada = await firstValueFrom(
+        this.catalogoService
+          .crear<Inter_institucion>(
+            'instituciones',
+            { nombre: datos.nombre } as Inter_institucion,
+          )
+          .pipe(timeout(TIMEOUT_HTTP_MS)),
+      );
 
-          this.instituciones = [...this.instituciones, creada];
-          this.institucionReferencia = String(creada.id);
-          this.mostrandoOtroInstitucion = false;
-          this.cdr.markForCheck();
-        },
-        error: (error) => {
-          if (this.destruido) return;
+      if (this.destruido) return false;
+      if (creada.id == null) {
+        this.popUps.error('No se pudo crear la institución.');
+        return false;
+      }
 
-          this.mostrarError(error, 'No se pudo crear la institución.');
-        },
-      });
+      this.instituciones = [...this.instituciones, creada];
+      this.institucionReferencia = String(creada.id);
+      this.mostrandoOtroInstitucion = false;
+      return true;
+    } catch (error) {
+      if (!this.destruido) {
+        this.mostrarError(error, 'No se pudo crear la institución.');
+      }
+      return false;
+    } finally {
+      this.creandoInstitucion = false;
+      if (!this.destruido) this.cdr.markForCheck();
+    }
   }
 
   cancelarInstitucion(): void {
     this.mostrandoOtroInstitucion = false;
     this.institucionReferencia = this.institucionAnterior;
+  }
+
+  private resolverSeleccionesPendientes(): Promise<boolean> {
+    const selecciones: SeleccionPendiente[] = [];
+
+    if (this.mostrandoOtroCondicion) {
+      selecciones.push({
+        etiqueta: 'Condición de egreso',
+        componente: this.condicionOtro,
+        crear: (datos) => this.crearCondicion(datos),
+      });
+    }
+
+    if (this.mostrandoOtroInstitucion) {
+      selecciones.push({
+        etiqueta: 'Institución de referencia',
+        componente: this.institucionOtro,
+        crear: (datos) => this.crearInstitucion(datos),
+      });
+    }
+
+    return crearSeleccionesPendientes(selecciones, (mensaje) =>
+      this.popUps.formIncompleto(mensaje),
+    );
   }
 
   // ------------------- CARGA DEL ALTA -------------------
@@ -434,7 +475,8 @@ export class Alta implements OnInit, OnDestroy {
       this.guardando ||
       this.anulando ||
       this.confirmando ||
-      this.cargando
+      this.cargando ||
+      this.preparandoSelecciones
     ) {
       return false;
     }
@@ -446,7 +488,10 @@ export class Alta implements OnInit, OnDestroy {
     }
 
     if (this.esReferenciaTraslado) {
-      return this.institucionReferencia !== '' && this.motivoReferencia.trim().length > 0;
+      return (
+        (this.institucionReferencia !== '' || this.mostrandoOtroInstitucion) &&
+        this.motivoReferencia.trim().length > 0
+      );
     }
 
     return true;
@@ -462,9 +507,9 @@ export class Alta implements OnInit, OnDestroy {
     return this.tipoTratamiento === 'medicamentos';
   }
 
-  /** La ficha del paciente ocupa el panel derecho; sin tratamiento permanece siempre visible. */
+  /** La ficha del paciente ocupa el panel derecho solo cuando la abre su pestaña. */
   get pacienteVisible(): boolean {
-    return !this.hayTratamiento || this.pacienteAbierto;
+    return this.pacienteAbierto;
   }
 
   /** Las tarjetas del tratamiento ocupan el panel derecho cuando la ficha está contraída. */
@@ -472,10 +517,6 @@ export class Alta implements OnInit, OnDestroy {
     return this.hayTratamiento && !this.pacienteAbierto;
   }
 
-  /** El cuerpo de la ficha se dibuja desplegado mientras no haya tratamiento. */
-  get cuerpoPacienteExpandido(): boolean {
-    return !this.hayTratamiento || this.cuerpoPacienteVisible;
-  }
 
   /** Hay un alta vigente cargada: se puede anular o actualizar. */
   get hayAltaExistente(): boolean {
@@ -652,21 +693,9 @@ export class Alta implements OnInit, OnDestroy {
 
   /** Abre la ficha del paciente o vuelve a las tarjetas del tratamiento, según su estado. */
   cambiarPanelPaciente(abierto: boolean): void {
-    if (!this.hayTratamiento) return;
-
     this.pacienteAbierto = abierto;
-
-    if (abierto) {
-      this.cuerpoPacienteVisible = true;
-    }
   }
 
-  /** Pliega o despliega el cuerpo de la ficha sin ocultar su panel. */
-  cambiarCuerpoPaciente(visible: boolean): void {
-    if (!this.hayTratamiento) return;
-
-    this.cuerpoPacienteVisible = visible;
-  }
 
   // ------------------- GUARDADO Y ANULACIÓN -------------------
   /**
@@ -674,7 +703,15 @@ export class Alta implements OnInit, OnDestroy {
    * los campos de la sección; al guardar, el backend cierra el episodio.
    */
   async guardarEgreso(): Promise<void> {
-    if (this.destruido || this.guardando || this.anulando || this.confirmando) return;
+    if (
+      this.destruido ||
+      this.guardando ||
+      this.anulando ||
+      this.confirmando ||
+      this.preparandoSelecciones
+    ) {
+      return;
+    }
 
     if (!this.puedeGuardar) {
       this.avisarValidacion();
@@ -712,6 +749,16 @@ export class Alta implements OnInit, OnDestroy {
       if (!confirmado || this.destruido) return;
     }
 
+    this.preparandoSelecciones = true;
+    this.cdr.markForCheck();
+    try {
+      if (!(await this.resolverSeleccionesPendientes())) return;
+    } finally {
+      this.preparandoSelecciones = false;
+      if (!this.destruido) this.cdr.markForCheck();
+    }
+    if (this.destruido) return;
+
     const cuerpo = this.construirRequest(episodioId, usuarioId);
 
     this.guardando = true;
@@ -724,7 +771,10 @@ export class Alta implements OnInit, OnDestroy {
       // La solicitud debe crearse antes del alta: al guardarla, el backend cierra el episodio.
       if (idEditado === null) {
         solicitudFarmacia = await this.crearSolicitudFarmacia(episodioId, usuarioId);
-        if (this.destruido) return;
+        if (this.destruido) {
+          if (solicitudFarmacia) await this.cancelarSolicitudFarmacia(solicitudFarmacia.id);
+          return;
+        }
       }
 
       let respuesta: AltaResponse;
@@ -831,7 +881,6 @@ export class Alta implements OnInit, OnDestroy {
         (opcion) => /solicitud/i.test(opcion.nombre) && /medicamento/i.test(opcion.nombre),
       ) ??
       activos.find((opcion) => /solicitud/i.test(opcion.nombre)) ??
-      activos.find((opcion) => /medicamento/i.test(opcion.nombre)) ??
       null;
 
     if (!tipo) {
@@ -963,8 +1012,7 @@ export class Alta implements OnInit, OnDestroy {
     this.medicamentoEnEdicion = null;
     this.cuidadoEnEdicion = null;
     this.mostrandoTratamiento = false;
-    this.pacienteAbierto = !this.hayTratamiento;
-    this.cuerpoPacienteVisible = true;
+    this.pacienteAbierto = false;
     this.cdr.markForCheck();
   }
 
@@ -991,8 +1039,7 @@ export class Alta implements OnInit, OnDestroy {
     this.cuidadoEnEdicion = null;
     this.mostrandoTratamiento = false;
     this.altaExistente = null;
-    this.pacienteAbierto = true;
-    this.cuerpoPacienteVisible = true;
+    this.pacienteAbierto = false;
   }
 
   /** Suelta los datos que estaban cargados en los formularios del tratamiento. */

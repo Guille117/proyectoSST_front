@@ -2,13 +2,14 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable, timeout } from 'rxjs';
 import { environment } from '../../../../../../environments/environment';
+import { TIMEOUT_HTTP_MS } from '../../../evaluacion/data/constantes-clinicas';
 import {
   ExamenRequest,
   ExamenResponse,
   EstadoExamenApi,
 } from './examenInterfaz';
 
-const TIEMPO_ESPERA_MS = 5000;
+// 30 segundos: subida de archivos, operación que puede superar el tiempo de espera normal.
 const TIEMPO_SUBIDA_MS = 30000;
 
 /**
@@ -30,7 +31,7 @@ export class IndicacionExamenService {
     const params = new HttpParams().set('episodioId', episodioId).set('estado', estado);
     return this.http
       .get<ExamenResponse[]>(`${this.apiUrl}/buscar`, { params })
-      .pipe(timeout(TIEMPO_ESPERA_MS));
+      .pipe(timeout(TIMEOUT_HTTP_MS));
   }
 
   crearExamen(request: ExamenRequest, archivos: File[]): Observable<ExamenResponse> {
@@ -64,19 +65,19 @@ export class IndicacionExamenService {
     const params = new HttpParams().set('estado', estado);
     return this.http
       .patch<ExamenResponse>(`${this.apiUrl}/${id}/estado`, null, { params })
-      .pipe(timeout(TIEMPO_ESPERA_MS));
+      .pipe(timeout(TIMEOUT_HTTP_MS));
   }
 
   eliminarArchivo(examenId: number, archivoId: number): Observable<void> {
     return this.http
       .delete<void>(`${this.apiUrl}/${examenId}/archivos/${archivoId}`)
-      .pipe(timeout(TIEMPO_ESPERA_MS));
+      .pipe(timeout(TIMEOUT_HTTP_MS));
   }
 
   obtenerArchivo(examenId: number, archivoId: number): Observable<Blob> {
     return this.http
       .get(`${this.apiUrl}/${examenId}/archivos/${archivoId}`, { responseType: 'blob' })
-      .pipe(timeout(TIEMPO_ESPERA_MS));
+      .pipe(timeout(TIMEOUT_HTTP_MS));
   }
 
   private crearFormData(request: ExamenRequest, archivos: File[]): FormData {

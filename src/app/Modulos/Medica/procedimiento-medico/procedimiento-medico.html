@@ -39,6 +39,7 @@
 
           @if (mostrandoOtroTipo) {
             <app-opcion-otro
+              #tipoOtro
               [placeholder]="'Escribe el tipo de procedimiento'"
               [creando]="creandoTipo"
               (confirmar)="crearTipo($event)"
@@ -519,7 +520,5 @@
     [plegable]="true"
     [abierto]="pacienteAbierto"
     (abiertoCambia)="cambiarFichaPaciente($event)"
-    [cuerpoVisible]="datosPacienteVisibles"
-    (cuerpoVisibleCambia)="datosPacienteVisibles = $event"
   ></app-datos-paciente>
 </div>

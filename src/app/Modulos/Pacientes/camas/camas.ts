@@ -1,11 +1,12 @@
-import { ChangeDetectorRef, Component, DestroyRef, OnInit, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, DestroyRef, OnInit, inject, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { finalize, timeout } from 'rxjs';
+import { firstValueFrom, timeout } from 'rxjs';
 import { ServicioCama } from './data/servicioCama';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TabSwitch } from '../../../shared/tab-switch/tab-switch';
 import { OpcionOtroComponent, OpcionOtroValor } from '../../../shared/opcion-otro/opcion-otro';
+import { crearSeleccionesPendientes, SeleccionPendiente } from '../../../shared/opcion-otro/crear-seleccion-pendiente';
 import { CatalogoService } from '../../Catalogos/data/serviceCatalogo';
 import { tipoDato2 } from '../../Catalogos/data/nombreInterfaz';
 import { PopUps } from '../../../shared/popUps/popUpsService';
@@ -41,6 +42,11 @@ EstadoCama = EstadoCama;
   creandoArea = false;
   creandoTipoCama = false;
   creandoHabitacion = false;
+  preparandoSelecciones = false;
+  guardando = false;
+  private readonly areaOtro = viewChild<OpcionOtroComponent>('areaOtro');
+  private readonly tipoCamaOtro = viewChild<OpcionOtroComponent>('tipoCamaOtro');
+  private readonly habitacionOtro = viewChild<OpcionOtroComponent>('habitacionOtro');
   private areaAnterior = 0;
   private tipoCamaAnterior = 0;
   private habitacionAnterior = 0;
@@ -93,27 +99,33 @@ EstadoCama = EstadoCama;
     this.camaRequest.areaId = valor;
   }
 
-  crearArea(datos: OpcionOtroValor): void {
-    if (this.creandoArea) return;
+  async crearArea(datos: OpcionOtroValor): Promise<boolean> {
+    if (this.creandoArea) return false;
 
     this.creandoArea = true;
-    this.catalogoService
-      .crear2('areas', { nombre: datos.nombre })
-      .pipe(
-        timeout(5000),
-        finalize(() => {
-          this.creandoArea = false;
-        }),
-        takeUntilDestroyed(this.destroyRef),
-      )
-      .subscribe({
-        next: (creada) => {
-          this.areas = [...this.areas, creada];
-          this.camaRequest.areaId = creada.id;
-          this.mostrandoOtroArea = false;
-        },
-        error: (error) => this.popUp.errorDesdeBackend(error, 'No se pudo crear el área.'),
-      });
+    try {
+      const creada = await firstValueFrom(
+        this.catalogoService
+          .crear2('areas', { nombre: datos.nombre })
+          .pipe(timeout(5000), takeUntilDestroyed(this.destroyRef)),
+      );
+
+      if (creada?.id == null) {
+        this.popUp.error('No se pudo crear el área.');
+        return false;
+      }
+
+      this.areas = [...this.areas, creada];
+      this.camaRequest.areaId = creada.id;
+      this.mostrandoOtroArea = false;
+      return true;
+    } catch (error) {
+      this.popUp.errorDesdeBackend(error, 'No se pudo crear el área.');
+      return false;
+    } finally {
+      this.creandoArea = false;
+      this.cdr.detectChanges();
+    }
   }
 
   cancelarArea(): void {
@@ -132,27 +144,33 @@ EstadoCama = EstadoCama;
     this.camaRequest.tipoId = valor;
   }
 
-  crearTipoCama(datos: OpcionOtroValor): void {
-    if (this.creandoTipoCama) return;
+  async crearTipoCama(datos: OpcionOtroValor): Promise<boolean> {
+    if (this.creandoTipoCama) return false;
 
     this.creandoTipoCama = true;
-    this.catalogoService
-      .crear2('tiposCama', { nombre: datos.nombre })
-      .pipe(
-        timeout(5000),
-        finalize(() => {
-          this.creandoTipoCama = false;
-        }),
-        takeUntilDestroyed(this.destroyRef),
-      )
-      .subscribe({
-        next: (creado) => {
-          this.tiposCama = [...this.tiposCama, creado];
-          this.camaRequest.tipoId = creado.id;
-          this.mostrandoOtroTipoCama = false;
-        },
-        error: (error) => this.popUp.errorDesdeBackend(error, 'No se pudo crear el tipo de cama.'),
-      });
+    try {
+      const creado = await firstValueFrom(
+        this.catalogoService
+          .crear2('tiposCama', { nombre: datos.nombre })
+          .pipe(timeout(5000), takeUntilDestroyed(this.destroyRef)),
+      );
+
+      if (creado?.id == null) {
+        this.popUp.error('No se pudo crear el tipo de cama.');
+        return false;
+      }
+
+      this.tiposCama = [...this.tiposCama, creado];
+      this.camaRequest.tipoId = creado.id;
+      this.mostrandoOtroTipoCama = false;
+      return true;
+    } catch (error) {
+      this.popUp.errorDesdeBackend(error, 'No se pudo crear el tipo de cama.');
+      return false;
+    } finally {
+      this.creandoTipoCama = false;
+      this.cdr.detectChanges();
+    }
   }
 
   cancelarTipoCama(): void {
@@ -171,32 +189,70 @@ EstadoCama = EstadoCama;
     this.camaRequest.habitacionId = valor;
   }
 
-  crearHabitacion(datos: OpcionOtroValor): void {
-    if (this.creandoHabitacion) return;
+  async crearHabitacion(datos: OpcionOtroValor): Promise<boolean> {
+    if (this.creandoHabitacion) return false;
 
     this.creandoHabitacion = true;
-    this.catalogoService
-      .crear2('habitaciones', { nombre: datos.nombre })
-      .pipe(
-        timeout(5000),
-        finalize(() => {
-          this.creandoHabitacion = false;
-        }),
-        takeUntilDestroyed(this.destroyRef),
-      )
-      .subscribe({
-        next: (creada) => {
-          this.habitaciones = [...this.habitaciones, creada];
-          this.camaRequest.habitacionId = creada.id;
-          this.mostrandoOtroHabitacion = false;
-        },
-        error: (error) => this.popUp.errorDesdeBackend(error, 'No se pudo crear la habitación.'),
-      });
+    try {
+      const creada = await firstValueFrom(
+        this.catalogoService
+          .crear2('habitaciones', { nombre: datos.nombre })
+          .pipe(timeout(5000), takeUntilDestroyed(this.destroyRef)),
+      );
+
+      if (creada?.id == null) {
+        this.popUp.error('No se pudo crear la habitación.');
+        return false;
+      }
+
+      this.habitaciones = [...this.habitaciones, creada];
+      this.camaRequest.habitacionId = creada.id;
+      this.mostrandoOtroHabitacion = false;
+      return true;
+    } catch (error) {
+      this.popUp.errorDesdeBackend(error, 'No se pudo crear la habitación.');
+      return false;
+    } finally {
+      this.creandoHabitacion = false;
+      this.cdr.detectChanges();
+    }
   }
 
   cancelarHabitacion(): void {
     this.mostrandoOtroHabitacion = false;
     this.camaRequest.habitacionId = this.habitacionAnterior;
+  }
+
+  private resolverSeleccionesPendientes(): Promise<boolean> {
+    const selecciones: SeleccionPendiente[] = [];
+
+    if (this.mostrandoOtroArea) {
+      selecciones.push({
+        etiqueta: 'Área',
+        componente: () => this.areaOtro(),
+        crear: (datos) => this.crearArea(datos),
+      });
+    }
+
+    if (this.mostrandoOtroTipoCama) {
+      selecciones.push({
+        etiqueta: 'Tipo de cama',
+        componente: () => this.tipoCamaOtro(),
+        crear: (datos) => this.crearTipoCama(datos),
+      });
+    }
+
+    if (this.mostrandoOtroHabitacion) {
+      selecciones.push({
+        etiqueta: 'Habitación',
+        componente: () => this.habitacionOtro(),
+        crear: (datos) => this.crearHabitacion(datos),
+      });
+    }
+
+    return crearSeleccionesPendientes(selecciones, (mensaje) =>
+      this.popUp.formIncompleto(mensaje),
+    );
   }
 
   //---------------------------------------------------
@@ -210,7 +266,11 @@ EstadoCama = EstadoCama;
     private camaRequestInicial: camaRequest | null = null;
 
   validarCama(): boolean {
-    if (!this.camaRequest.habitacionId || !this.camaRequest.tipoId || !this.camaRequest.areaId) {
+    const areaValida = !!this.camaRequest.areaId || this.mostrandoOtroArea;
+    const tipoValido = !!this.camaRequest.tipoId || this.mostrandoOtroTipoCama;
+    const habitacionValida = !!this.camaRequest.habitacionId || this.mostrandoOtroHabitacion;
+
+    if (!areaValida || !tipoValido || !habitacionValida) {
       this.popUp.formIncompleto('Debe seleccionar área, tipo de cama y habitación.');
       return false;
     }
@@ -222,21 +282,39 @@ EstadoCama = EstadoCama;
     return true;
   }
 
-  crearCama(): void {
-    if (!this.validarCama()) {
+  async crearCama(): Promise<void> {
+    if (this.guardando || this.preparandoSelecciones || !this.validarCama()) {
       return;
     }
 
-    this.servicioCama.crearCama({ ...this.camaRequest, precio: this.precio }).subscribe({
-      next: () => {
-        this.popUp.exito('Cama creada exitosamente');
-        this.limpiarFormulario();
-        this.listarCamas();
-      },
-      error: () => {
-        this.popUp.errorDesdeBackend('Error al crear la cama');
+    this.preparandoSelecciones = true;
+    this.cdr.detectChanges();
+    try {
+      if (!(await this.resolverSeleccionesPendientes())) {
+        return;
       }
-    });
+    } finally {
+      this.preparandoSelecciones = false;
+      this.cdr.detectChanges();
+    }
+
+    this.guardando = true;
+    this.cdr.detectChanges();
+    try {
+      await firstValueFrom(
+        this.servicioCama
+          .crearCama({ ...this.camaRequest, precio: this.precio })
+          .pipe(takeUntilDestroyed(this.destroyRef)),
+      );
+      this.popUp.exito('Cama creada exitosamente');
+      this.limpiarFormulario();
+      this.listarCamas();
+    } catch (error) {
+      this.popUp.errorDesdeBackend(error, 'Error al crear la cama');
+    } finally {
+      this.guardando = false;
+      this.cdr.detectChanges();
+    }
   }
 
 
@@ -398,26 +476,55 @@ EstadoCama = EstadoCama;
   }
 
   async actualizarCama(){
+    if (
+      this.guardando ||
+      this.preparandoSelecciones ||
+      this.idActualizar == null ||
+      !this.validarCama()
+    ) {
+      return;
+    }
+
     const confirmacion = await this.popUp.confirmarToast('¿Estás seguro de actualizar la cama?');
     if (!confirmacion) {
       return;
     }
 
-    this.servicioCama.actualizarCama(this.idActualizar!, {
+    const id = this.idActualizar;
+    this.preparandoSelecciones = true;
+    this.cdr.detectChanges();
+    try {
+      if (!(await this.resolverSeleccionesPendientes())) {
+        return;
+      }
+    } finally {
+      this.preparandoSelecciones = false;
+      this.cdr.detectChanges();
+    }
+
+    const datosCama = {
       ...this.camaRequest,
       precio: this.precio,
-    }).subscribe({
-      next: () => {
-        this.popUp.exito('Cama actualizada exitosamente');
-        this.limpiarFormulario();
-        this.listarCamas();
-        this.isEditing = false;
-        this.cdr.detectChanges();
-      },
-      error: () => {
-        this.popUp.errorDesdeBackend('Error al actualizar la cama');
-      }
-    });
+    };
+
+    this.guardando = true;
+    this.cdr.detectChanges();
+    try {
+      await firstValueFrom(
+        this.servicioCama
+          .actualizarCama(id, datosCama)
+          .pipe(takeUntilDestroyed(this.destroyRef)),
+      );
+      this.popUp.exito('Cama actualizada exitosamente');
+      this.limpiarFormulario();
+      this.listarCamas();
+      this.isEditing = false;
+    } catch (error) {
+      this.popUp.errorDesdeBackend(error, 'Error al actualizar la cama');
+    } finally {
+      this.guardando = false;
+      this.cdr.detectChanges();
+    }
   }
 
   //---------------------------------------
@@ -460,7 +567,9 @@ EstadoCama = EstadoCama;
 
   puedeGuardar(): boolean {
     const formularioCompleto = Boolean(
-      this.camaRequest.tipoId && this.camaRequest.habitacionId && this.camaRequest.areaId,
+      (this.camaRequest.areaId || this.mostrandoOtroArea) &&
+      (this.camaRequest.tipoId || this.mostrandoOtroTipoCama) &&
+      (this.camaRequest.habitacionId || this.mostrandoOtroHabitacion),
     );
 
     if (!formularioCompleto) {

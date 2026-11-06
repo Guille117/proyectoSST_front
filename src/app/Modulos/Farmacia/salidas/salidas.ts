@@ -1,8 +1,17 @@
 import { NgClass } from '@angular/common';
-import { ChangeDetectorRef, Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
+import {
+  ChangeDetectorRef,
+  Component,
+  OnDestroy,
+  OnInit,
+  inject,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { finalize, forkJoin, Subscription, timeout, TimeoutError } from 'rxjs';
+import { finalize, firstValueFrom, forkJoin, Subscription, timeout, TimeoutError } from 'rxjs';
 import { OpcionOtroComponent, OpcionOtroValor } from '../../../shared/opcion-otro/opcion-otro';
+import { crearSeleccionesPendientes } from '../../../shared/opcion-otro/crear-seleccion-pendiente';
 import { PopUps } from '../../../shared/popUps/popUpsService';
 import { TabSwitch } from '../../../shared/tab-switch/tab-switch';
 import { AuthService } from '../../Auth/data/auth-service';
@@ -120,6 +129,8 @@ export class Salidas implements OnInit, OnDestroy {
   readonly opcionOtroId = -1;
   detalleEditandoMotivo: DetalleSalidaVista | null = null;
   creandoMotivo = false;
+  preparandoSelecciones = false;
+  private readonly motivoOtro = viewChild<OpcionOtroComponent>('motivoOtro');
 
   cargandoSolicitudes = false;
   cargandoDetalle = false;
@@ -192,13 +203,15 @@ export class Salidas implements OnInit, OnDestroy {
   }
 
   get puedeGuardarDevolucion(): boolean {
-    if (!this.solicitudSeleccionada || this.guardandoDevolucion) return false;
+    if (!this.solicitudSeleccionada || this.guardandoDevolucion || this.preparandoSelecciones) {
+      return false;
+    }
 
     return this.detallesConEntregas.some((detalle) => {
       const cantidad = Number(detalle.cantidadDevolver);
       return (
         detalle.loteDevueltoId !== null &&
-        detalle.motivoBajaId !== null &&
+        (detalle.motivoBajaId !== null || this.detalleEditandoMotivo === detalle) &&
         Number.isInteger(cantidad) &&
         cantidad > 0 &&
         cantidad <= this.maximoDevolucion(detalle)
@@ -386,35 +399,46 @@ export class Salidas implements OnInit, OnDestroy {
     detalle.motivoBajaId = valor;
   }
 
-  crearMotivo(detalle: DetalleSalidaVista, datos: OpcionOtroValor): void {
-    if (this.creandoMotivo) return;
+  async crearMotivo(detalle: DetalleSalidaVista, datos: OpcionOtroValor): Promise<boolean> {
+    if (this.creandoMotivo) return false;
 
     this.creandoMotivo = true;
-    this.catalogoService
-      .crear<Inter_base>('motivoBaja', { nombre: datos.nombre })
-      .pipe(
-        timeout(TIEMPO_ESPERA_MS),
-        finalize(() => {
-          this.creandoMotivo = false;
-          if (!this.destruido) this.cdr.markForCheck();
-        }),
-      )
-      .subscribe({
-        next: (creado) => {
-          if (this.destruido || creado.id == null) return;
+    try {
+      const creado = await firstValueFrom(
+        this.catalogoService
+          .crear<Inter_base>('motivoBaja', { nombre: datos.nombre })
+          .pipe(timeout(TIEMPO_ESPERA_MS)),
+      );
 
-          this.motivos = [...this.motivos, creado];
-          detalle.motivoBajaId = creado.id;
-          detalle.motivoBajaAnterior = undefined;
-          this.detalleEditandoMotivo = null;
-          this.cdr.markForCheck();
-        },
-        error: (error) => {
-          if (this.destruido) return;
+      if (this.destruido || creado.id == null) return false;
 
-          this.mostrarError(error, 'No se pudo crear el motivo de baja.');
+      this.motivos = [...this.motivos, creado];
+      detalle.motivoBajaId = creado.id;
+      detalle.motivoBajaAnterior = undefined;
+      this.detalleEditandoMotivo = null;
+      return true;
+    } catch (error) {
+      if (!this.destruido) {
+        this.mostrarError(error, 'No se pudo crear el motivo de baja.');
+      }
+      return false;
+    } finally {
+      this.creandoMotivo = false;
+      if (!this.destruido) this.cdr.markForCheck();
+    }
+  }
+
+  private resolverMotivoPendiente(detalle: DetalleSalidaVista): Promise<boolean> {
+    return crearSeleccionesPendientes(
+      [
+        {
+          etiqueta: 'Motivo de devolución',
+          componente: this.motivoOtro,
+          crear: (datos) => this.crearMotivo(detalle, datos),
         },
-      });
+      ],
+      (mensaje) => this.popUps.formIncompleto(mensaje),
+    );
   }
 
   cancelarMotivo(detalle: DetalleSalidaVista): void {
@@ -1032,9 +1056,9 @@ export class Salidas implements OnInit, OnDestroy {
 
   // ------------------- DEVOLUCIONES -------------------
 
-  devolver(): void {
+  async devolver(): Promise<void> {
     const solicitud = this.solicitudSeleccionada;
-    if (!solicitud || this.guardandoDevolucion) return;
+    if (!solicitud || this.guardandoDevolucion || this.preparandoSelecciones) return;
 
     const usuarioId = this.authService.currentUser()?.id;
     if (!usuarioId) {
@@ -1042,17 +1066,22 @@ export class Salidas implements OnInit, OnDestroy {
       return;
     }
 
-    const lineas: DevolucionLineaRequest[] = [];
-    for (const detalle of this.detallesConEntregas) {
+    const detalles = this.detallesConEntregas.filter((detalle) => {
       const cantidad = Number(detalle.cantidadDevolver);
-      if (!Number.isInteger(cantidad) || cantidad <= 0) continue;
+      return Number.isInteger(cantidad) && cantidad > 0;
+    });
+
+    if (!detalles.length) {
+      this.popUps.advertencia('Ingrese al menos una cantidad a devolver.');
+      return;
+    }
+
+    // Se validan primero los campos ajenos al motivo para no crear catálogos innecesarios.
+    for (const detalle of detalles) {
+      const cantidad = Number(detalle.cantidadDevolver);
 
       if (detalle.loteDevueltoId === null) {
         this.popUps.advertencia(`Seleccione el lote entregado de ${detalle.nombre}.`);
-        return;
-      }
-      if (detalle.motivoBajaId === null) {
-        this.popUps.advertencia(`Seleccione el motivo de devolución de ${detalle.nombre}.`);
         return;
       }
       if (cantidad > this.maximoDevolucion(detalle)) {
@@ -1061,10 +1090,34 @@ export class Salidas implements OnInit, OnDestroy {
         );
         return;
       }
+    }
+
+    const detallePendiente = this.detalleEditandoMotivo;
+    this.preparandoSelecciones = true;
+    this.cdr.markForCheck();
+    let listo = true;
+    try {
+      if (detallePendiente) {
+        listo = await this.resolverMotivoPendiente(detallePendiente);
+      }
+    } finally {
+      this.preparandoSelecciones = false;
+      this.cdr.markForCheck();
+    }
+    if (!listo) return;
+
+    const lineas: DevolucionLineaRequest[] = [];
+    for (const detalle of detalles) {
+      const cantidad = Number(detalle.cantidadDevolver);
+
+      if (detalle.motivoBajaId === null) {
+        this.popUps.advertencia(`Seleccione el motivo de devolución de ${detalle.nombre}.`);
+        return;
+      }
 
       lineas.push({
         detalleId: detalle.id,
-        loteId: detalle.loteDevueltoId,
+        loteId: detalle.loteDevueltoId!,
         cantidad,
         condicion: detalle.condicion,
         motivoBajaId: detalle.motivoBajaId,
