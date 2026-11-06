@@ -8,10 +8,6 @@ export interface GlucosaRequest {
   observacion: string | null;
   episodioId: number;
   usuarioId: number;
-  /** Atención de control desde la que se registra la medición. */
-  cuidadoId?: number | null;
-  /** Hora programada de la atención que se está ejecutando. */
-  fechaHoraProgramada?: string | null;
 }
 
 /** Medición de glucosa tal como la devuelve el backend. */

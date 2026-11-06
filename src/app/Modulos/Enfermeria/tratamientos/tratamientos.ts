@@ -1,3 +1,4 @@
+import { Location } from '@angular/common';
 import {
   ChangeDetectorRef,
   Component,
@@ -9,7 +10,7 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { finalize, forkJoin, Subscription, TimeoutError } from 'rxjs';
+import { finalize, forkJoin, Observable, Subscription, TimeoutError } from 'rxjs';
 import { ArchivoService } from '../../../shared/archivos/archivoService';
 import { PopUps } from '../../../shared/popUps/popUpsService';
 import { VisorArchivos } from '../../../shared/visor-archivos/visor-archivos';
@@ -45,6 +46,12 @@ import {
   EjecucionCuidadoResponse,
 } from '../data/registrosEnfermeriaInterfaz';
 import { RegistrosEnfermeriaService } from '../data/registrosEnfermeriaService';
+import { ControlHidricoService } from '../monitoreo/data/control-hidrico-service';
+import { ControlHidricoResponse } from '../monitoreo/data/controlHidricoInterfaz';
+import { GlucosaService } from '../monitoreo/data/glucosa-service';
+import { GlucosaResponse } from '../monitoreo/data/glucosaInterfaz';
+import { SignosVitalesService } from '../monitoreo/data/signos-vitales-service';
+import { SignosVitalesResponse } from '../monitoreo/data/signosVitalesInterfaz';
 import {
   AplicacionProgramada,
   calcularAplicaciones,
@@ -121,6 +128,13 @@ interface AplicacionMedicamentoVista {
   cantidad: number | null;
   /** Registro de monitoreo vinculado cuando la ejecución proviene de un control. */
   monitoreoId: number | null;
+  /** Sección de Monitoreo del registro vinculado. */
+  monitoreoTipo: SeccionMonitoreoControl | null;
+}
+
+/** Resultados del control listos para la fila expandible del historial. */
+interface ResultadoControlVista {
+  filas: { etiqueta: string; valor: string }[];
 }
 
 /** Aplicación programada de una indicación, con su registro si ya se capturó. */
@@ -177,6 +191,14 @@ interface ExamenIndicadoVista extends IndicacionTratamientoVista {
   usuario: string;
 }
 
+/** Monitoreo tomado desde una atención y pendiente de guardar como ejecución. */
+interface ControlTomadoPendiente {
+  cuidadoId: number;
+  fechaHoraProgramada: string;
+  monitoreoId: number;
+  tipo: SeccionMonitoreoControl;
+}
+
 /** Atención indicada que muestra la tarjeta de indicaciones médicas. */
 interface CuidadoIndicadoVista extends IndicacionConMetaVista, IndicacionConProgramacion {
   nombre: string;
@@ -217,10 +239,14 @@ export class Tratamientos implements OnInit, OnDestroy {
   private readonly servicioCuidados = inject(IndicacionCuidadoService);
   private readonly servicioExamenes = inject(IndicacionExamenService);
   private readonly registrosEnfermeria = inject(RegistrosEnfermeriaService);
+  private readonly servicioSignos = inject(SignosVitalesService);
+  private readonly servicioGlucosa = inject(GlucosaService);
+  private readonly servicioHidrico = inject(ControlHidricoService);
   private readonly archivos = inject(ArchivoService);
   private readonly modalService = inject(ModalService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
+  private readonly location = inject(Location);
   private readonly cdr = inject(ChangeDetectorRef);
 
   /** Archivos que admite el gestor de exámenes, incluido TXT. */
@@ -248,9 +274,6 @@ export class Tratamientos implements OnInit, OnDestroy {
   observacionAdministracion = '';
   /** Hora programada elegida para la nueva administración. */
   horaAdministracion = '';
-
-  /** Observación que se muestra al pasar el puntero por una aplicación registrada. */
-  observacionPopup: { texto: string; x: number; y: number } | null = null;
 
   /** Opciones del desplegable del estado de la administración. */
   readonly estadosAdministracion: EstadoAdministracionVista[] = [
@@ -294,6 +317,9 @@ export class Tratamientos implements OnInit, OnDestroy {
   /** Hora programada que se registró en Monitoreo y debe mostrarse al volver. */
   private horaControlPendiente: string | null = null;
 
+  /** Monitoreo tomado que todavía no se guarda como ejecución de la atención. */
+  private controlTomadoPendiente: ControlTomadoPendiente | null = null;
+
   /** Medicamento cuyo historial de aplicaciones está desplegado; null si ninguno. */
   private indicacionAplicacionesAbierta: number | null = null;
 
@@ -316,7 +342,21 @@ export class Tratamientos implements OnInit, OnDestroy {
   private peticionAccion?: Subscription;
   private peticionArchivos?: Subscription;
   private peticionSolicitud?: Subscription;
+  private peticionResultado?: Subscription;
   private destruido = false;
+
+  /** Ejecución cuyos resultados están desplegados en el historial; null si ninguna. */
+  resultadoAbierto: number | null = null;
+
+  /** Resultados del control desplegado. */
+  resultadoActual: ResultadoControlVista | null = null;
+
+  /** Estados de carga y error de los resultados del control. */
+  cargandoResultado = false;
+  errorResultado = false;
+
+  /** Resultados ya consultados por ejecución, para no repetir la petición. */
+  private readonly resultadosPorEjecucion = new Map<number, ResultadoControlVista>();
 
   /** Secciones del rail de indicaciones médicas. */
   readonly secciones: SeccionTratamientoVista[] = [
@@ -338,8 +378,9 @@ export class Tratamientos implements OnInit, OnDestroy {
 
   /** Abre Atenciones y recuerda la atención que vuelve desde el registro de un control. */
   private leerRetornoControl(): void {
-    const seccion = this.route.snapshot.queryParamMap.get('seccion');
-    const indicacionId = Number(this.route.snapshot.queryParamMap.get('indicacionId'));
+    const params = this.route.snapshot.queryParamMap;
+    const seccion = params.get('seccion');
+    const indicacionId = Number(params.get('indicacionId'));
 
     if (seccion !== 'cuidados' || !Number.isInteger(indicacionId) || indicacionId <= 0) {
       return;
@@ -347,7 +388,29 @@ export class Tratamientos implements OnInit, OnDestroy {
 
     this.seccionActiva = 'cuidados';
     this.indicacionPendiente = indicacionId;
-    this.horaControlPendiente = this.route.snapshot.queryParamMap.get('fechaHoraProgramada');
+
+    const fechaHoraProgramada = params.get('fechaHoraProgramada');
+    const monitoreoId = Number(params.get('monitoreoId'));
+    const tipo = params.get('tipoMonitoreo');
+
+    if (
+      fechaHoraProgramada &&
+      Number.isInteger(monitoreoId) &&
+      monitoreoId > 0 &&
+      tipo &&
+      ['signos', 'hidrico', 'glucosa'].includes(tipo)
+    ) {
+      this.horaControlPendiente = fechaHoraProgramada;
+      this.controlTomadoPendiente = {
+        cuidadoId: indicacionId,
+        fechaHoraProgramada,
+        monitoreoId,
+        tipo: tipo as SeccionMonitoreoControl,
+      };
+    }
+
+    // Los parámetros son de un solo uso; evita repetir el mensaje al recargar
+    this.location.replaceState('/enfermeria/tratamientos');
   }
 
   ngOnDestroy(): void {
@@ -356,6 +419,7 @@ export class Tratamientos implements OnInit, OnDestroy {
     this.peticionAccion?.unsubscribe();
     this.peticionArchivos?.unsubscribe();
     this.peticionSolicitud?.unsubscribe();
+    this.peticionResultado?.unsubscribe();
   }
 
   /** El episodio es un historial cerrado: se consulta, pero no se registran cambios. */
@@ -445,7 +509,7 @@ export class Tratamientos implements OnInit, OnDestroy {
       if (this.estadoAdministracion === 'noAdministrado') {
         return this.observacionAdministracion.trim().length > 0;
       }
-      return this.controlRegistrado;
+      return this.controlTomado || this.controlRegistrado;
     }
 
     if (this.seccionActiva !== 'medicamentos') return true;
@@ -553,6 +617,16 @@ export class Tratamientos implements OnInit, OnDestroy {
     );
   }
 
+  /** Hay un monitoreo tomado desde esta atención pendiente de guardarse. */
+  get controlTomado(): boolean {
+    const pendiente = this.controlTomadoPendiente;
+    return (
+      pendiente !== null &&
+      this.controlSeleccionado?.id === pendiente.cuidadoId &&
+      this.horaAdministracion === pendiente.fechaHoraProgramada
+    );
+  }
+
   /** El control seleccionado está marcado como no realizado y exige un motivo. */
   get esControlNoRealizado(): boolean {
     return this.controlSeleccionado !== null && this.estadoAdministracion === 'noAdministrado';
@@ -566,6 +640,7 @@ export class Tratamientos implements OnInit, OnDestroy {
       this.estadoAdministracion === 'administrado' &&
       this.controlSeleccionado !== null &&
       !this.controlRegistrado &&
+      !this.controlTomado &&
       this.horaAdministracion.trim().length > 0
     );
   }
@@ -597,22 +672,6 @@ export class Tratamientos implements OnInit, OnDestroy {
             etiqueta: this.formatearFechaHora(fecha),
           });
         }
-      }
-    }
-
-    // Al volver del monitoreo, la hora ya registrada debe seguir visible en el formulario
-    if (
-      this.controlSeleccionado &&
-      this.horaAdministracion &&
-      !opciones.some((opcion) => opcion.valor === this.horaAdministracion)
-    ) {
-      const fecha = new Date(this.horaAdministracion);
-      if (!Number.isNaN(fecha.getTime())) {
-        opciones.unshift({
-          numero: 0,
-          valor: this.horaAdministracion,
-          etiqueta: this.formatearFechaHora(fecha),
-        });
       }
     }
 
@@ -1108,6 +1167,7 @@ export class Tratamientos implements OnInit, OnDestroy {
   seleccionarIndicacion(id: number): void {
     this.indicacionSeleccionadaId = id;
     this.actualizarHoraAdministracion(true);
+    this.cerrarResultado();
 
     if (this.aplicacionEnEdicion) {
       this.limpiarFormularioAdministracion();
@@ -1120,6 +1180,7 @@ export class Tratamientos implements OnInit, OnDestroy {
     this.indicacionAplicacionesAbierta = null;
     this.indicacionSeleccionadaId = null;
     this.solicitandoMedicamento = false;
+    this.cerrarResultado();
 
     if (this.aplicacionEnEdicion) {
       this.limpiarFormularioAdministracion();
@@ -1132,6 +1193,7 @@ export class Tratamientos implements OnInit, OnDestroy {
   seleccionarFiltro(filtro: FiltroTratamiento): void {
     this.filtroActivo = filtro;
     this.indicacionAplicacionesAbierta = null;
+    this.cerrarResultado();
 
     if (this.aplicacionEnEdicion) {
       this.limpiarFormularioAdministracion();
@@ -1162,6 +1224,7 @@ export class Tratamientos implements OnInit, OnDestroy {
     this.observacionAdministracion = '';
     this.horaAdministracion = '';
     this.aplicacionEnEdicion = null;
+    this.controlTomadoPendiente = null;
     this.actualizarHoraAdministracion();
   }
 
@@ -1256,15 +1319,28 @@ export class Tratamientos implements OnInit, OnDestroy {
         return;
       }
 
+      const controlPendiente =
+        edicion === null && this.controlTomado ? this.controlTomadoPendiente : null;
       const request = {
         cuidadoId: cuidado.id,
         fechaHoraProgramada: this.horaAdministracion,
         estado: estado === 'administrado' ? ('REALIZADO' as const) : ('NO_REALIZADO' as const),
         observacion,
         usuarioId,
+        signosVitalesId:
+          estado === 'administrado' && controlPendiente?.tipo === 'signos'
+            ? controlPendiente.monitoreoId
+            : null,
+        glucosaId:
+          estado === 'administrado' && controlPendiente?.tipo === 'glucosa'
+            ? controlPendiente.monitoreoId
+            : null,
+        controlHidricoId:
+          estado === 'administrado' && controlPendiente?.tipo === 'hidrico'
+            ? controlPendiente.monitoreoId
+            : null,
       };
 
-      // Al volver del monitoreo, la ejecución del control ya existe: se actualiza, no se duplica
       const ejecucionRegistrada =
         edicion === null && this.controlSeleccionado
           ? this.controlSeleccionado.aplicaciones.find(
@@ -1297,7 +1373,15 @@ export class Tratamientos implements OnInit, OnDestroy {
   }
 
   private administracionGuardada(): void {
+    const eraControl = this.controlSeleccionado !== null;
+    const indicacionId = this.indicacionSeleccionadaId;
+
     this.limpiarFormularioAdministracion();
+
+    if (eraControl && indicacionId !== null) {
+      this.indicacionPendiente = indicacionId;
+    }
+
     this.popUps.exito(
       this.seccionActiva === 'cuidados'
         ? 'Atención registrada exitosamente.'
@@ -1311,46 +1395,160 @@ export class Tratamientos implements OnInit, OnDestroy {
     return this.indicacionAplicacionesAbierta === id;
   }
 
-  /** Muestra la observación de la aplicación junto al puntero. */
-  mostrarObservacion(evento: MouseEvent, observacion: string | null | undefined): void {
-    const texto = observacion?.trim();
-    if (!texto) {
-      this.observacionPopup = null;
-      return;
-    }
-
-    this.observacionPopup = { texto, ...this.posicionObservacion(evento) };
-  }
-
-  /** Mantiene el popup junto al puntero mientras recorre la fila. */
-  moverObservacion(evento: MouseEvent): void {
-    if (!this.observacionPopup) return;
-
-    this.observacionPopup = { ...this.observacionPopup, ...this.posicionObservacion(evento) };
-  }
-
-  /** Oculta la observación al salir de la fila. */
-  ocultarObservacion(): void {
-    this.observacionPopup = null;
-  }
-
-  private posicionObservacion(evento: MouseEvent): { x: number; y: number } {
-    const margen = 14;
-    const ancho = 320;
-
-    return {
-      x: Math.min(evento.clientX + margen, Math.max(8, window.innerWidth - ancho - 8)),
-      y: evento.clientY + margen,
-    };
-  }
-
   /** Despliega u oculta el historial de aplicaciones de una indicación. */
   alternarAplicaciones(id: number): void {
-    this.indicacionAplicacionesAbierta = this.indicacionAplicacionesAbierta === id ? null : id;
+    const abriendo = this.indicacionAplicacionesAbierta !== id;
+    this.indicacionAplicacionesAbierta = abriendo ? id : null;
+
+    if (!abriendo) {
+      this.cerrarResultado();
+    }
 
     if (this.aplicacionEnEdicion) {
       this.limpiarFormularioAdministracion();
     }
+  }
+
+  /** Indica si la ejecución tiene resultados de monitoreo u observación que mostrar. */
+  tieneDetalle(registro: AplicacionMedicamentoVista): boolean {
+    // En medicamentos siempre se puede consultar el detalle; en atenciones hace falta contenido
+    if (this.seccionActiva === 'medicamentos') return true;
+    return registro.monitoreoId !== null || registro.observacion.trim().length > 0;
+  }
+
+  /** Despliega los resultados del control o la observación de la ejecución. */
+  verResultados(registro: AplicacionMedicamentoVista): void {
+    if (!this.tieneDetalle(registro)) return;
+
+    if (this.resultadoAbierto === registro.id) {
+      this.cerrarResultado();
+      return;
+    }
+
+    this.resultadoAbierto = registro.id;
+    this.peticionResultado?.unsubscribe();
+    this.resultadoActual = null;
+    this.cargandoResultado = false;
+    this.errorResultado = false;
+
+    if (registro.monitoreoId === null || registro.monitoreoTipo === null) {
+      return;
+    }
+
+    const cache = this.resultadosPorEjecucion.get(registro.id);
+    if (cache) {
+      this.resultadoActual = cache;
+      return;
+    }
+
+    this.cargandoResultado = true;
+    this.cargarResultado(registro);
+  }
+
+  /** Oculta los resultados y vuelve a la tabla del historial. */
+  cerrarResultado(): void {
+    this.peticionResultado?.unsubscribe();
+    this.resultadoAbierto = null;
+    this.resultadoActual = null;
+    this.cargandoResultado = false;
+    this.errorResultado = false;
+  }
+
+  private cargarResultado(registro: AplicacionMedicamentoVista): void {
+    const id = registro.monitoreoId;
+    if (id === null || registro.monitoreoTipo === null) return;
+
+    if (registro.monitoreoTipo === 'signos') {
+      this.suscribirResultado(this.servicioSignos.obtenerPorId(id), registro.id, (respuesta) =>
+        this.resultadoSignos(respuesta),
+      );
+      return;
+    }
+
+    if (registro.monitoreoTipo === 'glucosa') {
+      this.suscribirResultado(this.servicioGlucosa.obtenerPorId(id), registro.id, (respuesta) =>
+        this.resultadoGlucosa(respuesta),
+      );
+      return;
+    }
+
+    this.suscribirResultado(this.servicioHidrico.obtenerPorId(id), registro.id, (respuesta) =>
+      this.resultadoHidrico(respuesta),
+    );
+  }
+
+  private suscribirResultado<T>(
+    peticion: Observable<T>,
+    ejecucionId: number,
+    mapear: (respuesta: T) => ResultadoControlVista,
+  ): void {
+    this.peticionResultado?.unsubscribe();
+    this.peticionResultado = peticion
+      .pipe(
+        finalize(() => {
+          this.cargandoResultado = false;
+          if (!this.destruido) this.cdr.markForCheck();
+        }),
+      )
+      .subscribe({
+        next: (respuesta) => {
+          if (this.destruido || this.resultadoAbierto !== ejecucionId) return;
+
+          const vista = mapear(respuesta);
+          this.resultadoActual = vista;
+          this.resultadosPorEjecucion.set(ejecucionId, vista);
+        },
+        error: (error) => {
+          if (this.destruido) return;
+
+          this.errorResultado = true;
+          this.mostrarError(error, 'No se pudieron cargar los resultados del control.');
+        },
+      });
+  }
+
+  private resultadoSignos(respuesta: SignosVitalesResponse): ResultadoControlVista {
+    return {
+      filas: [
+        {
+          etiqueta: 'Presión arterial',
+          valor: `${respuesta.sistolica}/${respuesta.diastolica} mmHg`,
+        },
+        { etiqueta: 'Fr. cardíaca', valor: `${respuesta.frecuenciaCardiaca} lpm` },
+        { etiqueta: 'Fr. respiratoria', valor: `${respuesta.frecuenciaRespiratoria} rpm` },
+        { etiqueta: 'Temperatura', valor: `${respuesta.temperatura} °C` },
+        { etiqueta: 'Saturación', valor: `${respuesta.saturacion} %` },
+        { etiqueta: 'Observación', valor: respuesta.observacion?.trim() || 'Sin observación' },
+      ],
+    };
+  }
+
+  private resultadoGlucosa(respuesta: GlucosaResponse): ResultadoControlVista {
+    return {
+      filas: [
+        { etiqueta: 'Glucosa', valor: `${respuesta.glucosa} mg/dL` },
+        { etiqueta: 'Tipo de medición', valor: this.tipoGlucosaVista(respuesta.tipo) },
+        { etiqueta: 'Observación', valor: respuesta.observacion?.trim() || 'Sin observación' },
+      ],
+    };
+  }
+
+  private resultadoHidrico(respuesta: ControlHidricoResponse): ResultadoControlVista {
+    return {
+      filas: [
+        { etiqueta: 'Tipo', valor: respuesta.tipo === 'INGRESO' ? 'Ingreso' : 'Egreso' },
+        { etiqueta: 'Vía', valor: respuesta.via },
+        { etiqueta: 'Cantidad', valor: `${respuesta.cantidad} ml` },
+        { etiqueta: 'Descripción', valor: respuesta.descripcion },
+      ],
+    };
+  }
+
+  private tipoGlucosaVista(tipo: GlucosaResponse['tipo']): string {
+    if (tipo === 'PREPRANDIAL') return 'Preprandial';
+    if (tipo === 'POSTPRANDIAL') return 'Postprandial';
+    if (tipo === 'ALEATORIA') return 'Aleatoria';
+    return 'Ayunas';
   }
 
   /** Genera las horas que puede elegir el usuario para la indicación seleccionada. */
@@ -1562,9 +1760,7 @@ export class Tratamientos implements OnInit, OnDestroy {
 
     const programacion = this.programacionDeVista(indicacion);
     const programadas = calcularAplicaciones(programacion);
-    if (!programadas.length) return [];
-
-    return programadas.map((aplicacion) => ({
+    const filas = programadas.map((aplicacion) => ({
       numero: aplicacion.numero,
       fechaHora: this.formatearFechaHora(aplicacion.fechaHora),
       registro:
@@ -1572,6 +1768,26 @@ export class Tratamientos implements OnInit, OnDestroy {
           this.mismaFecha(registro.fechaHoraProgramada, aplicacion.fechaHora),
         ) ?? null,
     }));
+
+    // Si un registro no coincide con la programación, se muestra igualmente para no perderlo
+    const minutosProgramados = new Set(
+      programadas.map((aplicacion) => Math.floor(aplicacion.fechaHora.getTime() / 60000)),
+    );
+    const sinProgramacion = indicacion.aplicaciones
+      .filter((registro) => {
+        const fecha = new Date(registro.fechaHoraProgramada);
+        return (
+          !Number.isNaN(fecha.getTime()) &&
+          !minutosProgramados.has(Math.floor(fecha.getTime() / 60000))
+        );
+      })
+      .map((registro, indice) => ({
+        numero: programadas.length + indice + 1,
+        fechaHora: this.formatearFechaHora(new Date(registro.fechaHoraProgramada)),
+        registro,
+      }));
+
+    return [...filas, ...sinProgramacion];
   }
 
   /** Texto de la tarjeta del cuidado: cada cuántas horas se realiza y durante cuánto tiempo. */
@@ -1709,6 +1925,7 @@ export class Tratamientos implements OnInit, OnDestroy {
       observacion: respuesta.observacion ?? '',
       cantidad: respuesta.cantidad,
       monitoreoId: null,
+      monitoreoTipo: null,
     };
   }
 
@@ -1716,6 +1933,15 @@ export class Tratamientos implements OnInit, OnDestroy {
     respuesta: EjecucionCuidadoResponse,
     indice: number,
   ): AplicacionMedicamentoVista {
+    const monitoreoTipo: SeccionMonitoreoControl | null =
+      respuesta.signosVitalesId != null
+        ? 'signos'
+        : respuesta.glucosaId != null
+          ? 'glucosa'
+          : respuesta.controlHidricoId != null
+            ? 'hidrico'
+            : null;
+
     return {
       id: respuesta.id,
       numero: indice + 1,
@@ -1728,6 +1954,7 @@ export class Tratamientos implements OnInit, OnDestroy {
       cantidad: null,
       monitoreoId:
         respuesta.signosVitalesId ?? respuesta.glucosaId ?? respuesta.controlHidricoId ?? null,
+      monitoreoTipo,
     };
   }
 

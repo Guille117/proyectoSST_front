@@ -655,7 +655,7 @@ describe('IndicacionMedicamentos', () => {
     expect(registrosEnfermeria.buscarAplicacionesPorIndicacion).toHaveBeenCalledWith(30);
     const registros = elemento<HTMLElement>('.indicacion-registros');
     expect(registros?.textContent).toContain('Enf. María López');
-    const estado = registros?.querySelector('td.registros-tabla_estado i');
+    const estado = registros?.querySelector('td.aplicaciones-tabla_estado i');
     expect(estado?.getAttribute('aria-label')).toBe('Administrado');
     expect(estado?.getAttribute('title')).toBe('Administrado');
   });

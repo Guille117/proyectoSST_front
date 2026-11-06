@@ -21,6 +21,10 @@ export class GlucosaService {
       .pipe(timeout(TIMEOUT_HTTP_MS));
   }
 
+  obtenerPorId(id: number): Observable<GlucosaResponse> {
+    return this.http.get<GlucosaResponse>(`${this.apiUrl}/${id}`).pipe(timeout(TIMEOUT_HTTP_MS));
+  }
+
   crear(request: GlucosaRequest): Observable<GlucosaResponse> {
     return this.http.post<GlucosaResponse>(this.apiUrl, request).pipe(timeout(TIMEOUT_HTTP_MS));
   }

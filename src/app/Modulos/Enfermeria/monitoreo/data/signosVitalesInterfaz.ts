@@ -9,10 +9,6 @@ export interface SignosVitalesRequest {
   observacion: string | null;
   episodioId: number;
   usuarioId: number;
-  /** Atención de control desde la que se registra la toma. */
-  cuidadoId?: number | null;
-  /** Hora programada de la atención que se está ejecutando. */
-  fechaHoraProgramada?: string | null;
 }
 
 /** Toma de signos vitales tal como la devuelve el backend. */

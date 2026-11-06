@@ -198,8 +198,8 @@ export class IndicacionMedicamentos implements OnInit, OnDestroy {
   /** Tarjeta cuyos registros de Enfermería están desplegados; null si ninguno. */
   registrosIndicacionAbierta: number | null = null;
 
-  /** Observación que se muestra al pasar el puntero por un registro. */
-  observacionPopup: { texto: string; x: number; y: number } | null = null;
+  /** Registro cuyos detalles están desplegados en la tabla; null si ninguno. */
+  detalleAbierto: number | null = null;
 
   /** Aplicaciones de Enfermería cargadas por indicación. */
   private readonly registrosPorIndicacion = new Map<number, AplicacionMedicamentoVista[]>();
@@ -572,6 +572,7 @@ export class IndicacionMedicamentos implements OnInit, OnDestroy {
   seleccionarFiltroIndicacion(filtro: FiltroIndicacion): void {
     this.filtroIndicacion = filtro;
     this.cerrarMenuIndicacion();
+    this.cerrarDetalle();
     this.registrosIndicacionAbierta = null;
 
     // La indicación en edición puede quedar fuera del listado que se va a cargar
@@ -713,7 +714,7 @@ export class IndicacionMedicamentos implements OnInit, OnDestroy {
 
   /** Despliega u oculta los registros de Enfermería de la indicación. */
   alternarRegistros(indicacion: IndicacionMedicamentoVista): void {
-    this.ocultarObservacion();
+    this.cerrarDetalle();
 
     if (this.registrosIndicacionAbierta === indicacion.id) {
       this.registrosIndicacionAbierta = null;
@@ -724,37 +725,14 @@ export class IndicacionMedicamentos implements OnInit, OnDestroy {
     this.cargarRegistros(indicacion.id);
   }
 
-  /** Muestra la observación del registro junto al puntero. */
-  mostrarObservacion(evento: MouseEvent, observacion: string | null | undefined): void {
-    const texto = observacion?.trim();
-    if (!texto) {
-      this.observacionPopup = null;
-      return;
-    }
-
-    this.observacionPopup = { texto, ...this.posicionObservacion(evento) };
+  /** Despliega u oculta la observación del registro. */
+  verDetalle(registro: AplicacionMedicamentoVista): void {
+    this.detalleAbierto = this.detalleAbierto === registro.id ? null : registro.id;
   }
 
-  /** Mantiene el popup junto al puntero mientras recorre la fila. */
-  moverObservacion(evento: MouseEvent): void {
-    if (!this.observacionPopup) return;
-
-    this.observacionPopup = { ...this.observacionPopup, ...this.posicionObservacion(evento) };
-  }
-
-  /** Oculta la observación al salir de la fila. */
-  ocultarObservacion(): void {
-    this.observacionPopup = null;
-  }
-
-  private posicionObservacion(evento: MouseEvent): { x: number; y: number } {
-    const margen = 14;
-    const ancho = 320;
-
-    return {
-      x: Math.min(evento.clientX + margen, Math.max(8, window.innerWidth - ancho - 8)),
-      y: evento.clientY + margen,
-    };
+  /** Cierra el detalle abierto del historial. */
+  cerrarDetalle(): void {
+    this.detalleAbierto = null;
   }
 
   /** Registros de Enfermería ya cargados de una indicación. */
@@ -824,6 +802,7 @@ export class IndicacionMedicamentos implements OnInit, OnDestroy {
     if (this.guardando || this.eliminando || this.cambiandoEstado) return;
 
     this.cerrarMenuIndicacion();
+    this.cerrarDetalle();
     this.indicacionEnEdicion = indicacion.id;
 
     if (indicacion.medicamentoLogId === null) {
@@ -862,6 +841,7 @@ export class IndicacionMedicamentos implements OnInit, OnDestroy {
 
   /** Deja el formulario listo para capturar una indicación nueva. */
   limpiarFormulario(): void {
+    this.cerrarDetalle();
     this.medicamento = '';
     this.medicamentoLibre = '';
     this.cantidad = null;

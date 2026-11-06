@@ -1,3 +1,4 @@
+@use '../../../../shared/registros-tabla/registros-tabla';
 @use '../../panel-seccion';
 @use '../comun';
 
@@ -36,6 +37,15 @@
 .indicacion-form .indicacion-fila {
   grid-template-rows: auto auto;
   row-gap: 10px;
+}
+
+/* La duración necesita menos ancho que el tipo y la fecha de inicio. */
+.indicacion-fila--vigencia {
+  grid-template-columns: minmax(0, 0.55fr) minmax(0, 0.9fr) minmax(0, 1.55fr);
+
+  .indicacion-input {
+    min-width: 0;
+  }
 }
 
 .indicacion-form .indicacion-campo {
@@ -78,6 +88,10 @@
 @media (max-width: 900px) {
   .indicacion-campo--ancho {
     grid-column: auto;
+  }
+
+  .indicacion-fila--vigencia {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 

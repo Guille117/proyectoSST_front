@@ -66,6 +66,19 @@
   margin-bottom: 0;
 }
 
+/* Durante un control, las otras secciones quedan bloqueadas para no perder el registro. */
+.panel-secciones .tarjeta:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+
+  &:hover {
+    box-shadow: none;
+    transform: none;
+  }
+}
+
 /* El formulario se ancla al alto de su propio contenido para no heredar el alto del historial */
 .panel-formulario {
   grid-area: formulario;

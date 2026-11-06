@@ -1,5 +1,11 @@
 <!-- Indicaciones médicas: rail de secciones, registro de la sección activa y su listado -->
-<div class="indicaciones" [class.indicaciones--ficha-abierta]="pacienteAbierto">
+<div
+  class="indicaciones"
+  [class.indicaciones--ficha-abierta]="pacienteAbierto"
+  [class.indicaciones--paneles-amplios]="
+    seccionActiva === 'medicamentos' || seccionActiva === 'cuidados'
+  "
+>
   <!-- Rail de secciones: medicamentos, exámenes y atenciones están desarrollados -->
   <section class="panel panel-secciones">
     <h3 class="panel-titulo">Indicaciones</h3>

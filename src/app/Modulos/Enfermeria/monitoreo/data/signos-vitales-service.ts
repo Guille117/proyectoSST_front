@@ -21,6 +21,12 @@ export class SignosVitalesService {
       .pipe(timeout(TIMEOUT_HTTP_MS));
   }
 
+  obtenerPorId(id: number): Observable<SignosVitalesResponse> {
+    return this.http
+      .get<SignosVitalesResponse>(`${this.apiUrl}/${id}`)
+      .pipe(timeout(TIMEOUT_HTTP_MS));
+  }
+
   crear(request: SignosVitalesRequest): Observable<SignosVitalesResponse> {
     return this.http
       .post<SignosVitalesResponse>(this.apiUrl, request)

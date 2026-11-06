@@ -424,6 +424,41 @@ export class Monitoreo implements OnInit, OnDestroy {
     this.cerrarMenuGlucosa();
   }
 
+  /** Durante un control solo se permite la sección que originó el registro. */
+  seccionBloqueada(id: SeccionMonitoreo): boolean {
+    return this.contextoControl !== null && this.contextoControl.seccion !== id;
+  }
+
+  /** Cancela la toma de signos; si vino de una atención, regresa a Indicaciones médicas. */
+  cancelarRegistroSignos(): void {
+    if (this.volverSinGuardarControl()) return;
+    this.limpiarFormulario();
+  }
+
+  /** Cancela el registro hídrico; si vino de una atención, regresa a Indicaciones médicas. */
+  cancelarRegistroHidrico(): void {
+    if (this.volverSinGuardarControl()) return;
+    this.limpiarFormularioHidrico();
+  }
+
+  /** Cancela la glucosa; si vino de una atención, regresa a Indicaciones médicas. */
+  cancelarRegistroGlucosa(): void {
+    if (this.volverSinGuardarControl()) return;
+    this.limpiarFormularioGlucosa();
+  }
+
+  /** Vuelve a la atención que originó el control sin registrar el monitoreo. */
+  private volverSinGuardarControl(): boolean {
+    const control = this.contextoControl;
+    if (!control) return false;
+
+    this.contextoControl = null;
+    this.router.navigate(['/enfermeria', 'tratamientos'], {
+      queryParams: { seccion: 'cuidados', indicacionId: control.cuidadoId },
+    });
+    return true;
+  }
+
   /**
    * Abre o cierra la ficha con los datos del paciente desde su pestaña lateral. Al abrirla se
    * muestran los datos completos para que el usuario vea la información de contexto.
@@ -465,8 +500,6 @@ export class Monitoreo implements OnInit, OnDestroy {
       observacion: this.observacion.trim() || null,
       episodioId: contexto.episodioId,
       usuarioId: contexto.usuarioId,
-      cuidadoId: this.contextoControl?.cuidadoId ?? null,
-      fechaHoraProgramada: this.contextoControl?.fechaHoraProgramada ?? null,
     };
 
     this.guardando = true;
@@ -485,12 +518,12 @@ export class Monitoreo implements OnInit, OnDestroy {
         }),
       )
       .subscribe({
-        next: () => {
+        next: (respuesta) => {
           const control = this.contextoControl;
           this.limpiarFormulario();
 
           if (control) {
-            this.volverAIndicaciones(control);
+            this.volverAIndicaciones(control, respuesta.id, 'signos');
             return;
           }
 
@@ -578,8 +611,6 @@ export class Monitoreo implements OnInit, OnDestroy {
       descripcion: this.descripcionHidrica.trim(),
       episodioId: contexto.episodioId,
       usuarioId: contexto.usuarioId,
-      cuidadoId: this.contextoControl?.cuidadoId ?? null,
-      fechaHoraProgramada: this.contextoControl?.fechaHoraProgramada ?? null,
     };
 
     this.guardando = true;
@@ -598,12 +629,12 @@ export class Monitoreo implements OnInit, OnDestroy {
         }),
       )
       .subscribe({
-        next: () => {
+        next: (respuesta) => {
           const control = this.contextoControl;
           this.limpiarFormularioHidrico();
 
           if (control) {
-            this.volverAIndicaciones(control);
+            this.volverAIndicaciones(control, respuesta.id, 'hidrico');
             return;
           }
 
@@ -677,8 +708,6 @@ export class Monitoreo implements OnInit, OnDestroy {
       observacion: this.observacionGlucosa.trim() || null,
       episodioId: contexto.episodioId,
       usuarioId: contexto.usuarioId,
-      cuidadoId: this.contextoControl?.cuidadoId ?? null,
-      fechaHoraProgramada: this.contextoControl?.fechaHoraProgramada ?? null,
     };
 
     this.guardando = true;
@@ -697,12 +726,12 @@ export class Monitoreo implements OnInit, OnDestroy {
         }),
       )
       .subscribe({
-        next: () => {
+        next: (respuesta) => {
           const control = this.contextoControl;
           this.limpiarFormularioGlucosa();
 
           if (control) {
-            this.volverAIndicaciones(control);
+            this.volverAIndicaciones(control, respuesta.id, 'glucosa');
             return;
           }
 
@@ -880,14 +909,19 @@ export class Monitoreo implements OnInit, OnDestroy {
   }
 
   // ------------------- APOYO -------------------
-  /** Vuelve a Indicaciones médicas conservando la atención que originó el control. */
-  private volverAIndicaciones(control: ContextoControl): void {
-    this.popUps.exito('Control registrado y vinculado a la atención.');
+  /** Vuelve a Indicaciones médicas conservando el monitoreo que originó el control. */
+  private volverAIndicaciones(
+    control: ContextoControl,
+    monitoreoId: number,
+    tipoMonitoreo: SeccionMonitoreo,
+  ): void {
     this.router.navigate(['/enfermeria', 'tratamientos'], {
       queryParams: {
         seccion: 'cuidados',
         indicacionId: control.cuidadoId,
         fechaHoraProgramada: control.fechaHoraProgramada,
+        monitoreoId,
+        tipoMonitoreo,
       },
     });
   }

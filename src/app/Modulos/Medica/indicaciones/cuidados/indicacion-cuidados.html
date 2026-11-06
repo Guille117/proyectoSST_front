@@ -1,5 +1,8 @@
 <!-- Atenciones: registro del cuidado o del monitoreo y listado con el filtro por estado -->
-<section class="panel panel-seccion" aria-labelledby="tituloAtenciones">
+<section
+  class="panel panel-seccion panel-seccion--scroll"
+  aria-labelledby="tituloAtenciones"
+>
   <div class="indicacion-cabecera">
     <h3 class="panel-titulo indicacion-titulo" id="tituloAtenciones">Atenciones</h3>
 
@@ -74,7 +77,7 @@
     </div>
 
     <!-- Duración, tipo de duración y fecha de inicio: la vigencia del cuidado en una sola fila -->
-    <div class="indicacion-fila">
+    <div class="indicacion-fila indicacion-fila--vigencia">
       <div class="indicacion-campo">
         <label class="indicacion-etiqueta" for="duracionCuidado">
           Duración
@@ -268,26 +271,27 @@
                   No se pudieron cargar los registros. Cierre y vuelva a desplegar la tarjeta.
                 </p>
               } @else if (registrosDe(cuidado.id).length) {
-                <div class="tabla-container">
-                  <table class="registros-tabla" aria-label="Registros de Enfermería">
+                <div class="aplicaciones-historial">
+                  <table class="aplicaciones-tabla" aria-label="Registros de Enfermería">
                     <thead>
                       <tr>
-                        <th>Programada</th>
-                        <th>Registrada</th>
-                        <th class="registros-tabla_estado celda_centrada">Estado</th>
-                        <th>Enfermera</th>
+                        <th class="aplicaciones-tabla_numero" scope="col">No.</th>
+                        <th class="aplicaciones-tabla_fecha" scope="col">Fecha programada</th>
+                        <th class="aplicaciones-tabla_fecha" scope="col">Fecha de registro</th>
+                        <th class="aplicaciones-tabla_estado celda_centrada" scope="col">Estado</th>
+                        <th class="aplicaciones-tabla_usuario" scope="col">Usuario</th>
+                        <th class="aplicaciones-tabla_acciones" scope="col">Acciones</th>
                       </tr>
                     </thead>
                     <tbody>
                       @for (registro of registrosDe(cuidado.id); track registro.id) {
-                        <tr
-                          (mouseenter)="mostrarObservacion($event, registro.observacion)"
-                          (mousemove)="moverObservacion($event)"
-                          (mouseleave)="ocultarObservacion()"
-                        >
-                          <td>{{ registro.fechaHoraProgramada }}</td>
-                          <td>{{ registro.fechaRegistro }}</td>
-                          <td class="registros-tabla_estado celda_centrada">
+                        <tr [class.aplicaciones-fila--resultados]="resultadoAbierto === registro.id">
+                          <td class="aplicaciones-tabla_numero">{{ registro.numero }}</td>
+                          <td class="aplicaciones-tabla_fecha">
+                            {{ registro.fechaHoraProgramada }}
+                          </td>
+                          <td class="aplicaciones-tabla_fecha">{{ registro.fechaRegistro }}</td>
+                          <td class="aplicaciones-tabla_estado celda_centrada">
                             <i
                               class="bi"
                               [class.bi-check-circle-fill]="registro.esPositivo"
@@ -300,7 +304,70 @@
                             ></i>
                           </td>
                           <td>{{ registro.usuario }}</td>
+                          <td class="aplicaciones-tabla_acciones">
+                            <div class="aplicaciones-acciones">
+                              @if (tieneDetalle(registro)) {
+                                <button
+                                  type="button"
+                                  class="aplicaciones-accion aplicaciones-accion--resultados"
+                                  [title]="
+                                    resultadoAbierto === registro.id
+                                      ? 'Ocultar detalle'
+                                      : 'Ver detalle'
+                                  "
+                                  [attr.aria-label]="
+                                    resultadoAbierto === registro.id
+                                      ? 'Ocultar detalle del registro'
+                                      : 'Ver detalle del registro'
+                                  "
+                                  [attr.aria-expanded]="resultadoAbierto === registro.id"
+                                  (click)="verResultados(registro)"
+                                >
+                                  <i
+                                    class="bi"
+                                    [class.bi-eye]="resultadoAbierto !== registro.id"
+                                    [class.bi-eye-slash]="resultadoAbierto === registro.id"
+                                    aria-hidden="true"
+                                  ></i>
+                                </button>
+                              }
+                            </div>
+                          </td>
                         </tr>
+
+                        @if (tieneDetalle(registro) && resultadoAbierto === registro.id) {
+                          <tr class="aplicaciones-resultados">
+                            <td colspan="6">
+                              <div class="resultado-control">
+                                @if (registro.monitoreoTipo === null) {
+                                  <div class="resultado-control_observacion">
+                                    <span class="resultado-control_observacion-etiqueta">
+                                      Observación
+                                    </span>
+                                    <p>{{ registro.observacion.trim() || 'Sin observación' }}</p>
+                                  </div>
+                                }
+
+                                @if (cargandoResultado) {
+                                  <p class="resultado-control_estado">Cargando resultados...</p>
+                                } @else if (errorResultado) {
+                                  <p class="resultado-control_estado">
+                                    No se pudieron cargar los resultados del control.
+                                  </p>
+                                } @else if (resultadoActual; as resultado) {
+                                  <dl class="resultado-control_grid">
+                                    @for (fila of resultado.filas; track fila.etiqueta) {
+                                      <div>
+                                        <dt>{{ fila.etiqueta }}</dt>
+                                        <dd>{{ fila.valor }}</dd>
+                                      </div>
+                                    }
+                                  </dl>
+                                }
+                              </div>
+                            </td>
+                          </tr>
+                        }
                       }
                     </tbody>
                   </table>
@@ -356,14 +423,3 @@
     }
   </div>
 </section>
-
-@if (observacionPopup; as popup) {
-  <div
-    class="observacion-popup"
-    role="tooltip"
-    [style.left.px]="popup.x"
-    [style.top.px]="popup.y"
-  >
-    <strong>Observación:</strong> {{ popup.texto }}
-  </div>
-}

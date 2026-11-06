@@ -1,5 +1,8 @@
 <!-- Medicamentos: registro y listado de la sección de indicaciones médicas -->
-<section class="panel panel-seccion" aria-labelledby="tituloMedicamentos">
+<section
+  class="panel panel-seccion panel-seccion--scroll"
+  aria-labelledby="tituloMedicamentos"
+>
   <h3 class="panel-titulo indicacion-titulo" id="tituloMedicamentos">Medicamentos</h3>
 
   @if (!soloLectura) {
@@ -153,8 +156,8 @@
     <!-- Resto de la captura: espera al medicamento elegido, porque con la tabla de resultados
          desplegada el formulario solo muestra el buscador y sus resultados -->
     @if (!busquedaMedicamentoRealizada) {
-      <!-- Fecha y hora de inicio de la indicación -->
-      <div class="indicacion-fila">
+      <!-- Fecha de inicio y frecuencia -->
+      <div class="indicacion-fila indicacion-fila--dos">
         <div class="indicacion-campo">
           <label class="indicacion-etiqueta" for="fechaInicioIndicada">
             Fecha y hora de inicio<span class="indicacion-obligatorio" aria-hidden="true">*</span>
@@ -168,10 +171,28 @@
             [(ngModel)]="fechaInicio"
           />
         </div>
+
+        <div class="indicacion-campo">
+          <label class="indicacion-etiqueta" for="frecuenciaIndicada">
+            Frecuencia (horas)<span class="indicacion-obligatorio" aria-hidden="true">*</span>
+          </label>
+          <input
+            class="indicacion-input"
+            id="frecuenciaIndicada"
+            name="frecuencia"
+            type="number"
+            min="1"
+            step="1"
+            inputmode="numeric"
+            placeholder="Ej. 8"
+            aria-required="true"
+            [(ngModel)]="frecuencia"
+          />
+        </div>
       </div>
 
-      <!-- Cantidad, unidad de medida y frecuencia: la frecuencia solo admite números -->
-      <div class="indicacion-fila indicacion-fila--cantidad">
+      <!-- Cantidad y unidad de medida -->
+      <div class="indicacion-fila indicacion-fila--dos">
         <div class="indicacion-campo">
           <label class="indicacion-etiqueta" for="cantidadIndicada">
             Cantidad<span class="indicacion-obligatorio" aria-hidden="true">*</span>
@@ -217,28 +238,10 @@
             </select>
           }
         </div>
-
-        <div class="indicacion-campo">
-          <label class="indicacion-etiqueta" for="frecuenciaIndicada">
-            Frecuencia (horas)<span class="indicacion-obligatorio" aria-hidden="true">*</span>
-          </label>
-          <input
-            class="indicacion-input"
-            id="frecuenciaIndicada"
-            name="frecuencia"
-            type="number"
-            min="1"
-            step="1"
-            inputmode="numeric"
-            placeholder="Ej. 8"
-            aria-required="true"
-            [(ngModel)]="frecuencia"
-          />
-        </div>
       </div>
 
-      <!-- Duración y observaciones -->
-      <div class="indicacion-fila">
+      <!-- Duración y tipo de duración -->
+      <div class="indicacion-fila indicacion-fila--dos">
         <div class="indicacion-campo">
           <label class="indicacion-etiqueta" for="duracionCantidadIndicada">
             Duración
@@ -274,11 +277,14 @@
             }
           </select>
         </div>
+      </div>
 
-        <div class="indicacion-campo">
+      <!-- Observaciones del medicamento -->
+      <div class="indicacion-fila">
+        <div class="indicacion-campo indicacion-campo--completo">
           <label class="indicacion-etiqueta" for="observacionesIndicadas">Observaciones</label>
           <textarea
-            class="indicacion-input indicacion-textarea"
+            class="indicacion-input indicacion-textarea indicacion-textarea--medicamento"
             id="observacionesIndicadas"
             name="observaciones"
             placeholder="Indicaciones adicionales..."
@@ -425,26 +431,25 @@
                 No se pudieron cargar los registros. Cierre y vuelva a desplegar la tarjeta.
               </p>
             } @else if (registrosDe(indicacion.id).length) {
-              <div class="tabla-container">
-                <table class="registros-tabla" aria-label="Registros de Enfermería">
+              <div class="aplicaciones-historial">
+                <table class="aplicaciones-tabla" aria-label="Registros de Enfermería">
                   <thead>
                     <tr>
-                      <th>Programada</th>
-                      <th>Registrada</th>
-                      <th class="registros-tabla_estado celda_centrada">Estado</th>
-                      <th>Enfermera</th>
+                      <th class="aplicaciones-tabla_numero" scope="col">No.</th>
+                      <th class="aplicaciones-tabla_fecha" scope="col">Fecha programada</th>
+                      <th class="aplicaciones-tabla_fecha" scope="col">Fecha de registro</th>
+                      <th class="aplicaciones-tabla_estado celda_centrada" scope="col">Estado</th>
+                      <th class="aplicaciones-tabla_usuario" scope="col">Usuario</th>
+                      <th class="aplicaciones-tabla_acciones" scope="col">Acciones</th>
                     </tr>
                   </thead>
                   <tbody>
                     @for (registro of registrosDe(indicacion.id); track registro.id) {
-                      <tr
-                        (mouseenter)="mostrarObservacion($event, registro.observacion)"
-                        (mousemove)="moverObservacion($event)"
-                        (mouseleave)="ocultarObservacion()"
-                      >
-                        <td>{{ registro.fechaHoraProgramada }}</td>
-                        <td>{{ registro.fechaRegistro }}</td>
-                        <td class="registros-tabla_estado celda_centrada">
+                      <tr [class.aplicaciones-fila--resultados]="detalleAbierto === registro.id">
+                        <td class="aplicaciones-tabla_numero">{{ registro.numero }}</td>
+                        <td class="aplicaciones-tabla_fecha">{{ registro.fechaHoraProgramada }}</td>
+                        <td class="aplicaciones-tabla_fecha">{{ registro.fechaRegistro }}</td>
+                        <td class="aplicaciones-tabla_estado celda_centrada">
                           <i
                             class="bi"
                             [class.bi-check-circle-fill]="registro.esPositivo"
@@ -457,7 +462,47 @@
                           ></i>
                         </td>
                         <td>{{ registro.usuario }}</td>
+                        <td class="aplicaciones-tabla_acciones">
+                          <div class="aplicaciones-acciones">
+                            <button
+                              type="button"
+                              class="aplicaciones-accion aplicaciones-accion--resultados"
+                              [title]="
+                                detalleAbierto === registro.id ? 'Ocultar detalle' : 'Ver detalle'
+                              "
+                              [attr.aria-label]="
+                                detalleAbierto === registro.id
+                                  ? 'Ocultar detalle del registro'
+                                  : 'Ver detalle del registro'
+                              "
+                              [attr.aria-expanded]="detalleAbierto === registro.id"
+                              (click)="verDetalle(registro)"
+                            >
+                              <i
+                                class="bi"
+                                [class.bi-eye]="detalleAbierto !== registro.id"
+                                [class.bi-eye-slash]="detalleAbierto === registro.id"
+                                aria-hidden="true"
+                              ></i>
+                            </button>
+                          </div>
+                        </td>
                       </tr>
+
+                      @if (detalleAbierto === registro.id) {
+                        <tr class="aplicaciones-resultados">
+                          <td colspan="6">
+                            <div class="resultado-control">
+                              <div class="resultado-control_observacion">
+                                <span class="resultado-control_observacion-etiqueta">
+                                  Observación
+                                </span>
+                                <p>{{ registro.observacion.trim() || 'Sin observación' }}</p>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      }
                     }
                   </tbody>
                 </table>
@@ -529,14 +574,3 @@
     }
   </div>
 </section>
-
-@if (observacionPopup; as popup) {
-  <div
-    class="observacion-popup"
-    role="tooltip"
-    [style.left.px]="popup.x"
-    [style.top.px]="popup.y"
-  >
-    <strong>Observación:</strong> {{ popup.texto }}
-  </div>
-}

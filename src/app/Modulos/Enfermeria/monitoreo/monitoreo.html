@@ -17,6 +17,7 @@
         class="tarjeta"
         [class.tarjeta--activa]="seccionActiva === seccion.id"
         [attr.aria-pressed]="seccionActiva === seccion.id"
+        [disabled]="seccionBloqueada(seccion.id)"
         (click)="seleccionarSeccion(seccion.id)"
       >
         <span class="tarjeta_icono"><i class="bi {{ seccion.icono }}" aria-hidden="true"></i></span>
@@ -150,7 +151,7 @@
           </div>
 
           <div class="acciones-formulario monitoreo-acciones">
-            <button type="button" class="btn _cancelar" (click)="limpiarFormulario()">
+            <button type="button" class="btn _cancelar" (click)="cancelarRegistroSignos()">
               Cancelar
             </button>
             <button type="submit" class="btn _guardar" [disabled]="!puedeGuardar">Guardar</button>
@@ -340,7 +341,7 @@
           </div>
 
           <div class="acciones-formulario monitoreo-acciones">
-            <button type="button" class="btn _cancelar" (click)="limpiarFormularioHidrico()">
+            <button type="button" class="btn _cancelar" (click)="cancelarRegistroHidrico()">
               Cancelar
             </button>
             <button type="submit" class="btn _guardar" [disabled]="!puedeGuardarHidrico">
@@ -541,7 +542,7 @@
           </div>
 
           <div class="acciones-formulario monitoreo-acciones">
-            <button type="button" class="btn _cancelar" (click)="limpiarFormularioGlucosa()">
+            <button type="button" class="btn _cancelar" (click)="cancelarRegistroGlucosa()">
               Cancelar
             </button>
             <button type="submit" class="btn _guardar" [disabled]="!puedeGuardarGlucosa">

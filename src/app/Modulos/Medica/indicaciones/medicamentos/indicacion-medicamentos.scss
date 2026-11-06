@@ -1,3 +1,4 @@
+@use '../../../../shared/registros-tabla/registros-tabla';
 @use '../../panel-seccion';
 @use '../comun';
 @use '../medicamentos';
@@ -12,6 +13,15 @@
    las que sí lo llevan para que los tres campos de la fila queden alineados */
 .indicacion-fila--cantidad .indicacion-etiqueta {
   line-height: 1.6rem;
+}
+
+/* Las observaciones ocupan toda la fila y disponen de más alto para escribir. */
+.indicacion-campo--completo {
+  grid-column: 1 / -1;
+}
+
+.indicacion-textarea--medicamento {
+  min-height: 160px;
 }
 
 .indicacion-meta-toggle {

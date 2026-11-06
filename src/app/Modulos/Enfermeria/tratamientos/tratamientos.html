@@ -430,18 +430,16 @@
                       <th class="aplicaciones-tabla_fecha" scope="col">Fecha de registro</th>
                       <th class="aplicaciones-tabla_estado celda_centrada" scope="col">Estado</th>
                       <th class="aplicaciones-tabla_usuario" scope="col">Usuario</th>
-                      @if (!soloLectura) {
-                        <th class="aplicaciones-tabla_acciones" scope="col">Acciones</th>
-                      }
+                      <th class="aplicaciones-tabla_acciones" scope="col">Acciones</th>
                     </tr>
                   </thead>
 
                   <tbody>
                     @for (aplicacion of aplicacionesProgramadas(indicacion); track aplicacion.numero) {
                       <tr
-                        (mouseenter)="mostrarObservacion($event, aplicacion.registro?.observacion)"
-                        (mousemove)="moverObservacion($event)"
-                        (mouseleave)="ocultarObservacion()"
+                        [class.aplicaciones-fila--resultados]="
+                          resultadoAbierto !== null && resultadoAbierto === aplicacion.registro?.id
+                        "
                       >
                         <td class="aplicaciones-tabla_numero">{{ aplicacion.numero }}</td>
                         <td class="aplicaciones-tabla_fecha">{{ aplicacion.fechaHora }}</td>
@@ -461,9 +459,35 @@
                             ></i>
                           </td>
                           <td>{{ registro.usuario }}</td>
-                          @if (!soloLectura) {
-                            <td class="aplicaciones-tabla_acciones">
-                              <div class="aplicaciones-acciones">
+                          <td class="aplicaciones-tabla_acciones">
+                            <div class="aplicaciones-acciones">
+                              @if (tieneDetalle(registro)) {
+                                <button
+                                  type="button"
+                                  class="aplicaciones-accion aplicaciones-accion--resultados"
+                                  [title]="
+                                    resultadoAbierto === registro.id
+                                      ? 'Ocultar detalle'
+                                      : 'Ver detalle'
+                                  "
+                                  [attr.aria-label]="
+                                    resultadoAbierto === registro.id
+                                      ? 'Ocultar detalle del registro'
+                                      : 'Ver detalle del registro'
+                                  "
+                                  [attr.aria-expanded]="resultadoAbierto === registro.id"
+                                  (click)="verResultados(registro); $event.stopPropagation()"
+                                >
+                                  <i
+                                    class="bi"
+                                    [class.bi-eye]="resultadoAbierto !== registro.id"
+                                    [class.bi-eye-slash]="resultadoAbierto === registro.id"
+                                    aria-hidden="true"
+                                  ></i>
+                                </button>
+                              }
+
+                              @if (!soloLectura) {
                                 <button
                                   type="button"
                                   class="aplicaciones-accion aplicaciones-accion--editar"
@@ -482,15 +506,55 @@
                                 >
                                   <i class="bi bi-trash3" aria-hidden="true"></i>
                                 </button>
-                              </div>
-                            </td>
-                          }
+                              }
+                            </div>
+                          </td>
                         } @else {
+                          <td class="aplicaciones-tabla_pendiente">---</td>
                           <td class="aplicaciones-tabla_pendiente">---</td>
                           <td class="aplicaciones-tabla_pendiente">---</td>
                           <td class="aplicaciones-tabla_pendiente">---</td>
                         }
                       </tr>
+
+                      @if (aplicacion.registro; as registroResultado) {
+                        @if (
+                          tieneDetalle(registroResultado) &&
+                          resultadoAbierto === registroResultado.id
+                        ) {
+                          <tr class="aplicaciones-resultados">
+                            <td colspan="6">
+                              <div class="resultado-control">
+                                @if (registroResultado.monitoreoTipo === null) {
+                                  <div class="resultado-control_observacion">
+                                    <span class="resultado-control_observacion-etiqueta">
+                                      Observación
+                                    </span>
+                                    <p>{{ registroResultado.observacion.trim() || 'Sin observación' }}</p>
+                                  </div>
+                                }
+
+                                @if (cargandoResultado) {
+                                  <p class="resultado-control_estado">Cargando resultados...</p>
+                                } @else if (errorResultado) {
+                                  <p class="resultado-control_estado">
+                                    No se pudieron cargar los resultados del control.
+                                  </p>
+                                } @else if (resultadoActual; as resultado) {
+                                  <dl class="resultado-control_grid">
+                                    @for (fila of resultado.filas; track fila.etiqueta) {
+                                      <div>
+                                        <dt>{{ fila.etiqueta }}</dt>
+                                        <dd>{{ fila.valor }}</dd>
+                                      </div>
+                                    }
+                                  </dl>
+                                }
+                              </div>
+                            </td>
+                          </tr>
+                        }
+                      }
                     }
                   </tbody>
                 </table>
@@ -670,18 +734,16 @@
                       <th class="aplicaciones-tabla_fecha" scope="col">Fecha de registro</th>
                       <th class="aplicaciones-tabla_estado celda_centrada" scope="col">Estado</th>
                       <th class="aplicaciones-tabla_usuario" scope="col">Usuario</th>
-                      @if (!soloLectura) {
-                        <th class="aplicaciones-tabla_acciones" scope="col">Acciones</th>
-                      }
+                      <th class="aplicaciones-tabla_acciones" scope="col">Acciones</th>
                     </tr>
                   </thead>
 
                   <tbody>
                     @for (aplicacion of aplicacionesProgramadas(indicacion); track aplicacion.numero) {
                       <tr
-                        (mouseenter)="mostrarObservacion($event, aplicacion.registro?.observacion)"
-                        (mousemove)="moverObservacion($event)"
-                        (mouseleave)="ocultarObservacion()"
+                        [class.aplicaciones-fila--resultados]="
+                          resultadoAbierto !== null && resultadoAbierto === aplicacion.registro?.id
+                        "
                       >
                         <td class="aplicaciones-tabla_numero">{{ aplicacion.numero }}</td>
                         <td class="aplicaciones-tabla_fecha">{{ aplicacion.fechaHora }}</td>
@@ -701,9 +763,35 @@
                             ></i>
                           </td>
                           <td>{{ registro.usuario }}</td>
-                          @if (!soloLectura) {
-                            <td class="aplicaciones-tabla_acciones">
-                              <div class="aplicaciones-acciones">
+                          <td class="aplicaciones-tabla_acciones">
+                            <div class="aplicaciones-acciones">
+                              @if (tieneDetalle(registro)) {
+                                <button
+                                  type="button"
+                                  class="aplicaciones-accion aplicaciones-accion--resultados"
+                                  [title]="
+                                    resultadoAbierto === registro.id
+                                      ? 'Ocultar detalle'
+                                      : 'Ver detalle'
+                                  "
+                                  [attr.aria-label]="
+                                    resultadoAbierto === registro.id
+                                      ? 'Ocultar detalle del registro'
+                                      : 'Ver detalle del registro'
+                                  "
+                                  [attr.aria-expanded]="resultadoAbierto === registro.id"
+                                  (click)="verResultados(registro); $event.stopPropagation()"
+                                >
+                                  <i
+                                    class="bi"
+                                    [class.bi-eye]="resultadoAbierto !== registro.id"
+                                    [class.bi-eye-slash]="resultadoAbierto === registro.id"
+                                    aria-hidden="true"
+                                  ></i>
+                                </button>
+                              }
+
+                              @if (!soloLectura) {
                                 <button
                                   type="button"
                                   class="aplicaciones-accion aplicaciones-accion--editar"
@@ -722,15 +810,55 @@
                                 >
                                   <i class="bi bi-trash3" aria-hidden="true"></i>
                                 </button>
-                              </div>
-                            </td>
-                          }
+                              }
+                            </div>
+                          </td>
                         } @else {
+                          <td class="aplicaciones-tabla_pendiente">---</td>
                           <td class="aplicaciones-tabla_pendiente">---</td>
                           <td class="aplicaciones-tabla_pendiente">---</td>
                           <td class="aplicaciones-tabla_pendiente">---</td>
                         }
                       </tr>
+
+                      @if (aplicacion.registro; as registroResultado) {
+                        @if (
+                          tieneDetalle(registroResultado) &&
+                          resultadoAbierto === registroResultado.id
+                        ) {
+                          <tr class="aplicaciones-resultados">
+                            <td colspan="6">
+                              <div class="resultado-control">
+                                @if (registroResultado.monitoreoTipo === null) {
+                                  <div class="resultado-control_observacion">
+                                    <span class="resultado-control_observacion-etiqueta">
+                                      Observación
+                                    </span>
+                                    <p>{{ registroResultado.observacion.trim() || 'Sin observación' }}</p>
+                                  </div>
+                                }
+
+                                @if (cargandoResultado) {
+                                  <p class="resultado-control_estado">Cargando resultados...</p>
+                                } @else if (errorResultado) {
+                                  <p class="resultado-control_estado">
+                                    No se pudieron cargar los resultados del control.
+                                  </p>
+                                } @else if (resultadoActual; as resultado) {
+                                  <dl class="resultado-control_grid">
+                                    @for (fila of resultado.filas; track fila.etiqueta) {
+                                      <div>
+                                        <dt>{{ fila.etiqueta }}</dt>
+                                        <dd>{{ fila.valor }}</dd>
+                                      </div>
+                                    }
+                                  </dl>
+                                }
+                              </div>
+                            </td>
+                          </tr>
+                        }
+                      }
                     }
                   </tbody>
                 </table>
@@ -814,14 +942,20 @@
         </div>
 
         @if (controlSeleccionado) {
-          <button
-            type="button"
-            class="btn btn-registrar-control"
-            [disabled]="!puedeRegistrarControl"
-            (click)="registrarControl()"
-          >
-            Registrar control
-          </button>
+          @if (controlTomado) {
+            <p class="control-registrado-aviso" role="status">
+              El control fue registrado correctamente. Guarde la atención para completar el proceso.
+            </p>
+          } @else {
+            <button
+              type="button"
+              class="btn btn-registrar-control"
+              [disabled]="!puedeRegistrarControl"
+              (click)="registrarControl()"
+            >
+              Registrar control
+            </button>
+          }
         }
 
         @if (seccionActiva === 'medicamentos') {
@@ -894,14 +1028,4 @@
     }
   </section>
 
-  @if (observacionPopup; as popup) {
-    <div
-      class="observacion-popup"
-      role="tooltip"
-      [style.left.px]="popup.x"
-      [style.top.px]="popup.y"
-    >
-      <strong>Observación:</strong> {{ popup.texto }}
-    </div>
-  }
 </div>
