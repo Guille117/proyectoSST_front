@@ -483,6 +483,24 @@
   }
 
   .contenido-scroll {
-    max-height: 60vh;
+    max-height: none;
+    overflow: visible;
+  }
+}
+
+@media (max-width: 640px) {
+  .procedimiento-medico {
+    padding: 12px;
+    gap: 16px;
+  }
+
+  .panel-seccion,
+  .panel-recursos,
+  .bloque-procedimiento {
+    border-radius: 16px;
+  }
+
+  .recurso-item {
+    grid-template-columns: minmax(0, 1fr);
   }
 }

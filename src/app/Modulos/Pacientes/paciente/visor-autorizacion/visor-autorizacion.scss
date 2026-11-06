@@ -86,3 +86,21 @@
 .autorizacion-vacio--error {
   color: #b42318;
 }
+
+@media (max-width: 640px) {
+  .autorizacion-selector {
+    flex-wrap: wrap;
+    padding: 14px 14px 0;
+
+    select {
+      width: 100%;
+      min-width: 0;
+      min-height: 44px;
+      font-size: 1rem;
+    }
+  }
+
+  .autorizacion-contenido {
+    margin: 0 14px 14px;
+  }
+}

@@ -54,3 +54,16 @@
   padding-top: 1.25rem;
   border-top: 1px solid #e4ebf5;
 }
+
+@media (max-width: 640px) {
+  .historia-campo {
+    min-height: 220px;
+    padding: 12px;
+  }
+
+  .historia-acciones {
+    gap: 0.75rem;
+    margin-top: 1rem;
+    padding-top: 1rem;
+  }
+}

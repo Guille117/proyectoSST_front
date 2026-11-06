@@ -643,12 +643,26 @@
 @media (max-width: 900px) {
   .pacientes-lista {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    max-height: none;
+    overflow: visible;
   }
 
   .panel-seleccionado {
     min-width: 0;
     max-height: none;
     overflow-y: visible;
+  }
+}
+
+@media (max-width: 640px) {
+  .atencion {
+    padding: 12px;
+    gap: 16px;
+  }
+
+  .panel-seleccionado {
+    padding: 14px;
+    border-radius: 16px;
   }
 }
 

@@ -257,6 +257,38 @@
     border-radius: 18px;
     box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
   }
+
+  /* En su forma deslizante la ficha gana esquinas y una sombra clara de panel, y la pestaña
+     mantiene un objetivo táctil cómodo. */
+  .ficha--plegable {
+    padding: 16px;
+    border-radius: 18px 0 0 18px;
+    box-shadow: -10px 0 30px rgba(15, 23, 42, 0.18);
+  }
+
+  .ficha-pestana {
+    width: 48px;
+    padding: 16px 11px;
+  }
+}
+
+@media (max-width: 640px) {
+  .ficha--plegable {
+    padding: 14px;
+  }
+
+  .ficha-paciente-nombre {
+    font-size: 1.15rem;
+  }
+
+  .ficha-subtitulo {
+    font-size: 1rem;
+  }
+
+  .ficha-pestana {
+    width: 44px;
+    padding: 14px 10px;
+  }
 }
 
 @media (max-width: 620px) {

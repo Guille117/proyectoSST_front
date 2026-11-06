@@ -380,6 +380,47 @@
 	flex-shrink: 0;
 }
 
+@media (max-width: 900px) {
+	.contenedorPrincipal {
+		flex-direction: column;
+		height: auto;
+		overflow: visible;
+	}
+
+	.izquierda,
+	.derecha {
+		width: 100%;
+		height: auto;
+		overflow: visible;
+	}
+
+	.derecha .formulario-container {
+		height: auto;
+		overflow: visible;
+	}
+
+	.derecha .form-roles {
+		overflow: visible;
+	}
+
+	.derecha ::ng-deep .etiqueta-input .campo-formulario {
+		width: 100%;
+	}
+
+	.panel-submodulos,
+	.tabla-permisos-container {
+		overflow: visible;
+	}
+
+	.submodulos-body {
+		overflow: visible;
+	}
+
+	.acciones-formulario {
+		flex-wrap: wrap;
+	}
+}
+
 @media (max-width: 768px) {
 	.seccion-permisos {
 		flex-direction: column;
@@ -403,5 +444,52 @@
 			border-left-color: transparent;
 			border-bottom-color: #1a6fbd;
 		}
+	}
+}
+
+@media (max-width: 640px) {
+	.contenedorPrincipal {
+		margin-top: 14px;
+	}
+
+	.panel-modulos {
+		min-width: 0;
+	}
+
+	.panel-submodulos {
+		padding: 12px;
+	}
+
+	.modulo-item {
+		padding: 10px 14px;
+		font-size: 1rem;
+	}
+
+	.col-acciones-header,
+	.acciones-permisos {
+		grid-template-columns: repeat(4, 32px);
+		gap: 8px;
+	}
+
+	.submodulos-header {
+		padding: 8px 10px;
+		font-size: 13px;
+	}
+
+	.submodulo-fila {
+		gap: 8px;
+	}
+
+	.submodulo-nombre {
+		font-size: 1rem;
+	}
+
+	.permiso {
+		width: 22px;
+		height: 22px;
+	}
+
+	.acciones-formulario > * {
+		flex: 1 1 auto;
 	}
 }

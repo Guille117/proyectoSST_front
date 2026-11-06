@@ -50,7 +50,7 @@
             <th class="celda_centrada">Teléfono</th>
             <th class="celda_izquierda">Email</th>
             <th class="celda_centrada">NIT</th>
-            <th class="celda_centrada">Acciones</th>
+            <th class="celda_centrada celda-acciones">Acciones</th>
           </tr>
         </thead>
         <tbody>
@@ -81,7 +81,7 @@
                 <td class="celda_centrada">{{ prov.telefono }}</td>
                 <td class="celda_izquierda">{{ prov.email }}</td>
                 <td class="celda_centrada">{{ prov.nit }}</td>
-                <td class="celda_centrada">
+                <td class="celda_centrada celda-acciones">
                   @if (!isEditing) {
                     <div class="interruptor-estado">
                       @if (prov.estado) {

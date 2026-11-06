@@ -132,3 +132,28 @@
     }
   }
 }
+
+@media (max-width: 640px) {
+  .carga-archivo .zona-carga {
+    min-height: 88px;
+
+    strong {
+      font-size: 1rem;
+    }
+
+    span,
+    .ayuda-archivo {
+      font-size: 0.85rem;
+    }
+
+    .boton-archivo {
+      min-height: 40px;
+      font-size: 0.9rem;
+    }
+  }
+
+  .examen-archivos-guardados .ayuda-archivo,
+  .archivo-seleccionado {
+    font-size: 0.9rem;
+  }
+}

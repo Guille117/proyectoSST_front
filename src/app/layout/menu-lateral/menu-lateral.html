@@ -1,76 +1,93 @@
 <!--este componente contendrá tanto la barra de navegación 
 como el área de trabajo dinámico-->
 <div class="main">  
-    <nav class="manuLateralNav">
+    @if (layout.menuAbierto()) {
+        <div class="menu-backdrop" (click)="layout.cerrarMenu()" aria-hidden="true"></div>
+    }
+
+    <nav
+        id="menuLateral"
+        class="manuLateralNav"
+        [class.abierto]="layout.menuAbierto()"
+        aria-label="Módulos del sistema"
+    >
         
         @if (permisos.puedeLeerModulo('FARMACIA')) {
-            <div class="option" routerLink="/farmacia" routerLinkActive="active">
+            <div class="option" routerLink="/farmacia" routerLinkActive="active" title="Farmacia">
                 <div class="barra"></div>
                 <div class="foco">
-                    <i class="bi bi-capsule"></i>
+                    <i class="bi bi-capsule" aria-hidden="true"></i>
                 </div>
+                <span class="option-texto">Farmacia</span>
             </div>
         }
 
         @if (permisos.puedeLeerModulo('PACIENTES')) {
-            <div class="option" routerLink="/pacientes" routerLinkActive="active">
+            <div class="option" routerLink="/pacientes" routerLinkActive="active" title="Pacientes">
                 <div class="barra"></div>
                 <div class="foco">
-                    <i class="bi bi-person-vcard"></i>
+                    <i class="bi bi-person-vcard" aria-hidden="true"></i>
                 </div>
+                <span class="option-texto">Pacientes</span>
             </div>
         }
     
         @if (permisos.puedeLeerModulo('MEDICA')) {
-            <div class="option" routerLink="/medica" routerLinkActive="active">
+            <div class="option" routerLink="/medica" routerLinkActive="active" title="Módulo médico">
                 <div class="barra"></div>
                 <div class="foco">
-                    <i class="bi bi-heart-pulse"></i>
+                    <i class="bi bi-heart-pulse" aria-hidden="true"></i>
                 </div>
+                <span class="option-texto">Módulo médico</span>
             </div>
         }
         
         @if (permisos.puedeLeerModulo('ENFERMERIA')) {
-            <div class="option" routerLink="/enfermeria" routerLinkActive="active">
+            <div class="option" routerLink="/enfermeria" routerLinkActive="active" title="Enfermería">
                 <div class="barra"></div>
                 <div class="foco">
-                    <i class="bi bi-clipboard2-pulse"></i>
+                    <i class="bi bi-clipboard2-pulse" aria-hidden="true"></i>
                 </div>
+                <span class="option-texto">Enfermería</span>
             </div>
         }
 
         @if (permisos.tieneAlgunCatalogo()) {
-            <div class="option" routerLink="/catalogos" routerLinkActive="active">
+            <div class="option" routerLink="/catalogos" routerLinkActive="active" title="Catálogos">
                 <div class="barra"></div>
                 <div class="foco">
-                    <i class="bi bi-grid-3x3-gap"></i>
+                    <i class="bi bi-grid-3x3-gap" aria-hidden="true"></i>
                 </div>
+                <span class="option-texto">Catálogos</span>
             </div>
         }
     
         @if (permisos.puedeLeerModulo('USUARIOS')) {
-            <div class="option" routerLink="/usuarios" routerLinkActive="active">
+            <div class="option" routerLink="/usuarios" routerLinkActive="active" title="Usuarios">
                 <div class="barra"></div>
                 <div class="foco">
-                    <i class="bi bi-person-circle"></i>
+                    <i class="bi bi-person-circle" aria-hidden="true"></i>
                 </div>
+                <span class="option-texto">Usuarios</span>
             </div>
         }
 
         @if (permisos.puedeLeerModulo('REPORTES')) {
-            <div class="option" routerLink="/reportes" routerLinkActive="active">
+            <div class="option" routerLink="/reportes" routerLinkActive="active" title="Reportes">
                 <div class="barra"></div>
                 <div class="foco">
-                    <i class="bi bi-bar-chart-line"></i>
+                    <i class="bi bi-bar-chart-line" aria-hidden="true"></i>
                 </div>
+                <span class="option-texto">Reportes</span>
             </div>
         }
 
-        <div class="option" routerLink="/configuracion" routerLinkActive="active">
+        <div class="option" routerLink="/configuracion" routerLinkActive="active" title="Configuración">
             <div class="barra"></div>
             <div class="foco">
-                <i class="bi bi-gear"></i>
+                <i class="bi bi-gear" aria-hidden="true"></i>
             </div>
+            <span class="option-texto">Configuración</span>
         </div>
     </nav>
 

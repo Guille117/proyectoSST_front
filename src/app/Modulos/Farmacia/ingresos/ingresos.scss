@@ -42,6 +42,10 @@
 
 .table-container{
     --ancho: 1;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
 
     tbody tr {
         cursor: pointer;
@@ -202,5 +206,65 @@
     font-size: 1rem;
     font-weight: 500;
     text-align: center;
+}
+
+/* ==================== RESPONSIVIDAD ==================== */
+@media (max-width: 900px) {
+    .table-container > .table {
+        min-width: 680px;
+    }
+
+    .trabajoArea {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 20px;
+    }
+
+    .detalle-card {
+        padding: 18px;
+    }
+
+    .row {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .acciones-compra {
+        flex-wrap: wrap;
+    }
+}
+
+@media (max-width: 640px) {
+    .seccionSuperior {
+        gap: 12px;
+        margin-bottom: 16px;
+    }
+
+    .buscador-container {
+        flex-basis: 100%;
+        height: auto;
+    }
+
+    .botones-container {
+        width: 100%;
+        margin-left: 0;
+        flex-wrap: wrap;
+    }
+
+    .detalle-card {
+        padding: 16px;
+        border-radius: 18px;
+    }
+
+    .detalle-card h3 {
+        font-size: 1.25rem;
+    }
+
+    .acciones-compra .btn {
+        flex: 1 1 140px;
+    }
+
+    .table-container > .table {
+        min-width: 640px;
+    }
 }
 

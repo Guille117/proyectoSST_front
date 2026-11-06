@@ -139,14 +139,43 @@
 @media (max-width: 900px) {
   .principal {
     grid-template-columns: 1fr;
+    gap: 18px;
+    margin-top: 14px;
   }
 
   .reportes-menu {
     position: static;
-    max-height: none;
+    max-height: 45vh;
+    overflow-y: auto;
   }
 
   .menu-opciones {
     overflow: visible;
+  }
+}
+
+@media (max-width: 640px) {
+  .principal {
+    gap: 14px;
+  }
+
+  .reportes-menu {
+    max-height: 40vh;
+    border-radius: 14px;
+    padding: 12px;
+  }
+
+  .menu-opciones {
+    max-height: 26vh;
+    overflow-y: auto;
+  }
+
+  .menu-grupo-titulo {
+    font-size: 0.75rem;
+  }
+
+  .menu-opcion {
+    min-height: 44px;
+    font-size: 1rem;
   }
 }

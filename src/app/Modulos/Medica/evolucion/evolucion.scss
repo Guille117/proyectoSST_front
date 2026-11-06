@@ -410,3 +410,15 @@
     padding-right: 0;
   }
 }
+
+@media (max-width: 640px) {
+  .evolucion {
+    padding: 12px;
+    gap: 16px;
+  }
+
+  .panel,
+  .tarjeta {
+    border-radius: 16px;
+  }
+}

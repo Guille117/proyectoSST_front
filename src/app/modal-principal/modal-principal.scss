@@ -331,3 +331,71 @@ dialog.modal-visor-documentos .modal-wrapper {
   pointer-events: auto !important;
 }
 
+/* ==================== RESPONSIVIDAD ==================== */
+@media (max-width: 900px) {
+  dialog {
+    width: calc(100vw - 24px);
+    min-width: 0;
+    max-height: 90dvh;
+  }
+
+  dialog.modal-ancho {
+    width: calc(100vw - 24px);
+  }
+
+  .modal-wrapper {
+    .modal-header {
+      padding: 22px 0 7px 20px;
+    }
+
+    .modal-body {
+      padding: 1.25rem;
+    }
+
+    .modal-footer {
+      flex-wrap: wrap;
+      gap: 10px;
+      padding: 14px 1.25rem 1.25rem;
+
+      .btn {
+        margin-bottom: 0;
+      }
+    }
+  }
+}
+
+@media (max-width: 640px) {
+  dialog,
+  dialog.modal-ancho {
+    width: calc(100vw - 16px);
+    max-height: 92dvh;
+    border-radius: 16px;
+  }
+
+  .modal-wrapper {
+    border-radius: 16px;
+
+    .modal-header {
+      padding: 18px 0 8px 16px;
+
+      h2 {
+        font-size: 1.15rem;
+      }
+    }
+
+    .modal-body {
+      padding: 14px;
+    }
+
+    .modal-footer {
+      flex-direction: column;
+      align-items: stretch;
+      padding: 12px 14px 14px;
+
+      .btn {
+        width: 100%;
+      }
+    }
+  }
+}
+

@@ -222,6 +222,7 @@
 @media (max-width: 900px) {
   .expediente-layout {
     grid-template-columns: 1fr;
+    gap: 18px;
   }
 
   .expediente-menu {
@@ -231,5 +232,15 @@
 
   .menu-opciones {
     overflow: visible;
+  }
+}
+
+@media (max-width: 640px) {
+  .expediente-layout {
+    gap: 14px;
+  }
+
+  .expediente-menu {
+    border-radius: 14px;
   }
 }

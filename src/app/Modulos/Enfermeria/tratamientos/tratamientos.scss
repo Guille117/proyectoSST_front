@@ -838,6 +838,55 @@ select.administracion-input {
   .tratamientos--ficha-abierta {
     padding-right: 1rem;
   }
+
+  /* Sin columnas el listado no necesita scroll interno ni tabla comprimida. */
+  .panel-indicaciones {
+    max-height: none;
+    overflow: visible;
+  }
+
+  .indicados-lista {
+    overflow-y: visible;
+    padding-right: 0;
+  }
+
+  .aplicaciones-historial {
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .aplicaciones-tabla {
+    min-width: 560px;
+  }
+}
+
+@media (max-width: 640px) {
+  .tratamientos {
+    padding: 12px;
+    gap: 16px;
+  }
+
+  .panel,
+  .tarjeta {
+    border-radius: 16px;
+  }
+
+  .indicacion-contenido {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 0.75rem;
+  }
+
+  .indicacion-aplicaciones {
+    padding-top: 0.75rem;
+    padding-left: 0;
+    border-top: 1px solid #e4ebf5;
+    border-left: 0;
+  }
+
+  .aplicaciones-tabla {
+    min-width: 520px;
+  }
 }
 
 /* ==================== SOLICITUD DE MEDICAMENTO ==================== */

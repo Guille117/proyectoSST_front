@@ -107,17 +107,25 @@ textarea {
     }
 }
 
-@media (max-width: 560px) {
+@media (max-width: 640px) {
     .fila {
         grid-template-columns: 1fr;
     }
 
     .pasos {
+        flex-wrap: wrap;
         width: 100%;
+        row-gap: 8px;
 
         .texto {
-            font-size: 14px;
+            font-size: 1rem;
         }
+    }
+
+    .conector {
+        flex: 0 0 24px;
+        min-width: 24px;
+        margin: 0 8px;
     }
 }
 

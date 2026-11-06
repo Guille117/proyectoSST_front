@@ -12,7 +12,7 @@
 
     
     <div class="form-row">
-      <div class="campo-formulario" [style.width]="isMedicamento ? '60%' : '100%'">
+      <div class="campo-formulario campo-nombre">
         <label for="genericName">Nombre genérico</label>
         <input
           type="text"
@@ -22,7 +22,7 @@
         />
       </div>
       @if(isMedicamento){
-        <div class="campo-formulario" style="width: 15%; flex-shrink: 0;">
+        <div class="campo-formulario campo-dosis">
           <label for="dose">Dosis</label>
           <input
             type="text"
@@ -32,7 +32,7 @@
           />
         </div>
   
-        <div class="campo-formulario" style="width: 19%; flex-shrink: 0;">
+        <div class="campo-formulario campo-unidad">
           <label for="administrationRoute">Unidad</label>
           <select  id="administrationRoute" [(ngModel)]="productForm.administrationRoute" class="desplegable">
             <option value="">Seleccionar</option>
@@ -44,7 +44,7 @@
       }
     </div>
 
-    <div class="campo-formulario" [style.width]="isMedicamento ? '60%' : '100%'">
+    <div class="campo-formulario campo-nombre">
       <label for="marcaCommercial">Marca comercial</label>
       <input
         type="text"
@@ -57,7 +57,7 @@
 
      @if(isMedicamento){
        <div class="form-row">
-         <div class="campo-formulario" style="width: 45%; flex-shrink: 0;">
+         <div class="campo-formulario campo-via">
            <label for="administrationRoute">Vía de administración</label>
            <select  id="administrationRoute" [(ngModel)]="productForm.administrationRoute" class="desplegable">
              <option value="">Seleccionar</option>
@@ -66,7 +66,7 @@
              </option>
            </select>
          </div>
-         <div class="campo-formulario" style="width: 45%; flex-shrink: 0;">
+         <div class="campo-formulario campo-presentacion">
            <label for="presentation">Presentación</label>
            <select id="presentation" [(ngModel)]="productForm.presentation" class="desplegable">
              <option value="">Seleccionar</option>

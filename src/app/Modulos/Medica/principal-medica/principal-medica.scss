@@ -52,6 +52,12 @@
 }
 
 
+@media (max-width: 900px) {
+  .subMenuNav .btn.cerrar-episodio {
+    margin-left: 0.75rem;
+  }
+}
+
 /* Modo lectura: oculta las acciones de escritura de las pantallas hijas. */
 .contenido.solo-lectura ::ng-deep ._guardar,
 .contenido.solo-lectura ::ng-deep ._editar,

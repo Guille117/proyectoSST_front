@@ -126,3 +126,64 @@
   font-size: 0.85rem;
   color: #64748b;
 }
+
+/* ==================== RESPONSIVIDAD ==================== */
+@media (max-width: 900px) {
+  .reporte {
+    padding: 0.75rem;
+  }
+
+  .filtros {
+    align-items: stretch;
+  }
+
+  .filtro-fecha,
+  .filtro-busqueda {
+    flex: 1 1 220px;
+    width: auto;
+  }
+
+  .table-container > table {
+    min-width: 620px;
+  }
+}
+
+@media (max-width: 640px) {
+  .reporte {
+    gap: 0.75rem;
+    padding: 0.5rem;
+  }
+
+  .filtros {
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+
+  .filtro-fecha,
+  .filtro-busqueda {
+    flex-basis: 100%;
+    width: 100%;
+  }
+
+  .grafica {
+    height: 260px;
+  }
+
+  .kpis {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .kpi {
+    min-width: 0;
+  }
+
+  .table-container > table {
+    min-width: 640px;
+  }
+
+  .reporte-vacio {
+    padding: 14px;
+    font-size: 1rem;
+  }
+}

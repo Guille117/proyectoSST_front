@@ -139,7 +139,7 @@
                             <th class="celda_izquierda">Observación</th>
                             <th class="celda_centrada">Fecha</th>
                             <th class="celda_izquierda">Usuario</th>
-                            <th class="celda_centrada">Revertir</th>
+                            <th class="celda_centrada celda-acciones">Revertir</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -173,7 +173,7 @@
                                         {{ formatearFecha(baja.fecha) }}
                                     </td>
                                     <td class="celda_izquierda">{{ baja.usuario }}</td>
-                                    <td class="celda_centrada">
+                                    <td class="celda_centrada celda-acciones">
                                         <button
                                             type="button"
                                             class="iconRevertir"
@@ -229,7 +229,7 @@
                             <th class="celda_izquierda">Proveedor</th>
                             <th class="celda_centrada">Lote</th>
                             <th class="celda_centrada">Vencimiento</th>
-                            <th class="celda_centrada">Eliminar</th>
+                            <th class="celda_centrada celda-acciones">Eliminar</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -322,7 +322,7 @@
                                     >
                                         {{ formatearFecha(item.fechaVencimiento) }}
                                     </td>
-                                    <td class="celda_centrada">
+                                    <td class="celda_centrada celda-acciones">
                                         <button
                                             type="button"
                                             class="iconEliminar"

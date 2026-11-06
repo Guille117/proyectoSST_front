@@ -458,6 +458,13 @@ select.egreso-input {
     flex-wrap: wrap;
   }
 
+  .tratamiento-panel {
+    width: var(--ficha-ancho, 340px);
+    padding: 1rem;
+    border-radius: 18px 0 0 18px;
+    box-shadow: -10px 0 30px rgba(15, 23, 42, 0.18);
+  }
+
   /* El retiro voluntario se apila y la línea divisoria pasa a ser horizontal */
   .egreso-cuerpo--dividido {
     grid-template-columns: minmax(0, 1fr);
@@ -472,5 +479,20 @@ select.egreso-input {
     margin-top: 1.25rem;
     padding-top: 1.25rem;
     border-top: 1px solid #e4ebf5;
+  }
+}
+
+@media (max-width: 640px) {
+  .alta {
+    padding: 12px;
+  }
+
+  .tratamiento-panel {
+    padding: 14px;
+  }
+
+  .panel-registro,
+  .panel-secciones .tarjeta {
+    border-radius: 16px;
   }
 }

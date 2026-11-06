@@ -633,3 +633,20 @@
       'examen';
   }
 }
+
+@media (max-width: 640px) {
+  .evaluacion {
+    padding: 12px;
+    gap: 16px;
+  }
+
+  .panel-secciones .tarjeta,
+  .panel-seccion,
+  .panel-hallazgos {
+    border-radius: 16px;
+  }
+
+  .hallazgo-campo {
+    min-height: 160px;
+  }
+}

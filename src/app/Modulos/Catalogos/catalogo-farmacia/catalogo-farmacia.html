@@ -44,7 +44,7 @@
           } @else if(catalogoSeleccionado === 'Motivo baja'){
             <th class="celda_izquierda">Descripción</th>
           }
-          <th class="celda_centrada">Acciones</th>
+          <th class="celda_centrada celda-acciones">Acciones</th>
         </tr>
       </thead>
 
@@ -58,7 +58,7 @@
             } @else if(catalogoSeleccionado === 'Motivo baja'){
               <td class="celda_izquierda">{{ dato.descripcion }}</td>
             }
-            <td class="celda_centrada acciones">
+            <td class="celda_centrada acciones celda-acciones">
               @if(mostrarActivos){
                 <button class="iconEditar" title="Editar" aria-label="Editar" 
                   (click)="precargar(dato.nombre, dato.id!,

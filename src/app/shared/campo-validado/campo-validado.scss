@@ -71,3 +71,25 @@
   font-weight: 900;
   font-size: 0.8rem;
 }
+
+/* En pantallas estrechas el aviso deja de flotar sobre el campo y se muestra debajo, sin tapar
+   etiquetas ni controles vecinos. */
+@media (max-width: 640px) {
+  .mensaje-error {
+    top: auto;
+    left: 0;
+    width: 100%;
+    max-width: 100%;
+    font-size: 0.85rem;
+    transform: none;
+  }
+
+  .mensaje-error--visible {
+    position: static;
+    margin-top: 6px;
+  }
+
+  .mensaje-error--visible::after {
+    display: none;
+  }
+}

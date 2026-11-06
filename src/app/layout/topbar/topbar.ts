@@ -4,6 +4,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router } from '@angular/router';
 import { filter } from 'rxjs';
 import { AuthService } from '../../Modulos/Auth/data/auth-service';
+import { LayoutState } from '../layout-state.service';
 
 /** Título que se muestra en la barra superior según el módulo activo. */
 const TITULOS_MODULO: Record<string, string> = {
@@ -24,6 +25,7 @@ const TITULOS_MODULO: Record<string, string> = {
 })
 export class Topbar {
   public authService = inject(AuthService);
+  public layout = inject(LayoutState);
   private readonly router = inject(Router);
 
   readonly tituloModulo = signal(this.obtenerTitulo(this.router.url));
@@ -39,6 +41,11 @@ export class Topbar {
 
   logout(): void {
     this.authService.logout();
+  }
+
+  /** Abre el menú lateral deslizante en pantallas estrechas. */
+  alternarMenu(): void {
+    this.layout.alternarMenu();
   }
 
   /** Obtiene el título del módulo a partir del primer segmento de la URL. */

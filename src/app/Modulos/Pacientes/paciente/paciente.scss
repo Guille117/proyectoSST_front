@@ -29,6 +29,9 @@
 .tabla-pacientes {
     max-height: calc(100vh - var(--heightTopBar) - 220px);
     overflow-y: auto;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
 }
 
 /* Las filas del listado son seleccionables: el detalle se muestra a la derecha */
@@ -687,6 +690,16 @@ tbody tr.selected-row td {
 		gap: 24px;
 	}
 
+	.tabla-pacientes {
+		max-height: none;
+		overflow-x: auto;
+		overflow-y: auto;
+	}
+
+	.tabla-pacientes > .table {
+		min-width: 640px;
+	}
+
 	.documentacion {
 		grid-template-columns: 1fr;
 		gap: 24px;
@@ -704,6 +717,30 @@ tbody tr.selected-row td {
 		.detalle-scroll {
 			overflow: visible;
 		}
+	}
+}
+
+@media (max-width: 640px) {
+	.izquierda .seccionSuperior {
+		flex-wrap: wrap;
+		gap: 12px;
+	}
+
+	.izquierda .buscador-container {
+		width: 100%;
+		height: auto;
+	}
+
+	.izquierda .switchContainer {
+		width: 100%;
+	}
+
+	.contenedorPrincipal {
+		gap: 20px;
+	}
+
+	.tabla-pacientes > .table {
+		min-width: 620px;
 	}
 }
 

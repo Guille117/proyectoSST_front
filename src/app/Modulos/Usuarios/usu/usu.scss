@@ -237,3 +237,81 @@ tbody tr {
 
 }
 
+/* ==================== RESPONSIVIDAD ==================== */
+@media (max-width: 900px) {
+    .contenedorPrincipal {
+        flex-direction: column;
+        gap: 20px;
+        height: auto;
+    }
+
+    .izquierda,
+    .derecha {
+        width: 100%;
+        min-width: 0;
+    }
+
+    .seccionSuperior {
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+
+    .buscador-container,
+    .switchContainer {
+        flex: 1 1 100%;
+        width: 100%;
+        height: auto;
+    }
+
+    .tabla-usuarios {
+        max-width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior-x: contain;
+    }
+
+    .tabla-usuarios > .table {
+        min-width: 640px;
+    }
+
+    .derecha {
+        .datosPer,
+        .datosLab {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .data {
+            grid-template-columns: minmax(0, 1fr);
+            gap: 2px;
+        }
+    }
+}
+
+@media (max-width: 640px) {
+    .contenedorPrincipal {
+        margin-top: 14px;
+    }
+
+    .derecha {
+        padding: 12px;
+        border-radius: 12px;
+
+        .datosPer,
+        .datosLab {
+            grid-template-columns: minmax(0, 1fr);
+        }
+
+        .footer {
+            flex-wrap: wrap;
+        }
+
+        .footer > * {
+            flex: 1 1 auto;
+        }
+    }
+
+    .tabla-usuarios > .table {
+        min-width: 620px;
+    }
+}
+

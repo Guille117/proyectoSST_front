@@ -316,4 +316,18 @@
   .resumen-cabecera {
     flex-direction: column;
   }
+
+  .resumen-tabla-container table {
+    min-width: 680px;
+  }
+}
+
+@media (max-width: 640px) {
+  .resumen-tabla-container {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .resumen-tabla-container table {
+    min-width: 720px;
+  }
 }

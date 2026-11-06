@@ -467,4 +467,31 @@ select.indicacion-input {
   .indicacion-fila--dos {
     grid-template-columns: minmax(0, 1fr);
   }
+
+  /* En una sola columna la página desplaza el contenido: el listado no necesita scroll interno. */
+  .panel-indicados {
+    max-height: none;
+    overflow: visible;
+  }
+
+  .indicados-lista {
+    overflow-y: visible;
+    padding-right: 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .panel-seccion,
+  .panel-indicados {
+    border-radius: 16px;
+    padding: 14px;
+  }
+
+  .indicacion-titulo {
+    font-size: 1.25rem;
+  }
+
+  .indicacion-fila {
+    gap: 0.75rem;
+  }
 }
