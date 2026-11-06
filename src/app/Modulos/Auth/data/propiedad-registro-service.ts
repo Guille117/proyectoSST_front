@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { AuthService } from './auth-service';
 
-const ROLES_ACCESO_GLOBAL = ['Administrador', 'Director'];
+const ROLES_ACCESO_GLOBAL = ['Administrador'];
 
 /** Decide si el usuario actual puede editar o eliminar un registro clínico. */
 @Injectable({ providedIn: 'root' })

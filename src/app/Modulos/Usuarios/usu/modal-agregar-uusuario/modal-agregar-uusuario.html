@@ -215,29 +215,54 @@
             </app-campo-validado>
         }
 
-        <app-campo-validado
-            class="etiqueta-input" 
-            [label]="'Horario'"
-            [fieldId]="'horario'"
-            [required]="true"
-            [showError]="!!(horario.touched && horario.invalid)"
-            [errorMessage]="'Debe seleccionar un horario'"
-        >
-            <select
-                id="horario"
-                name="horarioId"
-                required
-                [(ngModel)]="usuarioReq.horarioId"
-                #horario="ngModel"
-                [class.input-invalid]="horario.touched && horario.invalid"
+        @if (!esMedico) {
+            <app-campo-validado
+                class="etiqueta-input" 
+                [label]="'Horario'"
+                [fieldId]="'horario'"
+                [required]="true"
+                [showError]="!!(horario.touched && horario.invalid)"
+                [errorMessage]="'Debe seleccionar un horario'"
             >
-                <option [ngValue]="0" disabled>Seleccione un horario</option>
-                @for (horario of horarios; track horario.id) {
-                    <option [ngValue]="horario.id">{{ horario.nombre }}</option>
-                }
-            </select>
-        </app-campo-validado>
+                <select
+                    id="horario"
+                    name="horarioId"
+                    required
+                    [(ngModel)]="usuarioReq.horarioId"
+                    #horario="ngModel"
+                    [class.input-invalid]="horario.touched && horario.invalid"
+                >
+                    <option [ngValue]="0" disabled>Seleccione un horario</option>
+                    @for (horario of horarios; track horario.id) {
+                        <option [ngValue]="horario.id">{{ horario.nombre }}</option>
+                    }
+                </select>
+            </app-campo-validado>
+        }
     </div>
+
+    @if (esGuardia) {
+        <div class="fila">
+            <app-campo-validado
+                class="etiqueta-input"
+                [label]="'Inicio de guardia'"
+                [fieldId]="'inicioGuardia'"
+                [required]="true"
+                [showError]="!!(inicioGuardia.touched && inicioGuardia.invalid)"
+                [errorMessage]="'Debe ingresar la fecha y hora de inicio de guardia'"
+            >
+                <input
+                    type="datetime-local"
+                    id="inicioGuardia"
+                    name="inicioGuardia"
+                    required
+                    [(ngModel)]="usuarioReq.inicioGuardia"
+                    #inicioGuardia="ngModel"
+                    [class.input-invalid]="inicioGuardia.touched && inicioGuardia.invalid"
+                >
+            </app-campo-validado>
+        </div>
+    }
 
     @if (esMedico) {
         <div class="fila">

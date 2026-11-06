@@ -187,4 +187,63 @@ describe('ModalAgregarUusuario', () => {
       'Completa el valor de «Puesto» o cancélalo antes de guardar.',
     );
   });
+
+  it('oculta el horario para un médico y lo envía como null', async () => {
+    prepararPaso2(5, 12);
+    expect(component.esMedico).toBe(true);
+    expect(component.puedeGuardarPaso2).toBe(true);
+
+    const guardado = component.guardarUsuario();
+    await fixture.whenStable();
+    const guardarUsuario = httpMock.expectOne(`${environment.apiUrl}/usuarios`);
+    expect(guardarUsuario.request.body.horarioId).toBeNull();
+    expect(guardarUsuario.request.body.inicioGuardia).toBeNull();
+    guardarUsuario.flush({
+      id: 1,
+      codigo: 'U-1',
+      username: 'ana',
+      nombres: 'Ana',
+      apellidos: 'Lopez',
+      estado: true,
+      pin: '1234',
+    });
+    await guardado;
+  });
+
+  it('exige el inicio de guardia cuando el horario es rotativo', async () => {
+    component.puestos = [{ id: 2, codigo: 'P-2', nombre: 'Enfermera', estado: true }];
+    component.horarios = [
+      {
+        id: 3,
+        codigo: 'HOR-03',
+        nombre: 'Guardia medica',
+        esRotativo: true,
+        estado: true,
+      },
+    ];
+    prepararPaso2(2);
+    component.usuarioReq.horarioId = 3;
+
+    expect(component.esGuardia).toBe(true);
+    expect(component.puedeGuardarPaso2).toBe(false);
+
+    component.usuarioReq.inicioGuardia = '2026-08-24T08:00';
+    expect(component.puedeGuardarPaso2).toBe(true);
+
+    const guardado = component.guardarUsuario();
+    await fixture.whenStable();
+    const guardarUsuario = httpMock.expectOne(`${environment.apiUrl}/usuarios`);
+    expect(guardarUsuario.request.body.horarioId).toBe(3);
+    expect(guardarUsuario.request.body.inicioGuardia).toBe('2026-08-24T08:00');
+    guardarUsuario.flush({
+      id: 1,
+      codigo: 'U-1',
+      username: 'ana',
+      nombres: 'Ana',
+      apellidos: 'Lopez',
+      estado: true,
+      pin: '1234',
+    });
+    await guardado;
+  });
 });

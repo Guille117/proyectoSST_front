@@ -79,6 +79,7 @@ export class ModalAgregarUusuario implements OnInit, OnChanges {
     rolIds: [],
     username: '',
     especialidadId: 0,
+    inicioGuardia: null,
     estado: true,
   };
 
@@ -132,6 +133,12 @@ export class ModalAgregarUusuario implements OnInit, OnChanges {
     }
 
     this.usuarioReq.puestoId = valor;
+
+    const puesto = this.puestos.find((item) => item.id === valor);
+    if (this.esPuestoMedico(puesto?.nombre)) {
+      this.usuarioReq.horarioId = 0;
+      this.usuarioReq.inicioGuardia = null;
+    }
   }
 
   async crearPuesto(datos: OpcionOtroValor): Promise<boolean> {
@@ -155,6 +162,10 @@ export class ModalAgregarUusuario implements OnInit, OnChanges {
       this.puestos = [...this.puestos, puesto];
       this.usuarioReq.puestoId = puesto.id;
       this.mostrandoOtroPuesto = false;
+      if (this.esPuestoMedico(puesto.nombre)) {
+        this.usuarioReq.horarioId = 0;
+        this.usuarioReq.inicioGuardia = null;
+      }
       return true;
     } catch (error) {
       this.popUps.errorDesdeBackend(error, 'No se pudo crear el puesto.');
@@ -301,9 +312,13 @@ export class ModalAgregarUusuario implements OnInit, OnChanges {
     const puestoValido = !!this.usuarioReq.puestoId || this.mostrandoOtroPuesto;
     const especialidadValida = !!this.usuarioReq.especialidadId || this.mostrandoOtroEspecialidad;
 
+    const horarioValido = this.esMedico || !!this.usuarioReq.horarioId;
+    const guardiaValida = !this.esGuardia || !!this.usuarioReq.inicioGuardia;
+
     return !!(
       puestoValido &&
-      this.usuarioReq.horarioId &&
+      horarioValido &&
+      guardiaValida &&
       this.usuarioReq.rolIds?.length &&
       this.usuarioReq.username?.trim() &&
       (!this.esMedico || especialidadValida) &&
@@ -327,7 +342,8 @@ export class ModalAgregarUusuario implements OnInit, OnChanges {
         email: this.persona.email?.trim() ?? '',
       },
       puestoId: Number(this.usuarioReq.puestoId),
-      horarioId: Number(this.usuarioReq.horarioId),
+      horarioId: this.esMedico ? 0 : Number(this.usuarioReq.horarioId),
+      inicioGuardia: this.esGuardia ? (this.usuarioReq.inicioGuardia ?? '') : '',
       rolIds: [...(this.usuarioReq.rolIds ?? [])].map(Number).sort((a, b) => a - b),
       username: this.usuarioReq.username?.trim() ?? '',
       especialidadId: Number(this.usuarioReq.especialidadId ?? 0),
@@ -336,11 +352,28 @@ export class ModalAgregarUusuario implements OnInit, OnChanges {
 
   get esMedico(): boolean {
     const puesto = this.puestos.find((item) => item.id === Number(this.usuarioReq.puestoId));
-    return puesto?.nombre
+    const nombre =
+      puesto?.nombre ??
+      this.usuarioToEdit?.puesto?.nombre ??
+      this.usuarioToEdit?.puestoNombre ??
+      '';
+    return this.esPuestoMedico(nombre);
+  }
+
+  get horarioSeleccionado(): HorarioResponse | undefined {
+    return this.horarios.find((item) => item.id === Number(this.usuarioReq.horarioId));
+  }
+
+  get esGuardia(): boolean {
+    return !this.esMedico && !!this.horarioSeleccionado?.esRotativo;
+  }
+
+  private esPuestoMedico(nombre: string | null | undefined): boolean {
+    const normalizado = (nombre ?? '')
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '')
-      .toLowerCase()
-      .includes('medic') ?? false;
+      .toLowerCase();
+    return normalizado.includes('medic') || normalizado.includes('doctor');
   }
 
   cargarDatosEdicion(): void {
@@ -363,12 +396,17 @@ export class ModalAgregarUusuario implements OnInit, OnChanges {
         this.usuarioToEdit.especialidadId ??
         (especialidad && typeof especialidad === 'object' ? especialidad.id : undefined);
 
+      const inicioGuardiaVal = this.usuarioToEdit.inicioGuardia
+        ? String(this.usuarioToEdit.inicioGuardia).slice(0, 16)
+        : null;
+
       this.usuarioReq = {
         puestoId: Number(puestoIdVal),
         horarioId: Number(horarioIdVal),
         rolIds: rolIdsVal.map((id: number | string) => Number(id)),
         username: this.usuarioToEdit.username || '',
         especialidadId: Number(especialidadIdVal ?? 0),
+        inicioGuardia: inicioGuardiaVal,
         estado: this.usuarioToEdit.estado ?? true,
       };
       this.snapshotInicial = this.crearSnapshot();
@@ -459,8 +497,12 @@ export class ModalAgregarUusuario implements OnInit, OnChanges {
       this.popUps.formIncompleto('Debe seleccionar un puesto.');
       return false;
     }
-    if (!this.usuarioReq.horarioId || this.usuarioReq.horarioId === 0) {
+    if (!this.esMedico && (!this.usuarioReq.horarioId || this.usuarioReq.horarioId === 0)) {
       this.popUps.formIncompleto('Debe seleccionar un horario.');
+      return false;
+    }
+    if (this.esGuardia && !this.usuarioReq.inicioGuardia) {
+      this.popUps.formIncompleto('Debe ingresar la fecha y hora de inicio de guardia.');
       return false;
     }
     if (!this.usuarioReq.username?.trim()) {
@@ -528,10 +570,11 @@ export class ModalAgregarUusuario implements OnInit, OnChanges {
     const payload: UsuarioRequest = {
       persona: datosPersonales,
       puestoId: Number(this.usuarioReq.puestoId),
-      horarioId: Number(this.usuarioReq.horarioId),
+      horarioId: this.esMedico ? null : Number(this.usuarioReq.horarioId),
       rolIds: (this.usuarioReq.rolIds ?? []).map((id) => Number(id)),
       username: this.usuarioReq.username!,
       especialidadId: this.esMedico ? Number(this.usuarioReq.especialidadId) : undefined,
+      inicioGuardia: this.esGuardia ? this.usuarioReq.inicioGuardia : null,
       estado: this.usuarioReq.estado ?? true,
     };
 

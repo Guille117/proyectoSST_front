@@ -22,6 +22,9 @@ export const authInterceptor: HttpInterceptorFn = (request, next) => {
       if (error.status === 401 && authService.isLoggedIn()) {
         authService.logout();
       }
+      if (error.status === 403 && error.error?.codigo === 'FUERA_DE_HORARIO' && authService.isLoggedIn()) {
+        authService.logout();
+      }
       return throwError(() => error);
     }),
   );
