@@ -83,7 +83,9 @@ export class ModalAgregarPaciente {
   // ----------------------- carga de inicio.------------------
   ngOnInit() {
     this.precargarFormulario();
-    if (!this.soloDatosPersonales) {
+    if (this.soloDatosPersonales) {
+      this.cargarMedicos();
+    } else {
       this.llenarSelects();
     }
   }
@@ -479,21 +481,48 @@ export class ModalAgregarPaciente {
   }
 
   private seleccionarMedicoEdicion(): void {
-    if (!this.isEditing || !this.datosEdicion?.medicoId) return;
+    if (!this.isEditing || !this.datosEdicion) return;
 
-    const id = this.datosEdicion.medicoId;
-    let medico = this.medicos.find((item) => item.id === id) ?? null;
+    const ids = this.datosEdicion.medicos?.map((medico) => medico.id) ?? [];
+    if (!ids.length && this.datosEdicion.medicoId) {
+      ids.push(this.datosEdicion.medicoId);
+    }
+    this.medicosSeleccionados = this.resolverMedicos(ids, this.datosEdicion);
+  }
 
-    if (!medico) {
-      medico = {
+  /** Convierte IDs de médicos en el catálogo local, agregando los que falten. */
+  private resolverMedicos(ids: number[], detallePaciente?: PacienteDetalle | null): MedicoDatos[] {
+    return ids.map((id) => {
+      const existente = this.medicos.find((item) => item.id === id);
+      if (existente) return existente;
+
+      const detalle = detallePaciente?.medicos?.find((medico) => medico.id === id);
+      const medico: MedicoDatos = {
         id,
-        nombreCompleto: this.datosEdicion.medicoNombre ?? '—',
-        especialidad: '',
+        nombreCompleto: detalle?.nombreCompleto ?? detallePaciente?.medicoNombre ?? '—',
+        especialidad: detalle?.especialidad ?? '',
       };
       this.medicos = [...this.medicos, medico];
-    }
+      return medico;
+    });
+  }
 
-    this.medicoSeleccionado = medico;
+  /** Compatibilidad con el contrato anterior de un solo médico tratante. */
+  get medicoSeleccionado(): MedicoDatos | null {
+    return this.medicosSeleccionados[0] ?? null;
+  }
+
+  set medicoSeleccionado(medico: MedicoDatos | null) {
+    this.medicosSeleccionados = medico ? [medico] : [];
+  }
+
+  get nombresMedicosSeleccionados(): string {
+    if (!this.medicosSeleccionados.length) {
+      return 'Seleccione uno o varios médicos';
+    }
+    return this.medicosSeleccionados
+      .map((medico) => `Dr. ${medico.nombreCompleto}`)
+      .join(', ');
   }
 
   private seleccionarInstitucionEdicion(): void {
@@ -618,7 +647,7 @@ export class ModalAgregarPaciente {
     this.parentescoSeleccionadoNombre = null;
     this.tipoAtencion = 'emergencia';
     this.descripcionAtencion = '';
-    this.medicoSeleccionado = null;
+    this.medicosSeleccionados = [];
     this.camaSeleccionada = null;
     this.institucionSeleccionada = null;
     this.motivoReferencia = '';
@@ -681,7 +710,7 @@ export class ModalAgregarPaciente {
   }
 
   // ------------------------ GUARDAR PACIENTE ------------------------
-    medicoSeleccionado: MedicoDatos | null = null;
+    medicosSeleccionados: MedicoDatos[] = [];
     institucionSeleccionada: Inter_institucion | null = null;
     camaSeleccionada: camaResponseSimple | null = null;
     archivoReferencia: File | null = null;
@@ -820,15 +849,22 @@ export class ModalAgregarPaciente {
       return false;
     }
 
-    // Un paciente sin episodio activo solo puede actualizar sus datos personales.
+    // Un paciente sin episodio activo puede editar sus datos personales y médicos,
+    // incluso si aún no tiene médicos asignados.
     if (this.soloDatosPersonales) {
       return true;
+    }
+
+    if (!this.medicosSeleccionados.length) {
+      this.contador = 2;
+      this.popUps.formIncompleto('Selecciona al menos un médico para el paciente.');
+      return false;
     }
 
     const camaId = this.tipoAtencion === 'hospitalizacion'
       ? this.camaSeleccionada?.idCama ?? null
       : null;
-    const medicoId = this.medicoSeleccionado?.id;
+    const medicoId = this.medicosSeleccionados[0]?.id;
     const descripcion = this.descripcionAtencion.trim();
 
     // Paso 3: médico y descripción siempre; cama solo para hospitalización.
@@ -915,6 +951,7 @@ export class ModalAgregarPaciente {
       direccion: this.pacienteForm.direccion.trim() || null,
       ocupacion: this.pacienteForm.ocupacion.trim() || null,
       camaId,
+      medicoIds: this.medicosSeleccionados.map((medico) => medico.id),
       alergiaIds: [...this.alergiasSeleccionadas],
       enfermedadIds: [...this.enfermedadesSeleccionadas],
     };
@@ -924,7 +961,7 @@ export class ModalAgregarPaciente {
       return { paciente: pacienteDatos, episodio: null };
     }
 
-    const medicoId = this.medicoSeleccionado!.id;
+    const medicoId = this.medicosSeleccionados[0]!.id;
     const descripcion = this.descripcionAtencion.trim();
     const responsable = this.responsableForm;
     const datosResponsable = responsable.persona;
@@ -996,6 +1033,7 @@ export class ModalAgregarPaciente {
         : this.tipoAtencion === 'hospitalizacion'
           ? this.camaSeleccionada?.idCama ?? null
           : null,
+      medicos: this.medicosSeleccionados.map((medico) => medico.id).sort((a, b) => a - b),
       alergias: [...this.alergiasSeleccionadas].sort((a, b) => a - b),
       enfermedades: [...this.enfermedadesSeleccionadas].sort((a, b) => a - b),
       episodio: this.soloDatosPersonales
@@ -1003,7 +1041,7 @@ export class ModalAgregarPaciente {
         : {
             tipoAtencion: this.tipoAtencion === 'emergencia' ? 'EMERGENCIA' : 'HOSPITALIZACION',
             descripcion: this.textoNormalizado(this.descripcionAtencion),
-            medicoId: this.medicoSeleccionado?.id ?? null,
+            medicoId: this.medicosSeleccionados[0]?.id ?? null,
             responsable: this.firmaResponsableActual(),
             referencia: this.referenciaTieneDatos
               ? {
@@ -1031,6 +1069,8 @@ export class ModalAgregarPaciente {
       direccion: this.textoNormalizado(datos.direccion),
       ocupacion: this.textoNormalizado(datos.ocupacion),
       camaId: datos.episodioId == null ? null : datos.camaId ?? null,
+      medicos: (datos.medicos?.map((medico) => medico.id)
+        ?? (datos.medicoId ? [datos.medicoId] : [])).sort((a, b) => a - b),
       alergias: datos.alergias.map((alergia) => alergia.id).sort((a, b) => a - b),
       enfermedades: datos.enfermedades.map((enfermedad) => enfermedad.id).sort((a, b) => a - b),
       episodio:
@@ -1153,7 +1193,7 @@ export class ModalAgregarPaciente {
   
   get puedeAvanzarPaso2(): boolean {
     return Boolean(
-      this.medicoSeleccionado?.id != null &&
+      this.medicosSeleccionados.length > 0 &&
       this.descripcionAtencion.trim() &&
       (this.tipoAtencion !== 'hospitalizacion' || this.camaSeleccionada?.idCama != null)
     );

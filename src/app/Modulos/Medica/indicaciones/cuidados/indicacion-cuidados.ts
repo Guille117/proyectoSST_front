@@ -5,6 +5,7 @@ import { finalize, forkJoin, map, Observable, Subscription, TimeoutError } from 
 import { PopUps } from '../../../../shared/popUps/popUpsService';
 import { TabSwitch } from '../../../../shared/tab-switch/tab-switch';
 import { AuthService } from '../../../Auth/data/auth-service';
+import { PropiedadRegistroService } from '../../../Auth/data/propiedad-registro-service';
 import { EpisodioActivoService } from '../../data/episodio-activo-service';
 import {
   DuracionVista,
@@ -49,6 +50,7 @@ type FiltroCuidado = 'todas' | 'completados' | 'enProceso' | 'eliminados';
 /** Cuidado indicado listo para pintar la tarjeta del listado. */
 interface CuidadoVista extends DuracionVista {
   id: number;
+  usuarioId: number;
   nombre: string;
   /** Frecuencia indicada en horas. */
   frecuencia: number;
@@ -116,6 +118,7 @@ export class IndicacionCuidados implements OnInit, OnDestroy {
   private readonly popUps = inject(PopUps);
   private readonly servicio = inject(IndicacionCuidadoService);
   private readonly authService = inject(AuthService);
+  private readonly propiedadRegistro = inject(PropiedadRegistroService);
   private readonly episodioActivo = inject(EpisodioActivoService);
   private readonly registrosEnfermeria = inject(RegistrosEnfermeriaService);
   private readonly servicioSignos = inject(SignosVitalesService);
@@ -133,6 +136,11 @@ export class IndicacionCuidados implements OnInit, OnDestroy {
   /** El episodio es un historial cerrado: se consulta, pero no se registran cambios. */
   get soloLectura(): boolean {
     return this.episodioActivo.esSoloLectura();
+  }
+
+  /** Solo el autor del registro (o un rol global) puede editarlo o eliminarlo. */
+  puedeGestionar(usuarioId: number): boolean {
+    return !this.soloLectura && this.propiedadRegistro.puedeGestionar(usuarioId);
   }
 
   /** Pestaña activa del registro: cuidado de nombre libre o monitoreo de un tipo. */
@@ -836,6 +844,7 @@ export class IndicacionCuidados implements OnInit, OnDestroy {
 
     return {
       id: respuesta.id,
+      usuarioId: respuesta.usuarioId,
       nombre: respuesta.nombreCuidado,
       frecuencia: respuesta.frecuencia,
       duracionTipo: this.aDuracionVista(respuesta.tipoDuracion),

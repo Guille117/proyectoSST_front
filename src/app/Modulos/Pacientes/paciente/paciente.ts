@@ -471,6 +471,13 @@ export class Paciente implements OnInit {
     }
   }
 
+  /** Nombres de todos los médicos asignados al paciente para la ficha. */
+  nombresMedicos(datos: PacienteDetalle): string {
+    const nombres = (datos.medicos ?? []).map((medico) => `Dr. ${medico.nombreCompleto}`);
+    if (nombres.length) return nombres.join(', ');
+    return datos.medicoNombre ? `Dr. ${datos.medicoNombre}` : '-';
+  }
+
   /** Obtiene la especialidad del médico asignado desde el catálogo de médicos. */
   private async obtenerEspecialidadMedico(medicoId: number | null): Promise<string> {
     if (!medicoId) return '—';

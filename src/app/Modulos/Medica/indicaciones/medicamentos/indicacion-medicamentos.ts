@@ -23,6 +23,7 @@ import { Paginacion } from '../../../../shared/paginacion/paginacion';
 import { PopUps } from '../../../../shared/popUps/popUpsService';
 import { CatalogoService } from '../../../Catalogos/data/serviceCatalogo';
 import { AuthService } from '../../../Auth/data/auth-service';
+import { PropiedadRegistroService } from '../../../Auth/data/propiedad-registro-service';
 import { EpisodioActivoService } from '../../data/episodio-activo-service';
 import { TIMEOUT_HTTP_MS } from '../../evaluacion/data/constantes-clinicas';
 import {
@@ -55,6 +56,7 @@ type FiltroIndicacion = 'todas' | 'activas' | 'finalizadas' | 'eliminadas';
 /** Indicación de medicamento lista para pintar la tarjeta del listado. */
 interface IndicacionMedicamentoVista extends DuracionVista {
   id: number;
+  usuarioId: number;
   medicamentoLogId: number | null;
   nombre: string;
   /** Texto libre cuando el medicamento no está registrado en el catálogo. */
@@ -126,6 +128,7 @@ export class IndicacionMedicamentos implements OnInit, OnDestroy {
   private readonly servicio = inject(MedicamentoIndicacionService);
   private readonly catalogoService = inject(CatalogoService);
   private readonly authService = inject(AuthService);
+  private readonly propiedadRegistro = inject(PropiedadRegistroService);
   private readonly episodioActivo = inject(EpisodioActivoService);
   private readonly registrosEnfermeria = inject(RegistrosEnfermeriaService);
   private readonly cdr = inject(ChangeDetectorRef);
@@ -144,6 +147,11 @@ export class IndicacionMedicamentos implements OnInit, OnDestroy {
   /** El episodio es un historial cerrado: se consulta, pero no se registran cambios. */
   get soloLectura(): boolean {
     return this.episodioActivo.esSoloLectura();
+  }
+
+  /** Solo el autor del registro (o un rol global) puede editarlo, eliminarlo o cambiar su estado. */
+  puedeGestionar(usuarioId: number): boolean {
+    return !this.soloLectura && this.propiedadRegistro.puedeGestionar(usuarioId);
   }
 
   /** Campos del formulario de la indicación. */
@@ -1161,6 +1169,7 @@ export class IndicacionMedicamentos implements OnInit, OnDestroy {
 
     return {
       id: respuesta.id,
+      usuarioId: respuesta.usuarioId,
       medicamentoLogId: respuesta.medicamentoLogId,
       nombre: respuesta.medicamento,
       medicamentoLibre: respuesta.medicamentoLibre ?? '',

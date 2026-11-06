@@ -8,6 +8,7 @@ import {
 import { FormsModule } from '@angular/forms';
 import { finalize, firstValueFrom, Subscription, switchMap, tap, timeout, TimeoutError } from 'rxjs';
 import { AuthService } from '../../Auth/data/auth-service';
+import { PropiedadRegistroService } from '../../Auth/data/propiedad-registro-service';
 import { OpcionOtroComponent, OpcionOtroValor } from '../../../shared/opcion-otro/opcion-otro';
 import { crearSeleccionesPendientes } from '../../../shared/opcion-otro/crear-seleccion-pendiente';
 import { PopUps } from '../../../shared/popUps/popUpsService';
@@ -33,6 +34,7 @@ interface SeccionVista {
 /** Hallazgo registrado listo para la tarjeta de la lista: fecha y hora ya formateadas. */
 interface HallazgoVista {
   id: number;
+  usuarioId: number;
   parteCuerpoId: number;
   parteCuerpo: string;
   descripcion: string;
@@ -62,6 +64,7 @@ export class Evaluacion implements OnInit, OnDestroy {
   constructor(
     private examenFisicoService: ExamenFisicoService,
     private authService: AuthService,
+    private propiedadRegistro: PropiedadRegistroService,
     private episodioActivo: EpisodioActivoService,
     private popUps: PopUps,
     private cdr: ChangeDetectorRef,
@@ -166,6 +169,11 @@ export class Evaluacion implements OnInit, OnDestroy {
     return this.episodioActivo.esSoloLectura();
   }
 
+  /** Solo el autor del registro (o un rol global) puede editarlo o eliminarlo. */
+  puedeGestionar(usuarioId: number): boolean {
+    return !this.soloLectura && this.propiedadRegistro.puedeGestionar(usuarioId);
+  }
+
   /** Solo historia clínica muestra siempre el bloque de datos; el resto usa la ficha plegable. */
   get seccionConDatosPaciente(): boolean {
     return this.seccionActiva === 'historia-clinica';
@@ -263,6 +271,7 @@ export class Evaluacion implements OnInit, OnDestroy {
 
     return {
       id: examen.id,
+      usuarioId: examen.usuarioId,
       parteCuerpoId: examen.parteCuerpoId,
       parteCuerpo: examen.parteCuerpoNombre,
       descripcion: examen.descripcion,

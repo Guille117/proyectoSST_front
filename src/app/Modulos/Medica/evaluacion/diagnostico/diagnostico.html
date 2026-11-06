@@ -81,7 +81,7 @@
                 <td class="celda_izquierda">{{ adicional.descripcion }}</td>
                 <td class="celda_centrada">
                   <div class="acciones-fila">
-                    @if (!soloLectura) {
+                    @if (puedeGestionar(adicional.usuarioId)) {
                     <button
                       type="button"
                       class="iconEditar"

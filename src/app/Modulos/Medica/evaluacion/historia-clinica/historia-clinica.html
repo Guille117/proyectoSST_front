@@ -61,7 +61,7 @@
           Cancelar
         </button>
       }
-      @if (!modoEdicion) {
+      @if (!modoEdicion && puedeGestionar(usuarioIdHistoriaActual)) {
         <button
           type="button"
           class="btn _editar"

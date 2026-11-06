@@ -364,7 +364,7 @@
           </div>
 
           <!-- Menú de opciones de la tarjeta: se despliega sobre ella sin cambiar su tamaño -->
-          @if (!soloLectura) {
+          @if (puedeGestionar(indicacion.usuarioId)) {
           <button
             type="button"
             class="indicacion-menu-trigger"
@@ -514,7 +514,7 @@
         }
 
         <!-- Menú de opciones: se dibuja al final de la tarjeta y flota sobre ella -->
-        @if (menuIndicacionAbierta === indicacion.id && !soloLectura) {
+        @if (menuIndicacionAbierta === indicacion.id && puedeGestionar(indicacion.usuarioId)) {
           <div
             class="indicacion-menu"
             role="menu"

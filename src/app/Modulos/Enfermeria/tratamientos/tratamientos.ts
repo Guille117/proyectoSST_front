@@ -18,6 +18,7 @@ import { ArchivoVisor } from '../../../shared/visor-archivos/visor-archivos.inte
 import { ModalService } from '../../../modal-principal/modal-service';
 import { TabSwitch } from '../../../shared/tab-switch/tab-switch';
 import { AuthService } from '../../Auth/data/auth-service';
+import { PropiedadRegistroService } from '../../Auth/data/propiedad-registro-service';
 import { DatosPaciente } from '../../Medica/datos-paciente/datos-paciente';
 import { EpisodioActivoService } from '../../Medica/data/episodio-activo-service';
 import { IndicacionCuidadoService } from '../../Medica/indicaciones/cuidados/data/cuidado-service';
@@ -118,6 +119,7 @@ interface IndicacionConMetaVista extends IndicacionTratamientoVista {
 /** Aplicación registrada de un medicamento o atención en el historial de la tarjeta. */
 interface AplicacionMedicamentoVista {
   id: number;
+  usuarioId: number;
   numero: number;
   estado: EstadoAplicacion;
   fechaHoraProgramada: string;
@@ -232,6 +234,7 @@ interface MedicamentoSolicitadoVista {
 export class Tratamientos implements OnInit, OnDestroy {
   private readonly popUps = inject(PopUps);
   private readonly authService = inject(AuthService);
+  private readonly propiedadRegistro = inject(PropiedadRegistroService);
   private readonly episodioActivo = inject(EpisodioActivoService);
   private readonly servicioProcedimientos = inject(ProcedimientoMedicoService);
   private readonly salidas = inject(SalidasService);
@@ -425,6 +428,11 @@ export class Tratamientos implements OnInit, OnDestroy {
   /** El episodio es un historial cerrado: se consulta, pero no se registran cambios. */
   get soloLectura(): boolean {
     return this.episodioActivo.esSoloLectura();
+  }
+
+  /** Solo el autor del registro (o un rol global) puede editarlo o eliminarlo. */
+  puedeGestionar(usuarioId: number): boolean {
+    return !this.soloLectura && this.propiedadRegistro.puedeGestionar(usuarioId);
   }
 
   /** Datos de la sección activa que se muestran en el listado. */
@@ -1916,6 +1924,7 @@ export class Tratamientos implements OnInit, OnDestroy {
   ): AplicacionMedicamentoVista {
     return {
       id: respuesta.id,
+      usuarioId: respuesta.usuarioId,
       numero: indice + 1,
       estado: respuesta.estado === 'ADMINISTRADO' ? 'administrado' : 'noAdministrado',
       fechaHoraProgramada: respuesta.fechaHoraProgramada,
@@ -1944,6 +1953,7 @@ export class Tratamientos implements OnInit, OnDestroy {
 
     return {
       id: respuesta.id,
+      usuarioId: respuesta.usuarioId,
       numero: indice + 1,
       estado: respuesta.estado === 'REALIZADO' ? 'administrado' : 'noAdministrado',
       fechaHoraProgramada: respuesta.fechaHoraProgramada,

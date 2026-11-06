@@ -34,6 +34,33 @@
 </div>
 
 @if (contador === 0) {
+	@if (soloDatosPersonales) {
+		<div class="fila">
+			<div class="control-medico">
+				<app-campo-validado [label]="'Médicos asignados'" [fieldId]="'medicosAsignados'" [required]="true" [showError]="!!(medicoControlSinEpisodio.touched && medicoControlSinEpisodio.invalid)" [errorMessage]="'Debe seleccionar al menos un médico'">
+					<mat-select
+						[(ngModel)]="medicosSeleccionados"
+						name="medicosAsignados"
+						[disabled]="guardando"
+						required
+						multiple
+						#medicoControlSinEpisodio="ngModel"
+						[class.input-invalid]="medicoControlSinEpisodio.touched && medicoControlSinEpisodio.invalid"
+						placeholder="Seleccione uno o varios médicos"
+						panelClass="panel-medicos"
+					>
+						<mat-select-trigger>{{ nombresMedicosSeleccionados }}</mat-select-trigger>
+						@for (medico of medicos; track medico.id) {
+							<mat-option [value]="medico">
+								<strong>Dr. {{ medico.nombreCompleto }}</strong>
+								<span class="especialidad-medico"> - {{ medico.especialidad }}</span>
+							</mat-option>
+						}
+					</mat-select>
+				</app-campo-validado>
+			</div>
+		</div>
+	}
 	@if (modoBusqueda) {
 		<div class="resultados-paciente">
 			<p class="resultados-titulo">Resultados de la búsqueda</p>
@@ -214,28 +241,28 @@
 			</div>
 
 			<div class="control-medico">
-				<app-campo-validado [label]="'Médico asignado'" [fieldId]="'medicoAtencion'" [required]="true" [showError]="!!(medicoControl.touched && medicoControl.invalid)" [errorMessage]="'Debe seleccionar un médico'">
+				<app-campo-validado [label]="'Médicos asignados'" [fieldId]="'medicoAtencion'" [required]="true" [showError]="!!(medicoControl.touched && medicoControl.invalid)" [errorMessage]="'Debe seleccionar al menos un médico'">
 				<mat-select
-					[(ngModel)]="medicoSeleccionado"
-					name="medicoSeleccionado"
+					[(ngModel)]="medicosSeleccionados"
+					name="medicosSeleccionados"
 					[disabled]="guardando"
 					required
+					multiple
 					#medicoControl="ngModel"
 					[class.input-invalid]="medicoControl.touched && medicoControl.invalid"
-					placeholder="Seleccione un médico"
+					placeholder="Seleccione uno o varios médicos"
 					panelClass="panel-medicos"
 				>
 					<mat-select-trigger>
-						Dr. {{ medicoSeleccionado?.nombreCompleto ?? 'Seleccione un médico' }}
+						{{ nombresMedicosSeleccionados }}
 					</mat-select-trigger>
-					<mat-option [value]="null">Seleccione un médico</mat-option>
 					@for (medico of medicos; track medico.id) {
 						<mat-option [value]="medico">
 							<strong>Dr. {{ medico.nombreCompleto }}</strong>
 							<span class="especialidad-medico"> - {{ medico.especialidad }}</span>
 						</mat-option>
 					}
-					</mat-select>
+				</mat-select>
 					</app-campo-validado>
 				</div>
 		</div>

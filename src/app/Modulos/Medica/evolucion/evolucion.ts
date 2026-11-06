@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { finalize, firstValueFrom, Subscription, TimeoutError, timeout } from 'rxjs';
 import { PopUps } from '../../../shared/popUps/popUpsService';
 import { AuthService } from '../../Auth/data/auth-service';
+import { PropiedadRegistroService } from '../../Auth/data/propiedad-registro-service';
 import { EpisodioActivoService } from '../data/episodio-activo-service';
 import { DatosPaciente } from '../datos-paciente/datos-paciente';
 import {
@@ -29,6 +30,7 @@ type FiltroEvolucion = 'activas' | 'eliminadas';
 /** Evolución registrada en el episodio: quién la escribió, cuándo y su contenido clínico. */
 interface EvolucionVista {
   id: number;
+  usuarioId: number;
   medico: string;
   fecha: string;
   hora: string;
@@ -67,6 +69,7 @@ export class Evolucion implements OnInit, OnDestroy {
   private readonly servicio = inject(EvolucionService);
   private readonly servicioCatalogo = inject(CatalogoService);
   private readonly authService = inject(AuthService);
+  private readonly propiedadRegistro = inject(PropiedadRegistroService);
   private readonly episodioActivo = inject(EpisodioActivoService);
   private readonly cdr = inject(ChangeDetectorRef);
 
@@ -78,6 +81,11 @@ export class Evolucion implements OnInit, OnDestroy {
   /** El episodio es un historial cerrado: se consulta, pero no se registran cambios. */
   get soloLectura(): boolean {
     return this.episodioActivo.esSoloLectura();
+  }
+
+  /** Solo el autor del registro (o un rol global) puede editarlo o eliminarlo. */
+  puedeGestionar(usuarioId: number): boolean {
+    return !this.soloLectura && this.propiedadRegistro.puedeGestionar(usuarioId);
   }
 
   /** Longitud máxima de cada cuadro del registro de la evolución. */
@@ -456,6 +464,7 @@ export class Evolucion implements OnInit, OnDestroy {
 
     return {
       id: respuesta.id,
+      usuarioId: respuesta.usuarioId,
       medico: respuesta.usuarioNombre,
       fecha: this.formatearFecha(fecha),
       hora: this.formatearHora(fecha),

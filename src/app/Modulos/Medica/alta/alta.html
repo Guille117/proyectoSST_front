@@ -327,9 +327,16 @@
         </div>
 
         <!-- Acciones del formulario: constancia a la izquierda y acciones del registro a la derecha -->
-        @if (!soloLectura || puedeAnularAlta) {
+        @if (
+          puedeEditarAlta ||
+          (!soloLectura && esRetiroVoluntario) ||
+          (puedeAnularAlta && puedeAnularAltaDe(altaExistente?.usuarioId))
+        ) {
         <div class="acciones-formulario egreso-acciones">
-          @if ((!soloLectura && esRetiroVoluntario) || puedeAnularAlta) {
+          @if (
+            (!soloLectura && esRetiroVoluntario) ||
+            (puedeAnularAlta && puedeAnularAltaDe(altaExistente?.usuarioId))
+          ) {
             <div class="egreso-acciones-grupo egreso-acciones-grupo--izquierda">
               @if (!soloLectura && esRetiroVoluntario) {
                 <!-- Acción pendiente: generará la constancia del retiro voluntario -->
@@ -338,7 +345,7 @@
                 </button>
               }
 
-              @if (puedeAnularAlta) {
+              @if (puedeAnularAlta && puedeAnularAltaDe(altaExistente?.usuarioId)) {
                 <button
                   type="button"
                   class="btn _eliminar"
@@ -351,7 +358,7 @@
             </div>
           }
 
-          @if (!soloLectura) {
+          @if (puedeEditarAlta) {
           <div class="egreso-acciones-grupo">
             <button
               type="button"
@@ -405,7 +412,7 @@
                   }
                 </span>
 
-                @if (!soloLectura) {
+                @if (puedeEditarAlta) {
                 <span class="tratamiento-card_acciones">
                   <button
                     type="button"
@@ -464,7 +471,7 @@
               <header class="tratamiento-card_encabezado">
                 <span class="tratamiento-card_nombre">{{ cuidado.nombre }}</span>
 
-                @if (!soloLectura) {
+                @if (puedeEditarAlta) {
                 <span class="tratamiento-card_acciones">
                   <button
                     type="button"

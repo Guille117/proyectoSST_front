@@ -180,7 +180,7 @@
               [attr.data-registro-id]="registro.id"
             >
               <header class="registro-encabezado">
-                @if (!soloLectura) {
+                @if (puedeGestionar(registro.usuarioId)) {
                   <button
                     type="button"
                     class="registro-menu-trigger"
@@ -231,7 +231,7 @@
               </footer>
 
               <!-- Menú de opciones: flota sobre la tarjeta y no cambia su tamaño -->
-              @if (menuRegistroAbierto === registro.id && !soloLectura) {
+              @if (menuRegistroAbierto === registro.id && puedeGestionar(registro.usuarioId)) {
                 <div
                   class="registro-menu"
                   role="menu"
@@ -418,7 +418,7 @@
                   <span class="hidrico-cantidad">{{ registro.cantidad }}<small>ml</small></span>
                 </div>
 
-                @if (!soloLectura) {
+                @if (puedeGestionar(registro.usuarioId)) {
                   <button
                     type="button"
                     class="registro-menu-trigger"
@@ -442,7 +442,7 @@
               </footer>
 
               <!-- Menú de opciones: flota sobre la tarjeta y no cambia su tamaño -->
-              @if (menuHidricoAbierto === registro.id && !soloLectura) {
+              @if (menuHidricoAbierto === registro.id && puedeGestionar(registro.usuarioId)) {
                 <div
                   class="registro-menu"
                   role="menu"
@@ -576,7 +576,7 @@
                   <span class="glucosa-tipo">{{ registro.tipo }}</span>
                 </div>
 
-                @if (!soloLectura) {
+                @if (puedeGestionar(registro.usuarioId)) {
                   <button
                     type="button"
                     class="registro-menu-trigger"
@@ -602,7 +602,7 @@
               </footer>
 
               <!-- Menú de opciones: flota sobre la tarjeta y no cambia su tamaño -->
-              @if (menuGlucosaAbierto === registro.id && !soloLectura) {
+              @if (menuGlucosaAbierto === registro.id && puedeGestionar(registro.usuarioId)) {
                 <div
                   class="registro-menu"
                   role="menu"

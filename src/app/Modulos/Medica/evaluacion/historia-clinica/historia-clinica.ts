@@ -2,6 +2,7 @@ import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { finalize, firstValueFrom, Subscription, TimeoutError, timeout } from 'rxjs';
 import { AuthService } from '../../../Auth/data/auth-service';
+import { PropiedadRegistroService } from '../../../Auth/data/propiedad-registro-service';
 import { PopUps } from '../../../../shared/popUps/popUpsService';
 import { EpisodioActivoService } from '../../data/episodio-activo-service';
 import { HistoriaClinicaService } from '../data/historia-clinica-service';
@@ -35,9 +36,15 @@ export class HistoriaClinica implements OnInit, OnDestroy {
     return this.episodioActivo.esSoloLectura();
   }
 
+  /** Solo el autor del registro (o un rol global) puede editarlo. */
+  puedeGestionar(usuarioId: number | null | undefined): boolean {
+    return !this.soloLectura && this.propiedadRegistro.puedeGestionar(usuarioId);
+  }
+
   constructor(
     private historiaClinicaService: HistoriaClinicaService,
     private authService: AuthService,
+    private propiedadRegistro: PropiedadRegistroService,
     private episodioActivo: EpisodioActivoService,
     private popUps: PopUps,
     private cdr: ChangeDetectorRef,
@@ -65,6 +72,9 @@ export class HistoriaClinica implements OnInit, OnDestroy {
 
   /** Identificador de la historia vigente; mientras sea nulo el guardado crea un registro nuevo. */
   idHistoriaActual: number | null = null;
+
+  /** Autor de la historia vigente; nulo mientras no haya un registro guardado. */
+  usuarioIdHistoriaActual: number | null = null;
 
   /** Identificadores de carga para bloquear acciones incompatibles y evitar doble clic. */
   cargando = false;
@@ -114,6 +124,7 @@ export class HistoriaClinica implements OnInit, OnDestroy {
     if (episodioId === null) {
       this.cargando = false;
       this.idHistoriaActual = null;
+      this.usuarioIdHistoriaActual = null;
       this.historiaClinica = '';
       this.historiaOriginal = '';
       this.modoEdicion = false;
@@ -137,6 +148,7 @@ export class HistoriaClinica implements OnInit, OnDestroy {
           if (this.destruido) return;
           const ultima = historias.length ? historias[historias.length - 1] : null;
           this.idHistoriaActual = ultima?.id ?? null;
+          this.usuarioIdHistoriaActual = ultima?.usuarioId ?? null;
           this.historiaClinica = ultima?.descripcion ?? '';
           this.historiaOriginal = ultima?.descripcion ?? '';
           this.estadoClinicoValor = ultima?.estadoClinicoId?.toString() ?? '';
@@ -148,6 +160,7 @@ export class HistoriaClinica implements OnInit, OnDestroy {
         error: (error) => {
           if (this.destruido) return;
           this.idHistoriaActual = null;
+          this.usuarioIdHistoriaActual = null;
           this.historiaClinica = '';
           this.historiaOriginal = '';
           this.estadoClinicoValor = '';
@@ -286,6 +299,7 @@ export class HistoriaClinica implements OnInit, OnDestroy {
         next: (respuesta) => {
           if (this.destruido) return;
           this.idHistoriaActual = respuesta.id;
+          this.usuarioIdHistoriaActual = respuesta.usuarioId;
           this.historiaClinica = respuesta.descripcion;
           this.historiaOriginal = respuesta.descripcion;
           this.estadoClinicoValor = respuesta.estadoClinicoId?.toString() ?? '';

@@ -16,6 +16,7 @@ import {
 import { TabSwitch } from '../../../shared/tab-switch/tab-switch';
 import { PopUps } from '../../../shared/popUps/popUpsService';
 import { AuthService } from '../../Auth/data/auth-service';
+import { PropiedadRegistroService } from '../../Auth/data/propiedad-registro-service';
 import { CatalogoService } from '../../Catalogos/data/serviceCatalogo';
 import { Inter_institucion } from '../../Catalogos/data/nombreInterfaz';
 import { EpisodioActivoService } from '../data/episodio-activo-service';
@@ -97,6 +98,7 @@ export class Alta implements OnInit, OnDestroy {
   private readonly servicio = inject(AltaService);
   private readonly servicioProcedimientos = inject(ProcedimientoMedicoService);
   private readonly authService = inject(AuthService);
+  private readonly propiedadRegistro = inject(PropiedadRegistroService);
   private readonly episodioActivo = inject(EpisodioActivoService);
   private readonly popUps = inject(PopUps);
   private readonly cdr = inject(ChangeDetectorRef);
@@ -112,6 +114,24 @@ export class Alta implements OnInit, OnDestroy {
   /** El episodio es un historial cerrado: se consulta, pero no se registran cambios. */
   get soloLectura(): boolean {
     return this.episodioActivo.esSoloLectura();
+  }
+
+  /** Solo el autor del alta (o un rol global) puede actualizarla. */
+  puedeGestionar(usuarioId: number): boolean {
+    return !this.soloLectura && this.propiedadRegistro.puedeGestionar(usuarioId);
+  }
+
+  /** El alta se puede anular aunque el episodio esté cerrado, dentro del plazo permitido. */
+  puedeAnularAltaDe(usuarioId: number | null | undefined): boolean {
+    return this.propiedadRegistro.puedeGestionar(usuarioId);
+  }
+
+  /** Se puede editar el alta cuando no hay una registrada o pertenece al usuario actual. */
+  get puedeEditarAlta(): boolean {
+    return (
+      !this.soloLectura &&
+      (!this.altaExistente || this.puedeGestionar(this.altaExistente.usuarioId))
+    );
   }
 
   /** Sección del egreso elegida en el panel de secciones. */

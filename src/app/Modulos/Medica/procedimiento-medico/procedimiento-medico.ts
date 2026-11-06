@@ -15,6 +15,7 @@ import { PopUps } from '../../../shared/popUps/popUpsService';
 import { TabSwitch } from '../../../shared/tab-switch/tab-switch';
 import { DatosPaciente } from '../datos-paciente/datos-paciente';
 import { AuthService } from '../../Auth/data/auth-service';
+import { PropiedadRegistroService } from '../../Auth/data/propiedad-registro-service';
 import { EpisodioActivoService } from '../data/episodio-activo-service';
 import { ProcedimientoMedicoService } from './data/procedimiento-medico-service';
 import {
@@ -64,6 +65,7 @@ interface RecursoUtilizado {
 /** Procedimiento del listado y de las tarjetas de resumen. */
 interface ProcedimientoVista {
   id: number;
+  usuarioId: number;
   /** Identificador del tipo de procedimiento en el catálogo. */
   tipoProcedimientoId: number;
   /** Título de la tarjeta: nombre del tipo de procedimiento. */
@@ -94,6 +96,7 @@ interface ProcedimientoVista {
 export class ProcedimientoMedico implements OnInit, OnDestroy {
   private readonly popUps = inject(PopUps);
   private readonly authService = inject(AuthService);
+  private readonly propiedadRegistro = inject(PropiedadRegistroService);
   private readonly servicio = inject(ProcedimientoMedicoService);
   private readonly episodioActivo = inject(EpisodioActivoService);
   private readonly cdr = inject(ChangeDetectorRef);
@@ -202,6 +205,11 @@ export class ProcedimientoMedico implements OnInit, OnDestroy {
   /** El episodio está cerrado: solo se muestran los procedimientos realizados. */
   get soloLectura(): boolean {
     return this.episodioActivo.esSoloLectura();
+  }
+
+  /** Solo el autor del registro (o un rol global) puede editarlo o eliminarlo. */
+  puedeGestionar(usuarioId: number): boolean {
+    return !this.soloLectura && this.propiedadRegistro.puedeGestionar(usuarioId);
   }
 
   /** Abre o cierra la ficha con los datos del paciente desde la pestaña lateral del bloque
@@ -890,6 +898,7 @@ export class ProcedimientoMedico implements OnInit, OnDestroy {
   private aVista(respuesta: ProcedimientoMedicoResponse): ProcedimientoVista {
     return {
       id: respuesta.id,
+      usuarioId: respuesta.usuarioId,
       tipoProcedimientoId: respuesta.tipoProcedimientoId,
       tipo: respuesta.tipoProcedimientoNombre,
       descripcion: respuesta.descripcion,

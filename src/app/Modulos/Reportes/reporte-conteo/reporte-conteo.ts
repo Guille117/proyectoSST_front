@@ -2,13 +2,16 @@ import { Component, DestroyRef, inject, OnDestroy } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
-import { Subscription } from 'rxjs';
+import { of, Subscription } from 'rxjs';
 import { ReportesService } from '../data/reportes-service';
 import { ClaveConteo, Conteo } from '../data/reportes-interfaz';
 import { GraficaBarras } from '../grafica-barras/grafica-barras';
-import { Celda, exportarExcel, exportarPdf } from '../data/reportes-export';
+import { Celda, crearExcel, crearPdf } from '../data/reportes-export';
 import { PopUps } from '../../../shared/popUps/popUpsService';
 import { CampoValidado } from '../../../shared/campo-validado/campo-validado';
+import { ModalService } from '../../../modal-principal/modal-service';
+import { VisorArchivos } from '../../../shared/visor-archivos/visor-archivos';
+import { ArchivoVisor } from '../../../shared/visor-archivos/visor-archivos.interfaz';
 
 export interface ConfigConteo {
   clave: ClaveConteo;
@@ -29,6 +32,7 @@ export class ReporteConteo implements OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly service = inject(ReportesService);
   private readonly popUps = inject(PopUps);
+  private readonly modalService = inject(ModalService);
   private readonly destroyRef = inject(DestroyRef);
   private sub?: Subscription;
 
@@ -75,19 +79,36 @@ export class ReporteConteo implements OnDestroy {
   }
 
   exportarPdf(): void {
-    exportarPdf(
+    const blob = crearPdf(
       this.config.titulo,
       [this.config.etiquetaColumna, this.config.etiquetaValor],
       this.datos.map((d) => [d.nombre, d.cantidad] as Celda[]),
     );
+    this.abrirVisor(blob, `${this.config.titulo}.pdf`, 'application/pdf');
   }
 
   exportarExcel(): void {
-    exportarExcel(
+    const blob = crearExcel(
       this.config.titulo,
       [this.config.etiquetaColumna, this.config.etiquetaValor],
       this.datos.map((d) => [d.nombre, d.cantidad] as Celda[]),
     );
+    this.abrirVisor(
+      blob,
+      `${this.config.titulo}.xlsx`,
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+  }
+
+  private abrirVisor(blob: Blob, nombre: string, tipo: string): void {
+    const archivo: ArchivoVisor = { id: nombre, nombreOriginal: nombre, tipo };
+    this.modalService.open(VisorArchivos, {
+      title: this.config.titulo,
+      modalClass: 'modal-visor-documentos',
+      archivos: [archivo],
+      indiceInicial: 0,
+      cargarArchivo: () => of(blob),
+    });
   }
 
   private hoy(): string {

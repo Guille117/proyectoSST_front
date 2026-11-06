@@ -126,7 +126,7 @@
               <span class="evolucion-titulo">Evolución clínica</span>
 
               <!-- Menú de opciones de la tarjeta: mismo despliegue del listado de indicaciones -->
-              @if (!soloLectura) {
+              @if (puedeGestionar(evolucion.usuarioId)) {
               <button
                 type="button"
                 class="evolucion-menu-trigger"
@@ -158,7 +158,7 @@
             </footer>
 
             <!-- Menú de opciones: se dibuja al final de la tarjeta y flota sobre ella -->
-            @if (menuEvolucionAbierta === evolucion.id && !soloLectura) {
+            @if (menuEvolucionAbierta === evolucion.id && puedeGestionar(evolucion.usuarioId)) {
               <div
                 class="evolucion-menu"
                 role="menu"

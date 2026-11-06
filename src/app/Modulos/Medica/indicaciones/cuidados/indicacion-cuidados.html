@@ -208,7 +208,7 @@
             <span class="indicacion-nombre">{{ cuidado.nombre }}</span>
 
             <!-- Menú de opciones de la tarjeta: se despliega sobre ella sin cambiar su tamaño -->
-            @if (!soloLectura) {
+            @if (puedeGestionar(cuidado.usuarioId)) {
             <button
               type="button"
               class="indicacion-menu-trigger"
@@ -379,7 +379,7 @@
           }
 
           <!-- Menú de opciones: se dibuja al final de la tarjeta y flota sobre ella -->
-          @if (menuIndicacionAbierta === cuidado.id && !soloLectura) {
+          @if (menuIndicacionAbierta === cuidado.id && puedeGestionar(cuidado.usuarioId)) {
             <div
               class="indicacion-menu"
               role="menu"

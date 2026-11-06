@@ -192,7 +192,7 @@
             <header class="indicacion-encabezado">
               <span class="indicacion-nombre">{{ procedimiento.tipo }}</span>
 
-              @if (!soloLectura) {
+              @if (puedeGestionar(procedimiento.usuarioId)) {
                 <button
                   type="button"
                   class="indicacion-menu-trigger"
@@ -220,7 +220,7 @@
 
             <p class="indicacion-observaciones">{{ procedimiento.descripcion }}</p>
 
-            @if (!soloLectura && menuProcedimientoAbierto === procedimiento.id) {
+            @if (puedeGestionar(procedimiento.usuarioId) && menuProcedimientoAbierto === procedimiento.id) {
               <div
                 class="indicacion-menu"
                 role="menu"

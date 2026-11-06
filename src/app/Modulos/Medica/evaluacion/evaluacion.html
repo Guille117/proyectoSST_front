@@ -145,7 +145,7 @@
             <span class="hallazgo-nombre">{{ hallazgo.parteCuerpo }}</span>
 
             <!-- Menú de opciones de la tarjeta: editar o eliminar el hallazgo -->
-            @if (!soloLectura) {
+            @if (puedeGestionar(hallazgo.usuarioId)) {
               <button
                 type="button"
                 class="hallazgo-menu-trigger"
@@ -169,7 +169,7 @@
           </footer>
 
           <!-- Menú de opciones: se dibuja al final de la tarjeta y flota sobre ella -->
-          @if (menuHallazgoAbierto === hallazgo.id && !soloLectura) {
+          @if (menuHallazgoAbierto === hallazgo.id && puedeGestionar(hallazgo.usuarioId)) {
             <div
               class="hallazgo-menu"
               role="menu"

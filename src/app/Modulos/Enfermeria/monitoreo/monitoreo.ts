@@ -11,6 +11,7 @@ import { finalize, forkJoin, Subscription, TimeoutError } from 'rxjs';
 import { PopUps } from '../../../shared/popUps/popUpsService';
 import { TabSwitch } from '../../../shared/tab-switch/tab-switch';
 import { AuthService } from '../../Auth/data/auth-service';
+import { PropiedadRegistroService } from '../../Auth/data/propiedad-registro-service';
 import { DatosPaciente } from '../../Medica/datos-paciente/datos-paciente';
 import { EpisodioActivoService } from '../../Medica/data/episodio-activo-service';
 import {
@@ -50,6 +51,7 @@ type FiltroHidrico = 'todos' | 'ingresos' | 'egresos' | 'eliminados';
 /** Registro de control hídrico listo para pintar su tarjeta del historial. */
 interface RegistroHidricoVista {
   id: number;
+  usuarioId: number;
   tipo: TipoBalance;
   via: string;
   cantidad: number;
@@ -69,6 +71,7 @@ interface FiltroHidricoVista {
 /** Registro de glucosa listo para pintar su tarjeta del historial. */
 interface RegistroGlucosaVista {
   id: number;
+  usuarioId: number;
   glucosa: number;
   tipo: string;
   observacion: string;
@@ -86,6 +89,7 @@ interface SeccionVista {
 /** Registro de signos vitales listo para pintar su tarjeta del historial. */
 interface RegistroSignosVista {
   id: number;
+  usuarioId: number;
   sistolica: number;
   diastolica: number;
   frecuenciaCardiaca: number;
@@ -114,6 +118,7 @@ interface RegistroSignosVista {
 export class Monitoreo implements OnInit, OnDestroy {
   private readonly popUps = inject(PopUps);
   private readonly authService = inject(AuthService);
+  private readonly propiedadRegistro = inject(PropiedadRegistroService);
   private readonly episodioActivo = inject(EpisodioActivoService);
   private readonly signosService = inject(SignosVitalesService);
   private readonly hidricoService = inject(ControlHidricoService);
@@ -268,6 +273,11 @@ export class Monitoreo implements OnInit, OnDestroy {
   /** El episodio es un historial cerrado: se consulta, pero no se registran cambios. */
   get soloLectura(): boolean {
     return this.episodioActivo.esSoloLectura();
+  }
+
+  /** Solo el autor del registro (o un rol global) puede editarlo o eliminarlo. */
+  puedeGestionar(usuarioId: number): boolean {
+    return !this.soloLectura && this.propiedadRegistro.puedeGestionar(usuarioId);
   }
 
   // ------------------- CARGA DEL EPISODIO -------------------
@@ -950,6 +960,7 @@ export class Monitoreo implements OnInit, OnDestroy {
 
     return {
       id: respuesta.id,
+      usuarioId: respuesta.usuarioId,
       sistolica: respuesta.sistolica,
       diastolica: respuesta.diastolica,
       frecuenciaCardiaca: respuesta.frecuenciaCardiaca,
@@ -968,6 +979,7 @@ export class Monitoreo implements OnInit, OnDestroy {
 
     return {
       id: respuesta.id,
+      usuarioId: respuesta.usuarioId,
       tipo: respuesta.tipo === 'INGRESO' ? 'ingreso' : 'egreso',
       via: respuesta.via,
       cantidad: respuesta.cantidad,
@@ -984,6 +996,7 @@ export class Monitoreo implements OnInit, OnDestroy {
 
     return {
       id: respuesta.id,
+      usuarioId: respuesta.usuarioId,
       glucosa: respuesta.glucosa,
       tipo: this.aTipoGlucosaVista(respuesta.tipo),
       observacion: respuesta.observacion ?? '',
