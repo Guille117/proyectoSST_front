@@ -34,7 +34,7 @@ describe('CatalogoGestionClinica', () => {
     servicio.actualizar1.mockReturnValue(of(null));
     servicio.cambiarEstado.mockReturnValue(of(null));
     servicio.obtenerConteoCatalogosClinica.mockReturnValue(
-      of({ partesCuerpo: 3, condicionesEgreso: 4, procedimientos: 5 }),
+      of({ partesCuerpo: 3, condicionesEgreso: 4, procedimientos: 5, estadosClinico: 2 }),
     );
     popUps.confirmarToast.mockResolvedValue(true);
     await TestBed.configureTestingModule({
@@ -54,7 +54,7 @@ describe('CatalogoGestionClinica', () => {
     expect(component).toBeTruthy();
     expect(servicio.listar).toHaveBeenCalledExactlyOnceWith('partesCuerpo', true);
     expect(fixture.nativeElement.querySelector('tbody').textContent).toContain('Parte del cuerpo 1');
-    expect(component.listaCatalogos.map(catalogo => catalogo.cantidad)).toEqual([3, 4, 5]);
+    expect(component.listaCatalogos.map(catalogo => catalogo.cantidad)).toEqual([3, 4, 5, 2]);
   });
 
   it.each([
@@ -142,10 +142,10 @@ describe('CatalogoGestionClinica', () => {
     component.obtenerConteoCatalogos();
     actual.next(registros(2));
     anterior.next(registros(1));
-    conteoActual.next({ partesCuerpo: 12, condicionesEgreso: 20, procedimientos: 30 });
-    conteoAnterior.next({ partesCuerpo: 1, condicionesEgreso: 2, procedimientos: 3 });
+    conteoActual.next({ partesCuerpo: 12, condicionesEgreso: 20, procedimientos: 30, estadosClinico: 8 });
+    conteoAnterior.next({ partesCuerpo: 1, condicionesEgreso: 2, procedimientos: 3, estadosClinico: 4 });
     expect(component.datos.length).toBe(2);
-    expect(component.listaCatalogos.map(catalogo => catalogo.cantidad)).toEqual([12, 20, 30]);
+    expect(component.listaCatalogos.map(catalogo => catalogo.cantidad)).toEqual([12, 20, 30, 8]);
     expect(anterior.observed).toBe(false);
     expect(conteoAnterior.observed).toBe(false);
     fixture.destroy();

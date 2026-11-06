@@ -1,25 +1,57 @@
-<!-- Cuidados indicados: registro del cuidado y listado con el filtro por estado -->
-<section class="panel panel-seccion" aria-labelledby="tituloCuidados">
-  <h3 class="panel-titulo indicacion-titulo" id="tituloCuidados">Cuidados</h3>
+<!-- Atenciones: registro del cuidado o del monitoreo y listado con el filtro por estado -->
+<section class="panel panel-seccion" aria-labelledby="tituloAtenciones">
+  <div class="indicacion-cabecera">
+    <h3 class="panel-titulo indicacion-titulo" id="tituloAtenciones">Atenciones</h3>
+
+    <div class="indicacion-cabecera-switch" role="group" aria-label="Tipo de atención">
+      <app-tab-switch
+        op1="Cuidados"
+        op2="Monitoreo"
+        tabindex="0"
+        [mostrarActivos]="tipoAtencion === 'cuidado'"
+        (opcionCambiada)="cambiarTipoAtencion($event)"
+        (keydown.arrowleft)="cambiarTipoAtencion(true)"
+        (keydown.arrowright)="cambiarTipoAtencion(false)"
+      ></app-tab-switch>
+    </div>
+  </div>
 
   @if (!soloLectura) {
   <form class="indicacion-form" (ngSubmit)="agregarCuidado()">
-    <!-- Nombre del cuidado y su frecuencia: la frecuencia solo admite números -->
+    <!-- Nombre del cuidado o tipo de monitoreo, y su frecuencia -->
     <div class="indicacion-fila">
       <div class="indicacion-campo indicacion-campo--ancho">
-        <label class="indicacion-etiqueta" for="nombreCuidado">
-          Nombre de cuidado<span class="indicacion-obligatorio" aria-hidden="true">*</span>
-        </label>
-        <input
-          class="indicacion-input"
-          id="nombreCuidado"
-          name="nombreCuidado"
-          type="text"
-          placeholder="Ej. Cambio de posición"
-          maxlength="200"
-          aria-required="true"
-          [(ngModel)]="nombreCuidado"
-        />
+        @if (esMonitoreo) {
+          <label class="indicacion-etiqueta" for="tipoMonitoreo">
+            Tipo de monitoreo<span class="indicacion-obligatorio" aria-hidden="true">*</span>
+          </label>
+          <select
+            class="indicacion-input"
+            id="tipoMonitoreo"
+            name="tipoMonitoreo"
+            aria-required="true"
+            [(ngModel)]="nombreCuidado"
+          >
+            <option value="">Seleccionar...</option>
+            @for (tipo of tiposMonitoreo; track tipo) {
+              <option [value]="tipo">{{ tipo }}</option>
+            }
+          </select>
+        } @else {
+          <label class="indicacion-etiqueta" for="nombreCuidado">
+            Nombre de cuidado<span class="indicacion-obligatorio" aria-hidden="true">*</span>
+          </label>
+          <input
+            class="indicacion-input"
+            id="nombreCuidado"
+            name="nombreCuidado"
+            type="text"
+            placeholder="Ej. Cambio de posición"
+            maxlength="200"
+            aria-required="true"
+            [(ngModel)]="nombreCuidado"
+          />
+        }
       </div>
 
       <div class="indicacion-campo">
@@ -41,22 +73,8 @@
       </div>
     </div>
 
-    <!-- Fecha de inicio, duración y tipo de duración: la vigencia del cuidado en una sola fila -->
+    <!-- Duración, tipo de duración y fecha de inicio: la vigencia del cuidado en una sola fila -->
     <div class="indicacion-fila">
-      <div class="indicacion-campo">
-        <label class="indicacion-etiqueta" for="fechaInicioCuidado">
-          Fecha y hora de inicio<span class="indicacion-obligatorio" aria-hidden="true">*</span>
-        </label>
-        <input
-          class="indicacion-input"
-          id="fechaInicioCuidado"
-          name="fechaInicioCuidado"
-          type="datetime-local"
-          aria-required="true"
-          [(ngModel)]="fechaInicioCuidado"
-        />
-      </div>
-
       <div class="indicacion-campo">
         <label class="indicacion-etiqueta" for="duracionCuidado">
           Duración
@@ -93,6 +111,20 @@
             <option [value]="opcion.id">{{ opcion.nombre }}</option>
           }
         </select>
+      </div>
+
+      <div class="indicacion-campo">
+        <label class="indicacion-etiqueta" for="fechaInicioCuidado">
+          Fecha y hora de inicio<span class="indicacion-obligatorio" aria-hidden="true">*</span>
+        </label>
+        <input
+          class="indicacion-input"
+          id="fechaInicioCuidado"
+          name="fechaInicioCuidado"
+          type="datetime-local"
+          aria-required="true"
+          [(ngModel)]="fechaInicioCuidado"
+        />
       </div>
     </div>
 
@@ -133,9 +165,9 @@
   }
 </section>
 
-<!-- Cuidados indicados en el episodio actual -->
-<section class="panel panel-indicados" aria-labelledby="tituloCuidadosIndicados">
-  <h3 class="panel-titulo indicacion-titulo" id="tituloCuidadosIndicados">Cuidados indicados</h3>
+<!-- Atenciones indicadas en el episodio actual -->
+<section class="panel panel-indicados" aria-labelledby="tituloAtencionesIndicadas">
+  <h3 class="panel-titulo indicacion-titulo" id="tituloAtencionesIndicadas">Atenciones indicadas</h3>
 
   <!-- Filtros del listado: cada opción muestra los cuidados que están en un estado -->
   <div class="indicados-filtros" role="group" aria-label="Filtrar cuidados indicados por estado">

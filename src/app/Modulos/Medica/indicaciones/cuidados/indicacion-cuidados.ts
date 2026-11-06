@@ -3,6 +3,7 @@ import { ChangeDetectorRef, Component, OnDestroy, OnInit, inject } from '@angula
 import { FormsModule } from '@angular/forms';
 import { finalize, forkJoin, map, Subscription, TimeoutError } from 'rxjs';
 import { PopUps } from '../../../../shared/popUps/popUpsService';
+import { TabSwitch } from '../../../../shared/tab-switch/tab-switch';
 import { AuthService } from '../../../Auth/data/auth-service';
 import { EpisodioActivoService } from '../../data/episodio-activo-service';
 import {
@@ -18,12 +19,16 @@ import {
   TipoDuracionCuidadoApi,
 } from './data/cuidadoInterfaz';
 import { IndicacionCuidadoService } from './data/cuidado-service';
+import { CONTROLES_MONITOREO, controlDeNombre } from './data/monitoreo';
 import { RegistrosEnfermeriaService } from '../../../Enfermeria/data/registrosEnfermeriaService';
 import { EjecucionCuidadoResponse } from '../../../Enfermeria/data/registrosEnfermeriaInterfaz';
 
 /* Tipos locales de la vista: traducen el contrato del backend al lenguaje de las tarjetas. */
 /** Colores de acento lateral de la tarjeta del cuidado; describen su estado en el listado. */
 type TonoIndicacion = 'verde' | 'rojo' | 'naranja';
+
+/** Pestaña del registro de atención: cuidado de nombre libre o monitoreo de un tipo. */
+type TipoAtencion = 'cuidado' | 'monitoreo';
 
 /** Estados en los que puede quedar un cuidado visto en el listado. */
 type EstadoCuidado = 'enProceso' | 'completado' | 'eliminado';
@@ -77,13 +82,13 @@ interface FormularioCuidadoOriginal {
 }
 
 /**
- * Sección de cuidados de las indicaciones médicas: registro del cuidado con su frecuencia, su
- * duración y sus observaciones, y listado de los cuidados indicados en el episodio. Las operaciones
- * se guardan contra el backend; el episodio y el usuario salen del contexto de la sesión.
+ * Sección de atenciones de las indicaciones médicas: registro del cuidado o del monitoreo con su
+ * frecuencia, su duración y sus observaciones, y listado de las atenciones indicadas en el episodio.
+ * Las operaciones se guardan contra el backend; el episodio y el usuario salen de la sesión.
  */
 @Component({
   selector: 'app-indicacion-cuidados',
-  imports: [FormsModule, NgClass],
+  imports: [FormsModule, NgClass, TabSwitch],
   templateUrl: './indicacion-cuidados.html',
   styleUrl: './indicacion-cuidados.scss',
   host: {
@@ -108,6 +113,12 @@ export class IndicacionCuidados implements OnInit, OnDestroy {
   get soloLectura(): boolean {
     return this.episodioActivo.esSoloLectura();
   }
+
+  /** Pestaña activa del registro: cuidado de nombre libre o monitoreo de un tipo. */
+  tipoAtencion: TipoAtencion = 'cuidado';
+
+  /** Tipos de monitoreo que ofrece el desplegable de la pestaña Monitoreo. */
+  readonly tiposMonitoreo = CONTROLES_MONITOREO.map((control) => control.nombre);
 
   /** Campos del formulario del cuidado: nombre, frecuencia, duración y observaciones. */
   nombreCuidado = '';
@@ -178,6 +189,11 @@ export class IndicacionCuidados implements OnInit, OnDestroy {
   }
 
   // ------------------- CONSULTAS PARA LA VISTA -------------------
+  /** Verdadero cuando la pestaña activa es Monitoreo: el nombre se elige de una lista. */
+  get esMonitoreo(): boolean {
+    return this.tipoAtencion === 'monitoreo';
+  }
+
   /** El botón Guardar del cuidado se habilita con el nombre del cuidado escrito. */
   get hayCuidado(): boolean {
     return this.nombreCuidado.trim().length > 0;
@@ -340,6 +356,17 @@ export class IndicacionCuidados implements OnInit, OnDestroy {
     this.cargarCuidados();
   }
 
+  // ------------------- PESTAÑA DE ATENCIÓN -------------------
+  /**
+   * Conmuta entre el registro de un cuidado y el de un monitoreo. Limpia el nombre capturado para
+   * no arrastrar un valor que no pertenece a la lista del otro modo.
+   */
+  cambiarTipoAtencion(esCuidado: boolean): void {
+    this.tipoAtencion = esCuidado ? 'cuidado' : 'monitoreo';
+    this.nombreCuidado = '';
+    this.cdr.markForCheck();
+  }
+
   // ------------------- MENÚ DE LA TARJETA -------------------
   /** Muestra u oculta el menú de opciones de la tarjeta pulsada. */
   alternarMenuIndicacion(id: number): void {
@@ -486,6 +513,7 @@ export class IndicacionCuidados implements OnInit, OnDestroy {
 
     this.cerrarMenuIndicacion();
     this.cuidadoEnEdicion = cuidado.id;
+    this.tipoAtencion = controlDeNombre(cuidado.nombre) ? 'monitoreo' : 'cuidado';
     this.nombreCuidado = cuidado.nombre;
     this.frecuenciaCuidado = cuidado.frecuencia;
     this.duracionTipoCuidado = cuidado.duracionTipo;

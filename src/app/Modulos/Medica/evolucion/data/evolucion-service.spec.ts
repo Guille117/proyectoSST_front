@@ -16,6 +16,7 @@ describe('EvolucionService', () => {
     planMedico: 'Continuar tratamiento.',
     episodioId: 1,
     usuarioId: 2,
+    estadoClinicoId: null,
   };
 
   beforeEach(() => {

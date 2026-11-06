@@ -15,6 +15,37 @@
       placeholder="Escribe la historia clínica del paciente..."
     ></textarea>
 
+    <!-- Estado clínico del episodio: select del catálogo compartido, con opción "Otro" para crear uno nuevo -->
+    <div class="historia-estado-clinico">
+      <label class="historia-label" for="estadoClinico">Estado clínico</label>
+
+      @if (mostrandoOtroEstado) {
+        <app-opcion-otro
+          #estadoOtro
+          [placeholder]="'Escribe el estado clínico'"
+          [creando]="creandoEstado"
+          (confirmar)="crearEstadoClinico($event)"
+          (cancelar)="cancelarEstadoClinico()"
+        ></app-opcion-otro>
+      } @else {
+        <select
+          class="historia-campo"
+          id="estadoClinico"
+          name="estadoClinico"
+          [disabled]="soloLectura || !modoEdicion"
+          [(ngModel)]="estadoClinicoValor"
+          (ngModelChange)="alElegirEstadoClinico($event)"
+        >
+          <option value="" disabled>Seleccione el estado clínico</option>
+
+          @for (estado of estadosClinico; track estado.id) {
+            <option [value]="estado.id">{{ estado.nombre }}</option>
+          }
+          <option [value]="opcionOtroId">Otro</option>
+        </select>
+      }
+    </div>
+
     <!-- Acciones del cuadro: sin historia registrada se captura directamente, por lo que "Editar"
          solo aparece cuando ya existe un registro que habilitar y "Cancelar" solo mientras se edita
          ese registro registrado, para descartar los cambios y volver al estado inicial -->

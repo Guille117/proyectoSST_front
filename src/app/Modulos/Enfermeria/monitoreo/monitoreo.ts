@@ -6,6 +6,7 @@ import {
   inject,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute, Router } from '@angular/router';
 import { finalize, forkJoin, Subscription, TimeoutError } from 'rxjs';
 import { PopUps } from '../../../shared/popUps/popUpsService';
 import { TabSwitch } from '../../../shared/tab-switch/tab-switch';
@@ -32,6 +33,13 @@ import { SignosVitalesService } from './data/signos-vitales-service';
 
 /** Secciones del monitoreo de enfermería. */
 type SeccionMonitoreo = 'signos' | 'hidrico' | 'glucosa';
+
+/** Atención de control que se está registrando desde Indicaciones médicas. */
+interface ContextoControl {
+  cuidadoId: number;
+  seccion: SeccionMonitoreo;
+  fechaHoraProgramada: string | null;
+}
 
 /** Tipo de registro del control hídrico. */
 type TipoBalance = 'ingreso' | 'egreso';
@@ -110,6 +118,8 @@ export class Monitoreo implements OnInit, OnDestroy {
   private readonly signosService = inject(SignosVitalesService);
   private readonly hidricoService = inject(ControlHidricoService);
   private readonly glucosaService = inject(GlucosaService);
+  private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
   private readonly cdr = inject(ChangeDetectorRef);
 
   private peticionSignos?: Subscription;
@@ -121,6 +131,9 @@ export class Monitoreo implements OnInit, OnDestroy {
   // ------------------- ESTADO DE LA VISTA -------------------
   /** Sección del rail que se muestra en el área central. */
   seccionActiva: SeccionMonitoreo = 'signos';
+
+  /** Control de Indicaciones médicas que se está registrando; null fuera de ese flujo. */
+  private contextoControl: ContextoControl | null = null;
 
   /** La ficha con los datos del paciente está desplegada; la abre su pestaña lateral. */
   pacienteAbierto = false;
@@ -217,7 +230,31 @@ export class Monitoreo implements OnInit, OnDestroy {
   registrosGlucosa: RegistroGlucosaVista[] = [];
 
   ngOnInit(): void {
+    this.cargarContextoControl();
     this.cargarTodo();
+  }
+
+  /** Recupera la atención de control que llega desde Indicaciones médicas. */
+  private cargarContextoControl(): void {
+    const params = this.route.snapshot.queryParamMap;
+    const seccion = params.get('seccion');
+    const cuidadoId = Number(params.get('cuidadoId'));
+
+    if (
+      !seccion ||
+      !['signos', 'hidrico', 'glucosa'].includes(seccion) ||
+      !Number.isInteger(cuidadoId) ||
+      cuidadoId <= 0
+    ) {
+      return;
+    }
+
+    this.seccionActiva = seccion as SeccionMonitoreo;
+    this.contextoControl = {
+      cuidadoId,
+      seccion: this.seccionActiva,
+      fechaHoraProgramada: params.get('fechaHoraProgramada'),
+    };
   }
 
   ngOnDestroy(): void {
@@ -377,6 +414,10 @@ export class Monitoreo implements OnInit, OnDestroy {
   // ------------------- SECCIONES Y FICHA DEL PACIENTE -------------------
   /** Muestra la sección pulsada y cierra el menú que hubiera abierto. */
   seleccionarSeccion(id: SeccionMonitoreo): void {
+    if (this.contextoControl && this.contextoControl.seccion !== id) {
+      this.contextoControl = null;
+    }
+
     this.seccionActiva = id;
     this.cerrarMenuRegistro();
     this.cerrarMenuHidrico();
@@ -424,6 +465,8 @@ export class Monitoreo implements OnInit, OnDestroy {
       observacion: this.observacion.trim() || null,
       episodioId: contexto.episodioId,
       usuarioId: contexto.usuarioId,
+      cuidadoId: this.contextoControl?.cuidadoId ?? null,
+      fechaHoraProgramada: this.contextoControl?.fechaHoraProgramada ?? null,
     };
 
     this.guardando = true;
@@ -443,7 +486,14 @@ export class Monitoreo implements OnInit, OnDestroy {
       )
       .subscribe({
         next: () => {
+          const control = this.contextoControl;
           this.limpiarFormulario();
+
+          if (control) {
+            this.volverAIndicaciones(control);
+            return;
+          }
+
           this.popUps.exito('Signos vitales registrados exitosamente.');
           this.recargarSignos();
         },
@@ -528,6 +578,8 @@ export class Monitoreo implements OnInit, OnDestroy {
       descripcion: this.descripcionHidrica.trim(),
       episodioId: contexto.episodioId,
       usuarioId: contexto.usuarioId,
+      cuidadoId: this.contextoControl?.cuidadoId ?? null,
+      fechaHoraProgramada: this.contextoControl?.fechaHoraProgramada ?? null,
     };
 
     this.guardando = true;
@@ -547,7 +599,14 @@ export class Monitoreo implements OnInit, OnDestroy {
       )
       .subscribe({
         next: () => {
+          const control = this.contextoControl;
           this.limpiarFormularioHidrico();
+
+          if (control) {
+            this.volverAIndicaciones(control);
+            return;
+          }
+
           this.popUps.exito('Registro hídrico guardado exitosamente.');
           this.recargarHidrico();
         },
@@ -618,6 +677,8 @@ export class Monitoreo implements OnInit, OnDestroy {
       observacion: this.observacionGlucosa.trim() || null,
       episodioId: contexto.episodioId,
       usuarioId: contexto.usuarioId,
+      cuidadoId: this.contextoControl?.cuidadoId ?? null,
+      fechaHoraProgramada: this.contextoControl?.fechaHoraProgramada ?? null,
     };
 
     this.guardando = true;
@@ -637,7 +698,14 @@ export class Monitoreo implements OnInit, OnDestroy {
       )
       .subscribe({
         next: () => {
+          const control = this.contextoControl;
           this.limpiarFormularioGlucosa();
+
+          if (control) {
+            this.volverAIndicaciones(control);
+            return;
+          }
+
           this.popUps.exito('Glucosa registrada exitosamente.');
           this.recargarGlucosa();
         },
@@ -812,6 +880,18 @@ export class Monitoreo implements OnInit, OnDestroy {
   }
 
   // ------------------- APOYO -------------------
+  /** Vuelve a Indicaciones médicas conservando la atención que originó el control. */
+  private volverAIndicaciones(control: ContextoControl): void {
+    this.popUps.exito('Control registrado y vinculado a la atención.');
+    this.router.navigate(['/enfermeria', 'tratamientos'], {
+      queryParams: {
+        seccion: 'cuidados',
+        indicacionId: control.cuidadoId,
+        fechaHoraProgramada: control.fechaHoraProgramada,
+      },
+    });
+  }
+
   /** Contexto obligatorio para registrar cualquier dato de Enfermería. */
   private contexto(): { episodioId: number; usuarioId: number } | null {
     const episodioId = this.episodioActivo.obtener();

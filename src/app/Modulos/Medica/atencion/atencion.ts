@@ -50,6 +50,8 @@ interface PacienteAtencionVista {
   ubicacion: string;
   diagnostico: string;
   fechaIngreso: string;
+  /** Nombre del estado clínico vigente del episodio, si lo tiene. */
+  estadoClinicoNombre: string | null;
   /** El paciente viene del listado de altas recientes y su episodio ya está cerrado. */
   esAlta: boolean;
   /** Datos del egreso cuando el paciente viene del listado de altas recientes. */
@@ -614,6 +616,7 @@ export class Atencion implements OnInit, OnDestroy {
       ubicacion: '',
       diagnostico: alta.diagnosticoEgreso,
       fechaIngreso: this.formatearFecha(fecha),
+      estadoClinicoNombre: null,
       esAlta: true,
       egreso: {
         tipoAlta: alta.tipoAlta,
@@ -658,6 +661,7 @@ export class Atencion implements OnInit, OnDestroy {
       diagnostico: '',
       tipoAtencion: paciente.tipoTratamiento,
       esAlta: false,
+      estadoClinicoNombre: paciente.estadoClinicoNombre ?? null,
       egreso: null,
       ...detalle,
     };

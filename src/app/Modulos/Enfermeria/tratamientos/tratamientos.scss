@@ -106,6 +106,33 @@ app-datos-paciente {
   white-space: nowrap;
 }
 
+/* Registro del control: blanco con borde azul y azul al pasar el puntero o pulsarlo. */
+.btn.btn-registrar-control {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 42px;
+  margin-bottom: 0;
+  border: 1px solid var(--azulSecundario);
+  border-radius: 15px;
+  background: #fff;
+  color: var(--azulSecundario);
+  font-weight: 600;
+
+  &:hover:not(:disabled),
+  &:active:not(:disabled) {
+    border-color: var(--azulSecundario);
+    background: var(--azulSecundario);
+    color: #fff;
+  }
+
+  &:focus-visible {
+    outline: 2px solid rgba(13, 110, 253, 0.35);
+    outline-offset: 2px;
+  }
+}
+
 /* El título del formulario lateral queda por debajo del listado en jerarquía */
 .tratamientos-titulo-lateral {
   font-size: 1.2rem;

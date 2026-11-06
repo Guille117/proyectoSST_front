@@ -10,6 +10,7 @@ import { SignosVitalesService } from '../../Enfermeria/monitoreo/data/signos-vit
 import { EvolucionService } from './data/evolucion-service';
 import { EvolucionRequest, EvolucionResponse, EstadoEvolucionApi } from './data/evolucionInterfaz';
 import { Evolucion } from './evolucion';
+import { CatalogoService } from '../../Catalogos/data/serviceCatalogo';
 
 describe('Evolucion', () => {
   let component: Evolucion;
@@ -71,6 +72,8 @@ describe('Evolucion', () => {
     usuarioNombre: 'Dr. Juan Pérez',
     fecha: '2026-10-12T10:30:00',
     estado,
+    estadoClinicoId: 1,
+    estadoClinicoNombre: 'Estable',
     ...overrides,
   });
 
@@ -116,6 +119,7 @@ describe('Evolucion', () => {
         usuarioNombre: 'Dr. Juan Pérez',
         fecha: '2026-10-13T11:00:00',
         estado: 'ACTIVA',
+        estadoClinicoNombre: null,
       };
       evolucionesMock = [...evolucionesMock, nueva];
       return of(nueva);
@@ -149,6 +153,10 @@ describe('Evolucion', () => {
       imports: [Evolucion],
       providers: [
         { provide: EvolucionService, useValue: servicio },
+        {
+          provide: CatalogoService,
+          useValue: { listar: vi.fn(() => of([])), crear: vi.fn(() => of({ id: 1, nombre: 'Nuevo' })) },
+        },
         { provide: EpisodioActivoService, useValue: episodio },
         { provide: PacienteService, useValue: pacienteService },
         { provide: SignosVitalesService, useValue: signosVitalesService },
@@ -264,7 +272,7 @@ describe('Evolucion', () => {
 
   it('pide la evolución clínica y el plan médico en cuadros de texto con su límite de caracteres', () => {
     expect(campos().length).toBe(2);
-    expect(elementos<HTMLLabelElement>('.evolucion-etiqueta').length).toBe(2);
+    expect(elementos<HTMLLabelElement>('.evolucion-etiqueta').length).toBe(3);
     expect(campos()[0].id).toBe('evolucionClinica');
     expect(campos()[1].id).toBe('planMedico');
     expect(campos()[0].maxLength).toBe(component.maxCaracteres);
@@ -496,6 +504,7 @@ describe('Evolucion', () => {
       planMedico: 'Alta con control en consulta externa.',
       episodioId: 1,
       usuarioId: 2,
+      estadoClinicoId: 1,
     });
     expect(component.evoluciones.length).toBe(total);
     expect(tarjetas()[1].textContent).toContain('Paciente estable, sin dolor abdominal.');
@@ -614,6 +623,7 @@ describe('Evolucion', () => {
       planMedico: 'Alta con control en consulta externa.',
       episodioId: 1,
       usuarioId: 2,
+      estadoClinicoId: 1,
     });
     expect(component.evoluciones.length).toBe(total + 1);
     expect(tarjetas().length).toBe(total + 1);

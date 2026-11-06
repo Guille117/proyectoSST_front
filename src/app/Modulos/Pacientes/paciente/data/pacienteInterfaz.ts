@@ -106,6 +106,7 @@ export interface PacienteDetalle {
   referencia: ReferenciaDetalle | null;
   alergias: CatalogoSeleccionado[];
   enfermedades: CatalogoSeleccionado[];
+  estadoClinicoNombre?: string | null;
 }
 
 export interface PacienteResponse {
@@ -132,6 +133,7 @@ export interface PacienteResumido {
   telefono: string;
   tipoTratamiento: TipoAtencion;
   estado: boolean;
+  estadoClinicoNombre?: string | null;
 }
 
 

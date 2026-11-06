@@ -9,6 +9,10 @@ export interface ControlHidricoRequest {
   descripcion: string;
   episodioId: number;
   usuarioId: number;
+  /** Atención de control desde la que se registra el movimiento. */
+  cuidadoId?: number | null;
+  /** Hora programada de la atención que se está ejecutando. */
+  fechaHoraProgramada?: string | null;
 }
 
 /** Registro hídrico tal como lo devuelve el backend. */

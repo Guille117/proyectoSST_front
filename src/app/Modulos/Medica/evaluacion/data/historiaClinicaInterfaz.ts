@@ -2,6 +2,7 @@ export interface HistoriaClinicaRequest {
   descripcion: string;
   episodioId: number;
   usuarioId: number;
+  estadoClinicoId: number | null;
 }
 
 export interface HistoriaClinicaResponse {
@@ -12,4 +13,6 @@ export interface HistoriaClinicaResponse {
   usuarioNombre: string;
   fecha: string;
   estado: boolean;
+  estadoClinicoId: number | null;
+  estadoClinicoNombre: string | null;
 }

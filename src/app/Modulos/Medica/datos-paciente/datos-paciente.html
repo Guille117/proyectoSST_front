@@ -41,8 +41,13 @@
       } @else if (detalle; as datos) {
         <!-- Identificación del paciente -->
         <div class="ficha-paciente">
-          <h4 class="ficha-paciente-nombre">{{ datos.nombreCompleto }}</h4>
-          <p class="ficha-paciente-meta">{{ datos.codigoExpediente || '—' }}</p>
+          <div class="ficha-paciente-texto">
+            <h4 class="ficha-paciente-nombre">{{ datos.nombreCompleto }}</h4>
+            <p class="ficha-paciente-meta">{{ datos.codigoExpediente || '—' }}</p>
+          </div>
+          @if (datos.estadoClinicoNombre) {
+            <span class="ficha-estado-clinico">{{ datos.estadoClinicoNombre }}</span>
+          }
         </div>
 
         <!-- Información de la atención -->

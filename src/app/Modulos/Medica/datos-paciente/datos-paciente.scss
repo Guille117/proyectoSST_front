@@ -93,6 +93,25 @@
 /* Identificación del paciente: nombre y expediente */
 .ficha-paciente {
   margin: 0 0 4px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Etiqueta del estado clínico: esquina superior derecha de la ficha del paciente */
+.ficha-estado-clinico {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  background: #e2e8f0;
+  color: #334155;
+  font-size: 0.85rem;
+  font-weight: 600;
+  white-space: nowrap;
 }
 
 .ficha-paciente-nombre {

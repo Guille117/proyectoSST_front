@@ -7,6 +7,7 @@ export interface EvolucionRequest {
   planMedico: string;
   episodioId: number;
   usuarioId: number;
+  estadoClinicoId: number | null;
 }
 
 /** Evolución tal como la devuelve el backend. */
@@ -19,4 +20,6 @@ export interface EvolucionResponse {
   usuarioNombre: string;
   fecha: string;
   estado: EstadoEvolucionApi;
+  estadoClinicoId: number | null;
+  estadoClinicoNombre: string | null;
 }

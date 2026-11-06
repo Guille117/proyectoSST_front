@@ -1,4 +1,4 @@
-<!-- Tratamientos: rail de secciones, listado de indicaciones por estado y panel lateral -->
+<!-- Indicaciones médicas: rail de secciones, listado de indicaciones por estado y panel lateral -->
 <div
   class="tratamientos"
   [class.tratamientos--solicitud]="solicitandoMedicamento"
@@ -11,9 +11,9 @@
     (abiertoCambia)="cambiarFichaPaciente($event)"
   ></app-datos-paciente>
 
-  <!-- Rail de secciones: medicamentos, exámenes y cuidados -->
+  <!-- Rail de secciones: medicamentos, exámenes y atenciones -->
   <section class="panel panel-secciones">
-    <h3 class="panel-titulo">Tratamientos</h3>
+    <h3 class="panel-titulo">Indicaciones médicas</h3>
 
     @for (seccion of secciones; track seccion.id) {
       <button
@@ -48,7 +48,7 @@
         <h3 class="panel-titulo" id="tituloSolicitudMedicamento">Solicitar medicamento</h3>
 
         <button type="button" class="btn _cancelar" (click)="cerrarSolicitudMedicamento()">
-          Volver a tratamientos
+          Volver a indicaciones médicas
         </button>
       </header>
 
@@ -268,7 +268,7 @@
   >
     <div class="tratamientos-cabecera">
       <h3 class="panel-titulo tratamientos-titulo" id="tituloSeccionTratamiento">
-        {{ seccionActual.titulo }} indicados
+        {{ tituloListado }}
       </h3>
     </div>
 
@@ -575,7 +575,7 @@
                       }
                     </div>
 
-                    @if (!soloLectura) {
+                    @if (!soloLectura && !indicacion.esControl) {
                       <button
                         type="button"
                         class="btn _principal indicacion-solicitar"
@@ -662,7 +662,7 @@
                 [attr.id]="'aplicaciones-' + indicacion.id"
                 [hidden]="!aplicacionesAbierta(indicacion.id)"
               >
-                <table class="aplicaciones-tabla" aria-label="Aplicaciones del cuidado">
+                <table class="aplicaciones-tabla" aria-label="Aplicaciones de la atención">
                   <thead>
                     <tr>
                       <th class="aplicaciones-tabla_numero" scope="col">No.</th>
@@ -813,6 +813,17 @@
           </select>
         </div>
 
+        @if (controlSeleccionado) {
+          <button
+            type="button"
+            class="btn btn-registrar-control"
+            [disabled]="!puedeRegistrarControl"
+            (click)="registrarControl()"
+          >
+            Registrar control
+          </button>
+        }
+
         @if (seccionActiva === 'medicamentos') {
           <div class="administracion-campo">
             <label class="administracion-etiqueta" for="cantidadAdministrada">
@@ -846,16 +857,22 @@
 
         <div class="administracion-campo">
           <label class="administracion-etiqueta" for="observacionAdministracion">
-            Observación
+            {{ esControlNoRealizado ? 'Motivo' : 'Observación' }}
+            @if (esControlNoRealizado) {
+              <span class="administracion-obligatorio" aria-hidden="true">*</span>
+            }
           </label>
           <textarea
             class="administracion-input administracion-textarea"
             id="observacionAdministracion"
             name="observacionAdministracion"
+            [attr.aria-required]="esControlNoRealizado"
             [placeholder]="
-              seccionActiva === 'cuidados'
-                ? 'Observaciones del cuidado...'
-                : 'Observaciones de la administración...'
+              esControlNoRealizado
+                ? 'Motivo por el que no se realizó el control...'
+                : seccionActiva === 'cuidados'
+                  ? 'Observaciones de la atención...'
+                  : 'Observaciones de la administración...'
             "
             maxlength="2000"
             [(ngModel)]="observacionAdministracion"

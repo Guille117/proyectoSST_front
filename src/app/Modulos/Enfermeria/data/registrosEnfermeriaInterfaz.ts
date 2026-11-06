@@ -34,6 +34,9 @@ export interface EjecucionCuidadoRequest {
   estado: EstadoEjecucionCuidadoApi;
   observacion: string | null;
   usuarioId: number;
+  signosVitalesId?: number | null;
+  glucosaId?: number | null;
+  controlHidricoId?: number | null;
 }
 
 /** Ejecución de cuidado tal como la devuelve el backend. */
@@ -46,6 +49,9 @@ export interface EjecucionCuidadoResponse {
   usuarioId: number;
   usuarioNombre: string;
   fechaRegistro: string;
+  signosVitalesId?: number | null;
+  glucosaId?: number | null;
+  controlHidricoId?: number | null;
 }
 
 /** Disponibilidad en piso de un medicamento del catálogo dentro del episodio. */

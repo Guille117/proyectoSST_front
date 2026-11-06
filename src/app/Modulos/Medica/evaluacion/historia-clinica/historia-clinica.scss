@@ -55,10 +55,28 @@
   border-top: 1px solid #e4ebf5;
 }
 
+/* Fila del estado clínico: label y select (ocupa el ancho completo como el cuadro de texto) */
+.historia-estado-clinico {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 1.25rem;
+}
+
+.historia-estado-clinico .historia-campo {
+  min-height: auto;
+  height: 44px;
+  padding: 10px 14px;
+}
+
 @media (max-width: 640px) {
   .historia-campo {
     min-height: 220px;
     padding: 12px;
+  }
+
+  .historia-estado-clinico {
+    margin-top: 1rem;
   }
 
   .historia-acciones {
