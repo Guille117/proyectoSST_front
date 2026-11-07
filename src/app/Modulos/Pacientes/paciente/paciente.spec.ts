@@ -142,6 +142,8 @@ describe('Paciente', () => {
     episodioId: 101,
     usuarioId: 5,
     usuarioNombre: 'Ana López',
+    usuarioNombreCorto: 'Ana López',
+    fechaRegistro: '2026-10-10T09:55:00',
     estado: 'PENDIENTE',
     recursos: [],
     requiereAutorizacion: true,

@@ -840,7 +840,7 @@ export class IndicacionCuidados implements OnInit, OnDestroy {
   // ------------------- APOYO -------------------
   /** Traduce el cuidado del backend a los datos que pinta la tarjeta. */
   private aVista(respuesta: CuidadoResponse): CuidadoVista {
-    const fechaInicio = new Date(respuesta.fechaInicio || respuesta.fecha);
+    const fechaRegistro = new Date(respuesta.fecha);
 
     return {
       id: respuesta.id,
@@ -851,9 +851,9 @@ export class IndicacionCuidados implements OnInit, OnDestroy {
       duracionCantidad: respuesta.duracion,
       observaciones: respuesta.observacion ?? '',
       fechaInicio: respuesta.fechaInicio || respuesta.fecha,
-      fecha: this.formatearFecha(fechaInicio),
-      hora: this.formatearHora(fechaInicio),
-      medico: respuesta.usuarioNombre,
+      fecha: this.formatearFecha(fechaRegistro),
+      hora: this.formatearHora(fechaRegistro),
+      medico: respuesta.usuarioNombreCorto,
       estado: this.aEstadoVista(respuesta.estado),
     };
   }

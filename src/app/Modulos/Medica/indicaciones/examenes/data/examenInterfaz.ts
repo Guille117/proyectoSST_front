@@ -26,6 +26,7 @@ export interface ExamenResponse {
   episodioId: number;
   usuarioId: number;
   usuarioNombre: string;
+  usuarioNombreCorto: string;
   fecha: string;
   estado: EstadoExamenApi;
 }

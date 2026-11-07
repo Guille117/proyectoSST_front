@@ -51,6 +51,8 @@ export interface ProcedimientoMedicoResponse {
   episodioId: number;
   usuarioId: number;
   usuarioNombre: string;
+  usuarioNombreCorto: string;
+  fechaRegistro: string | null;
   estado: EstadoProcedimientoApi;
   recursos: RecursoProcedimientoResponse[];
   requiereAutorizacion: boolean;

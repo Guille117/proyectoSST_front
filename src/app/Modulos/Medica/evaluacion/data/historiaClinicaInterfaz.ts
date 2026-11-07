@@ -11,6 +11,7 @@ export interface HistoriaClinicaResponse {
   episodioId: number;
   usuarioId: number;
   usuarioNombre: string;
+  usuarioNombreCorto: string;
   fecha: string;
   estado: boolean;
   estadoClinicoId: number | null;

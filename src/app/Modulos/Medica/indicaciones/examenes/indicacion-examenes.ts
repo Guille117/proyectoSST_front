@@ -49,6 +49,9 @@ interface ExamenVista {
   usuarioId: number;
   nombre: string;
   observacion: string;
+  fecha: string;
+  hora: string;
+  medico: string;
   archivos: ExamenArchivoResponse[];
   /** Tiene al menos un archivo adjunto: se lista con el borde verde y el ojo. */
   disponible: boolean;
@@ -602,16 +605,38 @@ export class IndicacionExamenes implements OnInit, OnDestroy {
   /** Traduce el examen del backend a los datos que pinta la tarjeta. */
   private aVista(respuesta: ExamenResponse): ExamenVista {
     const archivos = respuesta.archivos ?? [];
+    const fecha = new Date(respuesta.fecha);
 
     return {
       id: respuesta.id,
       usuarioId: respuesta.usuarioId,
       nombre: respuesta.nombreExamen,
       observacion: respuesta.observacion ?? '',
+      fecha: this.formatearFecha(fecha),
+      hora: this.formatearHora(fecha),
+      medico: respuesta.usuarioNombreCorto?.trim() || 'Usuario del sistema',
       archivos,
       disponible: archivos.length > 0,
       estado: respuesta.estado === 'ACTIVO' ? 'activo' : 'eliminado',
     };
+  }
+
+  /** Fecha del examen en el formato corto de la tarjeta (dd/MM/yyyy). */
+  private formatearFecha(fecha: Date): string {
+    if (Number.isNaN(fecha.getTime())) return '';
+
+    const dia = `${fecha.getDate()}`.padStart(2, '0');
+    const mes = `${fecha.getMonth() + 1}`.padStart(2, '0');
+    return `${dia}/${mes}/${fecha.getFullYear()}`;
+  }
+
+  /** Hora del examen en el formato de la tarjeta (HH:mm). */
+  private formatearHora(fecha: Date): string {
+    if (Number.isNaN(fecha.getTime())) return '';
+
+    const horas = `${fecha.getHours()}`.padStart(2, '0');
+    const minutos = `${fecha.getMinutes()}`.padStart(2, '0');
+    return `${horas}:${minutos}`;
   }
 
   /** Opción del filtro de exámenes elegida en el listado. */

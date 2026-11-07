@@ -38,6 +38,7 @@ describe('HistoriaClinica', () => {
     episodioId: EPISODIO_ID,
     usuarioId: 2,
     usuarioNombre: 'Carlos Mendez',
+    usuarioNombreCorto: 'Carlos Mendez',
     fecha: '2026-10-16T09:30:00',
     estado: true,
     estadoClinicoId: 1,

@@ -19,6 +19,7 @@ describe('Diagnostico', () => {
     episodioId: 1,
     usuarioId: 2,
     usuarioNombre: 'Carlos Méndez',
+    usuarioNombreCorto: 'Carlos Méndez',
     fecha: '2026-10-16T11:00:00',
     estado: true,
   };
@@ -30,6 +31,7 @@ describe('Diagnostico', () => {
     episodioId: 1,
     usuarioId: 2,
     usuarioNombre: 'Carlos Méndez',
+    usuarioNombreCorto: 'Carlos Méndez',
     fecha: '2026-10-16T11:00:00',
     estado: true,
   };

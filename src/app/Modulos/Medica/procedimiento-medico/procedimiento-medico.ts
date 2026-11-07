@@ -75,6 +75,8 @@ interface ProcedimientoVista {
   /** Fecha y hora en formato datetime-local. */
   inicio: string;
   fin: string;
+  fechaRegistro: string;
+  horaRegistro: string;
   profesional: string;
   estado: EstadoProcedimiento;
   recursos: RecursoUtilizado[];
@@ -227,7 +229,7 @@ export class ProcedimientoMedico implements OnInit, OnDestroy {
     };
     const realizados: SeccionVista = {
       id: 'realizados',
-      titulo: 'Procedimientos realizados',
+      titulo: 'Procedimientos registrados',
       icono: 'bi-list-check',
     };
 
@@ -848,6 +850,18 @@ export class ProcedimientoMedico implements OnInit, OnDestroy {
   }
 
   /** Texto del rango de fechas y horas; si no hay fin, muestra solo el inicio. */
+  private formatearFecha(fecha: Date): string {
+    if (Number.isNaN(fecha.getTime())) return '';
+    const dosDigitos = (valor: number): string => `${valor}`.padStart(2, '0');
+    return `${dosDigitos(fecha.getDate())}/${dosDigitos(fecha.getMonth() + 1)}/${fecha.getFullYear()}`;
+  }
+
+  private formatearHora(fecha: Date): string {
+    if (Number.isNaN(fecha.getTime())) return '';
+    const dosDigitos = (valor: number): string => `${valor}`.padStart(2, '0');
+    return `${dosDigitos(fecha.getHours())}:${dosDigitos(fecha.getMinutes())}`;
+  }
+
   formatearRango(inicio: string, fin: string): string {
     const fechaInicio = new Date(inicio);
 
@@ -896,6 +910,8 @@ export class ProcedimientoMedico implements OnInit, OnDestroy {
   // ------------------- APOYO -------------------
   /** Convierte la respuesta del backend a los datos que pintan las tarjetas. */
   private aVista(respuesta: ProcedimientoMedicoResponse): ProcedimientoVista {
+    const fechaRegistro = new Date(respuesta.fechaRegistro ?? respuesta.inicio);
+
     return {
       id: respuesta.id,
       usuarioId: respuesta.usuarioId,
@@ -905,7 +921,9 @@ export class ProcedimientoMedico implements OnInit, OnDestroy {
       resultado: respuesta.resultado ?? '',
       inicio: this.aDatetimeLocal(respuesta.inicio),
       fin: this.aDatetimeLocal(respuesta.fin),
-      profesional: respuesta.usuarioNombre?.trim() || 'Médico de turno',
+      fechaRegistro: this.formatearFecha(fechaRegistro),
+      horaRegistro: this.formatearHora(fechaRegistro),
+      profesional: respuesta.usuarioNombreCorto?.trim() || 'Médico de turno',
       estado: this.aEstadoVista(respuesta.estado),
       recursos: respuesta.recursos.map((recurso) => ({
         tipo: recurso.tipo === 'MEDICAMENTO' ? 'medicamento' : 'insumo',

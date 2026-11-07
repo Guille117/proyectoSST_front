@@ -12,6 +12,7 @@ export interface NotaEnfermeriaResponse {
   episodioId: number;
   usuarioId: number;
   usuarioNombre: string;
+  usuarioNombreCorto: string;
   fecha: string;
   eliminado: boolean;
 }

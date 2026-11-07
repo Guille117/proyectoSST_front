@@ -65,10 +65,18 @@
     cursor: pointer;
     padding: 6px;
     border-radius: 8px;
-    transition: background 0.2s ease;
+    font-size: 1.7rem;
+    -webkit-text-stroke: 0.4px currentColor;
+    transition: background 0.2s ease, color 0.2s ease;
 
     &:hover {
         background: rgba(255, 255, 255, 0.15);
+        color: #ff5252;
+    }
+
+    &:active {
+        background: rgba(255, 82, 82, 0.2);
+        color: #ff5252;
     }
 }
 

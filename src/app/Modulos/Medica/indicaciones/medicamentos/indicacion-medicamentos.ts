@@ -1165,7 +1165,7 @@ export class IndicacionMedicamentos implements OnInit, OnDestroy {
 
   /** Traduce la indicación del backend a los datos que pinta la tarjeta. */
   private aVista(respuesta: MedicamentoIndicacionResponse): IndicacionMedicamentoVista {
-    const fechaInicio = new Date(respuesta.fechaInicio || respuesta.fecha);
+    const fechaRegistro = new Date(respuesta.fecha);
 
     return {
       id: respuesta.id,
@@ -1180,9 +1180,9 @@ export class IndicacionMedicamentos implements OnInit, OnDestroy {
       duracionCantidad: respuesta.duracion,
       observaciones: respuesta.observaciones ?? '',
       fechaInicio: respuesta.fechaInicio || respuesta.fecha,
-      fecha: this.formatearFecha(fechaInicio),
-      hora: this.formatearHora(fechaInicio),
-      medico: respuesta.usuarioNombre,
+      fecha: this.formatearFecha(fechaRegistro),
+      hora: this.formatearHora(fechaRegistro),
+      medico: respuesta.usuarioNombreCorto,
       estado: this.aEstadoVista(respuesta.estado),
       tono: this.tonoDe(respuesta.estado),
     };

@@ -277,7 +277,7 @@ export class Evaluacion implements OnInit, OnDestroy {
       descripcion: examen.descripcion,
       fecha: this.formatearFecha(fecha),
       hora: this.formatearHora(fecha),
-      usuario: examen.usuarioNombre,
+      usuario: examen.usuarioNombreCorto,
     };
   }
 

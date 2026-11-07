@@ -70,6 +70,7 @@ describe('Evolucion', () => {
     episodioId: 1,
     usuarioId: 2,
     usuarioNombre: 'Dr. Juan Pérez',
+    usuarioNombreCorto: 'Dr. Juan Pérez',
     fecha: '2026-10-12T10:30:00',
     estado,
     estadoClinicoId: 1,
@@ -94,6 +95,7 @@ describe('Evolucion', () => {
           'respuesta al tratamiento.',
         planMedico: 'Mantener analgesia, control de signos vitales y valorar nuevos estudios.',
         usuarioNombre: 'Dra. Ana López',
+        usuarioNombreCorto: 'Dra. Ana López',
         fecha: '2026-10-11T09:15:00',
       }),
       evolucion(3, 'ELIMINADA', {
@@ -117,6 +119,7 @@ describe('Evolucion', () => {
         ...request,
         id: 4,
         usuarioNombre: 'Dr. Juan Pérez',
+        usuarioNombreCorto: 'Dr. Juan Pérez',
         fecha: '2026-10-13T11:00:00',
         estado: 'ACTIVA',
         estadoClinicoNombre: null,

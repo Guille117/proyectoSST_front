@@ -85,6 +85,7 @@ describe('Evaluacion', () => {
           episodioId: EPISODIO_ID,
           usuarioId: 2,
           usuarioNombre: 'Enf. Ana',
+          usuarioNombreCorto: 'Enf. Ana',
           fecha: '2026-10-10T09:00:00',
           eliminado: false,
         },
@@ -110,6 +111,7 @@ describe('Evaluacion', () => {
     parteCuerpoNombre,
     usuarioId: 2,
     usuarioNombre: 'Carlos Mendez',
+    usuarioNombreCorto: 'Carlos Mendez',
     fecha: '2026-10-16T10:15:00',
     estado: true,
   });

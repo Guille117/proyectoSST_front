@@ -1831,16 +1831,16 @@ export class Tratamientos implements OnInit, OnDestroy {
     const registros = aplicaciones.map((aplicacion, indice) =>
       this.aAplicacionMedicamentoVista(aplicacion, indice),
     );
-    const fechaInicio = new Date(respuesta.fechaInicio || respuesta.fecha);
+    const fechaRegistro = new Date(respuesta.fecha);
 
     return {
       id: respuesta.id,
       estado: estadoTratamiento(programacion, registros),
       observaciones: respuesta.observaciones ?? '',
       fechaInicio: respuesta.fechaInicio || respuesta.fecha,
-      fecha: this.formatearFecha(fechaInicio),
-      hora: this.formatearHora(fechaInicio),
-      medico: respuesta.usuarioNombre,
+      fecha: this.formatearFecha(fechaRegistro),
+      hora: this.formatearHora(fechaRegistro),
+      medico: respuesta.usuarioNombreCorto,
       nombre: respuesta.medicamento,
       cantidad: respuesta.cantidad,
       unidad: respuesta.presentacion?.trim() || 'unidad',
@@ -1873,7 +1873,7 @@ export class Tratamientos implements OnInit, OnDestroy {
     const registros = ejecuciones.map((ejecucion, indice) =>
       this.aEjecucionCuidadoVista(ejecucion, indice),
     );
-    const fechaInicio = new Date(respuesta.fechaInicio || respuesta.fecha);
+    const fechaRegistro = new Date(respuesta.fecha);
     const control = controlDeNombre(respuesta.nombreCuidado);
 
     return {
@@ -1881,9 +1881,9 @@ export class Tratamientos implements OnInit, OnDestroy {
       estado: estadoTratamiento(programacion, registros),
       observaciones: respuesta.observacion ?? '',
       fechaInicio: respuesta.fechaInicio || respuesta.fecha,
-      fecha: this.formatearFecha(fechaInicio),
-      hora: this.formatearHora(fechaInicio),
-      medico: respuesta.usuarioNombre,
+      fecha: this.formatearFecha(fechaRegistro),
+      hora: this.formatearHora(fechaRegistro),
+      medico: respuesta.usuarioNombreCorto,
       nombre: respuesta.nombreCuidado,
       frecuencia: respuesta.frecuencia,
       duracionTipo: this.aDuracionVista(respuesta.tipoDuracion),
@@ -1914,7 +1914,7 @@ export class Tratamientos implements OnInit, OnDestroy {
       fechaInicio: respuesta.fecha,
       fecha: this.formatearFecha(fecha),
       hora: this.formatearHora(fecha),
-      usuario: respuesta.usuarioNombre,
+      usuario: respuesta.usuarioNombreCorto,
     };
   }
 

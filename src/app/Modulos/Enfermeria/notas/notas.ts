@@ -286,7 +286,7 @@ export class Notas implements OnInit, OnDestroy {
       texto: nota.texto,
       fecha: this.formatearFecha(fecha),
       hora: this.formatearHora(fecha),
-      usuario: nota.usuarioNombre,
+      usuario: nota.usuarioNombreCorto,
     };
   }
 

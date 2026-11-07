@@ -82,7 +82,11 @@
             @for (item of historiaClinica; track item.id) {
               <article class="resumen-card">
                 <p>{{ item.descripcion }}</p>
-                <small>{{ fechaHora(item.fecha) }} · {{ item.usuarioNombre }}</small>
+                <small class="resumen-meta">
+                  <span><i class="bi bi-calendar3" aria-hidden="true"></i>{{ fecha(item.fecha) }}</span>
+                  <span><i class="bi bi-clock" aria-hidden="true"></i>{{ hora(item.fecha) }}</span>
+                  <span><i class="bi bi-person" aria-hidden="true"></i>{{ item.usuarioNombreCorto }}</span>
+                </small>
               </article>
             }
           </div>
@@ -101,7 +105,11 @@
               <article class="resumen-card">
                 <strong>{{ item.parteCuerpoNombre }}</strong>
                 <p>{{ item.descripcion }}</p>
-                <small>{{ fechaHora(item.fecha) }} · {{ item.usuarioNombre }}</small>
+                <small class="resumen-meta">
+                  <span><i class="bi bi-calendar3" aria-hidden="true"></i>{{ fecha(item.fecha) }}</span>
+                  <span><i class="bi bi-clock" aria-hidden="true"></i>{{ hora(item.fecha) }}</span>
+                  <span><i class="bi bi-person" aria-hidden="true"></i>{{ item.usuarioNombreCorto }}</span>
+                </small>
               </article>
             }
           </div>
@@ -120,7 +128,11 @@
               <article class="resumen-card">
                 <strong>{{ tipoDiagnosticoLegible(item.tipoDiagnostico) }}</strong>
                 <p>{{ item.descripcion }}</p>
-                <small>{{ fechaHora(item.fecha) }} · {{ item.usuarioNombre }}</small>
+                <small class="resumen-meta">
+                  <span><i class="bi bi-calendar3" aria-hidden="true"></i>{{ fecha(item.fecha) }}</span>
+                  <span><i class="bi bi-clock" aria-hidden="true"></i>{{ hora(item.fecha) }}</span>
+                  <span><i class="bi bi-person" aria-hidden="true"></i>{{ item.usuarioNombreCorto }}</span>
+                </small>
               </article>
             }
           </div>
@@ -141,7 +153,11 @@
                 <p>{{ item.evolucionClinica }}</p>
                 <strong>Plan médico</strong>
                 <p>{{ item.planMedico }}</p>
-                <small>{{ fechaHora(item.fecha) }} · {{ item.usuarioNombre }}</small>
+                <small class="resumen-meta">
+                  <span><i class="bi bi-calendar3" aria-hidden="true"></i>{{ fecha(item.fecha) }}</span>
+                  <span><i class="bi bi-clock" aria-hidden="true"></i>{{ hora(item.fecha) }}</span>
+                  <span><i class="bi bi-person" aria-hidden="true"></i>{{ item.usuarioNombreCorto }}</span>
+                </small>
               </article>
             }
           </div>
@@ -490,7 +506,11 @@
             @for (item of notas; track item.id) {
               <article class="resumen-card">
                 <p>{{ item.texto }}</p>
-                <small>{{ fechaHora(item.fecha) }} · {{ item.usuarioNombre }}</small>
+                <small class="resumen-meta">
+                  <span><i class="bi bi-calendar3" aria-hidden="true"></i>{{ fecha(item.fecha) }}</span>
+                  <span><i class="bi bi-clock" aria-hidden="true"></i>{{ hora(item.fecha) }}</span>
+                  <span><i class="bi bi-person" aria-hidden="true"></i>{{ item.usuarioNombreCorto }}</span>
+                </small>
               </article>
             }
           </div>

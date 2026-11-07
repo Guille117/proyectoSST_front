@@ -38,7 +38,8 @@
 /* La tarjeta que lleva el ojo le reserva su esquina inferior derecha: como el icono flota sobre la
    tarjeta, la última línea del texto no debe pasar por debajo de él. */
 .indicacion-card:has(.examen-ojo) {
-  .indicacion-observaciones {
+  .indicacion-observaciones,
+  .indicacion-meta {
     padding-right: 2.6rem;
   }
 }

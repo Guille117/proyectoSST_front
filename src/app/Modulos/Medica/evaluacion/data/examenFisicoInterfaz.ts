@@ -13,6 +13,7 @@ export interface ExamenFisicoResponse {
   parteCuerpoNombre: string;
   usuarioId: number;
   usuarioNombre: string;
+  usuarioNombreCorto: string;
   fecha: string;
   estado: boolean;
 }

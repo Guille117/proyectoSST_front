@@ -19,6 +19,7 @@ export interface GlucosaResponse {
   episodioId: number;
   usuarioId: number;
   usuarioNombre: string;
+  usuarioNombreCorto: string;
   fecha: string;
   eliminado: boolean;
 }

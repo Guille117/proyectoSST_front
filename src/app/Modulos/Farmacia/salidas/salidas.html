@@ -369,13 +369,16 @@
                 </span>
               }
               <span>
-                {{ formatearFechaHora(solicitud.fecha) }}
+                <i class="bi bi-calendar3" aria-hidden="true"></i>
+                {{ formatearFecha(solicitud.fecha) }}
               </span>
               <span>
-                Solicitado por: {{ solicitud.solicitante || '—' }}
-                @if (solicitud.solicitantePuesto) {
-                  — {{ solicitud.solicitantePuesto }}
-                }
+                <i class="bi bi-clock" aria-hidden="true"></i>
+                {{ formatearHora(solicitud.fecha) }}
+              </span>
+              <span>
+                <i class="bi bi-person" aria-hidden="true"></i>
+                {{ solicitud.solicitanteNombreCorto || '—' }}
               </span>
             </p>
           </div>
