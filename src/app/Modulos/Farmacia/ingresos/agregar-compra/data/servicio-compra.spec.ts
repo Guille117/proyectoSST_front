@@ -140,6 +140,14 @@ describe('ServicioCompra', () => {
     peticion.flush(null);
   });
 
+  it('elimina el comprobante con DELETE en /compras/{id}/comprobante', () => {
+    service.eliminarComprobante(1).subscribe();
+
+    const peticion = httpTesting.expectOne(`${apiUrl}/1/comprobante`);
+    expect(peticion.request.method).toBe('DELETE');
+    peticion.flush(null);
+  });
+
   it('actualiza la compra con PUT multipart en /compras/{id}', async () => {
     service.actualizarCompra(1, { request, comprobante }).subscribe();
 

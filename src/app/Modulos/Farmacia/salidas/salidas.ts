@@ -80,6 +80,7 @@ interface LineaSalidaVista {
 /** Movimientos de una salida agrupados mientras no pasen más de 10 minutos entre uno y otro. */
 interface GrupoHistorial {
   fechaHora: string;
+  usuarioNombreCorto: string | null;
   movimientos: HistorialMovimiento[];
 }
 
@@ -238,7 +239,11 @@ export class Salidas implements OnInit, OnDestroy {
       if (ultimo && instante >= instanteAnterior && instante - instanteAnterior <= margenMs) {
         ultimo.movimientos.push(movimiento);
       } else {
-        grupos.push({ fechaHora: movimiento.fechaHora, movimientos: [movimiento] });
+        grupos.push({
+          fechaHora: movimiento.fechaHora,
+          usuarioNombreCorto: movimiento.usuarioNombreCorto,
+          movimientos: [movimiento],
+        });
       }
     }
 

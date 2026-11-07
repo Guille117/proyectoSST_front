@@ -1143,6 +1143,9 @@ export class Tratamientos implements OnInit, OnDestroy {
       indiceInicial: 0,
       cargarArchivo: (archivo: ArchivoVisor) =>
         this.servicioExamenes.obtenerArchivo(examen.id, Number(archivo.id)),
+      onEliminar: (archivo: ArchivoVisor) =>
+        this.servicioExamenes.eliminarArchivo(examen.id, Number(archivo.id)),
+      onCambio: () => this.cargarIndicaciones(),
     });
   }
 

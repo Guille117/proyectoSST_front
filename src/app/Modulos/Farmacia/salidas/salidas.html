@@ -422,7 +422,12 @@
             } @else {
               @for (grupo of historialAgrupado; track grupo.fechaHora) {
                 <section class="historial-grupo">
-                  <h3 class="historial-fecha">{{ formatearFechaHora(grupo.fechaHora) }}</h3>
+                  <h3 class="historial-fecha">
+                    <span>{{ formatearFechaHora(grupo.fechaHora) }}</span>
+                    @if (grupo.usuarioNombreCorto) {
+                      <span class="historial-usuario">{{ grupo.usuarioNombreCorto }}</span>
+                    }
+                  </h3>
                   @for (movimiento of grupo.movimientos; track movimiento.id) {
                     <article class="historial-item">
                       <div class="historial-detalle">

@@ -750,10 +750,20 @@
 }
 
 .historial-fecha {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
   margin: 0;
   color: #14213d;
   font-size: 1rem;
   font-weight: 700;
+}
+
+.historial-usuario {
+  color: #667085;
+  font-size: 0.9rem;
+  font-weight: 600;
 }
 
 .historial-item {
