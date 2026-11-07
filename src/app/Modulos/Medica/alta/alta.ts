@@ -48,10 +48,6 @@ import {
 } from './data/altaInterfaz';
 import { AltaService } from './data/alta-service';
 
-/** Horas durante las que se permite anular un alta después de su registro. */
-const HORAS_PARA_ANULAR_ALTA = 5;
-const MS_HORA = 60 * 60 * 1000;
-
 /* Tipos locales de la vista: traducen el contrato del backend al lenguaje de la pantalla. */
 /** Motivos de egreso que ofrece la pantalla de alta médica. */
 type SeccionAlta = 'indicacion-medica' | 'retiro-voluntario' | 'referencia-traslado';
@@ -543,16 +539,9 @@ export class Alta implements OnInit, OnDestroy {
     return this.altaExistente !== null;
   }
 
-  /** El alta todavía está dentro de las horas permitidas para anularla. */
+  /** El backend indica si el alta todavía está dentro del plazo para anularla. */
   get puedeAnularAlta(): boolean {
-    const alta = this.altaExistente;
-    if (!alta) return false;
-
-    const egreso = new Date(alta.fechaHoraEgreso).getTime();
-    if (Number.isNaN(egreso)) return false;
-
-    const transcurrido = Date.now() - egreso;
-    return transcurrido >= 0 && transcurrido <= HORAS_PARA_ANULAR_ALTA * MS_HORA;
+    return this.altaExistente?.puedeAnular === true;
   }
 
   /**

@@ -162,6 +162,7 @@ describe('Paciente', () => {
     usuarioId: 5,
     usuarioNombre: 'Dr. Juan Pérez',
     estado: 'VIGENTE',
+    puedeAnular: true,
     responsableRetiro: null,
     motivoRetiro: null,
     riesgosRetiro: [],

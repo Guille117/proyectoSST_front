@@ -74,6 +74,8 @@ export interface AltaResponse {
   usuarioId: number;
   usuarioNombre: string;
   estado: EstadoAltaApi;
+  /** El backend indica si el alta sigue dentro del plazo de anulación. */
+  puedeAnular: boolean;
   responsableRetiro: ResponsableRetiroApi | null;
   motivoRetiro: string | null;
   riesgosRetiro: string[];

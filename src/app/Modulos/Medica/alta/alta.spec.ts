@@ -46,6 +46,7 @@ describe('Alta', () => {
     usuarioId: 2,
     usuarioNombre: 'Carlos Méndez',
     estado: 'VIGENTE',
+    puedeAnular: true,
     responsableRetiro: null,
     motivoRetiro: null,
     riesgosRetiro: [],
@@ -619,15 +620,10 @@ describe('Alta', () => {
     );
   });
 
-  it('oculta anular cuando pasaron más de 5 horas desde el alta', async () => {
+  it('oculta anular cuando el backend indica que el plazo venció', async () => {
     episodioActivo.esSoloLectura = () => false;
     altaService.buscarPorEpisodio.mockReturnValue(
-      of([
-        {
-          ...altaVigente,
-          fechaHoraEgreso: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
-        },
-      ]),
+      of([{ ...altaVigente, puedeAnular: false }]),
     );
 
     component.cargarAlta();
