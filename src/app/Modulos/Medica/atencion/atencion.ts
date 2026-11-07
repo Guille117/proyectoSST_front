@@ -61,37 +61,30 @@ interface PacienteAtencionVista {
 /** Detalle de la maqueta que acompaña a cada tarjeta del listado. */
 type DetallePacienteMock = Pick<
   PacienteAtencionVista,
-  'edad' | 'sexo' | 'estadoAtencion' | 'ubicacion' | 'fechaIngreso'
+  'estadoAtencion' | 'ubicacion' | 'fechaIngreso'
 >;
 
-// MOCK: datos temporales de las tarjetas del listado. El panel del paciente usa el detalle real;
-// el resumen del listado no trae edad, cama ni diagnóstico.
+// MOCK: datos temporales de la tarjeta que el resumen del listado no trae (cama, estado de
+// atención y fecha de ingreso). La edad y el sexo se toman del resumen real. El panel del
+// paciente usa el detalle real.
 /** Detalle de la maqueta: se reparte por posición entre los pacientes que devuelve el backend. */
 const DETALLES_MOCK: DetallePacienteMock[] = [
   {
-    edad: 45,
-    sexo: 'Masculino',
     estadoAtencion: 'en-atencion',
     ubicacion: 'A-105',
     fechaIngreso: '10-10-2026',
   },
   {
-    edad: 32,
-    sexo: 'Femenino',
     estadoAtencion: 'en-atencion',
     ubicacion: '2',
     fechaIngreso: '10-10-2026',
   },
   {
-    edad: 58,
-    sexo: 'Masculino',
     estadoAtencion: 'pendiente',
     ubicacion: 'A-106',
     fechaIngreso: '10-10-2026',
   },
   {
-    edad: 27,
-    sexo: 'Femenino',
     estadoAtencion: 'en-observacion',
     ubicacion: 'B-201',
     fechaIngreso: '09-10-2026',
@@ -656,6 +649,8 @@ export class Atencion implements OnInit, OnDestroy {
       episodioId: paciente.episodioId,
       ultimoEpisodioId: paciente.ultimoEpisodioId ?? paciente.episodioId ?? null,
       nombre: paciente.nombreCompleto,
+      edad: paciente.edad ?? null,
+      sexo: this.sexoLegible(paciente.sexo),
       telefono: paciente.telefono ?? '',
       // El resumen del listado no trae diagnóstico: se deja vacío para no inventarlo.
       diagnostico: '',

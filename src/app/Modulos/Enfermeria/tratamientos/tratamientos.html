@@ -901,23 +901,37 @@
                 : 'Fecha y hora de administración'
             }}<span class="administracion-obligatorio" aria-hidden="true">*</span>
           </label>
-          <select
-            class="administracion-input"
-            id="horaAdministracion"
-            name="horaAdministracion"
-            aria-required="true"
-            [(ngModel)]="horaAdministracion"
-          >
-            <option value="">Seleccionar...</option>
-            @for (hora of horasAdministracion; track hora.valor) {
-              <option [value]="hora.valor">{{ hora.numero }}. {{ hora.etiqueta }}</option>
-            }
-          </select>
-
-          @if (!horasAdministracion.length) {
+          @if (permiteHoraManual) {
+            <input
+              class="administracion-input"
+              id="horaAdministracion"
+              name="horaAdministracion"
+              type="datetime-local"
+              aria-required="true"
+              [(ngModel)]="horaAdministracion"
+            />
             <span class="administracion-ayuda">
-              No hay horas programadas pendientes para esta indicación.
+              Esta atención no tiene programación; registre la fecha y hora manualmente.
             </span>
+          } @else {
+            <select
+              class="administracion-input"
+              id="horaAdministracion"
+              name="horaAdministracion"
+              aria-required="true"
+              [(ngModel)]="horaAdministracion"
+            >
+              <option value="">Seleccionar...</option>
+              @for (hora of horasAdministracion; track hora.valor) {
+                <option [value]="hora.valor">{{ hora.numero }}. {{ hora.etiqueta }}</option>
+              }
+            </select>
+
+            @if (!horasAdministracion.length) {
+              <span class="administracion-ayuda">
+                No hay horas programadas pendientes para esta indicación.
+              </span>
+            }
           }
         </div>
 

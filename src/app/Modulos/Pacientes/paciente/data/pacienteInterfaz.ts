@@ -138,6 +138,7 @@ export interface PacienteResumido {
   nombreCompleto: string;
   cui: string | null;
   sexo: Sexo | null;
+  edad?: number | null;
   telefono: string;
   tipoTratamiento: TipoAtencion;
   estado: boolean;

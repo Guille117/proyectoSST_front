@@ -10,6 +10,83 @@
       <p>{{ error }}</p>
       <button type="button" class="btn _cancelar" (click)="recargar()">Reintentar</button>
     </div>
+  } @else if (!episodioSeleccionado) {
+    <section class="expediente-seleccion" aria-labelledby="tituloSeleccionEpisodios">
+      <header class="seleccion-encabezado">
+        <div class="menu-paciente">
+          <h1>{{ paciente?.nombreCompleto || 'Expediente clínico' }}</h1>
+
+          @if (paciente) {
+            <div class="menu-paciente-meta">
+              <span>{{ paciente.codigoExpediente || '—' }}</span>
+              <span>{{ paciente.edad ?? '—' }} años</span>
+              <span>{{ sexoLegible(paciente.sexo) }}</span>
+            </div>
+          }
+        </div>
+
+        <button type="button" class="menu-opcion menu-opcion--volver" (click)="volver()">
+          <i class="bi bi-arrow-left" aria-hidden="true"></i>
+          <span>Volver</span>
+        </button>
+      </header>
+
+      <h2 class="seleccion-titulo" id="tituloSeleccionEpisodios">Selecciona un episodio</h2>
+
+      @if (episodios.length) {
+        <div class="episodios-lista">
+          @for (episodio of episodios; track episodio.episodioId) {
+            <article
+              class="episodio-card"
+              [class.episodio-card--activo]="episodio.activo"
+              role="button"
+              tabindex="0"
+              [attr.aria-label]="
+                'Ver expediente: ' +
+                tipoAtencionLegible(episodio.tipoAtencion) +
+                ', ingreso ' +
+                fechaHoraLegible(episodio.fechaHoraIngreso)
+              "
+              (click)="seleccionarEpisodio(episodio)"
+              (keydown.enter)="seleccionarEpisodio(episodio)"
+            >
+              <header class="episodio-card_encabezado">
+                <span class="episodio-card_tipo">
+                  {{ tipoAtencionLegible(episodio.tipoAtencion) }}
+                </span>
+                <span
+                  class="episodio-card_estado"
+                  [class.episodio-card_estado--cerrado]="!episodio.activo"
+                >
+                  {{ estadoEpisodioLegible(episodio) }}
+                </span>
+              </header>
+
+              <dl class="episodio-card_datos">
+                <div>
+                  <dt>Ingreso</dt>
+                  <dd>{{ fechaHoraLegible(episodio.fechaHoraIngreso) }}</dd>
+                </div>
+                <div>
+                  <dt>Egreso</dt>
+                  <dd>
+                    {{ episodio.fechaHoraEgreso ? fechaHoraLegible(episodio.fechaHoraEgreso) : 'En curso' }}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Médico</dt>
+                  <dd>{{ episodio.medicoNombre || '—' }}</dd>
+                </div>
+              </dl>
+
+              <span class="episodio-card_accion">Ver expediente</span>
+            </article>
+          }
+        </div>
+      } @else {
+        <p class="expediente-vacio">El paciente no tiene episodios registrados.</p>
+      }
+    </section>
   } @else {
     <div class="expediente-layout">
       <aside class="expediente-menu" aria-label="Submenú del expediente">
@@ -24,13 +101,21 @@
           }
         </div>
 
-        <!-- El expediente muestra el episodio más reciente del paciente. -->
+        <!-- Episodio abierto: se puede cambiar desde aquí sin salir del expediente -->
         <div class="menu-episodio">
           @if (episodioSeleccionado; as episodio) {
             <div class="menu-episodio-card">
-              <span class="menu-episodio-tipo">
-                {{ tipoAtencionLegible(episodio.tipoAtencion) }}
-              </span>
+              <div class="menu-episodio-etiquetas">
+                <span class="menu-episodio-tipo">
+                  {{ tipoAtencionLegible(episodio.tipoAtencion) }}
+                </span>
+                <span
+                  class="menu-episodio-estado"
+                  [class.menu-episodio-estado--cerrado]="!episodio.activo"
+                >
+                  {{ estadoEpisodioLegible(episodio) }}
+                </span>
+              </div>
 
               <dl class="menu-episodio-fechas">
                 <div>
@@ -44,6 +129,14 @@
                   </dd>
                 </div>
               </dl>
+
+              <button
+                type="button"
+                class="btn _cancelar menu-episodio-cambiar"
+                (click)="volverAListaEpisodios()"
+              >
+                Cambiar episodio
+              </button>
             </div>
           } @else {
             <p class="expediente-vacio">El paciente no tiene episodios registrados.</p>
@@ -122,7 +215,10 @@
                     <div class="dato">
                       <span class="dato-rotulo">Fecha y hora de evaluación</span>
                       <span class="dato-valor">{{
-                        fechaHoraLegible(ultimaEvaluacion?.fecha ?? datos.fechaHoraIngreso)
+                        fechaHoraLegible(
+                          ultimaEvaluacion?.fecha ??
+                            episodioSeleccionado.fechaHoraIngreso
+                        )
                       }}</span>
                     </div>
                     <div class="dato">
@@ -238,23 +334,39 @@
                 <h4>Información de la atención</h4>
 
                 <div class="ingreso-datos">
-                  <div class="dato">
-                    <span class="dato-rotulo">Tipo de atención</span>
-                    <span class="dato-valor">{{ tipoAtencionLegible(datos.tipoAtencion) }}</span>
-                  </div>
-                  <div class="dato">
-                    <span class="dato-rotulo">Fecha y hora de ingreso</span>
-                    <span class="dato-valor">{{ fechaHoraLegible(datos.fechaHoraIngreso) }}</span>
-                  </div>
-                  <div class="dato">
-                    <span class="dato-rotulo">Médico asignado</span>
-                    <span class="dato-valor">{{ datos.medicoNombre || '—' }}</span>
-                  </div>
-                  @if (datos.tipoAtencion === 'HOSPITALIZACION' && datos.camaCodigo) {
+                  @if (episodioSeleccionado; as episodio) {
                     <div class="dato">
-                      <span class="dato-rotulo">Cama</span>
-                      <span class="dato-valor">{{ datos.camaCodigo }}</span>
+                      <span class="dato-rotulo">Tipo de atención</span>
+                      <span class="dato-valor">{{ tipoAtencionLegible(episodio.tipoAtencion) }}</span>
                     </div>
+                    <div class="dato">
+                      <span class="dato-rotulo">Fecha y hora de ingreso</span>
+                      <span class="dato-valor">{{ fechaHoraLegible(episodio.fechaHoraIngreso) }}</span>
+                    </div>
+                    <div class="dato">
+                      <span class="dato-rotulo">Fecha y hora de egreso</span>
+                      <span class="dato-valor">
+                        {{
+                          episodio.fechaHoraEgreso
+                            ? fechaHoraLegible(episodio.fechaHoraEgreso)
+                            : 'En curso'
+                        }}
+                      </span>
+                    </div>
+                    <div class="dato">
+                      <span class="dato-rotulo">Estado del episodio</span>
+                      <span class="dato-valor">{{ estadoEpisodioLegible(episodio) }}</span>
+                    </div>
+                    <div class="dato">
+                      <span class="dato-rotulo">Médico asignado</span>
+                      <span class="dato-valor">{{ episodio.medicoNombre || '—' }}</span>
+                    </div>
+                    @if (episodio.tipoAtencion === 'HOSPITALIZACION' && episodio.camaCodigo) {
+                      <div class="dato">
+                        <span class="dato-rotulo">Cama</span>
+                        <span class="dato-valor">{{ episodio.camaCodigo }}</span>
+                      </div>
+                    }
                   }
                 </div>
               </section>
@@ -265,21 +377,25 @@
                 <div class="ingreso-datos ingreso-datos--una-columna">
                   <div class="dato">
                     <span class="dato-rotulo">Nombre</span>
-                    <span class="dato-valor">{{ responsableNombre(datos) }}</span>
+                    <span class="dato-valor">{{ responsableEpisodio(episodioSeleccionado) }}</span>
                   </div>
                   <div class="dato">
                     <span class="dato-rotulo">Teléfono</span>
-                    <span class="dato-valor">{{ responsableTelefono(datos) }}</span>
+                    <span class="dato-valor">{{ responsableTelefonoEpisodio(episodioSeleccionado) }}</span>
                   </div>
                 </div>
               </section>
             </div>
 
-            @if (datos.descripcion) {
+            @if (motivoEpisodio(episodioSeleccionado) !== '—') {
               <section class="bloque motivo-visita">
                 <h4>Motivo de la visita</h4>
-                <p [attr.title]="textoTooltip(datos.descripcion, 'No registrado')">
-                  {{ datos.descripcion }}
+                <p
+                  [attr.title]="
+                    textoTooltip(motivoEpisodio(episodioSeleccionado), 'No registrado')
+                  "
+                >
+                  {{ motivoEpisodio(episodioSeleccionado) }}
                 </p>
               </section>
             }
@@ -356,10 +472,14 @@
               }
             </section>
 
-            @if (!datos.episodioId && episodioSeleccionado) {
+            @if (episodioSeleccionado; as episodio) {
               <div class="acciones">
-                <button type="button" class="btn _guardar" (click)="abrirUltimoEpisodio()">
-                  Abrir último episodio
+                <button type="button" class="btn _guardar" (click)="abrirEpisodioSeleccionado()">
+                  {{
+                    episodio.activo
+                      ? 'Abrir episodio actual'
+                      : 'Abrir episodio en solo lectura'
+                  }}
                 </button>
               </div>
             }

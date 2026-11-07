@@ -13,7 +13,7 @@ export interface CuidadoRequest {
   observacion: string | null;
   episodioId: number;
   usuarioId: number;
-  fechaInicio: string;
+  fechaInicio: string | null;
 }
 
 /** Cuidado tal como lo devuelve el backend. */
@@ -30,5 +30,5 @@ export interface CuidadoResponse {
   usuarioNombreCorto: string;
   fecha: string;
   estado: EstadoCuidadoApi;
-  fechaInicio: string;
+  fechaInicio: string | null;
 }

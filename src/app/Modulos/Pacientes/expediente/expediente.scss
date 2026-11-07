@@ -840,3 +840,195 @@
     }
   }
 }
+
+/* ==================== SELECCIÓN DE EPISODIOS ==================== */
+.expediente-seleccion {
+  padding: 20px;
+  border: 1px solid #e9eef5;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+}
+
+.seleccion-encabezado {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e8eef5;
+
+  .menu-opcion--volver {
+    flex: 0 0 auto;
+    width: auto;
+    padding: 10px 14px;
+    border: 1px solid #dbe4f0;
+    border-radius: 10px;
+    background: #fff;
+  }
+}
+
+.seleccion-titulo {
+  margin: 18px 0 14px;
+  color: var(--azulPrincipal);
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.episodios-lista {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-content: start;
+  gap: 14px;
+}
+
+.episodio-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-sizing: border-box;
+  padding: 16px;
+  border: 1px solid #e2e9f5;
+  border-radius: 14px;
+  background: #fff;
+  cursor: pointer;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+
+  &:hover {
+    border-color: var(--azulSecundario);
+    box-shadow: 0 8px 20px rgba(13, 110, 253, 0.12);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--azulSecundario);
+    outline-offset: 2px;
+  }
+}
+
+.episodio-card--activo {
+  border-left: 4px solid #22c55e;
+}
+
+.episodio-card_encabezado {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.episodio-card_tipo {
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: var(--azulSecundario);
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.episodio-card_estado {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #e5f6e9;
+  color: #3f9d5c;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.episodio-card_estado--cerrado {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.episodio-card_datos {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+
+  div {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  dt {
+    color: #64748b;
+    font-size: 0.82rem;
+  }
+
+  dd {
+    margin: 0;
+    color: #1e293b;
+    font-size: 0.88rem;
+    font-weight: 600;
+    text-align: right;
+  }
+}
+
+.episodio-card_accion {
+  align-self: flex-start;
+  margin-top: auto;
+  color: var(--azulSecundario);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.menu-episodio-etiquetas {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.menu-episodio-estado {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #e5f6e9;
+  color: #3f9d5c;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.menu-episodio-estado--cerrado {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.menu-episodio-cambiar {
+  width: 100%;
+  padding: 8px 12px;
+  font-size: 0.85rem;
+}
+
+@media (max-width: 1100px) {
+  .episodios-lista {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .expediente-seleccion {
+    padding: 14px;
+    border-radius: 14px;
+  }
+
+  .episodios-lista {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .seleccion-encabezado .menu-opcion--volver {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .episodio-card_accion {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+  }
+}

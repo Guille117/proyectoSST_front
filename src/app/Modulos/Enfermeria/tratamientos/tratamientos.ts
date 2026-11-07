@@ -691,6 +691,17 @@ export class Tratamientos implements OnInit, OnDestroy {
     return opciones;
   }
 
+  /**
+   * La atención no genera horas programadas (sin frecuencia, duración o inicio), así que la
+   * fecha y hora de realización se captura manualmente para poder registrar la ejecución.
+   */
+  get permiteHoraManual(): boolean {
+    if (this.seccionActiva !== 'cuidados') return false;
+
+    const indicacion = this.indicacionSeleccionada;
+    return indicacion !== null && this.programadasParaAdministrar(indicacion).length === 0;
+  }
+
   private get indicacionSeleccionada(): IndicacionConProgramacion | null {
     const id = this.indicacionSeleccionadaId;
     if (id === null) return null;
@@ -1588,6 +1599,12 @@ export class Tratamientos implements OnInit, OnDestroy {
     const horas = this.horasAdministracion;
     if (!forzar && horas.some((hora) => hora.valor === this.horaAdministracion)) return;
 
+    // Sin programación, la atención se registra con la fecha y hora actual, editable a mano
+    if (!horas.length && this.permiteHoraManual) {
+      this.horaAdministracion = this.aIsoLocal(new Date()).slice(0, 16);
+      return;
+    }
+
     this.horaAdministracion = horas[0]?.valor ?? '';
   }
 
@@ -1901,7 +1918,7 @@ export class Tratamientos implements OnInit, OnDestroy {
       id: respuesta.id,
       estado: estadoTratamiento(programacion, registros),
       observaciones: respuesta.observacion ?? '',
-      fechaInicio: respuesta.fechaInicio || respuesta.fecha,
+      fechaInicio: respuesta.fechaInicio ?? '',
       fecha: this.formatearFecha(fechaRegistro),
       hora: this.formatearHora(fechaRegistro),
       medico: respuesta.usuarioNombreCorto,
@@ -1991,14 +2008,14 @@ export class Tratamientos implements OnInit, OnDestroy {
   }
 
   private programacionDeRespuesta(respuesta: {
-    fechaInicio: string;
+    fechaInicio: string | null;
     fecha: string;
     frecuencia: number | null;
     tipoDuracion: TipoDuracionApi | null;
     duracion: number | null;
   }): ProgramacionTratamiento {
     return {
-      fechaInicio: new Date(respuesta.fechaInicio || respuesta.fecha),
+      fechaInicio: new Date(respuesta.fechaInicio ?? ''),
       frecuencia: respuesta.frecuencia,
       duracionTipo:
         respuesta.tipoDuracion === null ? '' : this.aDuracionVista(respuesta.tipoDuracion),

@@ -476,15 +476,15 @@ describe('Indicaciones', () => {
     expect(etiquetas[4]).toContain('Fecha y hora de inicio');
     expect(etiquetas[5]).toBe('Observaciones');
 
-    // Los cinco campos del cuidado estǭn en el formulario
+    // Los cinco campos del cuidado están en el formulario
     expect(elemento('#nombreCuidado')).not.toBeNull();
     expect(elemento('#frecuenciaCuidado')).not.toBeNull();
     expect(elemento('#fechaInicioCuidado')).not.toBeNull();
     expect(elemento('#duracionCuidado')).not.toBeNull();
     expect(elemento('#observacionesCuidado')).not.toBeNull();
 
-    // El nombre, la frecuencia, la fecha de inicio y el tipo de duraci��n son obligatorios
-    expect(elementos<HTMLElement>('.indicacion-obligatorio').length).toBe(2);
+    // Solo el nombre es obligatorio; la fecha de inicio y la programación son opcionales
+    expect(elementos<HTMLElement>('.indicacion-obligatorio').length).toBe(1);
     expect(obligatorio.closest('label')?.textContent).toContain('Nombre de cuidado');
     expect(botonGuardar().disabled).toBe(true);
   });
@@ -516,7 +516,7 @@ describe('Indicaciones', () => {
       observacion: 'Sin residuos y en porciones pequeñas.',
       episodioId: 1,
       usuarioId: 2,
-      fechaInicio: expect.any(String),
+      fechaInicio: null,
     });
     expect(tarjetas().length).toBe(5);
     expect(tarjetas()[4].textContent).toContain('Dieta blanda');
@@ -544,7 +544,7 @@ describe('Indicaciones', () => {
       observacion: null,
       episodioId: 1,
       usuarioId: 2,
-      fechaInicio: expect.any(String),
+      fechaInicio: null,
     });
   });
 
@@ -594,7 +594,7 @@ describe('Indicaciones', () => {
       observacion: null,
       episodioId: 1,
       usuarioId: 2,
-      fechaInicio: expect.any(String),
+      fechaInicio: null,
     });
     expect(insignias(4)).toEqual(['Realizar una vez']);
   });
