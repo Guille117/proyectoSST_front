@@ -2,43 +2,61 @@
   <div class="reporte-encabezado">
     <h2 class="reporte-titulo">Bitácora de pacientes</h2>
     <div class="filtros">
-      <div class="filtro-busqueda">
-        <app-campo-validado [label]="'Paciente'" [fieldId]="'buscarPaciente'">
+      <div class="buscador-container">
+        <div class="buscador">
           <input
-            type="search"
+            class="inputB"
+            type="text"
             id="buscarPaciente"
             name="buscarPaciente"
             [(ngModel)]="textoBusqueda"
-            (keydown.enter)="buscarPacientes()"
-            placeholder="Buscar por nombre o CUI..."
+            (keyup.enter)="buscarPacientes()"
+            placeholder="Buscar paciente por nombre o CUI..."
+            aria-label="Buscar paciente"
           />
-        </app-campo-validado>
+          <button
+            class="btnLupa"
+            type="button"
+            [disabled]="buscando"
+            (click)="buscarPacientes()"
+            aria-label="Buscar paciente"
+          >
+            <i class="bi bi-search fs-5" aria-hidden="true"></i>
+          </button>
+        </div>
       </div>
-      <button type="button" class="btn" [disabled]="buscando" (click)="buscarPacientes()">Buscar</button>
-      <div class="filtro-fecha">
-        <app-campo-validado [label]="'Desde'" [fieldId]="'desde'">
-          <input type="date" id="desde" name="desde" [(ngModel)]="desde" />
-        </app-campo-validado>
+      <div class="filtros-acciones">
+        <button
+          type="button"
+          class="btn _principal"
+          [disabled]="cargando || !pacienteSeleccionado"
+          (click)="generar()"
+        >
+          Generar
+        </button>
+        <button
+          type="button"
+          class="btn btn-exportar"
+          [disabled]="!entradas.length"
+          (click)="exportarPdf()"
+        >
+          PDF
+        </button>
+        <button
+          type="button"
+          class="btn btn-exportar"
+          [disabled]="!entradas.length"
+          (click)="exportarExcel()"
+        >
+          Excel
+        </button>
       </div>
-      <div class="filtro-fecha">
-        <app-campo-validado [label]="'Hasta'" [fieldId]="'hasta'">
-          <input type="date" id="hasta" name="hasta" [(ngModel)]="hasta" />
-        </app-campo-validado>
-      </div>
-      <button
-        type="button"
-        class="btn _principal"
-        [disabled]="cargando || !pacienteSeleccionado"
-        (click)="generar()"
-      >
-        Generar
-      </button>
     </div>
   </div>
 
   @if (resultados.length) {
-    <div class="table-container">
-      <table class="table">
+    <div class="tabla-scroll">
+      <table class="table tabla-reporte">
         <tbody>
           @for (p of resultados; track p.pacienteId) {
             <tr>
@@ -60,38 +78,79 @@
     </p>
   }
 
-  <div class="table-container">
-    <table class="table" [attr.aria-busy]="cargando">
-      <thead>
-        <tr>
-          <th class="celda_centrada">Fecha / Hora</th>
-          <th class="celda_izquierda">Usuario</th>
-          <th class="celda_izquierda">Acción</th>
-          <th class="celda_izquierda">Descripción</th>
-        </tr>
-      </thead>
-      <tbody>
-        @if (cargando) {
-          <tr>
-            <td colspan="4" class="celda_centrada">Cargando bitácora...</td>
-          </tr>
-        } @else {
-          @for (e of entradas; track e.id) {
+  @if (cargando) {
+    <p class="reporte-vacio">Cargando bitácora...</p>
+  } @else if (entradas.length) {
+    <section class="kpis" aria-label="Resumen de la bitácora del paciente">
+      <article class="kpi">
+        <span class="kpi-icono" aria-hidden="true"><i class="bi bi-journal-text"></i></span>
+        <div class="kpi-info">
+          <p class="kpi-etiqueta">Registros</p>
+          <p class="kpi-valor">{{ total() }}</p>
+        </div>
+      </article>
+
+      <article class="kpi">
+        <span class="kpi-icono" aria-hidden="true"><i class="bi bi-people"></i></span>
+        <div class="kpi-info">
+          <p class="kpi-etiqueta">Usuarios</p>
+          <p class="kpi-valor">{{ usuarios() }}</p>
+        </div>
+      </article>
+
+      <article class="kpi">
+        <span class="kpi-icono" aria-hidden="true"><i class="bi bi-box-arrow-in-right"></i></span>
+        <div class="kpi-info">
+          <p class="kpi-etiqueta">Ingreso</p>
+          <p class="kpi-valor kpi-valor--nombre">{{ primerRegistro() }}</p>
+        </div>
+      </article>
+
+      <article class="kpi">
+        <span class="kpi-icono" aria-hidden="true"><i class="bi bi-flag"></i></span>
+        <div class="kpi-info">
+          <p class="kpi-etiqueta">Último registro</p>
+          <p class="kpi-valor kpi-valor--nombre">{{ ultimoRegistro() }}</p>
+        </div>
+      </article>
+    </section>
+
+    <article class="panel">
+      <div class="panel-cabecera">
+        <h2 class="panel-titulo">Registros del paciente</h2>
+      </div>
+      <div class="tabla-scroll">
+        <table class="table tabla-reporte" [attr.aria-busy]="cargando">
+          <thead>
             <tr>
-              <td class="celda_centrada">{{ formatearFechaHora(e.fechaHora) }}</td>
-              <td class="celda_izquierda">{{ e.usuarioNombre ?? '—' }}</td>
-              <td class="celda_izquierda">
-                <span [class]="claseAccion(e.accion)">{{ accionLegible(e.accion) }}</span>
-              </td>
-              <td class="celda_izquierda" [title]="e.detalle ?? ''">{{ descripcion(e) }}</td>
+              <th scope="col" class="celda_centrada">Fecha / Hora</th>
+              <th scope="col" class="celda_izquierda">Usuario</th>
+              <th scope="col" class="celda_izquierda">Acción</th>
+              <th scope="col" class="celda_izquierda">Descripción</th>
+              <th scope="col" class="celda_izquierda">Detalle</th>
             </tr>
-          } @empty {
-            <tr>
-              <td colspan="4" class="celda_centrada">Sin registros.</td>
-            </tr>
-          }
-        }
-      </tbody>
-    </table>
-  </div>
+          </thead>
+          <tbody>
+            @for (e of entradas; track e.id) {
+              <tr>
+                <td class="celda_centrada">{{ formatearFechaHora(e.fechaHora) }}</td>
+                <td class="celda_izquierda">{{ e.usuarioNombre ?? '—' }}</td>
+                <td class="celda_izquierda">
+                  <span [class]="claseAccion(e.accion)">{{ accionLegible(e.accion) }}</span>
+                </td>
+                <td class="celda_izquierda" [title]="e.detalle ?? ''">{{ descripcion(e) }}</td>
+                <td class="celda_izquierda celda-detalle" [title]="e.detalle ?? ''">
+                  {{ detalle(e) }}
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </article>
+  } @else if (!pacienteSeleccionado) {
+    <p class="reporte-vacio">Busca y selecciona un paciente para consultar su bitácora.</p>
+  } @else {
+    <p class="reporte-vacio">Sin registros para el paciente y período seleccionados.</p>
+  }
 </div>

@@ -2,37 +2,111 @@
   <div class="reporte-encabezado">
     <h2 class="reporte-titulo">Stock bajo</h2>
     <div class="filtros">
-      <button type="button" class="btn" (click)="exportarPdf()">PDF</button>
-      <button type="button" class="btn" (click)="exportarExcel()">Excel</button>
+      <div class="filtros-acciones">
+        <button
+          type="button"
+          class="btn btn-exportar"
+          [disabled]="cargando || !datos.length"
+          (click)="exportarPdf()"
+        >
+          PDF
+        </button>
+        <button
+          type="button"
+          class="btn btn-exportar"
+          [disabled]="cargando || !datos.length"
+          (click)="exportarExcel()"
+        >
+          Excel
+        </button>
+      </div>
     </div>
   </div>
 
   @if (cargando) {
     <p class="reporte-vacio">Cargando reporte...</p>
+  } @else if (datos.length) {
+    <section class="kpis" aria-label="Resumen de stock bajo">
+      <article class="kpi">
+        <span class="kpi-icono" aria-hidden="true"><i class="bi bi-box"></i></span>
+        <div class="kpi-info">
+          <p class="kpi-etiqueta">Productos</p>
+          <p class="kpi-valor">{{ numero(datos.length) }}</p>
+        </div>
+      </article>
+
+      <article class="kpi">
+        <span class="kpi-icono" aria-hidden="true"><i class="bi bi-boxes"></i></span>
+        <div class="kpi-info">
+          <p class="kpi-etiqueta">Unidades disponibles</p>
+          <p class="kpi-valor">{{ numero(totalUnidades()) }}</p>
+        </div>
+      </article>
+
+      <article class="kpi">
+        <span class="kpi-icono" aria-hidden="true"><i class="bi bi-exclamation-triangle"></i></span>
+        <div class="kpi-info">
+          <p class="kpi-etiqueta">Menor disponible</p>
+          <p class="kpi-valor kpi-valor--nombre" [attr.title]="menor()?.producto">
+            {{ menor()?.producto ?? '—' }} ({{ numero(menor()?.disponible ?? 0) }})
+          </p>
+        </div>
+      </article>
+
+      <article class="kpi">
+        <span class="kpi-icono" aria-hidden="true"><i class="bi bi-calendar-x"></i></span>
+        <div class="kpi-info">
+          <p class="kpi-etiqueta">Próximo vencimiento</p>
+          <p class="kpi-valor">{{ proximoVencimiento() }}</p>
+        </div>
+      </article>
+    </section>
+
+    <article class="panel">
+      <div class="panel-cabecera">
+        <h2 class="panel-titulo">Unidades disponibles por producto</h2>
+        <div class="panel-cabecera-derecha">
+          <app-reporte-vista-toggle
+            [vista]="vista()"
+            etiqueta="Vista de stock bajo"
+            (cambiar)="cambiarVista($event)"
+          ></app-reporte-vista-toggle>
+        </div>
+      </div>
+
+      @if (vista() === 'grafica') {
+        <div class="grafica-reporte">
+          <app-grafica-barras
+            [etiquetas]="etiquetas()"
+            [valores]="valores()"
+            titulo="Unidades disponibles por producto"
+            [mostrarValores]="true"
+          ></app-grafica-barras>
+        </div>
+      } @else {
+        <div class="tabla-scroll">
+          <table class="table tabla-reporte">
+            <thead>
+              <tr>
+                <th scope="col" class="celda_izquierda">Producto</th>
+                <th scope="col" class="celda_numero">Disponible</th>
+                <th scope="col" class="celda_centrada">Vencimiento</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (s of datos; track s.id) {
+                <tr>
+                  <td class="celda_izquierda" [attr.title]="s.producto">{{ s.producto }}</td>
+                  <td class="celda_numero">{{ numero(s.disponible) }}</td>
+                  <td class="celda_centrada">{{ s.vencimiento ?? '—' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </article>
   } @else {
-    <div class="table-container">
-      <table class="table">
-        <thead>
-          <tr>
-            <th class="celda_izquierda">Producto</th>
-            <th class="celda_centrada">Disponible</th>
-            <th class="celda_centrada">Vencimiento</th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (s of datos; track s.id) {
-            <tr>
-              <td class="celda_izquierda">{{ s.producto }}</td>
-              <td class="celda_centrada">{{ s.disponible }}</td>
-              <td class="celda_centrada">{{ s.vencimiento ?? '—' }}</td>
-            </tr>
-          } @empty {
-            <tr>
-              <td colspan="3" class="celda_centrada">Sin datos.</td>
-            </tr>
-          }
-        </tbody>
-      </table>
-    </div>
+    <p class="reporte-vacio">No hay productos con stock bajo.</p>
   }
 </div>

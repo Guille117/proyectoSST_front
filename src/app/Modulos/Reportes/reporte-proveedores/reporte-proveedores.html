@@ -12,38 +12,114 @@
           <input type="date" id="hasta" name="hasta" [(ngModel)]="hasta" />
         </app-campo-validado>
       </div>
-      <button type="button" class="btn _principal" [disabled]="cargando" (click)="generar()">Generar</button>
-      <button type="button" class="btn" (click)="exportarPdf()">PDF</button>
-      <button type="button" class="btn" (click)="exportarExcel()">Excel</button>
+      <div class="filtros-acciones">
+        <button type="button" class="btn _principal" [disabled]="cargando" (click)="generar()">
+          Generar
+        </button>
+        <button
+          type="button"
+          class="btn btn-exportar"
+          [disabled]="cargando || !datos.length"
+          (click)="exportarPdf()"
+        >
+          PDF
+        </button>
+        <button
+          type="button"
+          class="btn btn-exportar"
+          [disabled]="cargando || !datos.length"
+          (click)="exportarExcel()"
+        >
+          Excel
+        </button>
+      </div>
     </div>
   </div>
 
   @if (cargando) {
     <p class="reporte-vacio">Cargando reporte...</p>
+  } @else if (datos.length) {
+    <section class="kpis" aria-label="Resumen de compras">
+      <article class="kpi">
+        <span class="kpi-icono" aria-hidden="true"><i class="bi bi-truck"></i></span>
+        <div class="kpi-info">
+          <p class="kpi-etiqueta">Proveedores</p>
+          <p class="kpi-valor">{{ numero(datos.length) }}</p>
+        </div>
+      </article>
+
+      <article class="kpi">
+        <span class="kpi-icono" aria-hidden="true"><i class="bi bi-bag-check"></i></span>
+        <div class="kpi-info">
+          <p class="kpi-etiqueta">Compras</p>
+          <p class="kpi-valor">{{ numero(totalCompras()) }}</p>
+        </div>
+      </article>
+
+      <article class="kpi">
+        <span class="kpi-icono" aria-hidden="true"><i class="bi bi-cash-stack"></i></span>
+        <div class="kpi-info">
+          <p class="kpi-etiqueta">Total comprado</p>
+          <p class="kpi-valor">{{ moneda(totalGastado()) }}</p>
+        </div>
+      </article>
+
+      <article class="kpi">
+        <span class="kpi-icono" aria-hidden="true"><i class="bi bi-trophy"></i></span>
+        <div class="kpi-info">
+          <p class="kpi-etiqueta">Proveedor principal</p>
+          <p class="kpi-valor kpi-valor--nombre" [attr.title]="principal()?.proveedor">
+            {{ principal()?.proveedor ?? '—' }}
+          </p>
+        </div>
+      </article>
+    </section>
+
+    <article class="panel">
+      <div class="panel-cabecera">
+        <h2 class="panel-titulo">Compras por proveedor</h2>
+        <div class="panel-cabecera-derecha">
+          <app-reporte-vista-toggle
+            [vista]="vista()"
+            etiqueta="Vista de proveedores"
+            (cambiar)="cambiarVista($event)"
+          ></app-reporte-vista-toggle>
+        </div>
+      </div>
+
+      @if (vista() === 'grafica') {
+        <div class="grafica-reporte">
+          <app-grafica-barras
+            [etiquetas]="etiquetas()"
+            [valores]="valores()"
+            titulo="Compras por proveedor"
+            [mostrarValores]="true"
+          ></app-grafica-barras>
+        </div>
+      } @else {
+        <div class="tabla-scroll">
+          <table class="table tabla-reporte">
+            <thead>
+              <tr>
+                <th scope="col" class="celda_izquierda">Proveedor</th>
+                <th scope="col" class="celda_numero">Compras</th>
+                <th scope="col" class="celda_numero">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (c of datos; track c.proveedor) {
+                <tr>
+                  <td class="celda_izquierda" [attr.title]="c.proveedor">{{ c.proveedor }}</td>
+                  <td class="celda_numero">{{ numero(c.cantidad) }}</td>
+                  <td class="celda_numero">{{ moneda(c.total) }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </article>
   } @else {
-    <div class="table-container">
-      <table class="table">
-        <thead>
-          <tr>
-            <th class="celda_izquierda">Proveedor</th>
-            <th class="celda_centrada">Compras</th>
-            <th class="celda_centrada">Total</th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (c of datos; track c.proveedor) {
-            <tr>
-              <td class="celda_izquierda">{{ c.proveedor }}</td>
-              <td class="celda_centrada">{{ c.cantidad }}</td>
-              <td class="celda_centrada">Q {{ c.total }}</td>
-            </tr>
-          } @empty {
-            <tr>
-              <td colspan="3" class="celda_centrada">Sin datos.</td>
-            </tr>
-          }
-        </tbody>
-      </table>
-    </div>
+    <p class="reporte-vacio">Sin datos para el período seleccionado.</p>
   }
 </div>

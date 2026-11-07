@@ -1,4 +1,4 @@
-import { Component, inject, OnDestroy, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, inject, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
 import { ReportesService } from '../data/reportes-service';
@@ -11,6 +11,7 @@ import {
   claseAccion,
   descripcionBitacora,
   formatearFechaHora,
+  resumenDetalle,
 } from '../data/bitacora-format';
 
 @Component({
@@ -22,6 +23,7 @@ import {
 export class BitacoraGeneral implements OnInit, OnDestroy {
   private readonly service = inject(ReportesService);
   private readonly popUps = inject(PopUps);
+  private readonly cdr = inject(ChangeDetectorRef);
   private sub?: Subscription;
 
   desde = this.haceDias(30);
@@ -42,14 +44,32 @@ export class BitacoraGeneral implements OnInit, OnDestroy {
     this.cargando = true;
     this.sub = this.service.bitacoraGeneral(this.desde, this.hasta).subscribe({
       next: (d) => {
-        this.entradas = d;
+        this.entradas = [...d].sort((a, b) => b.fechaHora.localeCompare(a.fechaHora));
         this.cargando = false;
+        this.cdr.detectChanges();
       },
       error: (e) => {
         this.cargando = false;
         this.popUps.errorDesdeBackend(e, 'No se pudo cargar la bitácora.');
+        this.cdr.detectChanges();
       },
     });
+  }
+
+  total(): number {
+    return this.entradas.length;
+  }
+
+  creados(): number {
+    return this.entradas.filter((e) => e.accion === 'CREAR').length;
+  }
+
+  editados(): number {
+    return this.entradas.filter((e) => e.accion === 'EDITAR').length;
+  }
+
+  eliminados(): number {
+    return this.entradas.filter((e) => e.accion === 'ELIMINAR').length;
   }
 
   accionLegible(accion: string): string {
@@ -64,6 +84,10 @@ export class BitacoraGeneral implements OnInit, OnDestroy {
     return descripcionBitacora(entrada);
   }
 
+  detalle(entrada: BitacoraEntry): string {
+    return resumenDetalle(entrada);
+  }
+
   formatearFechaHora(iso: string): string {
     return formatearFechaHora(iso);
   }
@@ -71,10 +95,16 @@ export class BitacoraGeneral implements OnInit, OnDestroy {
   exportarPdf(): void {
     exportarPdf(
       'Bitácora general',
-      ['Fecha', 'Usuario', 'Acción', 'Descripción'],
+      ['Fecha', 'Usuario', 'Acción', 'Descripción', 'Detalle'],
       this.entradas.map(
         (e) =>
-          [formatearFechaHora(e.fechaHora), e.usuarioNombre ?? '—', accionLegible(e.accion), descripcionBitacora(e)] as Celda[],
+          [
+            formatearFechaHora(e.fechaHora),
+            e.usuarioNombre ?? '—',
+            accionLegible(e.accion),
+            descripcionBitacora(e),
+            resumenDetalle(e),
+          ] as Celda[],
       ),
     );
   }
@@ -82,10 +112,16 @@ export class BitacoraGeneral implements OnInit, OnDestroy {
   exportarExcel(): void {
     exportarExcel(
       'Bitácora general',
-      ['Fecha', 'Usuario', 'Acción', 'Descripción'],
+      ['Fecha', 'Usuario', 'Acción', 'Descripción', 'Detalle'],
       this.entradas.map(
         (e) =>
-          [formatearFechaHora(e.fechaHora), e.usuarioNombre ?? '—', accionLegible(e.accion), descripcionBitacora(e)] as Celda[],
+          [
+            formatearFechaHora(e.fechaHora),
+            e.usuarioNombre ?? '—',
+            accionLegible(e.accion),
+            descripcionBitacora(e),
+            resumenDetalle(e),
+          ] as Celda[],
       ),
     );
   }

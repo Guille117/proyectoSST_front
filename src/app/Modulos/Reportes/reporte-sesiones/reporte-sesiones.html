@@ -1,0 +1,93 @@
+<div class="reporte areaTrabajo-container">
+  <div class="reporte-encabezado">
+    <h2 class="reporte-titulo">Sesiones activas</h2>
+    <div class="filtros">
+      <div class="filtros-acciones">
+        <button
+          type="button"
+          class="btn btn-exportar"
+          [disabled]="cargando || !datos.length"
+          (click)="exportarPdf()"
+        >
+          PDF
+        </button>
+        <button
+          type="button"
+          class="btn btn-exportar"
+          [disabled]="cargando || !datos.length"
+          (click)="exportarExcel()"
+        >
+          Excel
+        </button>
+      </div>
+    </div>
+  </div>
+
+  @if (cargando) {
+    <p class="reporte-vacio">Cargando sesiones...</p>
+  } @else if (datos.length) {
+    <section class="kpis" aria-label="Resumen de sesiones">
+      <article class="kpi">
+        <span class="kpi-icono" aria-hidden="true"><i class="bi bi-person-check"></i></span>
+        <div class="kpi-info">
+          <p class="kpi-etiqueta">Sesiones activas</p>
+          <p class="kpi-valor">{{ datos.length }}</p>
+        </div>
+      </article>
+
+      <article class="kpi">
+        <span class="kpi-icono" aria-hidden="true"><i class="bi bi-people"></i></span>
+        <div class="kpi-info">
+          <p class="kpi-etiqueta">Usuarios</p>
+          <p class="kpi-valor">{{ usuarios() }}</p>
+        </div>
+      </article>
+
+      <article class="kpi">
+        <span class="kpi-icono" aria-hidden="true"><i class="bi bi-door-open"></i></span>
+        <div class="kpi-info">
+          <p class="kpi-etiqueta">Sin cierre registrado</p>
+          <p class="kpi-valor">{{ sinCierre() }}</p>
+        </div>
+      </article>
+
+      <article class="kpi">
+        <span class="kpi-icono" aria-hidden="true"><i class="bi bi-clock-history"></i></span>
+        <div class="kpi-info">
+          <p class="kpi-etiqueta">Última actividad</p>
+          <p class="kpi-valor kpi-valor--nombre">{{ ultimaActividad() }}</p>
+        </div>
+      </article>
+    </section>
+
+    <article class="panel">
+      <div class="panel-cabecera">
+        <h2 class="panel-titulo">Detalle de sesiones</h2>
+      </div>
+      <div class="tabla-scroll">
+        <table class="table tabla-reporte">
+          <thead>
+            <tr>
+              <th scope="col" class="celda_izquierda">Usuario</th>
+              <th scope="col" class="celda_centrada">Último inicio</th>
+              <th scope="col" class="celda_centrada">Último cierre</th>
+              <th scope="col" class="celda_centrada">Última actividad</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (s of datos; track s.usuario) {
+              <tr>
+                <td class="celda_izquierda">{{ s.usuario }}</td>
+                <td class="celda_centrada">{{ formatear(s.ultimoLogin) }}</td>
+                <td class="celda_centrada">{{ formatear(s.ultimoLogout) }}</td>
+                <td class="celda_centrada">{{ formatear(s.ultimaActividad) }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </article>
+  } @else {
+    <p class="reporte-vacio">No hay sesiones activas registradas.</p>
+  }
+</div>

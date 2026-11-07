@@ -2,39 +2,111 @@
   <div class="reporte-encabezado">
     <h2 class="reporte-titulo">Vencimientos por mes/año</h2>
     <div class="filtros">
-      <button type="button" class="btn" (click)="exportarPdf()">PDF</button>
-      <button type="button" class="btn" (click)="exportarExcel()">Excel</button>
+      <div class="filtros-acciones">
+        <button
+          type="button"
+          class="btn btn-exportar"
+          [disabled]="cargando || !datos.length"
+          (click)="exportarPdf()"
+        >
+          PDF
+        </button>
+        <button
+          type="button"
+          class="btn btn-exportar"
+          [disabled]="cargando || !datos.length"
+          (click)="exportarExcel()"
+        >
+          Excel
+        </button>
+      </div>
     </div>
   </div>
 
   @if (cargando) {
     <p class="reporte-vacio">Cargando reporte...</p>
+  } @else if (datos.length) {
+    <section class="kpis" aria-label="Resumen de vencimientos">
+      <article class="kpi">
+        <span class="kpi-icono" aria-hidden="true"><i class="bi bi-box-seam"></i></span>
+        <div class="kpi-info">
+          <p class="kpi-etiqueta">Unidades vencidas</p>
+          <p class="kpi-valor">{{ numero(total()) }}</p>
+        </div>
+      </article>
+
+      <article class="kpi">
+        <span class="kpi-icono" aria-hidden="true"><i class="bi bi-box"></i></span>
+        <div class="kpi-info">
+          <p class="kpi-etiqueta">Productos</p>
+          <p class="kpi-valor">{{ numero(productos()) }}</p>
+        </div>
+      </article>
+
+      <article class="kpi">
+        <span class="kpi-icono" aria-hidden="true"><i class="bi bi-calendar3"></i></span>
+        <div class="kpi-info">
+          <p class="kpi-etiqueta">Períodos afectados</p>
+          <p class="kpi-valor">{{ numero(periodos()) }}</p>
+        </div>
+      </article>
+
+      <article class="kpi">
+        <span class="kpi-icono" aria-hidden="true"><i class="bi bi-trophy"></i></span>
+        <div class="kpi-info">
+          <p class="kpi-etiqueta">Período principal</p>
+          <p class="kpi-valor kpi-valor--nombre">{{ principalPeriodo() }}</p>
+        </div>
+      </article>
+    </section>
+
+    <article class="panel">
+      <div class="panel-cabecera">
+        <h2 class="panel-titulo">Unidades vencidas por período</h2>
+        <div class="panel-cabecera-derecha">
+          <app-reporte-vista-toggle
+            [vista]="vista()"
+            etiqueta="Vista de vencimientos"
+            (cambiar)="cambiarVista($event)"
+          ></app-reporte-vista-toggle>
+        </div>
+      </div>
+
+      @if (vista() === 'grafica') {
+        <div class="grafica-reporte">
+          <app-grafica-barras
+            [etiquetas]="etiquetas()"
+            [valores]="valores()"
+            titulo="Unidades vencidas por período"
+            [mostrarValores]="true"
+          ></app-grafica-barras>
+        </div>
+      } @else {
+        <div class="tabla-scroll">
+          <table class="table tabla-reporte">
+            <thead>
+              <tr>
+                <th scope="col" class="celda_izquierda">Producto</th>
+                <th scope="col" class="celda_numero">Cantidad vencida</th>
+                <th scope="col" class="celda_centrada">Mes</th>
+                <th scope="col" class="celda_numero">Año</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (v of datos; track v.producto + '|' + v.mes + '|' + v.anio) {
+                <tr>
+                  <td class="celda_izquierda" [attr.title]="v.producto">{{ v.producto }}</td>
+                  <td class="celda_numero">{{ numero(v.cantidad) }}</td>
+                  <td class="celda_centrada">{{ nombreMes(v.mes) }}</td>
+                  <td class="celda_numero">{{ v.anio }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </article>
   } @else {
-    <div class="table-container">
-      <table class="table">
-        <thead>
-          <tr>
-            <th class="celda_izquierda">Producto</th>
-            <th class="celda_centrada">Cantidad vencida</th>
-            <th class="celda_centrada">Mes</th>
-            <th class="celda_centrada">Año</th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (v of datos; track $index) {
-            <tr>
-              <td class="celda_izquierda">{{ v.producto }}</td>
-              <td class="celda_centrada">{{ v.cantidad }}</td>
-              <td class="celda_centrada">{{ nombreMes(v.mes) }}</td>
-              <td class="celda_centrada">{{ v.anio }}</td>
-            </tr>
-          } @empty {
-            <tr>
-              <td colspan="4" class="celda_centrada">Sin datos.</td>
-            </tr>
-          }
-        </tbody>
-      </table>
-    </div>
+    <p class="reporte-vacio">Sin datos para el período seleccionado.</p>
   }
 </div>

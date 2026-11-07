@@ -1,56 +1,174 @@
-<div class="reporte areaTrabajo-container">
-  <div class="reporte-encabezado">
-    <div class="filtros">
-      <div class="filtro-fecha">
-        <app-campo-validado [label]="'Desde'" [fieldId]="'desde'">
-          <input type="date" id="desde" name="desde" [(ngModel)]="desde" />
-        </app-campo-validado>
+@if (config; as cfg) {
+  <div class="reporte areaTrabajo-container">
+    <div class="reporte-encabezado">
+      <h2 class="reporte-titulo">{{ cfg.titulo }}</h2>
+      <div class="filtros">
+        <div class="filtro-fecha">
+          <app-campo-validado [label]="'Desde'" [fieldId]="'desde'">
+            <input type="date" id="desde" name="desde" [(ngModel)]="desde" />
+          </app-campo-validado>
+        </div>
+        <div class="filtro-fecha">
+          <app-campo-validado [label]="'Hasta'" [fieldId]="'hasta'">
+            <input type="date" id="hasta" name="hasta" [(ngModel)]="hasta" />
+          </app-campo-validado>
+        </div>
+        <div class="filtros-acciones">
+          <button type="button" class="btn _principal" [disabled]="cargando" (click)="generar()">
+            Generar
+          </button>
+          <button
+            type="button"
+            class="btn btn-exportar"
+            [disabled]="cargando || !datos.length"
+            (click)="exportarPdf()"
+          >
+            PDF
+          </button>
+          <button
+            type="button"
+            class="btn btn-exportar"
+            [disabled]="cargando || !datos.length"
+            (click)="exportarExcel()"
+          >
+            Excel
+          </button>
+        </div>
       </div>
-      <div class="filtro-fecha">
-        <app-campo-validado [label]="'Hasta'" [fieldId]="'hasta'">
-          <input type="date" id="hasta" name="hasta" [(ngModel)]="hasta" />
-        </app-campo-validado>
-      </div>
-      <button type="button" class="btn _principal" [disabled]="cargando" (click)="generar()">Generar</button>
-      <button type="button" class="btn" (click)="exportarPdf()">PDF</button>
-      <button type="button" class="btn" (click)="exportarExcel()">Excel</button>
     </div>
-  </div>
 
-  @if (cargando) {
-    <p class="reporte-vacio">Cargando reporte...</p>
-  } @else {
-    <div class="table-container">
-      <table class="table">
-        <thead>
-          <tr>
-            <th class="celda_izquierda">{{ config.etiquetaColumna }}</th>
-            <th class="celda_centrada">{{ config.etiquetaValor }}</th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (d of datos; track d.nombre) {
-            <tr>
-              <td class="celda_izquierda">{{ d.nombre }}</td>
-              <td class="celda_centrada">{{ d.cantidad }}</td>
-            </tr>
-          } @empty {
-            <tr>
-              <td colspan="2" class="celda_centrada">Sin datos.</td>
-            </tr>
+    @if (cargando) {
+      <p class="reporte-vacio">Cargando reporte...</p>
+    } @else if (datos.length) {
+      <section class="kpis" aria-label="Resumen del reporte">
+        <article class="kpi">
+          <span class="kpi-icono" aria-hidden="true"><i class="bi bi-bar-chart"></i></span>
+          <div class="kpi-info">
+            <p class="kpi-etiqueta">{{ tipoValor() === 'conteo' ? 'Total' : 'Promedio' }}</p>
+            <p class="kpi-valor">
+              {{ tipoValor() === 'conteo' ? numero(total()) : formatoValor(promedioValores()) }}
+            </p>
+          </div>
+        </article>
+
+        <article class="kpi">
+          <span class="kpi-icono" aria-hidden="true"><i class="bi bi-layers"></i></span>
+          <div class="kpi-info">
+            <p class="kpi-etiqueta">Categorías</p>
+            <p class="kpi-valor">{{ numero(datos.length) }}</p>
+          </div>
+        </article>
+
+        <article class="kpi">
+          <span class="kpi-icono" aria-hidden="true"><i class="bi bi-trophy"></i></span>
+          <div class="kpi-info">
+            <p class="kpi-etiqueta">{{ tipoValor() === 'conteo' ? 'Principal' : 'Mayor' }}</p>
+            <p class="kpi-valor kpi-valor--nombre" [attr.title]="principal()?.nombre">
+              {{ principalEtiqueta() }}
+            </p>
+          </div>
+        </article>
+
+        <article class="kpi">
+          <span class="kpi-icono" aria-hidden="true"><i class="bi bi-pie-chart"></i></span>
+          <div class="kpi-info">
+            @if (tipoValor() === 'conteo') {
+              <p class="kpi-etiqueta">Participación del principal</p>
+              <p class="kpi-valor">{{ porcentaje(participacionPrincipal()) }}</p>
+            } @else {
+              <p class="kpi-etiqueta">Menor</p>
+              <p class="kpi-valor kpi-valor--nombre">{{ menorEtiqueta() }}</p>
+            }
+          </div>
+        </article>
+      </section>
+
+      <article class="panel">
+        <div class="panel-cabecera">
+          <h2 class="panel-titulo">{{ cfg.graficaTitulo ?? cfg.titulo }}</h2>
+          @if (cfg.conGrafica) {
+            <div class="panel-cabecera-derecha">
+              <app-reporte-vista-toggle
+                [vista]="vista()"
+                [etiqueta]="'Vista de ' + cfg.titulo"
+                (cambiar)="cambiarVista($event)"
+              ></app-reporte-vista-toggle>
+            </div>
           }
-        </tbody>
-      </table>
-    </div>
+        </div>
 
-    @if (config.conGrafica && datos.length) {
-      <div class="grafica">
-        <app-grafica-barras
-          [etiquetas]="etiquetas()"
-          [valores]="valores()"
-          [titulo]="config.graficaTitulo ?? config.titulo"
-        ></app-grafica-barras>
-      </div>
+        @if (cfg.conGrafica && vista() === 'grafica') {
+          @if (tipoGrafica() === 'dona') {
+            <div class="distribucion-reporte">
+              <div class="grafica-reporte grafica-reporte--dona">
+                <app-grafica-dona
+                  [etiquetas]="etiquetas()"
+                  [valores]="valores()"
+                  [colores]="colores()"
+                  [total]="total()"
+                  [etiquetaTotal]="cfg.etiquetaValor"
+                ></app-grafica-dona>
+              </div>
+
+              <ul class="dona-leyenda">
+                @for (d of datos; track d.nombre; let i = $index) {
+                  <li>
+                    <span
+                      class="punto"
+                      [style.background]="colores()[i]"
+                      aria-hidden="true"
+                    ></span>
+                    <div>
+                      <p class="leyenda-titulo">{{ etiqueta(d.nombre) }}</p>
+                      <p class="leyenda-detalle">
+                        {{ numero(d.cantidad) }} ({{ porcentaje(participacion(d.cantidad)) }})
+                      </p>
+                    </div>
+                  </li>
+                }
+              </ul>
+            </div>
+          } @else {
+            <div class="grafica-reporte">
+              <app-grafica-barras
+                [etiquetas]="etiquetas()"
+                [valores]="valores()"
+                [titulo]="cfg.graficaTitulo ?? cfg.titulo"
+                [mostrarValores]="true"
+              ></app-grafica-barras>
+            </div>
+          }
+        } @else {
+          <div class="tabla-scroll">
+            <table class="table tabla-reporte">
+              <thead>
+                <tr>
+                  <th scope="col" class="celda_izquierda">{{ cfg.etiquetaColumna }}</th>
+                  <th scope="col" class="celda_numero">{{ cfg.etiquetaValor }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (d of datos; track d.nombre) {
+                  <tr>
+                    <td class="celda_izquierda" [attr.title]="d.nombre">
+                      {{ etiqueta(d.nombre) }}
+                    </td>
+                    <td class="celda_numero">{{ numero(d.cantidad) }}</td>
+                  </tr>
+                }
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td class="celda_izquierda">Total</td>
+                  <td class="celda_numero">{{ numero(total()) }}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        }
+      </article>
+    } @else {
+      <p class="reporte-vacio">Sin datos para el período seleccionado.</p>
     }
-  }
-</div>
+  </div>
+}

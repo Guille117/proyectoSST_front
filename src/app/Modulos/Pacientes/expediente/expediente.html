@@ -83,19 +83,806 @@
         </nav>
       </aside>
 
-      <section
-        class="expediente-detalle"
-        [attr.aria-label]="opcionActivaActual()?.titulo || 'Expediente'"
-      >
-        @if (episodioSeleccionado; as episodio) {
-          <app-resumen-episodio
-            [episodioId]="episodio.episodioId"
-            [paciente]="paciente"
-            [episodio]="episodio"
-            [seccion]="opcionActiva"
-          ></app-resumen-episodio>
+      <section class="expediente-detalle" aria-label="Detalle del paciente">
+        @if (opcionActiva === 'evaluacion') {
+          <aside class="panel-seleccionado" aria-label="Evaluación clínica del paciente">
+            @if (paciente; as datos) {
+              <div class="paciente">
+                <div class="paciente-identidad">
+                  <h2>Evaluación clínica</h2>
+
+                  <p class="paciente-meta">
+                    <span>{{ datos.nombreCompleto }}</span>
+                    <span class="separador" aria-hidden="true">|</span>
+                    <span>{{ datos.codigoExpediente || '—' }}</span>
+                  </p>
+                </div>
+
+                @if (estadoClinicoEvaluacion; as estado) {
+                  <span class="estado">{{ estado }}</span>
+                }
+              </div>
+
+              @if (cargandoPanel) {
+                <p class="aviso">Cargando evaluación clínica...</p>
+              } @else {
+                @if (errorPanel) {
+                  <div class="aviso-error" role="alert">
+                    <p>{{ errorPanel }}</p>
+                    <button type="button" class="btns" (click)="recargarPanel()">
+                      Reintentar
+                    </button>
+                  </div>
+                }
+
+                <section class="bloque">
+                  <h4>Datos generales</h4>
+
+                  <div class="ingreso-datos">
+                    <div class="dato">
+                      <span class="dato-rotulo">Fecha y hora de evaluación</span>
+                      <span class="dato-valor">{{
+                        fechaHoraLegible(ultimaEvaluacion?.fecha ?? datos.fechaHoraIngreso)
+                      }}</span>
+                    </div>
+                    <div class="dato">
+                      <span class="dato-rotulo">Médico responsable</span>
+                      <span class="dato-valor">{{ medicoResponsable(datos) }}</span>
+                    </div>
+                  </div>
+                </section>
+
+                <section class="bloque">
+                  <h4>Historia clínica</h4>
+
+                  @if (historiaClinica.length) {
+                    <div class="registros">
+                      @for (item of historiaClinica; track item.id) {
+                        <article class="registro">
+                          <p class="registro-texto">{{ item.descripcion }}</p>
+                          <p class="registro-meta">
+                            <span>{{ fechaHoraLegible(item.fecha) }}</span>
+                            @if (item.estadoClinicoNombre) {
+                              <span class="separador" aria-hidden="true">|</span>
+                              <span>{{ item.estadoClinicoNombre }}</span>
+                            }
+                            <span class="separador" aria-hidden="true">|</span>
+                            <span>{{ item.usuarioNombreCorto }}</span>
+                          </p>
+                        </article>
+                      }
+                    </div>
+                  } @else {
+                    <p class="dato-vacio">Sin registros de historia clínica.</p>
+                  }
+                </section>
+
+                <section class="bloque">
+                  <h4>Examen físico</h4>
+
+                  @if (examenFisico.length) {
+                    <div class="registros">
+                      @for (item of examenFisico; track item.id) {
+                        <article class="registro">
+                          <p class="registro-titulo">{{ item.parteCuerpoNombre }}</p>
+                          <p class="registro-texto">{{ item.descripcion }}</p>
+                          <p class="registro-meta">
+                            <span>{{ fechaHoraLegible(item.fecha) }}</span>
+                            <span class="separador" aria-hidden="true">|</span>
+                            <span>{{ item.usuarioNombreCorto }}</span>
+                          </p>
+                        </article>
+                      }
+                    </div>
+                  } @else {
+                    <p class="dato-vacio">Sin registros de examen físico.</p>
+                  }
+                </section>
+
+                <section class="bloque">
+                  <h4>Impresión clínica</h4>
+
+                  @if (diagnosticos.length) {
+                    <div class="registros">
+                      @for (item of diagnosticos; track item.id) {
+                        <article class="registro">
+                          <p class="registro-titulo">
+                            {{ tipoDiagnosticoLegible(item.tipoDiagnostico) }}
+                          </p>
+                          <p class="registro-texto">{{ item.descripcion }}</p>
+                          <p class="registro-meta">
+                            <span>{{ fechaHoraLegible(item.fecha) }}</span>
+                            <span class="separador" aria-hidden="true">|</span>
+                            <span>{{ item.usuarioNombreCorto }}</span>
+                          </p>
+                        </article>
+                      }
+                    </div>
+                  } @else {
+                    <p class="dato-vacio">Sin diagnósticos registrados.</p>
+                  }
+                </section>
+              }
+            } @else {
+              <p class="sin-seleccion">Seleccione un paciente para ver su información.</p>
+            }
+          </aside>
+        } @else if (opcionActiva === 'resumen') {
+        <aside class="panel-seleccionado" aria-label="Detalle del paciente">
+          @if (paciente; as datos) {
+            <!-- Identificación del paciente -->
+            <div class="paciente">
+              <div class="paciente-identidad">
+                <h2>{{ datos.nombreCompleto }}</h2>
+
+                <p class="paciente-meta">
+                  <span>{{ datos.codigoExpediente || '—' }}</span>
+                  <span class="separador" aria-hidden="true">|</span>
+                  <span>{{ datos.edad ?? '—' }} años</span>
+                  <span class="separador" aria-hidden="true">|</span>
+                  <span>{{ sexoLegible(datos.sexo) }}</span>
+                  @if (datos.telefono; as telefono) {
+                    <span class="separador" aria-hidden="true">|</span>
+                    <span>{{ telefono }}</span>
+                  }
+                </p>
+              </div>
+
+              <span class="estado" [class.estado--inactivo]="!datos.estado">
+                {{ datos.estado ? 'Activo' : 'Inactivo' }}
+              </span>
+            </div>
+
+            <div class="bloques-paralelos bloques-paralelos--atencion">
+              <section class="bloque bloque-atencion">
+                <h4>Información de la atención</h4>
+
+                <div class="ingreso-datos">
+                  <div class="dato">
+                    <span class="dato-rotulo">Tipo de atención</span>
+                    <span class="dato-valor">{{ tipoAtencionLegible(datos.tipoAtencion) }}</span>
+                  </div>
+                  <div class="dato">
+                    <span class="dato-rotulo">Fecha y hora de ingreso</span>
+                    <span class="dato-valor">{{ fechaHoraLegible(datos.fechaHoraIngreso) }}</span>
+                  </div>
+                  <div class="dato">
+                    <span class="dato-rotulo">Médico asignado</span>
+                    <span class="dato-valor">{{ datos.medicoNombre || '—' }}</span>
+                  </div>
+                  @if (datos.tipoAtencion === 'HOSPITALIZACION' && datos.camaCodigo) {
+                    <div class="dato">
+                      <span class="dato-rotulo">Cama</span>
+                      <span class="dato-valor">{{ datos.camaCodigo }}</span>
+                    </div>
+                  }
+                </div>
+              </section>
+
+              <section class="bloque bloque--responsable">
+                <h4>Persona responsable</h4>
+
+                <div class="ingreso-datos ingreso-datos--una-columna">
+                  <div class="dato">
+                    <span class="dato-rotulo">Nombre</span>
+                    <span class="dato-valor">{{ responsableNombre(datos) }}</span>
+                  </div>
+                  <div class="dato">
+                    <span class="dato-rotulo">Teléfono</span>
+                    <span class="dato-valor">{{ responsableTelefono(datos) }}</span>
+                  </div>
+                </div>
+              </section>
+            </div>
+
+            @if (datos.descripcion) {
+              <section class="bloque motivo-visita">
+                <h4>Motivo de la visita</h4>
+                <p [attr.title]="textoTooltip(datos.descripcion, 'No registrado')">
+                  {{ datos.descripcion }}
+                </p>
+              </section>
+            }
+
+            <div class="bloques-paralelos">
+              <section class="bloque bloque-alergias">
+                <h4>Alergias</h4>
+
+                @if (datos.alergias.length === 0) {
+                  <p class="dato-vacio">Ninguna registrada</p>
+                } @else {
+                  <ul class="lista-catalogo">
+                    @for (alergia of datos.alergias; track alergia.id) {
+                      <li>{{ alergia.nombre }}</li>
+                    }
+                  </ul>
+                }
+              </section>
+
+              <section class="bloque bloque-enfermedades bloque--responsable">
+                <h4>Enfermedades diagnosticadas</h4>
+
+                @if (datos.enfermedades.length === 0) {
+                  <p class="dato-vacio">Ninguna registrada</p>
+                } @else {
+                  <ul class="lista-catalogo">
+                    @for (enfermedad of datos.enfermedades; track enfermedad.id) {
+                      <li>{{ enfermedad.nombre }}</li>
+                    }
+                  </ul>
+                }
+              </section>
+            </div>
+
+            <section class="bloque bloque-signos">
+              <h4>Últimos signos vitales</h4>
+
+              @if (cargandoSignos) {
+                <p class="aviso">Cargando signos vitales...</p>
+              } @else if (errorSignos) {
+                <div class="aviso-error" role="alert">
+                  <p>{{ errorSignos }}</p>
+                  <button type="button" class="btns" (click)="recargarSignos()">Reintentar</button>
+                </div>
+              } @else if (ultimoSignoVital; as signo) {
+                <div class="ingreso-datos signos-datos">
+                  <div class="dato">
+                    <span class="dato-rotulo">PA (mmHg)</span>
+                    <span class="dato-valor">{{ signo.sistolica }}/{{ signo.diastolica }}</span>
+                  </div>
+                  <div class="dato">
+                    <span class="dato-rotulo">FC (lpm)</span>
+                    <span class="dato-valor">{{ signo.frecuenciaCardiaca }}</span>
+                  </div>
+                  <div class="dato">
+                    <span class="dato-rotulo">FR (rpm)</span>
+                    <span class="dato-valor">{{ signo.frecuenciaRespiratoria }}</span>
+                  </div>
+                  <div class="dato">
+                    <span class="dato-rotulo">Temp. (°C)</span>
+                    <span class="dato-valor">{{ signo.temperatura }}</span>
+                  </div>
+                  <div class="dato">
+                    <span class="dato-rotulo">SpO₂ (%)</span>
+                    <span class="dato-valor">{{ signo.saturacion }}</span>
+                  </div>
+                  <div class="dato">
+                    <span class="dato-rotulo">Última toma</span>
+                    <span class="dato-valor">{{ fechaHoraLegible(signo.fecha) }}</span>
+                  </div>
+                </div>
+              } @else {
+                <p class="dato-vacio">Sin registros de signos vitales.</p>
+              }
+            </section>
+
+            @if (!datos.episodioId && episodioSeleccionado) {
+              <div class="acciones">
+                <button type="button" class="btn _guardar" (click)="abrirUltimoEpisodio()">
+                  Abrir último episodio
+                </button>
+              </div>
+            }
+          } @else {
+            <p class="sin-seleccion">Seleccione un paciente para ver su información.</p>
+          }
+        </aside>
         } @else {
-          <p class="expediente-vacio">Seleccione un episodio para consultar el expediente.</p>
+          <aside class="panel-seleccionado" [attr.aria-label]="tituloSeccionActiva">
+            @if (paciente; as datos) {
+              <div class="paciente">
+                <div class="paciente-identidad">
+                  <h2>{{ tituloSeccionActiva }}</h2>
+
+                  <p class="paciente-meta">
+                    <span>{{ datos.nombreCompleto }}</span>
+                    <span class="separador" aria-hidden="true">|</span>
+                    <span>{{ datos.codigoExpediente || '—' }}</span>
+                  </p>
+                </div>
+              </div>
+
+              @if (cargandoPanel) {
+                <p class="aviso">Cargando información...</p>
+              } @else {
+                @if (errorPanel) {
+                  <div class="aviso-error" role="alert">
+                    <p>{{ errorPanel }}</p>
+                    <button type="button" class="btns" (click)="recargarPanel()">Reintentar</button>
+                  </div>
+                }
+
+                @switch (opcionActiva) {
+                  @case ('examenes') {
+                    @if (examenes.length) {
+                      <div class="registros">
+                        @for (item of examenes; track item.id) {
+                          <article class="registro">
+                            <p class="registro-titulo">{{ item.nombreExamen }}</p>
+                            @if (item.observacion) {
+                              <p class="registro-texto">{{ item.observacion }}</p>
+                            }
+                            @if (item.archivos.length) {
+                              <p class="registro-texto">Archivos: {{ textoArchivos(item) }}</p>
+                            }
+                            <p class="registro-meta">
+                              <span>{{ fechaHoraLegible(item.fecha) }}</span>
+                              <span class="separador" aria-hidden="true">|</span>
+                              <span>{{ item.usuarioNombreCorto }}</span>
+                            </p>
+                          </article>
+                        }
+                      </div>
+                    } @else {
+                      <p class="dato-vacio">No hay exámenes indicados.</p>
+                    }
+                  }
+
+                  @case ('procedimientos') {
+                    @if (procedimientos.length) {
+                      <div class="registros">
+                        @for (item of procedimientos; track item.id) {
+                          <article class="registro">
+                            <p class="registro-titulo">{{ item.tipoProcedimientoNombre }}</p>
+                            @if (item.descripcion || item.resultado || item.recursos.length) {
+                              <p class="registro-texto">@if (item.descripcion) { {{ item.descripcion }} }@if (item.resultado) { · Resultado: {{ item.resultado }} }@if (item.recursos.length) { · Recursos: {{ textoRecursos(item.recursos) }} }</p>
+                            }
+                            <p class="registro-meta">
+                              <span>Inicio {{ fechaHoraLegible(item.inicio) }}</span>
+                              @if (item.fin) {
+                                <span class="separador" aria-hidden="true">|</span>
+                                <span>Fin {{ fechaHoraLegible(item.fin) }}</span>
+                              }
+                              @if (item.fechaRegistro) {
+                                <span class="separador" aria-hidden="true">|</span>
+                                <span>Registrado {{ fechaHoraLegible(item.fechaRegistro) }}</span>
+                              }
+                              <span class="separador" aria-hidden="true">|</span>
+                              <span>{{ item.usuarioNombreCorto }}</span>
+                              <span class="separador" aria-hidden="true">|</span>
+                              <span>{{ etiqueta(item.estado) }}</span>
+                            </p>
+                          </article>
+                        }
+                      </div>
+                    } @else {
+                      <p class="dato-vacio">No hay procedimientos registrados.</p>
+                    }
+                  }
+
+                  @case ('evolucion') {
+                    @if (evoluciones.length) {
+                      <div class="registros">
+                        @for (item of evoluciones; track item.id) {
+                          <article class="registro">
+                            <p class="registro-texto"><strong>Evolución clínica:</strong> {{ item.evolucionClinica }}</p>
+                            <p class="registro-texto"><strong>Plan médico:</strong> {{ item.planMedico }}</p>
+                            <p class="registro-meta">
+                              <span>{{ fechaHoraLegible(item.fecha) }}</span>
+                              @if (item.estadoClinicoNombre) {
+                                <span class="separador" aria-hidden="true">|</span>
+                                <span>{{ item.estadoClinicoNombre }}</span>
+                              }
+                              <span class="separador" aria-hidden="true">|</span>
+                              <span>{{ item.usuarioNombreCorto }}</span>
+                            </p>
+                          </article>
+                        }
+                      </div>
+                    } @else {
+                      <p class="dato-vacio">No hay evoluciones registradas.</p>
+                    }
+                  }
+
+                  @case ('indicaciones') {
+                    <section class="bloque">
+                      <h4>Medicamentos indicados</h4>
+
+                      @if (medicamentos.length) {
+                        <div class="indicaciones-lista">
+                          @for (item of medicamentos; track item.id) {
+                            <article class="indicacion">
+                              <header class="indicacion-cabecera">
+                                <h4>{{ textoMedicamento(item) }}</h4>
+                                <span class="estado" [class.estado--inactivo]="item.estado !== 'ACTIVO'">
+                                  {{ etiqueta(item.estado) }}
+                                </span>
+                              </header>
+
+                              <p class="indicacion-detalle">
+                                <span>Cantidad {{ item.cantidad }}</span>
+                                <span class="separador" aria-hidden="true">|</span>
+                                <span>{{ textoFrecuencia(item.frecuencia) }}</span>
+                                <span class="separador" aria-hidden="true">|</span>
+                                <span>{{ textoDuracion(item.tipoDuracion, item.duracion) }}</span>
+                                <span class="separador" aria-hidden="true">|</span>
+                                <span>Inicio {{ fechaHoraLegible(item.fechaInicio) }}</span>
+                                <span class="separador" aria-hidden="true">|</span>
+                                <span>Registrado por {{ item.usuarioNombreCorto }}</span>
+                              </p>
+
+                              @if (item.observaciones) {
+                                <p class="registro-texto">Observación: {{ item.observaciones }}</p>
+                              }
+
+                              <h5 class="indicacion-subtitulo">Aplicaciones programadas</h5>
+
+                              @if (aplicacionesDeIndicacion(item.id).length) {
+                                <div class="indicacion-tabla-contenedor">
+                                  <table class="indicacion-tabla">
+                                    <thead>
+                                      <tr>
+                                        <th>Programada</th>
+                                        <th>Estado</th>
+                                        <th>Cantidad</th>
+                                        <th>Registrada</th>
+                                        <th>Usuario</th>
+                                        <th>Observación</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      @for (aplicacion of aplicacionesDeIndicacion(item.id); track aplicacion.id) {
+                                        <tr>
+                                          <td>{{ fechaHoraLegible(aplicacion.fechaHoraProgramada) }}</td>
+                                          <td>{{ etiqueta(aplicacion.estado) }}</td>
+                                          <td>{{ aplicacion.cantidad ?? '—' }}</td>
+                                          <td>{{ fechaHoraLegible(aplicacion.fechaRegistro) }}</td>
+                                          <td>{{ aplicacion.usuarioNombre }}</td>
+                                          <td class="indicacion-celda-texto">{{ aplicacion.observacion || '—' }}</td>
+                                        </tr>
+                                      }
+                                    </tbody>
+                                  </table>
+                                </div>
+                              } @else {
+                                <p class="dato-vacio">Sin aplicaciones registradas.</p>
+                              }
+                            </article>
+                          }
+                        </div>
+                      } @else {
+                        <p class="dato-vacio">No hay medicamentos indicados.</p>
+                      }
+                    </section>
+
+                    <section class="bloque">
+                      <h4>Cuidados indicados</h4>
+
+                      @if (cuidados.length) {
+                        <div class="indicaciones-lista">
+                          @for (item of cuidados; track item.id) {
+                            <article class="indicacion">
+                              <header class="indicacion-cabecera">
+                                <h4>{{ item.nombreCuidado }}</h4>
+                                <span class="estado" [class.estado--inactivo]="item.estado !== 'EN_PROCESO'">
+                                  {{ etiqueta(item.estado) }}
+                                </span>
+                              </header>
+
+                              <p class="indicacion-detalle">
+                                <span>{{ textoFrecuencia(item.frecuencia) }}</span>
+                                <span class="separador" aria-hidden="true">|</span>
+                                <span>{{ textoDuracion(item.tipoDuracion, item.duracion) }}</span>
+                                <span class="separador" aria-hidden="true">|</span>
+                                <span>Inicio {{ fechaHoraLegible(item.fechaInicio) }}</span>
+                                <span class="separador" aria-hidden="true">|</span>
+                                <span>Registrado por {{ item.usuarioNombreCorto }}</span>
+                              </p>
+
+                              @if (item.observacion) {
+                                <p class="registro-texto">Observación: {{ item.observacion }}</p>
+                              }
+
+                              <h5 class="indicacion-subtitulo">Ejecuciones programadas</h5>
+
+                              @if (ejecucionesDeCuidado(item.id).length) {
+                                <div class="indicacion-tabla-contenedor">
+                                  <table class="indicacion-tabla">
+                                    <thead>
+                                      <tr>
+                                        <th>Programada</th>
+                                        <th>Estado</th>
+                                        <th>Registrada</th>
+                                        <th>Usuario</th>
+                                        <th>Observación</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      @for (ejecucion of ejecucionesDeCuidado(item.id); track ejecucion.id) {
+                                        <tr>
+                                          <td>{{ fechaHoraLegible(ejecucion.fechaHoraProgramada) }}</td>
+                                          <td>{{ etiqueta(ejecucion.estado) }}</td>
+                                          <td>{{ fechaHoraLegible(ejecucion.fechaRegistro) }}</td>
+                                          <td>{{ ejecucion.usuarioNombre }}</td>
+                                          <td class="indicacion-celda-texto">{{ ejecucion.observacion || '—' }}</td>
+                                        </tr>
+                                      }
+                                    </tbody>
+                                  </table>
+                                </div>
+                              } @else {
+                                <p class="dato-vacio">Sin ejecuciones registradas.</p>
+                              }
+                            </article>
+                          }
+                        </div>
+                      } @else {
+                        <p class="dato-vacio">No hay cuidados indicados.</p>
+                      }
+                    </section>
+
+                    @if (aplicacionesSinIndicacion.length) {
+                      <section class="bloque">
+                        <h4>Otras aplicaciones de medicamentos</h4>
+
+                        <div class="registros">
+                          @for (item of aplicacionesSinIndicacion; track item.id) {
+                            <article class="registro">
+                              <p class="registro-titulo">{{ etiqueta(item.estado) }} · {{ fechaHoraLegible(item.fechaHoraProgramada) }}</p>
+                              @if (item.cantidad !== null) {
+                                <p class="registro-texto">Cantidad: {{ item.cantidad }}</p>
+                              }
+                              @if (item.observacion) {
+                                <p class="registro-texto">{{ item.observacion }}</p>
+                              }
+                              <p class="registro-meta">
+                                <span>Registrada {{ fechaHoraLegible(item.fechaRegistro) }}</span>
+                                <span class="separador" aria-hidden="true">|</span>
+                                <span>{{ item.usuarioNombre }}</span>
+                              </p>
+                            </article>
+                          }
+                        </div>
+                      </section>
+                    }
+
+                    @if (ejecucionesSinCuidado.length) {
+                      <section class="bloque">
+                        <h4>Otras ejecuciones de cuidados</h4>
+
+                        <div class="registros">
+                          @for (item of ejecucionesSinCuidado; track item.id) {
+                            <article class="registro">
+                              <p class="registro-titulo">{{ etiqueta(item.estado) }} · {{ fechaHoraLegible(item.fechaHoraProgramada) }}</p>
+                              @if (item.observacion) {
+                                <p class="registro-texto">{{ item.observacion }}</p>
+                              }
+                              <p class="registro-meta">
+                                <span>Registrada {{ fechaHoraLegible(item.fechaRegistro) }}</span>
+                                <span class="separador" aria-hidden="true">|</span>
+                                <span>{{ item.usuarioNombre }}</span>
+                              </p>
+                            </article>
+                          }
+                        </div>
+                      </section>
+                    }
+                  }
+
+                  @case ('alta') {
+                    @if (alta; as altaVigente) {
+                      <section class="bloque">
+                        <h4>Datos del alta</h4>
+
+                        <div class="ingreso-datos">
+                          <div class="dato">
+                            <span class="dato-rotulo">Tipo de alta</span>
+                            <span class="dato-valor">{{ tipoAltaLegible(altaVigente.tipoAlta) }}</span>
+                          </div>
+                          <div class="dato">
+                            <span class="dato-rotulo">Fecha y hora de egreso</span>
+                            <span class="dato-valor">{{ fechaHoraLegible(altaVigente.fechaHoraEgreso) }}</span>
+                          </div>
+                          @if (altaVigente.condicionEgresoNombre) {
+                            <div class="dato">
+                              <span class="dato-rotulo">Condición de egreso</span>
+                              <span class="dato-valor">{{ altaVigente.condicionEgresoNombre }}</span>
+                            </div>
+                          }
+                          <div class="dato">
+                            <span class="dato-rotulo">Registrado por</span>
+                            <span class="dato-valor">{{ altaVigente.usuarioNombre }}</span>
+                          </div>
+                          <div class="dato">
+                            <span class="dato-rotulo">Diagnóstico de egreso</span>
+                            <span class="dato-valor">{{ altaVigente.diagnosticoEgreso }}</span>
+                          </div>
+                          @if (altaVigente.observacionEgreso) {
+                            <div class="dato">
+                              <span class="dato-rotulo">Observación de egreso</span>
+                              <span class="dato-valor">{{ altaVigente.observacionEgreso }}</span>
+                            </div>
+                          }
+                          @if (altaVigente.motivoRetiro) {
+                            <div class="dato">
+                              <span class="dato-rotulo">Motivo de retiro</span>
+                              <span class="dato-valor">{{ altaVigente.motivoRetiro }}</span>
+                            </div>
+                          }
+                          @if (altaVigente.institucionNombre) {
+                            <div class="dato">
+                              <span class="dato-rotulo">Institución</span>
+                              <span class="dato-valor">{{ altaVigente.institucionNombre }}</span>
+                            </div>
+                          }
+                          @if (altaVigente.motivoReferencia) {
+                            <div class="dato">
+                              <span class="dato-rotulo">Motivo de referencia</span>
+                              <span class="dato-valor">{{ altaVigente.motivoReferencia }}</span>
+                            </div>
+                          }
+                          @if (altaVigente.indicacionesTraslado) {
+                            <div class="dato">
+                              <span class="dato-rotulo">Indicaciones de traslado</span>
+                              <span class="dato-valor">{{ altaVigente.indicacionesTraslado }}</span>
+                            </div>
+                          }
+                        </div>
+                      </section>
+
+                      <section class="bloque">
+                        <h4>Tratamiento del alta</h4>
+
+                        @if (altaVigente.tratamientos.length) {
+                          <div class="registros">
+                            @for (tratamiento of altaVigente.tratamientos; track $index) {
+                              <article class="registro">
+                                <p class="registro-titulo">{{ tratamiento.nombre }}</p>
+                                <p class="registro-texto">{{ etiqueta(tratamiento.tipo) }}@if (tratamiento.cantidad !== null) { · Cantidad {{ tratamiento.cantidad }} {{ tratamiento.unidadMedida || '' }} } · {{ textoFrecuencia(tratamiento.frecuencia) }} · {{ textoDuracion(tratamiento.duracionTipo, tratamiento.duracion) }}</p>
+                                @if (tratamiento.observaciones) {
+                                  <p class="registro-texto">{{ tratamiento.observaciones }}</p>
+                                }
+                              </article>
+                            }
+                          </div>
+                        } @else {
+                          <p class="dato-vacio">Sin tratamiento registrado en el alta.</p>
+                        }
+                      </section>
+                    } @else {
+                      <p class="dato-vacio">Sin alta médica vigente.</p>
+                    }
+                  }
+
+                  @case ('registros-enfermeria') {
+                    <section class="bloque">
+                      <h4>Signos vitales</h4>
+
+                      @if (cargandoSignos) {
+                        <p class="aviso">Cargando signos vitales...</p>
+                      } @else if (errorSignos) {
+                        <div class="aviso-error" role="alert">
+                          <p>{{ errorSignos }}</p>
+                          <button type="button" class="btns" (click)="recargarSignos()">Reintentar</button>
+                        </div>
+                      } @else if (signosVitales.length) {
+                        <div class="registros">
+                          @for (signo of signosVitales; track signo.id) {
+                            <article class="registro">
+                              <p class="registro-titulo">PA {{ signo.sistolica }}/{{ signo.diastolica }} mmHg · FC {{ signo.frecuenciaCardiaca }} lpm</p>
+                              <p class="registro-texto">FR {{ signo.frecuenciaRespiratoria }} rpm · Temp {{ signo.temperatura }} °C · SpO₂ {{ signo.saturacion }} %</p>
+                              @if (signo.observacion) {
+                                <p class="registro-texto">Observación: {{ signo.observacion }}</p>
+                              }
+                              <p class="registro-meta">
+                                <span>{{ fechaHoraLegible(signo.fecha) }}</span>
+                                <span class="separador" aria-hidden="true">|</span>
+                                <span>{{ signo.usuarioNombreCorto }}</span>
+                              </p>
+                            </article>
+                          }
+                        </div>
+                      } @else {
+                        <p class="dato-vacio">Sin signos vitales registrados.</p>
+                      }
+                    </section>
+
+                    <section class="bloque">
+                      <h4>Glucosa</h4>
+
+                      @if (glucosa.length) {
+                        <div class="registros">
+                          @for (item of glucosa; track item.id) {
+                            <article class="registro">
+                              <p class="registro-titulo">{{ item.glucosa }} mg/dL · {{ tipoMedicionLegible(item.tipo) }}</p>
+                              @if (item.observacion) {
+                                <p class="registro-texto">Observación: {{ item.observacion }}</p>
+                              }
+                              <p class="registro-meta">
+                                <span>{{ fechaHoraLegible(item.fecha) }}</span>
+                                <span class="separador" aria-hidden="true">|</span>
+                                <span>{{ item.usuarioNombreCorto }}</span>
+                              </p>
+                            </article>
+                          }
+                        </div>
+                      } @else {
+                        <p class="dato-vacio">Sin registros de glucosa.</p>
+                      }
+                    </section>
+
+                    <section class="bloque">
+                      <h4>Control hídrico</h4>
+
+                      @if (controlHidrico.length) {
+                        <div class="registros">
+                          @for (item of controlHidrico; track item.id) {
+                            <article class="registro">
+                              <p class="registro-titulo">{{ etiqueta(item.tipo) }} · {{ item.via }} · {{ item.cantidad }}</p>
+                              <p class="registro-texto">{{ item.descripcion }}</p>
+                              <p class="registro-meta">
+                                <span>{{ fechaHoraLegible(item.fecha) }}</span>
+                                <span class="separador" aria-hidden="true">|</span>
+                                <span>{{ item.usuarioNombreCorto }}</span>
+                              </p>
+                            </article>
+                          }
+                        </div>
+                      } @else {
+                        <p class="dato-vacio">Sin registros de control hídrico.</p>
+                      }
+                    </section>
+
+                    <section class="bloque">
+                      <h4>Notas de enfermería</h4>
+
+                      @if (notas.length) {
+                        <div class="registros">
+                          @for (item of notas; track item.id) {
+                            <article class="registro">
+                              <p class="registro-texto">{{ item.texto }}</p>
+                              <p class="registro-meta">
+                                <span>{{ fechaHoraLegible(item.fecha) }}</span>
+                                <span class="separador" aria-hidden="true">|</span>
+                                <span>{{ item.usuarioNombreCorto }}</span>
+                              </p>
+                            </article>
+                          }
+                        </div>
+                      } @else {
+                        <p class="dato-vacio">Sin notas de enfermería.</p>
+                      }
+                    </section>
+                  }
+
+                  @case ('consumo') {
+                    @if (consumo && consumo.items.length) {
+                      <section class="bloque">
+                        <div class="registros">
+                          @for (item of consumo.items; track $index) {
+                            <article class="registro">
+                              <p class="registro-titulo">{{ item.nombre }}</p>
+                              <p class="registro-texto">{{ etiqueta(item.tipo) }}@if (item.detalle) { · {{ item.detalle }} }</p>
+                              <p class="registro-meta">
+                                <span>Cantidad {{ item.cantidad }} {{ item.unidad }}</span>
+                                <span class="separador" aria-hidden="true">|</span>
+                                <span>Q {{ item.precioUnitario | number: '1.2-2' }}</span>
+                                <span class="separador" aria-hidden="true">|</span>
+                                <span>Subtotal Q {{ item.subtotal | number: '1.2-2' }}</span>
+                              </p>
+                            </article>
+                          }
+                        </div>
+                      </section>
+
+                      <section class="bloque">
+                        <div class="ingreso-datos ingreso-datos--una-columna">
+                          <div class="dato">
+                            <span class="dato-rotulo">Total</span>
+                            <span class="dato-valor">Q {{ consumo.total | number: '1.2-2' }}</span>
+                          </div>
+                        </div>
+                      </section>
+                    } @else {
+                      <p class="dato-vacio">Sin consumos registrados en el episodio.</p>
+                    }
+                  }
+                }
+              }
+            } @else {
+              <p class="sin-seleccion">Seleccione un paciente para ver su información.</p>
+            }
+          </aside>
         }
       </section>
     </div>

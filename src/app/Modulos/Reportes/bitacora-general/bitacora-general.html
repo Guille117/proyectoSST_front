@@ -12,44 +12,103 @@
           <input type="date" id="hasta" name="hasta" [(ngModel)]="hasta" />
         </app-campo-validado>
       </div>
-      <button type="button" class="btn _principal" [disabled]="cargando" (click)="generar()">Generar</button>
-      <button type="button" class="btn" (click)="exportarPdf()">PDF</button>
-      <button type="button" class="btn" (click)="exportarExcel()">Excel</button>
+      <div class="filtros-acciones">
+        <button type="button" class="btn _principal" [disabled]="cargando" (click)="generar()">
+          Generar
+        </button>
+        <button
+          type="button"
+          class="btn btn-exportar"
+          [disabled]="cargando || !entradas.length"
+          (click)="exportarPdf()"
+        >
+          PDF
+        </button>
+        <button
+          type="button"
+          class="btn btn-exportar"
+          [disabled]="cargando || !entradas.length"
+          (click)="exportarExcel()"
+        >
+          Excel
+        </button>
+      </div>
     </div>
   </div>
 
-  <div class="table-container">
-    <table class="table" [attr.aria-busy]="cargando">
-      <thead>
-        <tr>
-          <th class="celda_centrada">Fecha / Hora</th>
-          <th class="celda_izquierda">Usuario</th>
-          <th class="celda_izquierda">Acción</th>
-          <th class="celda_izquierda">Descripción</th>
-        </tr>
-      </thead>
-      <tbody>
-        @if (cargando) {
-          <tr>
-            <td colspan="4" class="celda_centrada">Cargando bitácora...</td>
-          </tr>
-        } @else {
-          @for (e of entradas; track e.id) {
+  @if (cargando) {
+    <p class="reporte-vacio">Cargando bitácora...</p>
+  } @else {
+    <section class="kpis" aria-label="Resumen de la bitácora">
+      <article class="kpi">
+        <span class="kpi-icono" aria-hidden="true"><i class="bi bi-journal-text"></i></span>
+        <div class="kpi-info">
+          <p class="kpi-etiqueta">Registros</p>
+          <p class="kpi-valor">{{ total() }}</p>
+        </div>
+      </article>
+
+      <article class="kpi">
+        <span class="kpi-icono" aria-hidden="true"><i class="bi bi-plus-circle"></i></span>
+        <div class="kpi-info">
+          <p class="kpi-etiqueta">Creados</p>
+          <p class="kpi-valor">{{ creados() }}</p>
+        </div>
+      </article>
+
+      <article class="kpi">
+        <span class="kpi-icono" aria-hidden="true"><i class="bi bi-pencil-square"></i></span>
+        <div class="kpi-info">
+          <p class="kpi-etiqueta">Editados</p>
+          <p class="kpi-valor">{{ editados() }}</p>
+        </div>
+      </article>
+
+      <article class="kpi">
+        <span class="kpi-icono" aria-hidden="true"><i class="bi bi-trash"></i></span>
+        <div class="kpi-info">
+          <p class="kpi-etiqueta">Eliminados</p>
+          <p class="kpi-valor">{{ eliminados() }}</p>
+        </div>
+      </article>
+    </section>
+
+    <article class="panel">
+      <div class="panel-cabecera">
+        <h2 class="panel-titulo">Registros del período</h2>
+      </div>
+      <div class="tabla-scroll">
+        <table class="table tabla-reporte" [attr.aria-busy]="cargando">
+          <thead>
             <tr>
-              <td class="celda_centrada">{{ formatearFechaHora(e.fechaHora) }}</td>
-              <td class="celda_izquierda">{{ e.usuarioNombre ?? '—' }}</td>
-              <td class="celda_izquierda">
-                <span [class]="claseAccion(e.accion)">{{ accionLegible(e.accion) }}</span>
-              </td>
-              <td class="celda_izquierda" [title]="e.detalle ?? ''">{{ descripcion(e) }}</td>
+              <th scope="col" class="celda_centrada">Fecha / Hora</th>
+              <th scope="col" class="celda_izquierda">Usuario</th>
+              <th scope="col" class="celda_izquierda">Acción</th>
+              <th scope="col" class="celda_izquierda">Descripción</th>
+              <th scope="col" class="celda_izquierda">Detalle</th>
             </tr>
-          } @empty {
-            <tr>
-              <td colspan="4" class="celda_centrada">Sin registros.</td>
-            </tr>
-          }
-        }
-      </tbody>
-    </table>
-  </div>
+          </thead>
+          <tbody>
+            @for (e of entradas; track e.id) {
+              <tr>
+                <td class="celda_centrada">{{ formatearFechaHora(e.fechaHora) }}</td>
+                <td class="celda_izquierda">{{ e.usuarioNombre ?? '—' }}</td>
+                <td class="celda_izquierda">
+                  <span [class]="claseAccion(e.accion)">{{ accionLegible(e.accion) }}</span>
+                </td>
+                <td class="celda_izquierda" [title]="e.detalle ?? ''">{{ descripcion(e) }}</td>
+                <td class="celda_izquierda celda-detalle" [title]="e.detalle ?? ''">
+                  {{ detalle(e) }}
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="5" class="celda_centrada">Sin registros.</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </article>
+  }
 </div>

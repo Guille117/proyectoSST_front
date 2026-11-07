@@ -1,0 +1,187 @@
+<div class="reporte-mas-vendidos">
+  <div class="filtros">
+    <div class="filtro-fecha">
+      <app-campo-validado [label]="'Desde'" [fieldId]="'desde'">
+        <input type="date" id="desde" name="desde" [(ngModel)]="desde" />
+      </app-campo-validado>
+    </div>
+
+    <div class="filtro-fecha">
+      <app-campo-validado [label]="'Hasta'" [fieldId]="'hasta'">
+        <input type="date" id="hasta" name="hasta" [(ngModel)]="hasta" />
+      </app-campo-validado>
+    </div>
+
+    <div class="filtros-acciones">
+      <button type="button" class="btn _principal" [disabled]="cargando" (click)="generar()">
+        Generar
+      </button>
+      <button
+        type="button"
+        class="btn btn-exportar"
+        [disabled]="cargando || !filas.length"
+        (click)="exportarPdf()"
+      >
+        PDF
+      </button>
+      <button
+        type="button"
+        class="btn btn-exportar"
+        [disabled]="cargando || !filas.length"
+        (click)="exportarExcel()"
+      >
+        Excel
+      </button>
+    </div>
+  </div>
+
+  @if (cargando) {
+    <p class="reporte-vacio">Cargando reporte...</p>
+  } @else if (filas.length) {
+    <section class="kpis" aria-label="Resumen del período">
+      <article class="kpi">
+        <span class="kpi-icono" aria-hidden="true"><i class="bi bi-box-seam"></i></span>
+        <div class="kpi-info">
+          <p class="kpi-etiqueta">Unidades despachadas</p>
+          <p class="kpi-valor">{{ numero(total) }}</p>
+        </div>
+      </article>
+
+      <article class="kpi">
+        <span class="kpi-icono" aria-hidden="true"><i class="bi bi-layers"></i></span>
+        <div class="kpi-info">
+          <p class="kpi-etiqueta">Productos diferentes</p>
+          <p class="kpi-valor">{{ numero(filas.length) }}</p>
+        </div>
+      </article>
+
+      <article class="kpi">
+        <span class="kpi-icono" aria-hidden="true"><i class="bi bi-clipboard2-pulse"></i></span>
+        <div class="kpi-info">
+          <p class="kpi-etiqueta">Producto principal</p>
+          <p class="kpi-valor kpi-valor--nombre" [attr.title]="principal()?.nombre">
+            {{ principal()?.nombre }}
+          </p>
+        </div>
+      </article>
+
+      <article class="kpi">
+        <span class="kpi-icono" aria-hidden="true"><i class="bi bi-pie-chart"></i></span>
+        <div class="kpi-info">
+          <p class="kpi-etiqueta">Participación del principal</p>
+          <p class="kpi-valor">{{ porcentaje(filas[0].participacion) }}</p>
+        </div>
+      </article>
+    </section>
+
+    <div class="paneles">
+      <article class="panel">
+        <div class="panel-cabecera">
+          <h2 class="panel-titulo">Productos con más salidas</h2>
+          <div class="panel-cabecera-derecha">
+            @if (vistaPanel() === 'grafica') {
+              <span class="panel-nota">Top 10</span>
+            }
+            <app-reporte-vista-toggle
+              [vista]="vistaPanel()"
+              etiqueta="Vista del panel de productos"
+              (cambiar)="cambiarVista($event)"
+            ></app-reporte-vista-toggle>
+          </div>
+        </div>
+
+        @if (vistaPanel() === 'grafica') {
+          <div class="grafica-barras">
+            <app-grafica-barras
+              [etiquetas]="etiquetasBarras()"
+              [valores]="valoresBarras()"
+              [titulo]="titulo"
+              [mostrarValores]="true"
+            ></app-grafica-barras>
+          </div>
+        } @else {
+          <div class="tabla-scroll">
+            <table class="table tabla-detalle">
+              <colgroup>
+                <col class="col-producto" />
+                <col class="col-tipo" />
+                <col class="col-cantidad" />
+                <col class="col-participacion" />
+              </colgroup>
+              <thead>
+                <tr>
+                  <th scope="col" class="celda_izquierda">Producto</th>
+                  <th scope="col" class="celda_centrada">Tipo</th>
+                  <th scope="col" class="celda_numero">Cantidad</th>
+                  <th scope="col" class="celda_numero">% participación</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (fila of filas; track fila.nombre + '|' + fila.tipo) {
+                  <tr>
+                    <td class="celda_izquierda" [attr.title]="fila.nombre">{{ fila.nombre }}</td>
+                    <td class="celda_centrada">
+                      <span
+                        class="tipo-badge"
+                        [class.tipo-badge--medicamento]="fila.tipo === 'MEDICAMENTO'"
+                        [class.tipo-badge--insumo]="fila.tipo === 'INSUMO'"
+                      >
+                        {{ etiquetaTipo(fila.tipo) }}
+                      </span>
+                    </td>
+                    <td class="celda_numero">{{ numero(fila.cantidad) }}</td>
+                    <td class="celda_numero">{{ porcentaje(fila.participacion) }}</td>
+                  </tr>
+                }
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td class="celda_izquierda">Total</td>
+                  <td></td>
+                  <td class="celda_numero">{{ numero(total) }}</td>
+                  <td class="celda_numero">100.0 %</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        }
+      </article>
+
+      <article class="panel">
+        <h2 class="panel-titulo">Distribución por tipo</h2>
+        <div class="distribucion">
+          <div class="grafica-dona">
+            <app-grafica-dona
+              [etiquetas]="etiquetasTipos()"
+              [valores]="valoresTipos()"
+              [colores]="coloresTipos()"
+              [total]="total"
+              etiquetaTotal="Unidades totales"
+            ></app-grafica-dona>
+          </div>
+
+          <ul class="dona-leyenda">
+            @for (resumen of tipos; track resumen.tipo) {
+              <li>
+                <span class="punto" [style.background]="resumen.color" aria-hidden="true"></span>
+                <div>
+                  <p class="leyenda-titulo">{{ resumen.etiqueta }}</p>
+                  <p class="leyenda-detalle">
+                    {{ numero(resumen.cantidad) }} unidades ({{ porcentaje(resumen.participacion) }})
+                  </p>
+                </div>
+              </li>
+            }
+          </ul>
+        </div>
+      </article>
+    </div>
+
+    <p class="aviso" role="status">
+      <i class="bi bi-info-circle" aria-hidden="true"></i>
+      <span>{{ mensajePrincipal() }}</span>
+    </p>
+  } @else {
+    <p class="reporte-vacio">Sin datos para el período seleccionado.</p>
+  }
+</div>
