@@ -1,6 +1,6 @@
 import { Location } from '@angular/common';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { ActivatedRoute, provideRouter } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { delay, of } from 'rxjs';
 import { SignosVitalesService } from '../../Enfermeria/monitoreo/data/signos-vitales-service';
 import { ControlHidricoService } from '../../Enfermeria/monitoreo/data/control-hidrico-service';
@@ -114,7 +114,7 @@ describe('Expediente', () => {
         { provide: ConsumoEpisodioService, useValue: servicioConsumo },
         { provide: Location, useValue: location },
         { provide: ActivatedRoute, useValue: route },
-        provideRouter([]),
+        { provide: Router, useValue: { navigate: vi.fn() } },
       ],
     }).compileComponents();
 

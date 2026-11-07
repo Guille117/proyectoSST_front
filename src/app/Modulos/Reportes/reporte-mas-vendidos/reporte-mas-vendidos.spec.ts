@@ -74,6 +74,9 @@ describe('ReporteMasVendidos', () => {
   });
 
   it('muestra los indicadores y el detalle en la plantilla', () => {
+    componente.cambiarVista('tabla');
+    fixture.detectChanges();
+
     const contenedor = fixture.nativeElement as HTMLElement;
     const texto = contenedor.textContent ?? '';
 
