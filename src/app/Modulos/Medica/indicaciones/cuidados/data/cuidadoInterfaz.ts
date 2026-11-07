@@ -7,9 +7,9 @@ export type TipoDuracionCuidadoApi = 'DIAS' | 'DOSIS_UNICA' | 'TIEMPO_INDEFINIDO
 /** Cuerpo con el que se crea o actualiza un cuidado. */
 export interface CuidadoRequest {
   nombreCuidado: string;
-  frecuencia: number;
+  frecuencia: number | null;
   duracion: number | null;
-  tipoDuracion: TipoDuracionCuidadoApi;
+  tipoDuracion: TipoDuracionCuidadoApi | null;
   observacion: string | null;
   episodioId: number;
   usuarioId: number;
@@ -20,9 +20,9 @@ export interface CuidadoRequest {
 export interface CuidadoResponse {
   id: number;
   nombreCuidado: string;
-  frecuencia: number;
+  frecuencia: number | null;
   duracion: number | null;
-  tipoDuracion: TipoDuracionCuidadoApi;
+  tipoDuracion: TipoDuracionCuidadoApi | null;
   observacion: string | null;
   episodioId: number;
   usuarioId: number;

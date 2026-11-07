@@ -425,13 +425,18 @@ export class ResumenEpisodio implements OnChanges {
     return texto.charAt(0).toUpperCase() + texto.slice(1);
   }
 
-  textoDuracion(tipo: TipoDuracionApi | TipoDuracionCuidadoApi, dias: number | null): string {
+  textoDuracion(
+    tipo: TipoDuracionApi | TipoDuracionCuidadoApi | null,
+    dias: number | null,
+  ): string {
+    if (tipo === null) return '—';
     if (tipo === 'DOSIS_UNICA') return 'Dosis única';
     if (tipo === 'TIEMPO_INDEFINIDO') return 'Tiempo indefinido';
     return `${dias ?? 0} ${dias === 1 ? 'día' : 'días'}`;
   }
 
-  textoFrecuencia(frecuencia: number): string {
+  textoFrecuencia(frecuencia: number | null): string {
+    if (frecuencia === null) return '—';
     return `Cada ${frecuencia} ${frecuencia === 1 ? 'hora' : 'horas'}`;
   }
 

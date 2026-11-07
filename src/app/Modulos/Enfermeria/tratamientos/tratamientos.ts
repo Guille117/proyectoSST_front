@@ -33,7 +33,10 @@ import {
   ExamenResponse,
 } from '../../Medica/indicaciones/examenes/data/examenInterfaz';
 import { MedicamentoIndicacionService } from '../../Medica/indicaciones/medicamentos/data/medicamento-service';
-import { MedicamentoIndicacionResponse } from '../../Medica/indicaciones/medicamentos/data/medicamentoInterfaz';
+import {
+  descripcionMedicamentoCompleta,
+  MedicamentoIndicacionResponse,
+} from '../../Medica/indicaciones/medicamentos/data/medicamentoInterfaz';
 import { ProcedimientoMedicoService } from '../../Medica/procedimiento-medico/data/procedimiento-medico-service';
 import {
   RecursoDisponibleResponse,
@@ -162,8 +165,8 @@ interface IndicacionConAplicaciones {
 /** Indicación cuya programación se calcula con la fecha de inicio y la frecuencia. */
 interface IndicacionConProgramacion extends IndicacionConAplicaciones {
   fechaInicio: string;
-  frecuencia: number;
-  duracionTipo: TipoDuracionTratamiento;
+  frecuencia: number | null;
+  duracionTipo: TipoDuracionTratamiento | '';
   duracionCantidad: number | null;
   ultimaAplicacion: Date | null;
   proximaAplicacion: Date | null;
@@ -174,6 +177,8 @@ interface MedicamentoIndicadoVista
   extends IndicacionConMetaVista,
     IndicacionConProgramacion {
   nombre: string;
+  /** Nombre con marca, presentación y vía de administración. */
+  descripcion: string;
   cantidad: number;
   unidad: string;
   frecuencia: number;
@@ -204,8 +209,8 @@ interface ControlTomadoPendiente {
 /** Atención indicada que muestra la tarjeta de indicaciones médicas. */
 interface CuidadoIndicadoVista extends IndicacionConMetaVista, IndicacionConProgramacion {
   nombre: string;
-  frecuencia: number;
-  duracionTipo: TipoDuracionTratamiento;
+  frecuencia: number | null;
+  duracionTipo: TipoDuracionTratamiento | '';
   duracionCantidad: number | null;
   /** La atención es un control de Monitoreo y no debe solicitar medicamentos. */
   esControl: boolean;
@@ -1143,6 +1148,9 @@ export class Tratamientos implements OnInit, OnDestroy {
       indiceInicial: 0,
       cargarArchivo: (archivo: ArchivoVisor) =>
         this.servicioExamenes.obtenerArchivo(examen.id, Number(archivo.id)),
+      onEliminar: (archivo: ArchivoVisor) =>
+        this.servicioExamenes.eliminarArchivo(examen.id, Number(archivo.id)),
+      onCambio: () => this.cargarIndicaciones(),
     });
   }
 
@@ -1800,6 +1808,10 @@ export class Tratamientos implements OnInit, OnDestroy {
 
   /** Texto de la tarjeta del cuidado: cada cuántas horas se realiza y durante cuánto tiempo. */
   textoRealizacion(cuidado: CuidadoIndicadoVista): string {
+    if (cuidado.frecuencia === null && cuidado.duracionTipo === '') {
+      return 'Sin programación';
+    }
+
     if (cuidado.duracionTipo === 'unica') {
       return 'Realizar una vez';
     }
@@ -1842,6 +1854,15 @@ export class Tratamientos implements OnInit, OnDestroy {
       hora: this.formatearHora(fechaRegistro),
       medico: respuesta.usuarioNombreCorto,
       nombre: respuesta.medicamento,
+      descripcion:
+        descripcionMedicamentoCompleta({
+          nombre: respuesta.medicamento,
+          marca: respuesta.medicamentoMarca,
+          presentacion: respuesta.medicamentoPresentacion,
+          dosis: respuesta.medicamentoDosis,
+          unidadMedida: respuesta.medicamentoUnidad,
+          viaAdministracion: respuesta.medicamentoViaAdministracion,
+        }) || respuesta.medicamento,
       cantidad: respuesta.cantidad,
       unidad: respuesta.presentacion?.trim() || 'unidad',
       frecuencia: respuesta.frecuencia,
@@ -1886,7 +1907,8 @@ export class Tratamientos implements OnInit, OnDestroy {
       medico: respuesta.usuarioNombreCorto,
       nombre: respuesta.nombreCuidado,
       frecuencia: respuesta.frecuencia,
-      duracionTipo: this.aDuracionVista(respuesta.tipoDuracion),
+      duracionTipo:
+        respuesta.tipoDuracion === null ? '' : this.aDuracionVista(respuesta.tipoDuracion),
       duracionCantidad: respuesta.duracion,
       esControl: control !== null,
       seccionMonitoreo: control?.seccion ?? null,
@@ -1971,14 +1993,15 @@ export class Tratamientos implements OnInit, OnDestroy {
   private programacionDeRespuesta(respuesta: {
     fechaInicio: string;
     fecha: string;
-    frecuencia: number;
-    tipoDuracion: TipoDuracionApi;
+    frecuencia: number | null;
+    tipoDuracion: TipoDuracionApi | null;
     duracion: number | null;
   }): ProgramacionTratamiento {
     return {
       fechaInicio: new Date(respuesta.fechaInicio || respuesta.fecha),
       frecuencia: respuesta.frecuencia,
-      duracionTipo: this.aDuracionVista(respuesta.tipoDuracion),
+      duracionTipo:
+        respuesta.tipoDuracion === null ? '' : this.aDuracionVista(respuesta.tipoDuracion),
       duracionCantidad: respuesta.duracion,
     };
   }

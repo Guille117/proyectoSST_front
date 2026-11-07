@@ -398,6 +398,7 @@ describe('Salidas', () => {
           condicion: null,
           motivoBaja: null,
           usuario: 'Carlos Méndez',
+          usuarioNombreCorto: 'Carlos Méndez',
           observacion: null,
         },
       ]),
@@ -411,6 +412,9 @@ describe('Salidas', () => {
     expect(fixture.nativeElement.textContent).toContain(
       'Se entregó 5 de Amoxicilina (LOTE-20)',
     );
+
+    const usuario: HTMLElement = fixture.nativeElement.querySelector('.historial-usuario');
+    expect(usuario?.textContent).toContain('Carlos Méndez');
   });
 
   const abrirDevolucionConOtro = (): OpcionOtroComponent => {

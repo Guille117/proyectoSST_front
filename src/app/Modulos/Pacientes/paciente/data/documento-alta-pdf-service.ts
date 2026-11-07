@@ -13,8 +13,8 @@ interface TratamientoAltaDocumento {
   nombre: string;
   cantidad: number | null;
   unidadMedida: string | null;
-  frecuencia: number;
-  duracionTipo: string;
+  frecuencia: number | null;
+  duracionTipo: string | null;
   duracion: number | null;
   observaciones: string | null;
 }
@@ -279,6 +279,7 @@ export class DocumentoAltaPdfService {
   }
 
   private textoDuracion(tratamiento: TratamientoAltaDocumento): string {
+    if (tratamiento.duracionTipo === null) return '—';
     if (tratamiento.duracionTipo === 'DOSIS_UNICA') return 'Dosis única';
     if (tratamiento.duracionTipo === 'TIEMPO_INDEFINIDO') return 'Tiempo indefinido';
     const dias = tratamiento.duracion ?? 0;

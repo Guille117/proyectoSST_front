@@ -286,6 +286,13 @@ export class Ingresos implements OnInit {
       archivos: [archivo],
       indiceInicial: 0,
       cargarArchivo: () => this.servicioCompra.obtenerComprobante(comprobante),
+      ...(detalle.estado
+        ? { onEliminar: () => this.servicioCompra.eliminarComprobante(detalle.id) }
+        : {}),
+      onCambio: () => {
+        this.comprasDetalle.delete(detalle.id);
+        this.cargarDetalle();
+      },
     });
   }
 

@@ -307,13 +307,18 @@ export class MedicamentoIndicacion implements OnInit, OnChanges, OnDestroy {
     const elegido = this.medicamentoElegido;
     if (!elegido) return '';
 
-    const partes = [elegido.nombre];
-    if (elegido.presentacion) partes.push(elegido.presentacion);
-    if (elegido.administracion) {
-      partes.push(`administración ${elegido.administracion.toLowerCase()}`);
-    }
+    return this.descripcionCompleta(elegido);
+  }
 
-    return partes.join(', ');
+  /** Nombre con marca, presentación y vía de administración del medicamento elegido. */
+  private descripcionCompleta(opcion: MedicamentoCatalogoVista): string {
+    return [
+      opcion.nombre,
+      opcion.presentacion,
+      opcion.administracion ? `administración ${opcion.administracion.toLowerCase()}` : '',
+    ]
+      .filter((parte) => parte?.trim())
+      .join(', ');
   }
 
   /** Texto de la tabla de resultados cuando la búsqueda no encuentra medicamentos en el catálogo. */
@@ -380,10 +385,28 @@ export class MedicamentoIndicacion implements OnInit, OnChanges, OnDestroy {
     return {
       id: opcion.id,
       nombre,
-      presentacion: opcion.presentacion ?? '',
+      presentacion: this.presentacionConConcentracion(opcion),
       administracion: opcion.viaAdministracion ?? '',
       disponible: opcion.disponible,
     };
+  }
+
+  /** Presentación del catálogo con su dosis: «Tabletas de 500 mg». */
+  private presentacionConConcentracion(opcion: MedicamentoCatalogoResponse): string {
+    const presentacion = opcion.presentacion?.trim() ?? '';
+    const dosis = opcion.dosis > 0 ? `${opcion.dosis}` : '';
+    const unidad = opcion.unidadMedida?.trim() ?? '';
+    const concentracion = [dosis, unidad].filter(Boolean).join(' ');
+
+    if (!concentracion) return presentacion;
+    if (presentacion && presentacion.toLowerCase().includes(concentracion.toLowerCase())) {
+      return presentacion;
+    }
+    if (!presentacion) return concentracion;
+
+    return /\d/.test(presentacion)
+      ? `${presentacion} ${concentracion}`
+      : `${presentacion} de ${concentracion}`;
   }
 
   /** Muestra otra página de la tabla de resultados. */
@@ -452,7 +475,9 @@ export class MedicamentoIndicacion implements OnInit, OnChanges, OnDestroy {
     }
 
     this.medicamentoAgregado.emit({
-      nombre: this.medicamento.trim(),
+      nombre: this.medicamentoElegido
+        ? this.descripcionCompleta(this.medicamentoElegido)
+        : this.medicamento.trim(),
       medicamentoLogId: this.medicamentoElegido?.id ?? null,
       medicamentoLibre: this.medicamentoElegido ? '' : this.medicamentoLibre.trim(),
       cantidad: this.cantidad,

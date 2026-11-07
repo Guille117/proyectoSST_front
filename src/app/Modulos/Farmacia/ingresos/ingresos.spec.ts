@@ -35,6 +35,7 @@ describe('Ingresos', () => {
     >(() => of([])),
     listarCompras: vi.fn<() => Observable<detalleCompraResponse[]>>(() => of([])),
     eliminarCompra: vi.fn<(id: number) => Observable<void>>(() => of(void 0)),
+    eliminarComprobante: vi.fn<(id: number) => Observable<void>>(() => of(void 0)),
   };
   const servicioProveedor = {
     getProveedores: vi.fn<(activos: boolean) => Observable<proveedorResponse[]>>(() => of([])),
@@ -102,6 +103,8 @@ describe('Ingresos', () => {
     servicioCompra.listarCompras.mockReturnValue(of([]));
     servicioCompra.eliminarCompra.mockReset();
     servicioCompra.eliminarCompra.mockReturnValue(of(void 0));
+    servicioCompra.eliminarComprobante.mockReset();
+    servicioCompra.eliminarComprobante.mockReturnValue(of(void 0));
     servicioProveedor.getProveedores.mockReset();
     servicioProveedor.getProveedores.mockReturnValue(of([]));
     popUp.errorDesdeBackend.mockReset();
@@ -289,10 +292,39 @@ describe('Ingresos', () => {
           }),
         ],
         cargarArchivo: expect.any(Function),
+        onEliminar: expect.any(Function),
+        onCambio: expect.any(Function),
       }),
     );
 
+    const opciones = abrirModal.mock.calls[0][1];
+    opciones.onEliminar().subscribe();
+    expect(servicioCompra.eliminarComprobante).toHaveBeenCalledWith(detalleCompra.id);
+
     fixtureComprobante.destroy();
+  });
+
+  it('no ofrece eliminar el comprobante cuando la compra esta inactiva', () => {
+    servicioCompra.listarComprasResumen.mockReturnValue(of([resumenCompra]));
+    servicioCompra.listarCompras.mockReturnValue(of([{ ...detalleCompra, estado: false }]));
+
+    const fixtureInactiva = TestBed.createComponent(Ingresos);
+    fixtureInactiva.detectChanges();
+
+    const modalService = TestBed.inject(ModalService);
+    const abrirModal = vi.spyOn(modalService, 'open');
+
+    const detalle: HTMLElement = fixtureInactiva.nativeElement.querySelector('.detalle-card');
+    const botonComprobante = Array.from(
+      detalle.querySelectorAll<HTMLButtonElement>('.acciones-compra button'),
+    ).find((boton) => boton.textContent?.includes('Ver Comprobante'));
+    botonComprobante?.click();
+
+    const opciones = abrirModal.mock.calls[0][1];
+    expect(opciones.onEliminar).toBeUndefined();
+    expect(opciones.onCambio).toEqual(expect.any(Function));
+
+    fixtureInactiva.destroy();
   });
 
   it('confirma y elimina la compra seleccionada', async () => {

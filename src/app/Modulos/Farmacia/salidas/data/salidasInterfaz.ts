@@ -131,5 +131,6 @@ export interface HistorialMovimiento {
   condicion: CondicionDevolucion | null;
   motivoBaja: string | null;
   usuario: string;
+  usuarioNombreCorto: string | null;
   observacion: string | null;
 }

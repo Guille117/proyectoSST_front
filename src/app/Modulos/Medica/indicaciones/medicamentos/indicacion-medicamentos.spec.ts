@@ -300,6 +300,23 @@ describe('IndicacionMedicamentos', () => {
     expect(encabezado?.textContent).toContain('Medicamento no registrado');
   });
 
+  it('muestra la dosis del medicamento en la tarjeta', async () => {
+    await cargarListado([
+      indicacion({
+        medicamentoMarca: 'MK',
+        medicamentoPresentacion: 'Tabletas',
+        medicamentoDosis: 400,
+        medicamentoUnidad: 'mg',
+        medicamentoViaAdministracion: 'Oral',
+      }),
+    ]);
+
+    const encabezado = elemento<HTMLElement>('.indicacion-card .indicacion-encabezado');
+    expect(encabezado?.textContent).toContain(
+      'Ibuprofeno MK, Tabletas de 400 mg, administración oral',
+    );
+  });
+
   it('ajusta solo la primera palabra de la presentación guardada', async () => {
     await cargarListado([
       indicacion({ presentacion: 'Tabletas de 400 mg', cantidad: 1 }),

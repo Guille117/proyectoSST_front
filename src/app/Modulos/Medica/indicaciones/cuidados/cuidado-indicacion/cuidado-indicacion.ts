@@ -74,16 +74,9 @@ export class CuidadoIndicacion implements OnChanges {
     return faltaDuracionEnDias(this.duracionTipo, this.duracionCantidad);
   }
 
-  /** El botón Guardar se habilita con la frecuencia y el tipo de duración resueltos. */
+  /** El botón Guardar se habilita con el nombre; la frecuencia y la duración son opcionales. */
   get puedeGuardar(): boolean {
-    return (
-      this.hayCuidado &&
-      !this.faltaDuracionEnDiasCuidado &&
-      this.duracionTipo !== '' &&
-      this.frecuencia !== null &&
-      Number.isInteger(this.frecuencia) &&
-      this.frecuencia > 0
-    );
+    return this.hayCuidado && !this.faltaDuracionEnDiasCuidado;
   }
 
   // ------------------- ACCIONES DE LA VISTA -------------------

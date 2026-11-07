@@ -562,6 +562,7 @@ export class Paciente implements OnInit {
   }
 
   private textoDuracionAlta(tratamiento: AltaTratamientoResponse): string {
+    if (tratamiento.duracionTipo === null) return '—';
     if (tratamiento.duracionTipo === 'DOSIS_UNICA') return 'Dosis única';
     if (tratamiento.duracionTipo === 'TIEMPO_INDEFINIDO') return 'Tiempo indefinido';
 

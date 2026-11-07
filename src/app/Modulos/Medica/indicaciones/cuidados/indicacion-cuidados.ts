@@ -52,8 +52,8 @@ interface CuidadoVista extends DuracionVista {
   id: number;
   usuarioId: number;
   nombre: string;
-  /** Frecuencia indicada en horas. */
-  frecuencia: number;
+  /** Frecuencia indicada en horas; opcional cuando el cuidado se registra solo con su nombre. */
+  frecuencia: number | null;
   observaciones: string;
   fechaInicio: string;
   fecha: string;
@@ -252,11 +252,6 @@ export class IndicacionCuidados implements OnInit, OnDestroy {
     return (
       this.hayCuidado &&
       !this.faltaDuracionEnDiasCuidado &&
-      this.duracionTipoCuidado !== '' &&
-      this.fechaInicioCuidado.trim().length > 0 &&
-      this.frecuenciaCuidado !== null &&
-      Number.isInteger(this.frecuenciaCuidado) &&
-      this.frecuenciaCuidado > 0 &&
       this.observacionesCuidado.length <= 2000 &&
       !this.guardando &&
       !this.confirmando
@@ -303,6 +298,10 @@ export class IndicacionCuidados implements OnInit, OnDestroy {
     }
 
     const frecuencia = cuidado.frecuencia;
+    if (frecuencia === null) {
+      return 'Sin programación';
+    }
+
     const cada = `Realizar cada ${frecuencia} ${frecuencia === 1 ? 'hora' : 'horas'}`;
 
     if (cuidado.duracionTipo === 'dias') {
@@ -748,10 +747,13 @@ export class IndicacionCuidados implements OnInit, OnDestroy {
 
     const cuerpo: CuidadoRequest = {
       nombreCuidado: this.nombreCuidado.trim(),
-      frecuencia: this.frecuenciaCuidado!,
+      frecuencia: this.frecuenciaCuidado,
       // El número de días solo se guarda con el tipo «días»
       duracion: this.duracionTipoCuidado === 'dias' ? this.duracionCantidadCuidado : null,
-      tipoDuracion: this.aDuracionApi(this.duracionTipoCuidado as TipoDuracion),
+      tipoDuracion:
+        this.duracionTipoCuidado === ''
+          ? null
+          : this.aDuracionApi(this.duracionTipoCuidado as TipoDuracion),
       observacion: this.observacionesCuidado.trim() || null,
       episodioId,
       usuarioId,
@@ -847,7 +849,8 @@ export class IndicacionCuidados implements OnInit, OnDestroy {
       usuarioId: respuesta.usuarioId,
       nombre: respuesta.nombreCuidado,
       frecuencia: respuesta.frecuencia,
-      duracionTipo: this.aDuracionVista(respuesta.tipoDuracion),
+      duracionTipo:
+        respuesta.tipoDuracion === null ? '' : this.aDuracionVista(respuesta.tipoDuracion),
       duracionCantidad: respuesta.duracion,
       observaciones: respuesta.observacion ?? '',
       fechaInicio: respuesta.fechaInicio || respuesta.fecha,
@@ -928,22 +931,6 @@ export class IndicacionCuidados implements OnInit, OnDestroy {
   private avisarValidacion(): void {
     if (!this.hayCuidado) {
       this.popUps.advertencia('El nombre del cuidado es obligatorio.');
-      return;
-    }
-    if (!this.fechaInicioCuidado.trim()) {
-      this.popUps.advertencia('Seleccione la fecha y hora de inicio.');
-      return;
-    }
-    if (
-      this.frecuenciaCuidado === null ||
-      !Number.isInteger(this.frecuenciaCuidado) ||
-      this.frecuenciaCuidado <= 0
-    ) {
-      this.popUps.advertencia('La frecuencia debe ser un número entero mayor a 0.');
-      return;
-    }
-    if (this.duracionTipoCuidado === '') {
-      this.popUps.advertencia('Seleccione el tipo de duración.');
       return;
     }
     if (this.faltaDuracionEnDiasCuidado) {

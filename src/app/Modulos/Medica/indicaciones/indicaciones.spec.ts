@@ -484,7 +484,7 @@ describe('Indicaciones', () => {
     expect(elemento('#observacionesCuidado')).not.toBeNull();
 
     // El nombre, la frecuencia, la fecha de inicio y el tipo de duraci��n son obligatorios
-    expect(elementos<HTMLElement>('.indicacion-obligatorio').length).toBe(4);
+    expect(elementos<HTMLElement>('.indicacion-obligatorio').length).toBe(2);
     expect(obligatorio.closest('label')?.textContent).toContain('Nombre de cuidado');
     expect(botonGuardar().disabled).toBe(true);
   });
@@ -495,8 +495,8 @@ describe('Indicaciones', () => {
     await escribir('#nombreCuidado', 'Dieta blanda');
 
     expect(cuidados().hayCuidado).toBe(true);
-    // El backend exige también la frecuencia y el tipo de duración
-    expect(botonGuardar().disabled).toBe(true);
+    // El nombre basta para habilitar Guardar
+    expect(botonGuardar().disabled).toBe(false);
 
     await escribir('#frecuenciaCuidado', '6');
     await elegir('#duracionTipoCuidado', 'dias');
@@ -527,6 +527,25 @@ describe('Indicaciones', () => {
     expect(cuidados().nombreCuidado).toBe('');
     expect(elemento<HTMLInputElement>('#nombreCuidado').value).toBe('');
     expect(botonGuardar().disabled).toBe(true);
+  });
+
+  it('registra un cuidado solo con el nombre, sin frecuencia ni duración', async () => {
+    await irASeccion('Atenciones');
+
+    await escribir('#nombreCuidado', 'Dieta blanda');
+    botonGuardar().click();
+    await fixture.whenStable();
+
+    expect(cuidadoService.crearCuidado).toHaveBeenCalledWith({
+      nombreCuidado: 'Dieta blanda',
+      frecuencia: null,
+      duracion: null,
+      tipoDuracion: null,
+      observacion: null,
+      episodioId: 1,
+      usuarioId: 2,
+      fechaInicio: expect.any(String),
+    });
   });
 
   it('exige la cantidad de días cuando la duración del cuidado se marca en días', async () => {

@@ -38,6 +38,12 @@ export class ServicioCompra {
       .pipe(timeout(TIEMPO_ESPERA_MS));
   }
 
+  eliminarComprobante(id: number): Observable<void> {
+    return this.http
+      .delete<void>(`${this.apiUrl}/${id}/comprobante`)
+      .pipe(timeout(TIEMPO_ESPERA_MS));
+  }
+
   listarComprasResumen(activos?: boolean): Observable<resumenCompraResponse[]> {
     const params =
       activos === undefined ? undefined : new HttpParams().set('activos', activos);
