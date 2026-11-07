@@ -4,8 +4,10 @@ export type TipoDuracionTratamiento = 'dias' | 'unica' | 'indefinida';
 /** Datos mínimos para calcular la programación de una indicación. */
 export interface ProgramacionTratamiento {
   fechaInicio: Date;
-  frecuencia: number;
-  duracionTipo: TipoDuracionTratamiento;
+  /** Puede faltar cuando la indicación se registra solo con su nombre. */
+  frecuencia: number | null;
+  /** Vacío cuando la indicación no define un tipo de duración. */
+  duracionTipo: TipoDuracionTratamiento | '';
   duracionCantidad: number | null;
 }
 
@@ -30,15 +32,17 @@ export function calcularAplicaciones(
   hasta: Date = new Date(),
 ): AplicacionProgramada[] {
   const inicio = new Date(tratamiento.fechaInicio);
+  const frecuencia = tratamiento.frecuencia;
   if (
     Number.isNaN(inicio.getTime()) ||
-    !Number.isFinite(tratamiento.frecuencia) ||
-    tratamiento.frecuencia <= 0
+    frecuencia === null ||
+    !Number.isFinite(frecuencia) ||
+    frecuencia <= 0
   ) {
     return [];
   }
 
-  const paso = tratamiento.frecuencia * MS_HORA;
+  const paso = frecuencia * MS_HORA;
 
   if (tratamiento.duracionTipo === 'indefinida') {
     const aplicaciones: AplicacionProgramada[] = [];
@@ -102,15 +106,17 @@ export function proximaAplicacion(
   ahora: Date = new Date(),
 ): Date | null {
   const inicio = new Date(tratamiento.fechaInicio);
+  const frecuencia = tratamiento.frecuencia;
   if (
     Number.isNaN(inicio.getTime()) ||
-    !Number.isFinite(tratamiento.frecuencia) ||
-    tratamiento.frecuencia <= 0
+    frecuencia === null ||
+    !Number.isFinite(frecuencia) ||
+    frecuencia <= 0
   ) {
     return null;
   }
 
-  const paso = tratamiento.frecuencia * MS_HORA;
+  const paso = frecuencia * MS_HORA;
   const registradas = new Set(
     registros
       .map((registro) => claveMinuto(new Date(registro.fechaHoraProgramada)))
@@ -147,10 +153,13 @@ function totalAplicaciones(tratamiento: ProgramacionTratamiento): number {
   if (tratamiento.duracionTipo !== 'dias') return 0;
 
   const horas = (tratamiento.duracionCantidad ?? 0) * 24;
-  if (horas <= 0) return 0;
+  const frecuencia = tratamiento.frecuencia;
+  if (horas <= 0 || frecuencia === null || !Number.isFinite(frecuencia) || frecuencia <= 0) {
+    return 0;
+  }
 
   // Cantidad de aplicaciones = horas / frecuencia, truncada al entero.
-  return Math.max(1, Math.floor(horas / tratamiento.frecuencia));
+  return Math.max(1, Math.floor(horas / frecuencia));
 }
 
 /** Clave de minuto para comparar fechas programadas sin depender de los segundos. */

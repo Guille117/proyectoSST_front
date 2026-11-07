@@ -24,8 +24,8 @@ export interface AltaTratamientoRequest {
   medicamentoLibre: string | null;
   cantidad: number | null;
   unidadMedida: string | null;
-  frecuencia: number;
-  duracionTipo: TipoDuracionApi;
+  frecuencia: number | null;
+  duracionTipo: TipoDuracionApi | null;
   duracion: number | null;
   observaciones: string | null;
 }
@@ -55,8 +55,8 @@ export interface AltaTratamientoResponse {
   medicamentoLibre: string | null;
   cantidad: number | null;
   unidadMedida: string | null;
-  frecuencia: number;
-  duracionTipo: TipoDuracionApi;
+  frecuencia: number | null;
+  duracionTipo: TipoDuracionApi | null;
   duracion: number | null;
   observaciones: string | null;
 }

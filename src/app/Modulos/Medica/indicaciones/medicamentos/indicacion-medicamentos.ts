@@ -33,6 +33,7 @@ import {
   faltaDuracionEnDias as calcularFaltaDuracion,
 } from '../data/duracion';
 import {
+  descripcionMedicamentoCompleta,
   EstadoIndicacionMedicamento,
   MedicamentoCatalogoResponse,
   MedicamentoIndicacionRequest,
@@ -59,6 +60,8 @@ interface IndicacionMedicamentoVista extends DuracionVista {
   usuarioId: number;
   medicamentoLogId: number | null;
   nombre: string;
+  /** Nombre con marca, presentación y vía de administración para la tarjeta. */
+  descripcion: string;
   /** Texto libre cuando el medicamento no está registrado en el catálogo. */
   medicamentoLibre: string;
   /** Presentación del medicamento o abreviatura de la unidad guardada con la indicación. */
@@ -358,15 +361,19 @@ export class IndicacionMedicamentos implements OnInit, OnDestroy {
     const elegido = this.medicamentoElegido;
     if (!elegido) return '';
 
-    const descripcion = this.descripcionMedicamento(elegido);
-    const via = elegido.viaAdministracion
-      ? `, administración ${elegido.viaAdministracion.toLowerCase()}`
-      : '';
+    const descripcion = descripcionMedicamentoCompleta({
+      nombre: elegido.nombre,
+      marca: elegido.marca,
+      presentacion: elegido.presentacion,
+      dosis: elegido.dosis,
+      unidadMedida: elegido.unidadMedida,
+      viaAdministracion: elegido.viaAdministracion,
+    });
     const sinExistencia =
       elegido.disponibleConocido !== false && elegido.disponible <= 0
         ? ' · Sin existencia'
         : '';
-    return `${descripcion}${via}${sinExistencia}`;
+    return `${descripcion}${sinExistencia}`;
   }
 
   /** Texto de la tabla de resultados cuando la búsqueda no encuentra medicamentos en el catálogo. */
@@ -1172,6 +1179,15 @@ export class IndicacionMedicamentos implements OnInit, OnDestroy {
       usuarioId: respuesta.usuarioId,
       medicamentoLogId: respuesta.medicamentoLogId,
       nombre: respuesta.medicamento,
+      descripcion:
+        descripcionMedicamentoCompleta({
+          nombre: respuesta.medicamento,
+          marca: respuesta.medicamentoMarca,
+          presentacion: respuesta.medicamentoPresentacion,
+          dosis: respuesta.medicamentoDosis,
+          unidadMedida: respuesta.medicamentoUnidad,
+          viaAdministracion: respuesta.medicamentoViaAdministracion,
+        }) || respuesta.medicamento,
       medicamentoLibre: respuesta.medicamentoLibre ?? '',
       presentacion: respuesta.presentacion ?? '',
       cantidad: respuesta.cantidad,

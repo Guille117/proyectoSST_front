@@ -44,7 +44,7 @@ describe('MedicamentoIndicacion', () => {
       codigo: 'MED-3',
       dosis: 500,
       marca: 'Genfar',
-      presentacion: 'tabletas de 500 mg',
+      presentacion: 'Tabletas',
       viaAdministracion: 'Oral',
       unidadMedida: 'mg',
       disponible: 20,
@@ -390,7 +390,7 @@ describe('MedicamentoIndicacion', () => {
     await fixture.whenStable();
 
     expect(agregado).toEqual({
-      nombre: 'Amoxicilina Bayer tabletas de 500 mg',
+      nombre: 'Amoxicilina Bayer, tabletas de 500 mg, administración oral',
       medicamentoLogId: 1,
       medicamentoLibre: '',
       cantidad: 2,
@@ -408,6 +408,23 @@ describe('MedicamentoIndicacion', () => {
     expect(component.observaciones).toBe('');
     expect(elemento('.medicamento-elegido')).toBeNull();
     expect(elemento<HTMLInputElement>('#medicamentoTratamiento').value).toBe('');
+  });
+
+  it('incluye la dosis cuando la presentación del catálogo no la trae', async () => {
+    await elegirMedicamento('paracetamol', 0);
+    await escribir('#cantidadTratamiento', '1');
+    await escribir('#frecuenciaTratamiento', '8');
+    await elegir('#duracionTipoTratamiento', 'indefinida');
+
+    let agregado: MedicamentoTratamiento | undefined;
+    component.medicamentoAgregado.subscribe((medicamento) => (agregado = medicamento));
+
+    botonGuardar().click();
+    await fixture.whenStable();
+
+    expect(agregado?.nombre).toBe(
+      'Paracetamol Genfar, Tabletas de 500 mg, administración oral',
+    );
   });
 
   it('descarta la captura y avisa a la pantalla que la abrió al cancelar', async () => {

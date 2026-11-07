@@ -567,7 +567,11 @@ export class Alta implements OnInit, OnDestroy {
       return 'Realizar una vez';
     }
 
-    const frecuencia = cuidado.frecuencia ?? 0;
+    const frecuencia = cuidado.frecuencia;
+    if (frecuencia === null) {
+      return 'Sin programación';
+    }
+
     const cada = `Realizar cada ${frecuencia} ${frecuencia === 1 ? 'hora' : 'horas'}`;
 
     if (cuidado.duracionTipo === 'dias') {
@@ -1077,7 +1081,7 @@ export class Alta implements OnInit, OnDestroy {
         medicamentoLibre: medicamento.medicamentoLibre?.trim() || null,
         cantidad: medicamento.cantidad,
         unidadMedida: medicamento.unidadMedida.trim() || null,
-        frecuencia: medicamento.frecuencia!,
+        frecuencia: medicamento.frecuencia ?? null,
         duracionTipo: this.aDuracionApi(medicamento.duracionTipo),
         duracion:
           medicamento.duracionTipo === 'dias' ? medicamento.duracionCantidad : null,
@@ -1093,7 +1097,7 @@ export class Alta implements OnInit, OnDestroy {
         medicamentoLibre: null,
         cantidad: null,
         unidadMedida: null,
-        frecuencia: cuidado.frecuencia!,
+        frecuencia: cuidado.frecuencia ?? null,
         duracionTipo: this.aDuracionApi(cuidado.duracionTipo),
         duracion: cuidado.duracionTipo === 'dias' ? cuidado.duracionCantidad : null,
         observaciones: cuidado.observaciones.trim() || null,
@@ -1157,16 +1161,20 @@ export class Alta implements OnInit, OnDestroy {
     return '';
   }
 
-  private aDuracionApi(tipo: 'dias' | 'unica' | 'indefinida' | ''): TipoDuracionApi {
+  private aDuracionApi(
+    tipo: 'dias' | 'unica' | 'indefinida' | '',
+  ): TipoDuracionApi | null {
     if (tipo === 'unica') return 'DOSIS_UNICA';
     if (tipo === 'indefinida') return 'TIEMPO_INDEFINIDO';
-    return 'DIAS';
+    if (tipo === 'dias') return 'DIAS';
+    return null;
   }
 
-  private aDuracionVista(tipo: TipoDuracionApi): 'dias' | 'unica' | 'indefinida' {
+  private aDuracionVista(tipo: TipoDuracionApi | null): 'dias' | 'unica' | 'indefinida' | '' {
     if (tipo === 'DOSIS_UNICA') return 'unica';
     if (tipo === 'TIEMPO_INDEFINIDO') return 'indefinida';
-    return 'dias';
+    if (tipo === 'DIAS') return 'dias';
+    return '';
   }
 
   private aIdCatalogo(valor: string): number | null {
