@@ -10,6 +10,9 @@ import {
   Conteo,
   GlucosaPromedio,
   MonitoreoSummary,
+  PermisoModulo,
+  ProductoConteo,
+  SesionActiva,
   StockBajo,
   Vencimiento,
 } from './reportes-interfaz';
@@ -34,6 +37,22 @@ export class ReportesService {
     cuidados: `${this.base}/enfermeria/tratamientos-cuidados`,
     porRol: `${this.base}/usuarios/por-rol`,
     accesos: `${this.base}/usuarios/accesos`,
+    consumoArea: `${this.base}/farmacia/consumo-area`,
+    rotacion: `${this.base}/farmacia/rotacion`,
+    egresos: `${this.base}/pacientes/egresos-por-area`,
+    gruposEdad: `${this.base}/pacientes/grupos-edad`,
+    estancia: `${this.base}/pacientes/estancia-promedio`,
+    ocupacion: `${this.base}/pacientes/ocupacion-camas`,
+    procedimientos: `${this.base}/medica/procedimientos-realizados`,
+    indicaciones: `${this.base}/medica/indicaciones-por-tipo`,
+    reingresos: `${this.base}/medica/reingresos`,
+    tiempoAtencion: `${this.base}/medica/tiempo-atencion`,
+    signosFueraRango: `${this.base}/enfermeria/signos-fuera-rango`,
+    eventos: `${this.base}/enfermeria/eventos-adversos`,
+    cargaEnfermero: `${this.base}/enfermeria/carga-enfermero`,
+    intentosFallidos: `${this.base}/usuarios/intentos-fallidos`,
+    actividad: `${this.base}/usuarios/actividad`,
+    usuariosCreados: `${this.base}/usuarios/creados-por-periodo`,
   };
 
   constructor(private readonly http: HttpClient) {}
@@ -53,6 +72,14 @@ export class ReportesService {
   }
 
   // --- Farmacia ---
+  productosMasVendidos(desde?: string, hasta?: string): Observable<ProductoConteo[]> {
+    return this.http
+      .get<ProductoConteo[]>(`${this.base}/farmacia/mas-vendidos`, {
+        params: this.params(desde, hasta),
+      })
+      .pipe(timeout(TIEMPO_ESPERA_MS));
+  }
+
   comprasPorProveedor(desde?: string, hasta?: string): Observable<CompraProveedor[]> {
     return this.http
       .get<CompraProveedor[]>(`${this.base}/farmacia/compras-por-proveedor`, {
@@ -106,6 +133,18 @@ export class ReportesService {
       .get<BitacoraEntry[]>(`${this.baseBitacora}/pacientes/${pacienteId}`, {
         params: this.params(desde, hasta),
       })
+      .pipe(timeout(TIEMPO_ESPERA_MS));
+  }
+
+  sesionesActivas(): Observable<SesionActiva[]> {
+    return this.http
+      .get<SesionActiva[]>(`${this.base}/usuarios/sesiones-activas`)
+      .pipe(timeout(TIEMPO_ESPERA_MS));
+  }
+
+  permisosPorModulo(): Observable<PermisoModulo[]> {
+    return this.http
+      .get<PermisoModulo[]>(`${this.base}/usuarios/permisos-por-modulo`)
       .pipe(timeout(TIEMPO_ESPERA_MS));
   }
 }

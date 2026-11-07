@@ -12,28 +12,137 @@
           <input type="date" id="hasta" name="hasta" [(ngModel)]="hasta" />
         </app-campo-validado>
       </div>
-      <button type="button" class="btn _principal" [disabled]="cargando" (click)="generar()">Generar</button>
-      <button type="button" class="btn" (click)="exportarPdf()">PDF</button>
-      <button type="button" class="btn" (click)="exportarExcel()">Excel</button>
+      <div class="filtros-acciones">
+        <button type="button" class="btn _principal" [disabled]="cargando" (click)="generar()">
+          Generar
+        </button>
+        <button
+          type="button"
+          class="btn btn-exportar"
+          [disabled]="cargando || !total()"
+          (click)="exportarPdf()"
+        >
+          PDF
+        </button>
+        <button
+          type="button"
+          class="btn btn-exportar"
+          [disabled]="cargando || !total()"
+          (click)="exportarExcel()"
+        >
+          Excel
+        </button>
+      </div>
     </div>
   </div>
 
   @if (cargando) {
     <p class="reporte-vacio">Cargando reporte...</p>
+  } @else if (total()) {
+    <section class="kpis" aria-label="Resumen de monitoreo">
+      <article class="kpi">
+        <span class="kpi-icono" aria-hidden="true"><i class="bi bi-clipboard2-pulse"></i></span>
+        <div class="kpi-info">
+          <p class="kpi-etiqueta">Total de registros</p>
+          <p class="kpi-valor">{{ numero(total()) }}</p>
+        </div>
+      </article>
+
+      <article class="kpi">
+        <span class="kpi-icono" aria-hidden="true"><i class="bi bi-activity"></i></span>
+        <div class="kpi-info">
+          <p class="kpi-etiqueta">Signos vitales</p>
+          <p class="kpi-valor">{{ numero(datos.signosVitales) }}</p>
+        </div>
+      </article>
+
+      <article class="kpi">
+        <span class="kpi-icono" aria-hidden="true"><i class="bi bi-droplet"></i></span>
+        <div class="kpi-info">
+          <p class="kpi-etiqueta">Mediciones de glucosa</p>
+          <p class="kpi-valor">{{ numero(datos.glucosa) }}</p>
+        </div>
+      </article>
+
+      <article class="kpi">
+        <span class="kpi-icono" aria-hidden="true"><i class="bi bi-water"></i></span>
+        <div class="kpi-info">
+          <p class="kpi-etiqueta">Control hídrico</p>
+          <p class="kpi-valor">{{ numero(datos.controlHidrico) }}</p>
+        </div>
+      </article>
+    </section>
+
+    <article class="panel">
+      <div class="panel-cabecera">
+        <h2 class="panel-titulo">Registros por tipo</h2>
+        <div class="panel-cabecera-derecha">
+          <app-reporte-vista-toggle
+            [vista]="vista()"
+            etiqueta="Vista de monitoreo"
+            (cambiar)="cambiarVista($event)"
+          ></app-reporte-vista-toggle>
+        </div>
+      </div>
+
+      @if (vista() === 'grafica') {
+        <div class="distribucion-reporte">
+          <div class="grafica-reporte grafica-reporte--dona">
+            <app-grafica-dona
+              [etiquetas]="etiquetas()"
+              [valores]="valores()"
+              [colores]="colores()"
+              [total]="total()"
+              etiquetaTotal="Registros"
+            ></app-grafica-dona>
+          </div>
+
+          <ul class="dona-leyenda">
+            @for (etiqueta of etiquetas(); track etiqueta; let i = $index) {
+              <li>
+                <span class="punto" [style.background]="colores()[i]" aria-hidden="true"></span>
+                <div>
+                  <p class="leyenda-titulo">{{ etiqueta }}</p>
+                  <p class="leyenda-detalle">{{ numero(valores()[i]) }} registros</p>
+                </div>
+              </li>
+            }
+          </ul>
+        </div>
+      } @else {
+        <div class="tabla-scroll">
+          <table class="table tabla-reporte">
+            <thead>
+              <tr>
+                <th scope="col" class="celda_izquierda">Indicador</th>
+                <th scope="col" class="celda_numero">Cantidad</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="celda_izquierda">Signos vitales</td>
+                <td class="celda_numero">{{ numero(datos.signosVitales) }}</td>
+              </tr>
+              <tr>
+                <td class="celda_izquierda">Mediciones de glucosa</td>
+                <td class="celda_numero">{{ numero(datos.glucosa) }}</td>
+              </tr>
+              <tr>
+                <td class="celda_izquierda">Control hídrico</td>
+                <td class="celda_numero">{{ numero(datos.controlHidrico) }}</td>
+              </tr>
+            </tbody>
+            <tfoot>
+              <tr>
+                <td class="celda_izquierda">Total</td>
+                <td class="celda_numero">{{ numero(total()) }}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      }
+    </article>
   } @else {
-    <div class="kpis">
-      <div class="kpi">
-        <div class="valor">{{ datos.signosVitales }}</div>
-        <div class="etiqueta">Signos vitales</div>
-      </div>
-      <div class="kpi">
-        <div class="valor">{{ datos.glucosa }}</div>
-        <div class="etiqueta">Mediciones de glucosa</div>
-      </div>
-      <div class="kpi">
-        <div class="valor">{{ datos.controlHidrico }}</div>
-        <div class="etiqueta">Control hídrico</div>
-      </div>
-    </div>
+    <p class="reporte-vacio">Sin datos para el período seleccionado.</p>
   }
 </div>

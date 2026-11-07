@@ -6,12 +6,16 @@
   display: flex;
   flex-direction: column;
   width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: clip;
 }
 
 /* La franja de categorías hereda el estilo compartido subMenuNav; aquí solo se ajusta el
-   desplazamiento horizontal y el aspecto de los botones. */
+   desplazamiento horizontal, el margen inferior y el aspecto de los botones. */
 .subMenuNav {
   gap: 0.4rem;
+  margin-bottom: 16px;
   overflow-x: auto;
   overscroll-behavior-x: contain;
 }
@@ -39,8 +43,9 @@
   display: grid;
   grid-template-columns: minmax(240px, 300px) minmax(0, 1fr);
   align-items: start;
-  gap: 24px;
+  gap: 18px;
   width: 100%;
+  min-width: 0;
 }
 
 .reportes-menu {
@@ -51,7 +56,7 @@
   flex-direction: column;
   box-sizing: border-box;
   max-height: calc(100vh - var(--heightTopBar) - 70px);
-  padding: 14px 14px 16px;
+  padding: 12px 12px 14px;
   border: 1px solid #e9eef5;
   border-radius: 16px;
   background: #fff;
@@ -156,6 +161,8 @@
 
 .reportes-detalle {
   min-width: 0;
+  max-width: 100%;
+  overflow-x: clip;
 }
 
 .reporte-pendiente {

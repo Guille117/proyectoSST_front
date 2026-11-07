@@ -1,0 +1,484 @@
+:host {
+  display: block;
+  width: 100%;
+  min-width: 0;
+}
+
+/* El reporte se adapta al ancho real de su columna, no al del viewport: el menú lateral
+   de reportes reduce el espacio disponible aunque la ventana sea ancha. */
+.reporte-mas-vendidos {
+  container-name: reporte;
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+  min-width: 0;
+}
+
+/* ==================== Filtros ==================== */
+.filtros {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 12px;
+}
+
+.filtro-fecha {
+  width: auto;
+
+  ::ng-deep .campo-formulario {
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 0;
+  }
+
+  ::ng-deep .campo-formulario > label {
+    flex: 0 0 auto;
+    margin: 0;
+    color: #334155;
+    font-size: 0.9rem;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  ::ng-deep .campo-formulario .input-wrapper {
+    flex: 0 0 auto;
+    width: auto;
+  }
+
+  ::ng-deep .campo-formulario input {
+    width: 140px;
+    min-height: 40px;
+    padding: 0 10px;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    background: #fff;
+    color: #0f172a;
+    font-size: 0.9rem;
+  }
+}
+
+.filtros-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+
+  .btn {
+    height: 40px;
+    margin-bottom: 0;
+    padding: 0 16px;
+    border-radius: 10px;
+    font-size: 0.92rem;
+  }
+}
+
+.btn-exportar {
+  background: #f1f5f9;
+  color: #334155;
+}
+
+/* ==================== Indicadores ==================== */
+.kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 12px;
+}
+
+.kpi {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 12px 14px;
+  border: 1px solid #e9eef5;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
+}
+
+.kpi-icono {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: #eef4ff;
+  color: #2563eb;
+  font-size: 1.15rem;
+}
+
+.kpi-info {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.kpi-etiqueta {
+  margin: 0 0 2px;
+  color: #64748b;
+  font-size: 0.78rem;
+  font-weight: 500;
+}
+
+.kpi-valor {
+  margin: 0;
+  color: #0f172a;
+  font-size: 1.35rem;
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.kpi-valor--nombre {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  font-size: 0.95rem;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+/* ==================== Paneles con gráficas ==================== */
+.paneles {
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
+  align-items: start;
+  gap: 14px;
+}
+
+.panel {
+  min-width: 0;
+  padding: 14px 16px;
+  border: 1px solid #e9eef5;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
+}
+
+.panel-cabecera {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.panel-cabecera .panel-titulo {
+  margin: 0;
+}
+
+.panel-cabecera-derecha {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.panel-titulo {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0 0 10px;
+  color: #0f172a;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.panel-nota {
+  flex: 0 0 auto;
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.grafica-barras {
+  height: 300px;
+  min-width: 0;
+}
+
+.distribucion {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  min-width: 0;
+  min-height: 300px;
+}
+
+.grafica-dona {
+  flex: 0 0 180px;
+  height: 180px;
+}
+
+.dona-leyenda {
+  display: flex;
+  flex: 1 1 150px;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    min-width: 0;
+  }
+}
+
+.punto {
+  flex: 0 0 auto;
+  width: 12px;
+  height: 12px;
+  margin-top: 4px;
+  border-radius: 4px;
+}
+
+.leyenda-titulo {
+  margin: 0;
+  color: #0f172a;
+  font-size: 0.82rem;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.leyenda-detalle {
+  margin: 2px 0 0;
+  color: #64748b;
+  font-size: 0.76rem;
+  overflow-wrap: anywhere;
+}
+
+/* ==================== Aviso del producto principal ==================== */
+.aviso {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: #e8f1fe;
+  color: #1e3a8a;
+  font-size: 0.88rem;
+
+  i {
+    flex: 0 0 auto;
+    font-size: 1.05rem;
+  }
+}
+
+/* ==================== Tabla de detalle ==================== */
+.tabla-scroll {
+  width: 100%;
+  max-width: 100%;
+  max-height: 360px;
+  overflow-x: auto;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.tabla-detalle {
+  width: 100%;
+  max-width: 720px;
+  min-width: 480px;
+  table-layout: fixed;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+
+  .col-producto {
+    width: auto;
+  }
+
+  .col-tipo {
+    width: 100px;
+  }
+
+  .col-cantidad {
+    width: 90px;
+  }
+
+  .col-participacion {
+    width: 110px;
+  }
+
+  thead tr th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    padding: 10px 12px;
+    border-bottom: 1px solid #e2e8f0;
+    background: #f8fafc;
+    color: #475569;
+    font-size: 0.82rem;
+    font-weight: 600;
+  }
+
+  tbody tr td {
+    padding: 10px 12px;
+    border-bottom: 1px solid #f1f5f9;
+    color: #1e293b;
+    font-size: 0.88rem;
+  }
+
+  tbody tr:hover td {
+    background: #f8fafc;
+  }
+
+  tfoot tr td {
+    padding: 10px 12px;
+    border-top: 2px solid #e2e8f0;
+    background: #fff;
+    color: #0f172a;
+    font-size: 0.9rem;
+    font-weight: 700;
+  }
+
+  .celda_izquierda {
+    overflow-wrap: anywhere;
+  }
+}
+
+.celda_numero {
+  padding-right: 12px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.tipo-badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: #eef2f6;
+  color: #475569;
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+.tipo-badge--medicamento {
+  background: #e0edff;
+  color: #1d4ed8;
+}
+
+.tipo-badge--insumo {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.reporte-vacio {
+  margin: 0;
+  padding: 24px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 12px;
+  background: #fff;
+  color: #64748b;
+  font-size: 0.95rem;
+  text-align: center;
+}
+
+/* ==================== RESPONSIVIDAD POR CONTENEDOR ==================== */
+@container reporte (max-width: 900px) {
+  .paneles {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .tabla-scroll {
+    max-height: none;
+    overflow-y: auto;
+  }
+
+  .tabla-detalle thead tr th {
+    position: static;
+  }
+}
+
+@container reporte (max-width: 760px) {
+  .kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .distribucion {
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .grafica-dona {
+    flex: 0 0 auto;
+    width: 180px;
+    height: 180px;
+  }
+
+  .dona-leyenda {
+    flex-basis: auto;
+    width: 100%;
+  }
+}
+
+@container reporte (max-width: 620px) {
+  .filtros {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .filtro-fecha {
+    flex: 1 1 100%;
+
+    ::ng-deep .campo-formulario .input-wrapper {
+      flex: 1 1 auto;
+      width: 100%;
+    }
+
+    ::ng-deep .campo-formulario input {
+      width: 100%;
+    }
+  }
+
+  .filtros-acciones {
+    margin-left: 0;
+  }
+
+  .filtros-acciones .btn {
+    flex: 1 1 100px;
+    min-height: 44px;
+  }
+
+  .kpi {
+    min-height: 64px;
+  }
+
+  .grafica-barras {
+    height: 320px;
+  }
+
+  .panel {
+    padding: 12px;
+  }
+
+  .aviso {
+    align-items: flex-start;
+    font-size: 0.9rem;
+  }
+
+  .tabla-detalle {
+    min-width: 440px;
+  }
+}
+
+@container reporte (max-width: 480px) {
+  .kpis {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

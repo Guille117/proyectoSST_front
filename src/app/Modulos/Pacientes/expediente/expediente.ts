@@ -1,14 +1,67 @@
-import { Location } from '@angular/common';
+import { DecimalPipe, Location } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectorRef, Component, DestroyRef, OnInit, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { ActivatedRoute } from '@angular/router';
-import { TimeoutError, forkJoin } from 'rxjs';
+import { ActivatedRoute, Router } from '@angular/router';
+import { Observable, TimeoutError, catchError, forkJoin, map, of } from 'rxjs';
+import { SignosVitalesService } from '../../Enfermeria/monitoreo/data/signos-vitales-service';
+import { SignosVitalesResponse } from '../../Enfermeria/monitoreo/data/signosVitalesInterfaz';
+import { ControlHidricoService } from '../../Enfermeria/monitoreo/data/control-hidrico-service';
+import { ControlHidricoResponse } from '../../Enfermeria/monitoreo/data/controlHidricoInterfaz';
+import { GlucosaService } from '../../Enfermeria/monitoreo/data/glucosa-service';
+import {
+  GlucosaResponse,
+  TipoMedicionGlucosaApi,
+} from '../../Enfermeria/monitoreo/data/glucosaInterfaz';
+import { NotaEnfermeriaService } from '../../Enfermeria/notas/data/nota-enfermeria-service';
+import { NotaEnfermeriaResponse } from '../../Enfermeria/notas/data/notaEnfermeriaInterfaz';
+import { RegistrosEnfermeriaService } from '../../Enfermeria/data/registrosEnfermeriaService';
+import {
+  AplicacionMedicamentoResponse,
+  EjecucionCuidadoResponse,
+} from '../../Enfermeria/data/registrosEnfermeriaInterfaz';
+import { EpisodioActivoService } from '../../Medica/data/episodio-activo-service';
+import { AltaService } from '../../Medica/alta/data/alta-service';
+import { AltaResponse, TipoAltaApi } from '../../Medica/alta/data/altaInterfaz';
+import { DiagnosticoService } from '../../Medica/evaluacion/data/diagnostico-service';
+import {
+  DiagnosticoResponse,
+  TipoDiagnostico,
+} from '../../Medica/evaluacion/data/diagnosticoInterfaz';
+import { ExamenFisicoService } from '../../Medica/evaluacion/data/examen-fisico-service';
+import { ExamenFisicoResponse } from '../../Medica/evaluacion/data/examenFisicoInterfaz';
+import { HistoriaClinicaService } from '../../Medica/evaluacion/data/historia-clinica-service';
+import { HistoriaClinicaResponse } from '../../Medica/evaluacion/data/historiaClinicaInterfaz';
+import { EvolucionService } from '../../Medica/evolucion/data/evolucion-service';
+import { EvolucionResponse } from '../../Medica/evolucion/data/evolucionInterfaz';
+import { IndicacionCuidadoService } from '../../Medica/indicaciones/cuidados/data/cuidado-service';
+import {
+  CuidadoResponse,
+  TipoDuracionCuidadoApi,
+} from '../../Medica/indicaciones/cuidados/data/cuidadoInterfaz';
+import { IndicacionExamenService } from '../../Medica/indicaciones/examenes/data/examen-service';
+import { ExamenResponse } from '../../Medica/indicaciones/examenes/data/examenInterfaz';
+import {
+  MedicamentoIndicacionService,
+} from '../../Medica/indicaciones/medicamentos/data/medicamento-service';
+import {
+  descripcionMedicamentoCompleta,
+  MedicamentoIndicacionResponse,
+  TipoDuracionApi,
+} from '../../Medica/indicaciones/medicamentos/data/medicamentoInterfaz';
+import {
+  ProcedimientoMedicoService,
+} from '../../Medica/procedimiento-medico/data/procedimiento-medico-service';
+import {
+  ProcedimientoMedicoResponse,
+  RecursoProcedimientoResponse,
+} from '../../Medica/procedimiento-medico/data/procedimientoMedicoInterfaz';
+import { ConsumoEpisodioService } from '../paciente/data/consumo-service';
+import { ConsumoEpisodio } from '../paciente/data/consumoInterfaz';
 import { PacienteDetalle, TipoAtencion } from '../paciente/data/pacienteInterfaz';
 import { PacienteService } from '../paciente/data/paciente-service';
 import { EpisodioResumen, SeccionExpediente } from './data/expedienteInterfaz';
 import { ExpedienteService } from './data/expediente-service';
-import { ResumenEpisodio } from './resumen-episodio/resumen-episodio';
 
 interface OpcionExpedienteVista {
   id: SeccionExpediente;
@@ -23,15 +76,32 @@ interface SeccionExpedienteVista {
 
 @Component({
   selector: 'app-expediente',
-  imports: [ResumenEpisodio],
+  imports: [DecimalPipe],
   templateUrl: './expediente.html',
   styleUrl: './expediente.scss',
 })
 export class Expediente implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly location = inject(Location);
+  private readonly router = inject(Router);
   private readonly servicioPaciente = inject(PacienteService);
   private readonly servicioExpediente = inject(ExpedienteService);
+  private readonly servicioSignos = inject(SignosVitalesService);
+  private readonly servicioHistoria = inject(HistoriaClinicaService);
+  private readonly servicioExamenFisico = inject(ExamenFisicoService);
+  private readonly servicioDiagnostico = inject(DiagnosticoService);
+  private readonly servicioExamen = inject(IndicacionExamenService);
+  private readonly servicioProcedimiento = inject(ProcedimientoMedicoService);
+  private readonly servicioEvolucion = inject(EvolucionService);
+  private readonly servicioMedicamento = inject(MedicamentoIndicacionService);
+  private readonly servicioCuidado = inject(IndicacionCuidadoService);
+  private readonly servicioAlta = inject(AltaService);
+  private readonly servicioGlucosa = inject(GlucosaService);
+  private readonly servicioControl = inject(ControlHidricoService);
+  private readonly servicioNotas = inject(NotaEnfermeriaService);
+  private readonly servicioRegistros = inject(RegistrosEnfermeriaService);
+  private readonly servicioConsumo = inject(ConsumoEpisodioService);
+  private readonly episodioActivo = inject(EpisodioActivoService);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -40,15 +110,56 @@ export class Expediente implements OnInit {
   cargando = false;
   error = '';
 
+  /** Signos vitales del episodio que muestra el panel de detalle. */
+  signosVitales: SignosVitalesResponse[] = [];
+  cargandoSignos = false;
+  errorSignos = '';
+
+  /** Datos de las secciones que muestra el panel derecho. */
+  historiaClinica: HistoriaClinicaResponse[] = [];
+  examenFisico: ExamenFisicoResponse[] = [];
+  diagnosticos: DiagnosticoResponse[] = [];
+  examenes: ExamenResponse[] = [];
+  procedimientos: ProcedimientoMedicoResponse[] = [];
+  evoluciones: EvolucionResponse[] = [];
+  medicamentos: MedicamentoIndicacionResponse[] = [];
+  cuidados: CuidadoResponse[] = [];
+  alta: AltaResponse | null = null;
+  glucosa: GlucosaResponse[] = [];
+  controlHidrico: ControlHidricoResponse[] = [];
+  notas: NotaEnfermeriaResponse[] = [];
+  aplicaciones: AplicacionMedicamentoResponse[] = [];
+  ejecuciones: EjecucionCuidadoResponse[] = [];
+  consumo: ConsumoEpisodio | null = null;
+  cargandoPanel = false;
+  errorPanel = '';
+  private seccionesConError: string[] = [];
+
   /** Opción del submenú actualmente seleccionada. */
   opcionActiva: SeccionExpediente = 'resumen';
+
+  /** Título de la sección activa que encabeza el panel derecho. */
+  get tituloSeccionActiva(): string {
+    const titulos: Record<SeccionExpediente, string> = {
+      resumen: 'Paciente',
+      evaluacion: 'Evaluación clínica',
+      examenes: 'Exámenes',
+      procedimientos: 'Procedimientos',
+      evolucion: 'Evolución médica',
+      indicaciones: 'Indicaciones médicas',
+      alta: 'Alta médica',
+      'registros-enfermeria': 'Registros de enfermería',
+      consumo: 'Consumo y estancia',
+    };
+    return titulos[this.opcionActiva];
+  }
 
   /** Opciones del submenú izquierdo agrupadas por sección. */
   readonly seccionesMenu: SeccionExpedienteVista[] = [
     {
       titulo: null,
       opciones: [
-        { id: 'resumen', titulo: 'Resumen', icono: 'bi-journal-text' },
+        { id: 'resumen', titulo: 'Paciente', icono: 'bi-journal-text' },
         { id: 'evaluacion', titulo: 'Evaluación clínica', icono: 'bi-clipboard2-pulse' },
         { id: 'examenes', titulo: 'Exámenes', icono: 'bi-clipboard2-check' },
         { id: 'procedimientos', titulo: 'Procedimientos', icono: 'bi-scissors' },
@@ -89,14 +200,6 @@ export class Expediente implements OnInit {
     this.cdr.markForCheck();
   }
 
-  opcionActivaActual(): OpcionExpedienteVista | null {
-    for (const seccion of this.seccionesMenu) {
-      const opcion = seccion.opciones.find((item) => item.id === this.opcionActiva);
-      if (opcion) return opcion;
-    }
-    return null;
-  }
-
   volver(): void {
     this.location.back();
   }
@@ -108,14 +211,198 @@ export class Expediente implements OnInit {
     }
   }
 
-  tipoAtencionLegible(tipo: TipoAtencion): string {
+  /** Vuelve a consultar los signos vitales del episodio del panel. */
+  recargarSignos(): void {
+    this.cargarSignosVitales(
+      this.paciente?.episodioId ?? this.episodioSeleccionado?.episodioId ?? null,
+    );
+  }
+
+  /** Vuelve a consultar los datos del panel derecho. */
+  recargarPanel(): void {
+    this.cargarPanel(
+      this.paciente?.episodioId ?? this.episodioSeleccionado?.episodioId ?? null,
+    );
+  }
+
+  /** Abre el episodio más reciente; si ya cerró, entra en modo solo lectura. */
+  abrirUltimoEpisodio(): void {
+    const episodio = this.episodioSeleccionado;
+    if (!episodio) return;
+
+    this.episodioActivo.guardar(episodio.episodioId, !episodio.activo);
+    this.episodioActivo.guardarPaciente(this.paciente?.pacienteId ?? null);
+    void this.router.navigate(['/medica', 'evaluacion']);
+  }
+
+  tipoAtencionLegible(tipo: TipoAtencion | null): string {
+    if (!tipo) return '—';
     return tipo === 'HOSPITALIZACION' ? 'Hospitalización' : 'Emergencia';
+  }
+
+  /** Médico de la evaluación más reciente o, en su defecto, el asignado a la atención. */
+  medicoResponsable(detalle: PacienteDetalle | null): string {
+    return this.ultimaEvaluacion?.usuarioNombre || detalle?.medicoNombre || '—';
+  }
+
+  tipoDiagnosticoLegible(tipo: TipoDiagnostico): string {
+    if (tipo === 'PRINCIPAL') return 'Principal';
+    if (tipo === 'PROVISIONAL') return 'Provisional';
+    return 'Asociado';
+  }
+
+  tipoAltaLegible(tipo: TipoAltaApi): string {
+    if (tipo === 'INDICACION_MEDICA') return 'Indicación médica';
+    if (tipo === 'RETIRO_VOLUNTARIO') return 'Retiro voluntario';
+    return 'Referencia / traslado';
+  }
+
+  tipoMedicionLegible(tipo: TipoMedicionGlucosaApi): string {
+    if (tipo === 'AYUNAS') return 'Ayunas';
+    if (tipo === 'PREPRANDIAL') return 'Preprandial';
+    if (tipo === 'POSTPRANDIAL') return 'Postprandial';
+    return 'Aleatoria';
+  }
+
+  /** Etiqueta legible de los estados que llegan del backend. */
+  etiqueta(valor: string | null | undefined): string {
+    if (!valor) return '—';
+    const texto = valor.replaceAll('_', ' ').toLowerCase();
+    return texto.charAt(0).toUpperCase() + texto.slice(1);
+  }
+
+  textoDuracion(
+    tipo: TipoDuracionApi | TipoDuracionCuidadoApi | null,
+    dias: number | null,
+  ): string {
+    if (tipo === null) return '—';
+    if (tipo === 'DOSIS_UNICA') return 'Dosis única';
+    if (tipo === 'TIEMPO_INDEFINIDO') return 'Tiempo indefinido';
+    return `${dias ?? 0} ${dias === 1 ? 'día' : 'días'}`;
+  }
+
+  textoFrecuencia(frecuencia: number | null): string {
+    if (frecuencia === null) return '—';
+    return `Cada ${frecuencia} ${frecuencia === 1 ? 'hora' : 'horas'}`;
+  }
+
+  /** Descripción completa del medicamento: nombre, marca, presentación/dosis y vía. */
+  textoMedicamento(medicamento: MedicamentoIndicacionResponse): string {
+    const nombre = medicamento.medicamento?.trim();
+    if (!nombre) {
+      return medicamento.medicamentoLibre?.trim() || 'Medicamento no registrado';
+    }
+
+    return descripcionMedicamentoCompleta({
+      nombre,
+      marca: medicamento.medicamentoMarca,
+      presentacion: medicamento.medicamentoPresentacion ?? medicamento.presentacion,
+      dosis: medicamento.medicamentoDosis,
+      unidadMedida: medicamento.medicamentoUnidad,
+      viaAdministracion: medicamento.medicamentoViaAdministracion,
+    });
+  }
+
+  textoRecursos(recursos: RecursoProcedimientoResponse[]): string {
+    if (!recursos.length) return '—';
+    return recursos.map((recurso) => `${recurso.nombre} (${recurso.cantidad})`).join(', ');
+  }
+
+  textoArchivos(examen: ExamenResponse): string {
+    return examen.archivos.map((archivo) => archivo.nombreOriginal).join(', ') || '—';
+  }
+
+  /** Aplicaciones registradas de una indicación de medicamento. */
+  aplicacionesDeIndicacion(indicacionId: number): AplicacionMedicamentoResponse[] {
+    return this.aplicaciones.filter((item) => item.indicacionMedicamentoId === indicacionId);
+  }
+
+  /** Ejecuciones registradas de un cuidado indicado. */
+  ejecucionesDeCuidado(cuidadoId: number): EjecucionCuidadoResponse[] {
+    return this.ejecuciones.filter((item) => item.cuidadoId === cuidadoId);
+  }
+
+  /** Aplicaciones cuyo medicamento indicado ya no está en la lista del episodio. */
+  get aplicacionesSinIndicacion(): AplicacionMedicamentoResponse[] {
+    const indicaciones = new Set(this.medicamentos.map((item) => item.id));
+    return this.aplicaciones.filter((item) => !indicaciones.has(item.indicacionMedicamentoId));
+  }
+
+  /** Ejecuciones cuyo cuidado indicado ya no está en la lista del episodio. */
+  get ejecucionesSinCuidado(): EjecucionCuidadoResponse[] {
+    const cuidados = new Set(this.cuidados.map((item) => item.id));
+    return this.ejecuciones.filter((item) => !cuidados.has(item.cuidadoId));
   }
 
   sexoLegible(sexo: string | null | undefined): string {
     if (sexo === 'FEMENINO') return 'Femenino';
     if (sexo === 'MASCULINO') return 'Masculino';
     return '—';
+  }
+
+  /** Último registro de signos vitales del episodio, si existe. */
+  get ultimoSignoVital(): SignosVitalesResponse | null {
+    return this.signosVitales[0] ?? null;
+  }
+
+  /** Evaluación clínica más reciente del episodio, si existe. */
+  get ultimaEvaluacion(): HistoriaClinicaResponse | null {
+    return this.historiaClinica[0] ?? null;
+  }
+
+  /** Estado clínico registrado en la evaluación más reciente. */
+  get estadoClinicoEvaluacion(): string | null {
+    return this.ultimaEvaluacion?.estadoClinicoNombre ?? null;
+  }
+
+  /** Fecha y hora del detalle en el formato dd-mm-yyyy • HH:mm. */
+  fechaHoraLegible(valor: string | null): string {
+    if (!valor) return '—';
+
+    const [fecha, hora = ''] = valor.split('T');
+    const [anio, mes, dia] = fecha.split('-');
+    if (!anio || !mes || !dia) return valor;
+
+    return `${dia}-${mes}-${anio}${hora ? ` • ${hora.slice(0, 5)}` : ''}`;
+  }
+
+  /** Nombre de la persona responsable del paciente. */
+  responsableNombre(detalle: PacienteDetalle | null): string {
+    if (!detalle?.responsable) return 'No registrado';
+
+    const nombre = `${detalle.responsable.nombres} ${detalle.responsable.apellidos}`.trim();
+    return nombre || 'No registrado';
+  }
+
+  /** Teléfono de la persona responsable del paciente. */
+  responsableTelefono(detalle: PacienteDetalle | null): string {
+    return detalle?.responsable?.telefono?.trim() || 'No registrado';
+  }
+
+  /** Parte el texto en líneas cortas para que el tooltip nativo no se abra tan ancho. */
+  textoTooltip(valor: string | null, porDefecto: string): string {
+    const texto = (valor ?? '').trim() || porDefecto;
+    const limite = 36;
+    const palabras = texto.split(/\s+/);
+    const lineas: string[] = [];
+    let linea = '';
+
+    for (const palabra of palabras) {
+      if (!linea) {
+        linea = palabra;
+        continue;
+      }
+
+      if (`${linea} ${palabra}`.length > limite) {
+        lineas.push(linea);
+        linea = palabra;
+      } else {
+        linea = `${linea} ${palabra}`;
+      }
+    }
+
+    if (linea) lineas.push(linea);
+    return lineas.join('\n');
   }
 
   fecha(valor: string | null): string {
@@ -144,6 +431,9 @@ export class Expediente implements OnInit {
         next: ({ paciente, episodios }) => {
           this.paciente = paciente;
           this.episodioSeleccionado = this.episodioMasReciente(episodios);
+          const episodioId = paciente.episodioId ?? this.episodioSeleccionado?.episodioId ?? null;
+          this.cargarSignosVitales(episodioId);
+          this.cargarPanel(episodioId);
           this.cargando = false;
           this.cdr.detectChanges();
         },
@@ -164,6 +454,232 @@ export class Expediente implements OnInit {
       const valorB = Number.isNaN(fechaB) ? 0 : fechaB;
       return valorB - valorA;
     })[0];
+  }
+
+  /** Carga los signos vitales del episodio y deja el más reciente al inicio. */
+  private cargarSignosVitales(episodioId: number | null): void {
+    this.signosVitales = [];
+    this.errorSignos = '';
+
+    if (episodioId === null || episodioId <= 0) {
+      this.cargandoSignos = false;
+      this.cdr.markForCheck();
+      return;
+    }
+
+    this.cargandoSignos = true;
+    this.cdr.markForCheck();
+
+    this.servicioSignos
+      .buscarPorEpisodio(episodioId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (registros) => {
+          this.signosVitales = [...registros].sort(
+            (a, b) => this.fechaMs(b.fecha) - this.fechaMs(a.fecha),
+          );
+          this.cargandoSignos = false;
+          this.cdr.detectChanges();
+        },
+        error: (error) => {
+          this.cargandoSignos = false;
+          this.errorSignos = this.mensajeError(error, 'No se pudieron cargar los signos vitales.');
+          this.cdr.detectChanges();
+        },
+      });
+  }
+
+  /** Carga en una sola pasada los datos de todas las secciones del panel derecho. */
+  private cargarPanel(episodioId: number | null): void {
+    this.historiaClinica = [];
+    this.examenFisico = [];
+    this.diagnosticos = [];
+    this.examenes = [];
+    this.procedimientos = [];
+    this.evoluciones = [];
+    this.medicamentos = [];
+    this.cuidados = [];
+    this.alta = null;
+    this.glucosa = [];
+    this.controlHidrico = [];
+    this.notas = [];
+    this.aplicaciones = [];
+    this.ejecuciones = [];
+    this.consumo = null;
+    this.errorPanel = '';
+    this.seccionesConError = [];
+
+    if (episodioId === null || episodioId <= 0) {
+      this.cargandoPanel = false;
+      this.cdr.markForCheck();
+      return;
+    }
+
+    this.cargandoPanel = true;
+    this.cdr.markForCheck();
+
+    forkJoin({
+      historia: this.conRespaldo(
+        this.servicioHistoria.getHistoriasPorEpisodio(episodioId, true),
+        [] as HistoriaClinicaResponse[],
+        'Historia clínica',
+      ),
+      examenFisico: this.conRespaldo(
+        this.servicioExamenFisico.getExamenesPorEpisodio(episodioId, true),
+        [] as ExamenFisicoResponse[],
+        'Examen físico',
+      ),
+      diagnosticos: this.conRespaldo(
+        this.servicioDiagnostico.getDiagnosticosPorEpisodio(episodioId, true),
+        [] as DiagnosticoResponse[],
+        'Impresión clínica',
+      ),
+      examenes: this.conRespaldo(
+        this.servicioExamen.buscarPorEpisodio(episodioId, 'ACTIVO'),
+        [] as ExamenResponse[],
+        'Exámenes',
+      ),
+      procedimientos: this.conRespaldo(
+        this.servicioProcedimiento
+          .getProcedimientos(episodioId)
+          .pipe(map((items) => items.filter((item) => item.estado !== 'ELIMINADO'))),
+        [] as ProcedimientoMedicoResponse[],
+        'Procedimientos',
+      ),
+      evoluciones: this.conRespaldo(
+        this.servicioEvolucion.buscarPorEpisodio(episodioId, 'ACTIVA'),
+        [] as EvolucionResponse[],
+        'Evolución médica',
+      ),
+      medicamentos: this.conRespaldo(
+        forkJoin([
+          this.servicioMedicamento.getIndicacionesPorEpisodio(episodioId, 'ACTIVO'),
+          this.servicioMedicamento.getIndicacionesPorEpisodio(episodioId, 'FINALIZADO'),
+        ]).pipe(map(([activos, finalizados]) => [...activos, ...finalizados])),
+        [] as MedicamentoIndicacionResponse[],
+        'Medicamentos indicados',
+      ),
+      cuidados: this.conRespaldo(
+        forkJoin([
+          this.servicioCuidado.buscarPorEpisodio(episodioId, 'EN_PROCESO'),
+          this.servicioCuidado.buscarPorEpisodio(episodioId, 'COMPLETADO'),
+        ]).pipe(map(([enProceso, completados]) => [...enProceso, ...completados])),
+        [] as CuidadoResponse[],
+        'Cuidados indicados',
+      ),
+      altas: this.conRespaldo(
+        this.servicioAlta
+          .buscarPorEpisodio(episodioId)
+          .pipe(map((items) => items.filter((item) => item.estado === 'VIGENTE'))),
+        [] as AltaResponse[],
+        'Alta médica',
+      ),
+      glucosa: this.conRespaldo(
+        this.servicioGlucosa
+          .buscarPorEpisodio(episodioId)
+          .pipe(map((items) => items.filter((item) => !item.eliminado))),
+        [] as GlucosaResponse[],
+        'Glucosa',
+      ),
+      control: this.conRespaldo(
+        this.servicioControl
+          .buscarPorEpisodio(episodioId)
+          .pipe(map((items) => items.filter((item) => !item.eliminado))),
+        [] as ControlHidricoResponse[],
+        'Control hídrico',
+      ),
+      notas: this.conRespaldo(
+        this.servicioNotas
+          .buscarPorEpisodio(episodioId)
+          .pipe(map((items) => items.filter((item) => !item.eliminado))),
+        [] as NotaEnfermeriaResponse[],
+        'Notas de enfermería',
+      ),
+      aplicaciones: this.conRespaldo(
+        this.servicioRegistros.buscarAplicacionesPorEpisodio(episodioId),
+        [] as AplicacionMedicamentoResponse[],
+        'Aplicaciones de medicamentos',
+      ),
+      ejecuciones: this.conRespaldo(
+        this.servicioRegistros.buscarEjecucionesPorEpisodio(episodioId),
+        [] as EjecucionCuidadoResponse[],
+        'Ejecuciones de cuidados',
+      ),
+      consumo: this.conRespaldo(
+        this.servicioConsumo.obtenerConsumo(episodioId),
+        null as ConsumoEpisodio | null,
+        'Consumo y estancia',
+      ),
+    })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (datos) => {
+          this.historiaClinica = this.ordenarPorFechaDesc(datos.historia, (item) => item.fecha);
+          this.examenFisico = this.ordenarPorFechaDesc(datos.examenFisico, (item) => item.fecha);
+          this.diagnosticos = this.ordenarPorFechaDesc(datos.diagnosticos, (item) => item.fecha);
+          this.examenes = this.ordenarPorFechaDesc(datos.examenes, (item) => item.fecha);
+          this.procedimientos = this.ordenarPorFechaDesc(
+            datos.procedimientos,
+            (item) => item.inicio,
+          );
+          this.evoluciones = this.ordenarPorFechaDesc(datos.evoluciones, (item) => item.fecha);
+          this.medicamentos = this.ordenarPorFechaDesc(
+            datos.medicamentos,
+            (item) => item.fechaInicio,
+          );
+          this.cuidados = this.ordenarPorFechaDesc(datos.cuidados, (item) => item.fechaInicio);
+          this.alta = datos.altas[0] ?? null;
+          this.glucosa = this.ordenarPorFechaDesc(datos.glucosa, (item) => item.fecha);
+          this.controlHidrico = this.ordenarPorFechaDesc(datos.control, (item) => item.fecha);
+          this.notas = this.ordenarPorFechaDesc(datos.notas, (item) => item.fecha);
+          this.aplicaciones = this.ordenarPorFechaDesc(
+            datos.aplicaciones,
+            (item) => item.fechaHoraProgramada,
+          );
+          this.ejecuciones = this.ordenarPorFechaDesc(
+            datos.ejecuciones,
+            (item) => item.fechaHoraProgramada,
+          );
+          this.consumo = datos.consumo;
+          this.cargandoPanel = false;
+
+          if (this.seccionesConError.length) {
+            this.errorPanel = `No se pudieron cargar: ${this.seccionesConError.join(', ')}.`;
+          }
+          this.cdr.detectChanges();
+        },
+        error: (error) => {
+          this.cargandoPanel = false;
+          this.errorPanel = this.mensajeError(error, 'No se pudieron cargar los datos del panel.');
+          this.cdr.detectChanges();
+        },
+      });
+  }
+
+  private conRespaldo<T>(observable: Observable<T>, respaldo: T, seccion: string): Observable<T> {
+    return observable.pipe(
+      catchError(() => {
+        this.seccionesConError = [...this.seccionesConError, seccion];
+        return of(respaldo);
+      }),
+    );
+  }
+
+  /** Ordena los registros por fecha, del más reciente al más antiguo. */
+  private ordenarPorFechaDesc<T>(
+    items: T[],
+    obtenerFecha: (item: T) => string | null | undefined,
+  ): T[] {
+    return [...items].sort(
+      (a, b) => this.fechaMs(obtenerFecha(b)) - this.fechaMs(obtenerFecha(a)),
+    );
+  }
+
+  /** Fecha de un registro clínico en milisegundos; los valores inválidos quedan al final. */
+  private fechaMs(valor: string | null | undefined): number {
+    if (!valor) return 0;
+    const fecha = new Date(valor).getTime();
+    return Number.isNaN(fecha) ? 0 : fecha;
   }
 
   private mensajeError(error: unknown, porDefecto: string): string {

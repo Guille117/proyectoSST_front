@@ -3,6 +3,13 @@ export interface Conteo {
   cantidad: number;
 }
 
+/** Resultado del reporte de productos más despachados, con su tipo de recurso. */
+export interface ProductoConteo {
+  nombre: string;
+  tipo: 'MEDICAMENTO' | 'INSUMO';
+  cantidad: number;
+}
+
 export type ClaveConteo =
   | 'masVendidos'
   | 'menosVendidos'
@@ -14,7 +21,23 @@ export type ClaveConteo =
   | 'medicamentos'
   | 'cuidados'
   | 'porRol'
-  | 'accesos';
+  | 'accesos'
+  | 'consumoArea'
+  | 'rotacion'
+  | 'egresos'
+  | 'gruposEdad'
+  | 'estancia'
+  | 'ocupacion'
+  | 'procedimientos'
+  | 'indicaciones'
+  | 'reingresos'
+  | 'tiempoAtencion'
+  | 'signosFueraRango'
+  | 'eventos'
+  | 'cargaEnfermero'
+  | 'intentosFallidos'
+  | 'actividad'
+  | 'usuariosCreados';
 
 export interface Vencimiento {
   producto: string;
@@ -51,6 +74,23 @@ export interface MonitoreoSummary {
 export interface GlucosaPromedio {
   tipo: string;
   promedio: number;
+}
+
+export interface SesionActiva {
+  usuario: string;
+  ultimoLogin: string | null;
+  ultimoLogout: string | null;
+  ultimaActividad: string | null;
+}
+
+export interface PermisoModulo {
+  modulo: string;
+  submodulo: string;
+  rol: string;
+  leer: boolean;
+  crear: boolean;
+  editar: boolean;
+  eliminar: boolean;
 }
 
 export interface BitacoraEntry {

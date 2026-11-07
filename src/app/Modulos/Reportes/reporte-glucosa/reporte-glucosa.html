@@ -12,36 +12,114 @@
           <input type="date" id="hasta" name="hasta" [(ngModel)]="hasta" />
         </app-campo-validado>
       </div>
-      <button type="button" class="btn _principal" [disabled]="cargando" (click)="generar()">Generar</button>
-      <button type="button" class="btn" (click)="exportarPdf()">PDF</button>
-      <button type="button" class="btn" (click)="exportarExcel()">Excel</button>
+      <div class="filtros-acciones">
+        <button type="button" class="btn _principal" [disabled]="cargando" (click)="generar()">
+          Generar
+        </button>
+        <button
+          type="button"
+          class="btn btn-exportar"
+          [disabled]="cargando || !datos.length"
+          (click)="exportarPdf()"
+        >
+          PDF
+        </button>
+        <button
+          type="button"
+          class="btn btn-exportar"
+          [disabled]="cargando || !datos.length"
+          (click)="exportarExcel()"
+        >
+          Excel
+        </button>
+      </div>
     </div>
   </div>
 
   @if (cargando) {
     <p class="reporte-vacio">Cargando reporte...</p>
+  } @else if (datos.length) {
+    <section class="kpis" aria-label="Resumen de glucosa">
+      <article class="kpi">
+        <span class="kpi-icono" aria-hidden="true"><i class="bi bi-droplet"></i></span>
+        <div class="kpi-info">
+          <p class="kpi-etiqueta">Tipos registrados</p>
+          <p class="kpi-valor">{{ datos.length }}</p>
+        </div>
+      </article>
+
+      <article class="kpi">
+        <span class="kpi-icono" aria-hidden="true"><i class="bi bi-graph-up"></i></span>
+        <div class="kpi-info">
+          <p class="kpi-etiqueta">Promedio general</p>
+          <p class="kpi-valor">{{ promedio(promedioGeneral()) }}</p>
+        </div>
+      </article>
+
+      <article class="kpi">
+        <span class="kpi-icono" aria-hidden="true"><i class="bi bi-arrow-up-circle"></i></span>
+        <div class="kpi-info">
+          <p class="kpi-etiqueta">Promedio más alto</p>
+          <p class="kpi-valor kpi-valor--nombre">
+            {{ mayor()?.tipo ?? '—' }} ({{ promedio(mayor()?.promedio ?? 0) }})
+          </p>
+        </div>
+      </article>
+
+      <article class="kpi">
+        <span class="kpi-icono" aria-hidden="true"><i class="bi bi-arrow-down-circle"></i></span>
+        <div class="kpi-info">
+          <p class="kpi-etiqueta">Promedio más bajo</p>
+          <p class="kpi-valor kpi-valor--nombre">
+            {{ menor()?.tipo ?? '—' }} ({{ promedio(menor()?.promedio ?? 0) }})
+          </p>
+        </div>
+      </article>
+    </section>
+
+    <article class="panel">
+      <div class="panel-cabecera">
+        <h2 class="panel-titulo">Promedio por tipo</h2>
+        <div class="panel-cabecera-derecha">
+          <app-reporte-vista-toggle
+            [vista]="vista()"
+            etiqueta="Vista de glucosa"
+            (cambiar)="cambiarVista($event)"
+          ></app-reporte-vista-toggle>
+        </div>
+      </div>
+
+      @if (vista() === 'grafica') {
+        <div class="grafica-reporte">
+          <app-grafica-barras
+            [etiquetas]="etiquetas()"
+            [valores]="valores()"
+            titulo="Glucosa promedio por tipo"
+            [mostrarValores]="true"
+          ></app-grafica-barras>
+        </div>
+      } @else {
+        <div class="tabla-scroll">
+          <table class="table tabla-reporte">
+            <thead>
+              <tr>
+                <th scope="col" class="celda_izquierda">Tipo</th>
+                <th scope="col" class="celda_numero">Promedio</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (g of datos; track g.tipo) {
+                <tr>
+                  <td class="celda_izquierda">{{ g.tipo }}</td>
+                  <td class="celda_numero">{{ promedio(g.promedio) }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </article>
   } @else {
-    <div class="table-container">
-      <table class="table">
-        <thead>
-          <tr>
-            <th class="celda_izquierda">Tipo</th>
-            <th class="celda_centrada">Promedio</th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (g of datos; track g.tipo) {
-            <tr>
-              <td class="celda_izquierda">{{ g.tipo }}</td>
-              <td class="celda_centrada">{{ g.promedio }}</td>
-            </tr>
-          } @empty {
-            <tr>
-              <td colspan="2" class="celda_centrada">Sin datos.</td>
-            </tr>
-          }
-        </tbody>
-      </table>
-    </div>
+    <p class="reporte-vacio">Sin datos para el período seleccionado.</p>
   }
 </div>

@@ -41,7 +41,47 @@ export function descripcionBitacora(entrada: BitacoraEntry): string {
   if (entrada.accion === 'LOGIN') return 'Inicio de sesión';
   if (entrada.accion === 'LOGOUT') return 'Cierre de sesión';
   const entidad = entrada.entidad ?? entrada.modulo ?? 'registro';
-  return `${accionLegible(entrada.accion)} ${entidad}`;
+  const id = entrada.entidadId ? ` #${entrada.entidadId}` : '';
+  return `${accionLegible(entrada.accion)} ${entidad}${id}`;
+}
+
+/** Resumen legible del cuerpo específico guardado en la bitácora. */
+export function resumenDetalle(entrada: BitacoraEntry): string {
+  if (!entrada.detalle || entrada.accion === 'LOGIN' || entrada.accion === 'LOGOUT') {
+    return '—';
+  }
+
+  const texto = entrada.detalle.trim();
+  if (!texto) return '—';
+
+  try {
+    const datos = JSON.parse(texto) as unknown;
+    if (Array.isArray(datos)) {
+      return `${datos.length} elemento(s)`;
+    }
+    if (datos && typeof datos === 'object') {
+      const sensibles = /(password|passwd|pin|token|secret|clave)/i;
+      const partes = Object.entries(datos as Record<string, unknown>)
+        .filter(([clave]) => !sensibles.test(clave))
+        .map(([clave, valor]) => `${clave}: ${valorLegible(valor)}`)
+        .slice(0, 6);
+      return recortar(partes.length ? partes.join(' · ') : '—');
+    }
+    return recortar(String(datos));
+  } catch {
+    return recortar(texto);
+  }
+}
+
+function valorLegible(valor: unknown): string {
+  if (valor === null || valor === undefined) return '—';
+  if (Array.isArray(valor)) return `${valor.length} elemento(s)`;
+  if (typeof valor === 'object') return '{…}';
+  return String(valor);
+}
+
+function recortar(texto: string, maximo = 140): string {
+  return texto.length > maximo ? `${texto.slice(0, maximo - 1)}…` : texto;
 }
 
 /** Formatea una fecha ISO a dd-mm-aaaa hh:mm. */

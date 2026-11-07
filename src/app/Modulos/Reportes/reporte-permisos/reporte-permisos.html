@@ -1,0 +1,135 @@
+<div class="reporte areaTrabajo-container">
+  <div class="reporte-encabezado">
+    <h2 class="reporte-titulo">Permisos por módulo</h2>
+    <div class="filtros">
+      <div class="filtros-acciones">
+        <button
+          type="button"
+          class="btn btn-exportar"
+          [disabled]="cargando || !datos.length"
+          (click)="exportarPdf()"
+        >
+          PDF
+        </button>
+        <button
+          type="button"
+          class="btn btn-exportar"
+          [disabled]="cargando || !datos.length"
+          (click)="exportarExcel()"
+        >
+          Excel
+        </button>
+      </div>
+    </div>
+  </div>
+
+  @if (cargando) {
+    <p class="reporte-vacio">Cargando permisos...</p>
+  } @else if (datos.length) {
+    <section class="kpis" aria-label="Resumen de permisos">
+      <article class="kpi">
+        <span class="kpi-icono" aria-hidden="true"><i class="bi bi-diagram-3"></i></span>
+        <div class="kpi-info">
+          <p class="kpi-etiqueta">Módulos</p>
+          <p class="kpi-valor">{{ modulos() }}</p>
+        </div>
+      </article>
+
+      <article class="kpi">
+        <span class="kpi-icono" aria-hidden="true"><i class="bi bi-list-check"></i></span>
+        <div class="kpi-info">
+          <p class="kpi-etiqueta">Submódulos</p>
+          <p class="kpi-valor">{{ submodulos() }}</p>
+        </div>
+      </article>
+
+      <article class="kpi">
+        <span class="kpi-icono" aria-hidden="true"><i class="bi bi-people"></i></span>
+        <div class="kpi-info">
+          <p class="kpi-etiqueta">Roles</p>
+          <p class="kpi-valor">{{ roles() }}</p>
+        </div>
+      </article>
+
+      <article class="kpi">
+        <span class="kpi-icono" aria-hidden="true"><i class="bi bi-shield-check"></i></span>
+        <div class="kpi-info">
+          <p class="kpi-etiqueta">Permisos asignados</p>
+          <p class="kpi-valor">{{ datos.length }}</p>
+        </div>
+      </article>
+    </section>
+
+    <article class="panel">
+      <div class="panel-cabecera">
+        <h2 class="panel-titulo">Matriz de permisos</h2>
+      </div>
+      <div class="tabla-scroll">
+        <table class="table tabla-reporte">
+          <thead>
+            <tr>
+              <th scope="col" class="celda_izquierda">Módulo</th>
+              <th scope="col" class="celda_izquierda">Submódulo</th>
+              <th scope="col" class="celda_izquierda">Rol</th>
+              <th scope="col" class="celda_centrada">L</th>
+              <th scope="col" class="celda_centrada">C</th>
+              <th scope="col" class="celda_centrada">E</th>
+              <th scope="col" class="celda_centrada">D</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (p of datos; track p.modulo + '|' + p.submodulo + '|' + p.rol) {
+              <tr>
+                <td class="celda_izquierda">{{ p.modulo }}</td>
+                <td class="celda_izquierda">{{ p.submodulo }}</td>
+                <td class="celda_izquierda">{{ p.rol }}</td>
+                <td class="celda_centrada">
+                  <i
+                    class="bi"
+                    [class.bi-check-lg]="p.leer"
+                    [class.bi-dash-lg]="!p.leer"
+                    [class.permiso-si]="p.leer"
+                    [class.permiso-no]="!p.leer"
+                    [attr.title]="p.leer ? 'Permitido' : 'No permitido'"
+                  ></i>
+                </td>
+                <td class="celda_centrada">
+                  <i
+                    class="bi"
+                    [class.bi-check-lg]="p.crear"
+                    [class.bi-dash-lg]="!p.crear"
+                    [class.permiso-si]="p.crear"
+                    [class.permiso-no]="!p.crear"
+                    [attr.title]="p.crear ? 'Permitido' : 'No permitido'"
+                  ></i>
+                </td>
+                <td class="celda_centrada">
+                  <i
+                    class="bi"
+                    [class.bi-check-lg]="p.editar"
+                    [class.bi-dash-lg]="!p.editar"
+                    [class.permiso-si]="p.editar"
+                    [class.permiso-no]="!p.editar"
+                    [attr.title]="p.editar ? 'Permitido' : 'No permitido'"
+                  ></i>
+                </td>
+                <td class="celda_centrada">
+                  <i
+                    class="bi"
+                    [class.bi-check-lg]="p.eliminar"
+                    [class.bi-dash-lg]="!p.eliminar"
+                    [class.permiso-si]="p.eliminar"
+                    [class.permiso-no]="!p.eliminar"
+                    [attr.title]="p.eliminar ? 'Permitido' : 'No permitido'"
+                  ></i>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </article>
+  } @else {
+    <p class="reporte-vacio">No hay permisos registrados.</p>
+  }
+</div>
