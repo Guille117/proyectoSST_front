@@ -359,6 +359,13 @@ export class ResumenEpisodio implements OnChanges {
     return this.formatearFechaHora(valor ?? null);
   }
 
+  hora(valor: string | null | undefined): string {
+    if (!valor) return '-';
+    const fecha = new Date(valor);
+    if (Number.isNaN(fecha.getTime())) return '-';
+    return `${this.dosDigitos(fecha.getHours())}:${this.dosDigitos(fecha.getMinutes())}`;
+  }
+
   fecha(valor: string | null | undefined): string {
     if (!valor) return '—';
     const fecha = new Date(valor);
