@@ -18,6 +18,7 @@ export interface EvolucionResponse {
   episodioId: number;
   usuarioId: number;
   usuarioNombre: string;
+  usuarioNombreCorto: string;
   fecha: string;
   estado: EstadoEvolucionApi;
   estadoClinicoId: number | null;

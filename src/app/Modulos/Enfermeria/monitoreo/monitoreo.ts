@@ -970,7 +970,7 @@ export class Monitoreo implements OnInit, OnDestroy {
       observacion: respuesta.observacion ?? '',
       fecha: this.formatearFecha(fecha),
       hora: this.formatearHora(fecha),
-      usuario: respuesta.usuarioNombre,
+      usuario: respuesta.usuarioNombreCorto,
     };
   }
 
@@ -986,7 +986,7 @@ export class Monitoreo implements OnInit, OnDestroy {
       descripcion: respuesta.descripcion,
       fecha: this.formatearFecha(fecha),
       hora: this.formatearHora(fecha),
-      usuario: respuesta.usuarioNombre,
+      usuario: respuesta.usuarioNombreCorto,
       eliminado: respuesta.eliminado,
     };
   }
@@ -1002,7 +1002,7 @@ export class Monitoreo implements OnInit, OnDestroy {
       observacion: respuesta.observacion ?? '',
       fecha: this.formatearFecha(fecha),
       hora: this.formatearHora(fecha),
-      usuario: respuesta.usuarioNombre,
+      usuario: respuesta.usuarioNombreCorto,
     };
   }
 

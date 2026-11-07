@@ -54,6 +54,8 @@ describe('ProcedimientoMedico', () => {
     episodioId: 10,
     usuarioId: 1,
     usuarioNombre: 'Dra. Ana López',
+    usuarioNombreCorto: 'Dra. Ana López',
+    fechaRegistro: '2026-10-19T10:55:00',
     estado: 'PENDIENTE',
     recursos: [],
   };

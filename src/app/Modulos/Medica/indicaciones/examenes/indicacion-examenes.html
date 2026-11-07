@@ -204,6 +204,15 @@
             <p class="indicacion-observaciones">{{ examen.observacion }}</p>
           }
 
+          <footer class="indicacion-meta">
+            <span>
+              <i class="bi bi-calendar3" aria-hidden="true"></i>
+              {{ examen.fecha }}
+            </span>
+            <span><i class="bi bi-clock" aria-hidden="true"></i>{{ examen.hora }}</span>
+            <span><i class="bi bi-person" aria-hidden="true"></i>{{ examen.medico }}</span>
+          </footer>
+
           <!-- Disponibilidad del examen: el ojo abre el visor de sus archivos -->
           @if (examen.archivos.length && examen.estado === 'activo') {
             <button

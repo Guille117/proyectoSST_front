@@ -62,6 +62,7 @@ interface DetalleSalidaVista extends DetalleSolicitudSalida {
 interface SolicitudSalidaVista extends SolicitudSalidaBase {
   solicitante: string;
   solicitantePuesto: string;
+  solicitanteNombreCorto: string;
   detalles: DetalleSalidaVista[];
 }
 
@@ -1229,6 +1230,17 @@ export class Salidas implements OnInit, OnDestroy {
     return `${dosDigitos(dia)}/${dosDigitos(mes)}/${anio}`;
   }
 
+  formatearHora(valor: string | null): string {
+    if (!valor) return '—';
+
+    const [, horaParte] = valor.split('T');
+    if (!horaParte) return '—';
+
+    const [hora, minuto] = horaParte.split(':').map(Number);
+    const dosDigitos = (numero: number): string => `${numero}`.padStart(2, '0');
+    return `${dosDigitos(hora)}:${dosDigitos(minuto)}`;
+  }
+
   // ------------------- APOYO -------------------
 
   private aVista(solicitud: SolicitudSalida): SolicitudSalidaVista {
@@ -1238,6 +1250,7 @@ export class Salidas implements OnInit, OnDestroy {
       paciente: solicitud.paciente,
       solicitante: solicitud.solicitante,
       solicitantePuesto: solicitud.solicitantePuesto,
+      solicitanteNombreCorto: solicitud.solicitanteNombreCorto,
       tipoAtencion: solicitud.tipoAtencion,
       procedimiento: solicitud.procedimiento,
       fecha: solicitud.fecha,

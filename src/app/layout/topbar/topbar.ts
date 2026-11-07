@@ -40,6 +40,21 @@ export class Topbar {
       .subscribe(() => this.tituloModulo.set(this.obtenerTitulo(this.router.url)));
   }
 
+  /** Muestra únicamente el primer nombre y el primer apellido del usuario. */
+  nombreCorto(): string {
+    const nombreCompleto = this.authService.currentUser()?.nombreCompleto?.trim();
+    if (!nombreCompleto) {
+      return 'Usuario';
+    }
+
+    const partes = nombreCompleto.split(/\s+/).filter(Boolean);
+    if (partes.length <= 2) {
+      return partes.join(' ');
+    }
+
+    return `${partes[0]} ${partes[partes.length - 2]}`;
+  }
+
   logout(): void {
     this.authService.logout();
   }

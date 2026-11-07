@@ -61,6 +61,7 @@ export interface DetalleSolicitudSalida {
 export interface SolicitudSalida extends SolicitudSalidaBase {
   solicitante: string;
   solicitantePuesto: string;
+  solicitanteNombreCorto: string;
   detalles: DetalleSolicitudSalida[];
 }
 

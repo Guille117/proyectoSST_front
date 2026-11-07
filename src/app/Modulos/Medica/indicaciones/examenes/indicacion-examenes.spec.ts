@@ -29,6 +29,7 @@ describe('IndicacionExamenes', () => {
     episodioId: 1,
     usuarioId: 2,
     usuarioNombre: 'Carlos Méndez',
+    usuarioNombreCorto: 'Carlos Méndez',
     fecha: '2026-10-16T11:00:00',
     estado: 'ACTIVO',
     ...cambios,
@@ -98,6 +99,15 @@ describe('IndicacionExamenes', () => {
 
     expect(tarjeta.textContent).not.toContain('hemograma.pdf');
     expect(tarjeta.querySelector('.examen-ojo')).not.toBeNull();
+  });
+
+  it('muestra quién registró el examen, la fecha y la hora', () => {
+    const tarjeta = fixture.nativeElement.querySelector('.indicacion-card') as HTMLElement;
+
+    expect(tarjeta.querySelector('.indicacion-meta')).not.toBeNull();
+    expect(tarjeta.textContent).toContain('Carlos');
+    expect(tarjeta.textContent).toContain('16/10/2026');
+    expect(tarjeta.textContent).toContain('11:00');
   });
 
   it('carga los eliminados al elegir su filtro', async () => {

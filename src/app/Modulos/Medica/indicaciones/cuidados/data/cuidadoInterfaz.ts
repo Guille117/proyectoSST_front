@@ -27,6 +27,7 @@ export interface CuidadoResponse {
   episodioId: number;
   usuarioId: number;
   usuarioNombre: string;
+  usuarioNombreCorto: string;
   fecha: string;
   estado: EstadoCuidadoApi;
   fechaInicio: string;

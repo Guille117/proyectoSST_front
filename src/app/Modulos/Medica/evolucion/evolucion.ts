@@ -465,7 +465,7 @@ export class Evolucion implements OnInit, OnDestroy {
     return {
       id: respuesta.id,
       usuarioId: respuesta.usuarioId,
-      medico: respuesta.usuarioNombre,
+      medico: respuesta.usuarioNombreCorto,
       fecha: this.formatearFecha(fecha),
       hora: this.formatearHora(fecha),
       evolucionClinica: respuesta.evolucionClinica,

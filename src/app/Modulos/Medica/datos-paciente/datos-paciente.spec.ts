@@ -53,6 +53,7 @@ describe('DatosPaciente', () => {
     episodioId: 101,
     usuarioId: 5,
     usuarioNombre: 'Enf. Ana López',
+    usuarioNombreCorto: 'Enf. Ana López',
     fecha: '2026-10-10T09:00:00',
     eliminado: false,
   };

@@ -17,13 +17,13 @@
     </div>
     <div class="usuario">
         <h3>
-            {{ authService.currentUser()?.nombreCompleto || 'Usuario' }}
+            {{ nombreCorto() }}
         </h3>
         <h5>
             {{ authService.currentUser()?.roles?.join(', ') || 'Usuario' }}
         </h5>
     </div>
     <button type="button" class="btn-logout" (click)="logout()" title="Cerrar sesión" aria-label="Cerrar sesión">
-        <i class="bi bi-box-arrow-right fs-5" aria-hidden="true"></i>
+        <i class="bi bi-power" aria-hidden="true"></i>
     </button>
 </div>

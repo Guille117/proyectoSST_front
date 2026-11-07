@@ -36,6 +36,7 @@ describe('Salidas', () => {
     paciente: 'Ana López',
     solicitante: 'Dra. María Pérez',
     solicitantePuesto: 'Médico',
+    solicitanteNombreCorto: 'Dra. María Pérez',
     tipoAtencion: 'EMERGENCIA',
     procedimiento: 'Sutura',
     fecha: '2026-10-19T10:00:00',
