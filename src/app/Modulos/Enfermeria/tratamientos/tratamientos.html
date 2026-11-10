@@ -896,9 +896,11 @@
         <div class="administracion-campo">
           <label class="administracion-etiqueta" for="horaAdministracion">
             {{
-              seccionActiva === 'cuidados'
-                ? 'Fecha y hora de realización'
-                : 'Fecha y hora de administración'
+              permiteHoraManual
+                ? seccionActiva === 'cuidados'
+                  ? 'Fecha y hora de realización'
+                  : 'Fecha y hora de administración'
+                : 'Fecha y hora de la próxima aplicación'
             }}<span class="administracion-obligatorio" aria-hidden="true">*</span>
           </label>
           @if (permiteHoraManual) {
@@ -914,23 +916,25 @@
               Esta atención no tiene programación; registre la fecha y hora manualmente.
             </span>
           } @else {
-            <select
-              class="administracion-input"
-              id="horaAdministracion"
-              name="horaAdministracion"
-              aria-required="true"
-              [(ngModel)]="horaAdministracion"
-            >
-              <option value="">Seleccionar...</option>
-              @for (hora of horasAdministracion; track hora.valor) {
-                <option [value]="hora.valor">{{ hora.numero }}. {{ hora.etiqueta }}</option>
-              }
-            </select>
+            <div class="administracion-valor" id="horaAdministracion" role="status">
+              {{ etiquetaHoraAdministracion || 'Sin hora programada' }}
+            </div>
 
             @if (!horasAdministracion.length) {
               <span class="administracion-ayuda">
                 No hay horas programadas pendientes para esta indicación.
               </span>
+            }
+
+            @if (administracionDemasiadoTemprana) {
+              <span class="administracion-ayuda administracion-ayuda--error">
+                Aún no es hora de registrar esta administración. Podrá hacerlo a partir de las
+                {{ horaDesdeAdministracion }} (20 minutos antes).
+              </span>
+            }
+
+            @if (administracionFueraDeHorario) {
+              <span class="administracion-ayuda administracion-ayuda--aviso"> Fuera de horario. </span>
             }
           }
         </div>

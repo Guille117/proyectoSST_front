@@ -65,6 +65,9 @@ import {
   ultimaAplicacionRegistrada,
 } from './data/programacionTratamiento';
 
+/** Margen con el que se puede registrar una administración antes de la hora programada. */
+const MARGEN_ADMINISTRACION_MS = 20 * 60 * 1000;
+
 /** Secciones del submenú de indicaciones médicas de enfermería. */
 type SeccionTratamiento = 'medicamentos' | 'examenes' | 'cuidados';
 
@@ -516,6 +519,7 @@ export class Tratamientos implements OnInit, OnDestroy {
       return false;
     }
     if (!this.horaAdministracion) return false;
+    if (this.administracionDemasiadoTemprana) return false;
     if (this.aplicacionEnEdicion && !this.hayCambiosEnEdicion) return false;
 
     if (this.controlSeleccionado) {
@@ -654,6 +658,7 @@ export class Tratamientos implements OnInit, OnDestroy {
       this.controlSeleccionado !== null &&
       !this.controlRegistrado &&
       !this.controlTomado &&
+      !this.administracionDemasiadoTemprana &&
       this.horaAdministracion.trim().length > 0
     );
   }
@@ -689,6 +694,43 @@ export class Tratamientos implements OnInit, OnDestroy {
     }
 
     return opciones;
+  }
+
+  /** Fecha y hora que se registrará: la próxima pendiente o el registro en edición. */
+  get etiquetaHoraAdministracion(): string {
+    const fecha = this.fechaAdministracion;
+    return fecha ? this.formatearFechaHora(fecha) : '';
+  }
+
+  /** La administración nueva solo se habilita 20 minutos antes de la hora programada. */
+  get administracionDemasiadoTemprana(): boolean {
+    if (this.editandoAplicacion || this.permiteHoraManual || this.controlTomado) return false;
+
+    const programada = this.fechaAdministracion;
+    return programada !== null && Date.now() < programada.getTime() - MARGEN_ADMINISTRACION_MS;
+  }
+
+  /** La administración se registra después de la hora programada. */
+  get administracionFueraDeHorario(): boolean {
+    if (this.editandoAplicacion || this.permiteHoraManual || this.controlTomado) return false;
+
+    const programada = this.fechaAdministracion;
+    return programada !== null && Date.now() > programada.getTime();
+  }
+
+  /** Hora desde la que se habilita el registro: la programada menos 20 minutos. */
+  get horaDesdeAdministracion(): string {
+    const programada = this.fechaAdministracion;
+    return programada
+      ? this.formatearHora(new Date(programada.getTime() - MARGEN_ADMINISTRACION_MS))
+      : '';
+  }
+
+  private get fechaAdministracion(): Date | null {
+    if (!this.horaAdministracion) return null;
+
+    const fecha = new Date(this.horaAdministracion);
+    return Number.isNaN(fecha.getTime()) ? null : fecha;
   }
 
   /**
