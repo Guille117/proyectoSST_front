@@ -172,6 +172,11 @@
   overflow-wrap: anywhere;
 }
 
+/* Signo vital fuera de su rango normal. */
+.ficha-campo_valor.valor-fuera-rango {
+  color: #dc2626;
+}
+
 /* Motivo de atención: texto completo sin corte; si es muy grande, el bloque tiene scroll */
 .ficha-motivo {
   margin: 0;

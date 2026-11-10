@@ -31,6 +31,9 @@ import {
   SignosVitalesResponse,
 } from './data/signosVitalesInterfaz';
 import { SignosVitalesService } from './data/signos-vitales-service';
+import {
+  fueraDeRango as evaluarFueraDeRango,
+} from '../../../shared/signos-vitales/rangos-signos-vitales';
 
 /** Secciones del monitoreo de enfermería. */
 type SeccionMonitoreo = 'signos' | 'hidrico' | 'glucosa';
@@ -126,6 +129,9 @@ export class Monitoreo implements OnInit, OnDestroy {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly cdr = inject(ChangeDetectorRef);
+
+  /** Evalúa si un signo vital está fuera de su rango normal. */
+  protected readonly fueraDeRango = evaluarFueraDeRango;
 
   private peticionSignos?: Subscription;
   private peticionHidrico?: Subscription;

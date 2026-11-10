@@ -6,6 +6,9 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { Observable, TimeoutError, catchError, forkJoin, map, of } from 'rxjs';
 import { SignosVitalesService } from '../../Enfermeria/monitoreo/data/signos-vitales-service';
 import { SignosVitalesResponse } from '../../Enfermeria/monitoreo/data/signosVitalesInterfaz';
+import {
+  fueraDeRango as evaluarFueraDeRango,
+} from '../../../shared/signos-vitales/rangos-signos-vitales';
 import { ControlHidricoService } from '../../Enfermeria/monitoreo/data/control-hidrico-service';
 import { ControlHidricoResponse } from '../../Enfermeria/monitoreo/data/controlHidricoInterfaz';
 import { GlucosaService } from '../../Enfermeria/monitoreo/data/glucosa-service';
@@ -103,6 +106,10 @@ export class Expediente implements OnInit {
   private readonly servicioConsumo = inject(ConsumoEpisodioService);
   private readonly episodioActivo = inject(EpisodioActivoService);
   private readonly cdr = inject(ChangeDetectorRef);
+
+  /** Evalúa si un signo vital está fuera de su rango normal. */
+  protected readonly fueraDeRango = evaluarFueraDeRango;
+
   private readonly destroyRef = inject(DestroyRef);
 
   paciente: PacienteDetalle | null = null;

@@ -409,6 +409,11 @@
   }
 }
 
+/* Signo vital fuera de su rango normal. */
+.dato-valor.valor-fuera-rango {
+  color: #dc2626;
+}
+
 /* Motivo de la visita: etiqueta y valor en la misma línea, con líneas divisorias */
 .motivo-visita {
   flex-direction: row;

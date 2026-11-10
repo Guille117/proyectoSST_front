@@ -14,11 +14,13 @@ import { SignosVitalesService } from '../../Enfermeria/monitoreo/data/signos-vit
 import { PacienteDetalle } from '../../Pacientes/paciente/data/pacienteInterfaz';
 import { PacienteService } from '../../Pacientes/paciente/data/paciente-service';
 import { EpisodioActivoService } from '../data/episodio-activo-service';
+import { fueraDeRango } from '../../../shared/signos-vitales/rangos-signos-vitales';
 
 /** Signo vital que se muestra en la ficha. */
 interface SignoVitalVista {
   etiqueta: string;
   valor: string;
+  fueraRango: boolean;
 }
 
 /**
@@ -191,10 +193,28 @@ export class DatosPaciente implements OnInit, OnDestroy {
 
         this.signosVitales = ultimo
           ? [
-              { etiqueta: 'PA (mmHg)', valor: `${ultimo.sistolica}/${ultimo.diastolica}` },
-              { etiqueta: 'FC (lpm)', valor: `${ultimo.frecuenciaCardiaca}` },
-              { etiqueta: 'Temp. (°C)', valor: `${ultimo.temperatura}` },
-              { etiqueta: 'SpO₂ (%)', valor: `${ultimo.saturacion}` },
+              {
+                etiqueta: 'PA (mmHg)',
+                valor: `${ultimo.sistolica}/${ultimo.diastolica}`,
+                fueraRango:
+                  fueraDeRango('sistolica', ultimo.sistolica) ||
+                  fueraDeRango('diastolica', ultimo.diastolica),
+              },
+              {
+                etiqueta: 'FC (lpm)',
+                valor: `${ultimo.frecuenciaCardiaca}`,
+                fueraRango: fueraDeRango('frecuenciaCardiaca', ultimo.frecuenciaCardiaca),
+              },
+              {
+                etiqueta: 'Temp. (°C)',
+                valor: `${ultimo.temperatura}`,
+                fueraRango: fueraDeRango('temperatura', ultimo.temperatura),
+              },
+              {
+                etiqueta: 'SpO₂ (%)',
+                valor: `${ultimo.saturacion}`,
+                fueraRango: fueraDeRango('saturacion', ultimo.saturacion),
+              },
             ]
           : [];
         this.cargandoSignos = false;

@@ -328,23 +328,49 @@
                 <div class="ingreso-datos signos-datos">
                   <div class="dato">
                     <span class="dato-rotulo">PA (mmHg)</span>
-                    <span class="dato-valor">{{ signo.sistolica }}/{{ signo.diastolica }}</span>
+                    <span class="dato-valor">
+                      <span [class.valor-fuera-rango]="fueraDeRango('sistolica', signo.sistolica)">{{
+                        signo.sistolica
+                      }}</span>/<span [class.valor-fuera-rango]="fueraDeRango('diastolica', signo.diastolica)">{{
+                        signo.diastolica
+                      }}</span>
+                    </span>
                   </div>
                   <div class="dato">
                     <span class="dato-rotulo">FC (lpm)</span>
-                    <span class="dato-valor">{{ signo.frecuenciaCardiaca }}</span>
+                    <span
+                      class="dato-valor"
+                      [class.valor-fuera-rango]="
+                        fueraDeRango('frecuenciaCardiaca', signo.frecuenciaCardiaca)
+                      "
+                      >{{ signo.frecuenciaCardiaca }}</span
+                    >
                   </div>
                   <div class="dato">
                     <span class="dato-rotulo">FR (rpm)</span>
-                    <span class="dato-valor">{{ signo.frecuenciaRespiratoria }}</span>
+                    <span
+                      class="dato-valor"
+                      [class.valor-fuera-rango]="
+                        fueraDeRango('frecuenciaRespiratoria', signo.frecuenciaRespiratoria)
+                      "
+                      >{{ signo.frecuenciaRespiratoria }}</span
+                    >
                   </div>
                   <div class="dato">
                     <span class="dato-rotulo">Temp. (°C)</span>
-                    <span class="dato-valor">{{ signo.temperatura }}</span>
+                    <span
+                      class="dato-valor"
+                      [class.valor-fuera-rango]="fueraDeRango('temperatura', signo.temperatura)"
+                      >{{ signo.temperatura }}</span
+                    >
                   </div>
                   <div class="dato">
                     <span class="dato-rotulo">SpO₂ (%)</span>
-                    <span class="dato-valor">{{ signo.saturacion }}</span>
+                    <span
+                      class="dato-valor"
+                      [class.valor-fuera-rango]="fueraDeRango('saturacion', signo.saturacion)"
+                      >{{ signo.saturacion }}</span
+                    >
                   </div>
                   <div class="dato">
                     <span class="dato-rotulo">Última toma</span>
@@ -759,8 +785,40 @@
                         <div class="registros">
                           @for (signo of signosVitales; track signo.id) {
                             <article class="registro">
-                              <p class="registro-titulo">PA {{ signo.sistolica }}/{{ signo.diastolica }} mmHg · FC {{ signo.frecuenciaCardiaca }} lpm</p>
-                              <p class="registro-texto">FR {{ signo.frecuenciaRespiratoria }} rpm · Temp {{ signo.temperatura }} °C · SpO₂ {{ signo.saturacion }} %</p>
+                              <p class="registro-titulo">
+                                PA
+                                <span [class.valor-fuera-rango]="fueraDeRango('sistolica', signo.sistolica)"
+                                  >{{ signo.sistolica }}</span
+                                >/<span [class.valor-fuera-rango]="fueraDeRango('diastolica', signo.diastolica)"
+                                  >{{ signo.diastolica }}</span
+                                >
+                                mmHg · FC
+                                <span
+                                  [class.valor-fuera-rango]="
+                                    fueraDeRango('frecuenciaCardiaca', signo.frecuenciaCardiaca)
+                                  "
+                                  >{{ signo.frecuenciaCardiaca }}</span
+                                >
+                                lpm
+                              </p>
+                              <p class="registro-texto">
+                                FR
+                                <span
+                                  [class.valor-fuera-rango]="
+                                    fueraDeRango('frecuenciaRespiratoria', signo.frecuenciaRespiratoria)
+                                  "
+                                  >{{ signo.frecuenciaRespiratoria }}</span
+                                >
+                                rpm · Temp
+                                <span [class.valor-fuera-rango]="fueraDeRango('temperatura', signo.temperatura)">{{
+                                  signo.temperatura
+                                }}</span>
+                                °C · SpO₂
+                                <span [class.valor-fuera-rango]="fueraDeRango('saturacion', signo.saturacion)">{{
+                                  signo.saturacion
+                                }}</span>
+                                %
+                              </p>
                               @if (signo.observacion) {
                                 <p class="registro-texto">Observación: {{ signo.observacion }}</p>
                               }

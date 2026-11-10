@@ -108,19 +108,19 @@
 		<div class="formularioPacientePaso1">
 		<div class="fila">
 						<app-campo-validado [label]="'Nombres'" [fieldId]="'nombresPaciente'" [required]="true" [showError]="!!(nombresPacienteControl.touched && nombresPacienteControl.invalid)" [errorMessage]="'Debe ingresar los nombres'">
-							<input type="text" id="nombresPaciente" name="nombresPaciente" placeholder="Nombres" required pattern="^[A-Za-zÁÉÍÓÚáéíóúÑñ ]+$" [(ngModel)]="pacienteForm.persona.nombres" #nombresPacienteControl="ngModel" [class.input-invalid]="nombresPacienteControl.touched && nombresPacienteControl.invalid">
+							<input type="text" id="nombresPaciente" name="nombresPaciente" placeholder="Nombres" required pattern="^[A-Za-zÁÉÍÓÚáéíóúÑñ ]+$" [disabled]="pacienteBloqueado" [(ngModel)]="pacienteForm.persona.nombres" #nombresPacienteControl="ngModel" [class.input-invalid]="nombresPacienteControl.touched && nombresPacienteControl.invalid">
 						</app-campo-validado>
 						<app-campo-validado [label]="'Apellidos'" [fieldId]="'apellidosPaciente'" [required]="true" [showError]="!!(apellidosPacienteControl.touched && apellidosPacienteControl.invalid)" [errorMessage]="'Debe ingresar los apellidos'">
-							<input type="text" id="apellidosPaciente" name="apellidosPaciente" placeholder="Apellidos" required pattern="^[A-Za-zÁÉÍÓÚáéíóúÑñ ]+$" [(ngModel)]="pacienteForm.persona.apellidos" #apellidosPacienteControl="ngModel" [class.input-invalid]="apellidosPacienteControl.touched && apellidosPacienteControl.invalid">
+							<input type="text" id="apellidosPaciente" name="apellidosPaciente" placeholder="Apellidos" required pattern="^[A-Za-zÁÉÍÓÚáéíóúÑñ ]+$" [disabled]="pacienteBloqueado" [(ngModel)]="pacienteForm.persona.apellidos" #apellidosPacienteControl="ngModel" [class.input-invalid]="apellidosPacienteControl.touched && apellidosPacienteControl.invalid">
 						</app-campo-validado>
 					</div>
 
 					<div class="fila">
 						<app-campo-validado [label]="'Fecha de nacimiento'" [fieldId]="'fechaNacimientoPaciente'" [required]="true" [showError]="!!(fechaNacimientoPacienteControl.touched && fechaNacimientoPacienteControl.invalid)" [errorMessage]="'Debe ingresar una fecha de nacimiento'">
-							<input type="date" id="fechaNacimientoPaciente" name="fechaNacimientoPaciente" required [(ngModel)]="pacienteForm.persona.fechaNacimiento" #fechaNacimientoPacienteControl="ngModel" [class.input-invalid]="fechaNacimientoPacienteControl.touched && fechaNacimientoPacienteControl.invalid">
+							<input type="date" id="fechaNacimientoPaciente" name="fechaNacimientoPaciente" required [disabled]="pacienteBloqueado" [(ngModel)]="pacienteForm.persona.fechaNacimiento" #fechaNacimientoPacienteControl="ngModel" [class.input-invalid]="fechaNacimientoPacienteControl.touched && fechaNacimientoPacienteControl.invalid">
 						</app-campo-validado>
 						<app-campo-validado [label]="'Sexo'" [fieldId]="'sexoPaciente'" [required]="true" [showError]="!!(sexoPacienteControl.touched && sexoPacienteControl.invalid)" [errorMessage]="'Debe seleccionar un sexo'">
-							<select id="sexoPaciente" name="sexoPaciente" required [(ngModel)]="pacienteForm.persona.sexo" #sexoPacienteControl="ngModel" [class.input-invalid]="sexoPacienteControl.touched && sexoPacienteControl.invalid">
+							<select id="sexoPaciente" name="sexoPaciente" required [disabled]="pacienteBloqueado" [(ngModel)]="pacienteForm.persona.sexo" #sexoPacienteControl="ngModel" [class.input-invalid]="sexoPacienteControl.touched && sexoPacienteControl.invalid">
 								<option [ngValue]="undefined">Seleccione un sexo</option>
 								<option value="MASCULINO">Masculino</option>
 								<option value="FEMENINO">Femenino</option>
@@ -130,10 +130,10 @@
 
 					<div class="fila">
 						<app-campo-validado [label]="'CUI'" [fieldId]="'cuiPaciente'" [showError]="!!(cuiPacienteControl.touched && cuiPacienteControl.invalid)" [errorMessage]="'Debe ingresar un CUI válido de 13 dígitos'">
-							<input type="text" inputmode="numeric" maxlength="13" pattern="[0-9]{13}" id="cuiPaciente" name="cuiPaciente" placeholder="CUI" [ngModel]="pacienteForm.persona.cui" #cuiPacienteControl="ngModel" [class.input-invalid]="cuiPacienteControl.touched && cuiPacienteControl.invalid" (input)="pacienteForm.persona.cui = filtrarDigitos($event, 13)">
+							<input type="text" inputmode="numeric" maxlength="13" pattern="[0-9]{13}" id="cuiPaciente" name="cuiPaciente" placeholder="CUI" [disabled]="pacienteBloqueado" [ngModel]="pacienteForm.persona.cui" #cuiPacienteControl="ngModel" [class.input-invalid]="cuiPacienteControl.touched && cuiPacienteControl.invalid" (input)="pacienteForm.persona.cui = filtrarDigitos($event, 13)">
 						</app-campo-validado>
 						<app-campo-validado [label]="'Estado civil'" [fieldId]="'estadoCivilPaciente'">
-							<select id="estadoCivilPaciente" name="estadoCivilPaciente" [(ngModel)]="pacienteForm.estadoCivil">
+							<select id="estadoCivilPaciente" name="estadoCivilPaciente" [disabled]="pacienteBloqueado" [(ngModel)]="pacienteForm.estadoCivil">
 								<option value="">Seleccione un estado civil</option>
 								<option value="SOLTERO">Soltero/a</option>
 								<option value="CASADO">Casado/a</option>
@@ -145,16 +145,16 @@
 
 					<div class="fila">
 						<app-campo-validado [label]="'Dirección'" [fieldId]="'direccionPaciente'">
-							<input type="text" id="direccionPaciente" name="direccionPaciente" placeholder="Dirección" [(ngModel)]="pacienteForm.direccion">
+							<input type="text" id="direccionPaciente" name="direccionPaciente" placeholder="Dirección" [disabled]="pacienteBloqueado" [(ngModel)]="pacienteForm.direccion">
 						</app-campo-validado>
 						<app-campo-validado [label]="'Teléfono'" [fieldId]="'telefonoPaciente'" [showError]="!!(telefonoPacienteControl.touched && telefonoPacienteControl.invalid)" [errorMessage]="'Debe ingresar un teléfono válido de 8 dígitos'">
-							<input type="tel" inputmode="numeric" maxlength="8" pattern="[0-9]{8}" id="telefonoPaciente" name="telefonoPaciente" placeholder="Teléfono" [ngModel]="pacienteForm.persona.telefono" #telefonoPacienteControl="ngModel" [class.input-invalid]="telefonoPacienteControl.touched && telefonoPacienteControl.invalid" (input)="pacienteForm.persona.telefono = filtrarDigitos($event, 8)">
+							<input type="tel" inputmode="numeric" maxlength="8" pattern="[0-9]{8}" id="telefonoPaciente" name="telefonoPaciente" placeholder="Teléfono" [disabled]="pacienteBloqueado" [ngModel]="pacienteForm.persona.telefono" #telefonoPacienteControl="ngModel" [class.input-invalid]="telefonoPacienteControl.touched && telefonoPacienteControl.invalid" (input)="pacienteForm.persona.telefono = filtrarDigitos($event, 8)">
 						</app-campo-validado>
 					</div>
 
 					<div class="fila">
 						<app-campo-validado [label]="'Ocupación'" [fieldId]="'ocupacionProfesionPaciente'">
-							<input type="text" id="ocupacionProfesionPaciente" name="ocupacionPaciente" placeholder="Ocupación / profesión" [(ngModel)]="pacienteForm.ocupacion">
+							<input type="text" id="ocupacionProfesionPaciente" name="ocupacionPaciente" placeholder="Ocupación / profesión" [disabled]="pacienteBloqueado" [(ngModel)]="pacienteForm.ocupacion">
 						</app-campo-validado>
 					</div>
 	</div>
