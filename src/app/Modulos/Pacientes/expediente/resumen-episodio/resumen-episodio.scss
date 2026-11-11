@@ -264,6 +264,13 @@
   }
 }
 
+/* Signo vital fuera de su rango normal. */
+.resumen-tabla td.valor-fuera-rango,
+.resumen-tabla .valor-fuera-rango {
+  color: #dc2626;
+  font-weight: 700;
+}
+
 .resumen-numero {
   text-align: right;
   white-space: nowrap;

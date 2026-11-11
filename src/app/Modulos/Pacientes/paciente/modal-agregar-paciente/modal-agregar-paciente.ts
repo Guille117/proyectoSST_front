@@ -1179,6 +1179,11 @@ export class ModalAgregarPaciente {
       .join(', ');
   }
   
+  /** Los datos del paso 1 quedan fijos cuando el paciente ya existe y se seleccionó en la búsqueda. */
+  get pacienteBloqueado(): boolean {
+    return this.pacienteIdSeleccionado !== null;
+  }
+
   get puedeAvanzarPaso1(): boolean {
     const persona = this.pacienteForm.persona;
     return Boolean(

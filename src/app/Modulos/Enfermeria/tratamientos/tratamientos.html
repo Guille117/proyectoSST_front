@@ -545,7 +545,7 @@
                                     @for (fila of resultado.filas; track fila.etiqueta) {
                                       <div>
                                         <dt>{{ fila.etiqueta }}</dt>
-                                        <dd>{{ fila.valor }}</dd>
+                                        <dd [class.valor-fuera-rango]="fila.fueraRango">{{ fila.valor }}</dd>
                                       </div>
                                     }
                                   </dl>
@@ -849,7 +849,7 @@
                                     @for (fila of resultado.filas; track fila.etiqueta) {
                                       <div>
                                         <dt>{{ fila.etiqueta }}</dt>
-                                        <dd>{{ fila.valor }}</dd>
+                                        <dd [class.valor-fuera-rango]="fila.fueraRango">{{ fila.valor }}</dd>
                                       </div>
                                     }
                                   </dl>
@@ -896,9 +896,11 @@
         <div class="administracion-campo">
           <label class="administracion-etiqueta" for="horaAdministracion">
             {{
-              seccionActiva === 'cuidados'
-                ? 'Fecha y hora de realización'
-                : 'Fecha y hora de administración'
+              permiteHoraManual
+                ? seccionActiva === 'cuidados'
+                  ? 'Fecha y hora de realización'
+                  : 'Fecha y hora de administración'
+                : 'Fecha y hora de la próxima aplicación'
             }}<span class="administracion-obligatorio" aria-hidden="true">*</span>
           </label>
           @if (permiteHoraManual) {

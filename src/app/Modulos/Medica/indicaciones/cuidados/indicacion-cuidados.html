@@ -357,7 +357,7 @@
                                     @for (fila of resultado.filas; track fila.etiqueta) {
                                       <div>
                                         <dt>{{ fila.etiqueta }}</dt>
-                                        <dd>{{ fila.valor }}</dd>
+                                        <dd [class.valor-fuera-rango]="fila.fueraRango">{{ fila.valor }}</dd>
                                       </div>
                                     }
                                   </dl>

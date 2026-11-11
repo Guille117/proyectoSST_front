@@ -272,13 +272,17 @@
   }
 }
 
-/* El acento de la tarjeta distingue las emergencias y las atenciones pendientes del resto */
+/* El acento de la tarjeta representa el estado: hospitalización azul, emergencia roja y egreso verde */
+.paciente-card--hospitalizacion {
+  --acento-card: var(--azulSecundario);
+}
+
 .paciente-card--emergencia {
   --acento-card: #ef4444;
 }
 
-.paciente-card--pendiente {
-  --acento-card: #f59e0b;
+.paciente-card--egresado {
+  --acento-card: #22c55e;
 }
 
 /* Tarjeta seleccionada: el borde exterior toma el azul del módulo y conserva el acento del tipo */
@@ -515,6 +519,11 @@
     line-height: 1.35;
     overflow-wrap: anywhere;
   }
+}
+
+/* Signo vital fuera de su rango normal. */
+.dato-valor.valor-fuera-rango {
+  color: #dc2626;
 }
 
 /* Motivo de la visita: etiqueta y valor en la misma línea, con líneas divisorias */

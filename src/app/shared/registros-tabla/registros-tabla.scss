@@ -243,4 +243,10 @@
     font-size: 1rem;
     overflow-wrap: anywhere;
   }
+
+  /* Valor de un signo vital fuera de su rango normal: se destaca en rojo. */
+  dd.valor-fuera-rango {
+    color: #dc2626;
+    font-weight: 700;
+  }
 }
