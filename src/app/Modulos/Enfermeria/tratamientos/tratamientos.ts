@@ -519,7 +519,7 @@ export class Tratamientos implements OnInit, OnDestroy {
     ) {
       return false;
     }
-    if (!this.horaAdministracion) return false;
+    if (!this.horaAdministracion && !this.permiteHoraManual) return false;
     if (this.administracionDemasiadoTemprana) return false;
     if (this.aplicacionEnEdicion && !this.hayCambiosEnEdicion) return false;
 
@@ -1340,8 +1340,13 @@ export class Tratamientos implements OnInit, OnDestroy {
     }
 
     if (!this.horaAdministracion) {
-      this.popUps.advertencia('Seleccione la fecha y hora de la administración.');
-      return;
+      if (this.permiteHoraManual) {
+        // Sin programación no se elige hora: se registra el momento en que se guarda
+        this.horaAdministracion = this.aIsoLocal(new Date());
+      } else {
+        this.popUps.advertencia('Seleccione la fecha y hora de la administración.');
+        return;
+      }
     }
 
     if (edicion) {
@@ -1673,9 +1678,9 @@ export class Tratamientos implements OnInit, OnDestroy {
     const horas = this.horasAdministracion;
     if (!forzar && horas.some((hora) => hora.valor === this.horaAdministracion)) return;
 
-    // Sin programación, la atención se registra con la fecha y hora actual, editable a mano
+    // Sin programación no se elige hora; se registra el momento en que se guarda
     if (!horas.length && this.permiteHoraManual) {
-      this.horaAdministracion = this.aIsoLocal(new Date()).slice(0, 16);
+      this.horaAdministracion = '';
       return;
     }
 
