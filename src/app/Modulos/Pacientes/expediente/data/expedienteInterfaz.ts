@@ -7,6 +7,12 @@ export interface EpisodioResumen {
   fechaHoraEgreso: string | null;
   medicoNombre: string | null;
   activo: boolean;
+  /** Motivo o descripción con el que se registró la atención. */
+  descripcion?: string | null;
+  /** Cama utilizada durante el episodio. */
+  camaCodigo?: string | null;
+  responsableNombre?: string | null;
+  responsableTelefono?: string | null;
 }
 
 /** Opciones del submenú del expediente clínico. */

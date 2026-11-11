@@ -2001,7 +2001,7 @@ export class Tratamientos implements OnInit, OnDestroy {
       id: respuesta.id,
       estado: estadoTratamiento(programacion, registros),
       observaciones: respuesta.observacion ?? '',
-      fechaInicio: respuesta.fechaInicio || respuesta.fecha,
+      fechaInicio: respuesta.fechaInicio ?? '',
       fecha: this.formatearFecha(fechaRegistro),
       hora: this.formatearHora(fechaRegistro),
       medico: respuesta.usuarioNombreCorto,
@@ -2091,14 +2091,14 @@ export class Tratamientos implements OnInit, OnDestroy {
   }
 
   private programacionDeRespuesta(respuesta: {
-    fechaInicio: string;
+    fechaInicio: string | null;
     fecha: string;
     frecuencia: number | null;
     tipoDuracion: TipoDuracionApi | null;
     duracion: number | null;
   }): ProgramacionTratamiento {
     return {
-      fechaInicio: new Date(respuesta.fechaInicio || respuesta.fecha),
+      fechaInicio: new Date(respuesta.fechaInicio ?? ''),
       frecuencia: respuesta.frecuencia,
       duracionTipo:
         respuesta.tipoDuracion === null ? '' : this.aDuracionVista(respuesta.tipoDuracion),

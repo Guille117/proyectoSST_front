@@ -113,6 +113,8 @@ export class Expediente implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
 
   paciente: PacienteDetalle | null = null;
+  /** Episodios del paciente, del más reciente al más antiguo. */
+  episodios: EpisodioResumen[] = [];
   episodioSeleccionado: EpisodioResumen | null = null;
   cargando = false;
   error = '';
@@ -140,7 +142,9 @@ export class Expediente implements OnInit {
   consumo: ConsumoEpisodio | null = null;
   cargandoPanel = false;
   errorPanel = '';
-  private seccionesConError: string[] = [];
+  private solicitudSignos = 0;
+  private solicitudPanel = 0;
+  private erroresPanel: string[] = [];
 
   /** Opción del submenú actualmente seleccionada. */
   opcionActiva: SeccionExpediente = 'resumen';
@@ -207,6 +211,24 @@ export class Expediente implements OnInit {
     this.cdr.markForCheck();
   }
 
+  /** Abre el expediente del episodio elegido y carga sus datos. */
+  seleccionarEpisodio(episodio: EpisodioResumen): void {
+    this.episodioSeleccionado = episodio;
+    this.opcionActiva = 'resumen';
+    this.cargarSignosVitales(episodio.episodioId);
+    this.cargarPanel(episodio.episodioId);
+    this.cdr.markForCheck();
+  }
+
+  /** Vuelve a la lista de episodios y descarta los datos del episodio abierto. */
+  volverAListaEpisodios(): void {
+    this.episodioSeleccionado = null;
+    this.opcionActiva = 'resumen';
+    this.cargarSignosVitales(null);
+    this.cargarPanel(null);
+    this.cdr.markForCheck();
+  }
+
   volver(): void {
     this.location.back();
   }
@@ -220,20 +242,16 @@ export class Expediente implements OnInit {
 
   /** Vuelve a consultar los signos vitales del episodio del panel. */
   recargarSignos(): void {
-    this.cargarSignosVitales(
-      this.paciente?.episodioId ?? this.episodioSeleccionado?.episodioId ?? null,
-    );
+    this.cargarSignosVitales(this.episodioSeleccionado?.episodioId ?? null);
   }
 
   /** Vuelve a consultar los datos del panel derecho. */
   recargarPanel(): void {
-    this.cargarPanel(
-      this.paciente?.episodioId ?? this.episodioSeleccionado?.episodioId ?? null,
-    );
+    this.cargarPanel(this.episodioSeleccionado?.episodioId ?? null);
   }
 
-  /** Abre el episodio más reciente; si ya cerró, entra en modo solo lectura. */
-  abrirUltimoEpisodio(): void {
+  /** Abre el episodio elegido en el módulo Médico; si está cerrado, entra en solo lectura. */
+  abrirEpisodioSeleccionado(): void {
     const episodio = this.episodioSeleccionado;
     if (!episodio) return;
 
@@ -247,9 +265,34 @@ export class Expediente implements OnInit {
     return tipo === 'HOSPITALIZACION' ? 'Hospitalización' : 'Emergencia';
   }
 
-  /** Médico de la evaluación más reciente o, en su defecto, el asignado a la atención. */
+  /** Estado del episodio en la lista y en la cabecera del expediente. */
+  estadoEpisodioLegible(episodio: EpisodioResumen): string {
+    return episodio.activo ? 'En curso' : 'Cerrado';
+  }
+
+  /** Nombre del responsable del episodio elegido. */
+  responsableEpisodio(episodio: EpisodioResumen | null): string {
+    return episodio?.responsableNombre?.trim() || 'No registrado';
+  }
+
+  /** Teléfono del responsable del episodio elegido. */
+  responsableTelefonoEpisodio(episodio: EpisodioResumen | null): string {
+    return episodio?.responsableTelefono?.trim() || 'No registrado';
+  }
+
+  /** Motivo o descripción del episodio elegido. */
+  motivoEpisodio(episodio: EpisodioResumen | null): string {
+    return episodio?.descripcion?.trim() || '—';
+  }
+
+  /** Médico de la evaluación más reciente o el asignado al episodio elegido. */
   medicoResponsable(detalle: PacienteDetalle | null): string {
-    return this.ultimaEvaluacion?.usuarioNombre || detalle?.medicoNombre || '—';
+    return (
+      this.ultimaEvaluacion?.usuarioNombre ||
+      this.episodioSeleccionado?.medicoNombre ||
+      detalle?.medicoNombre ||
+      '—'
+    );
   }
 
   tipoDiagnosticoLegible(tipo: TipoDiagnostico): string {
@@ -373,19 +416,6 @@ export class Expediente implements OnInit {
     return `${dia}-${mes}-${anio}${hora ? ` • ${hora.slice(0, 5)}` : ''}`;
   }
 
-  /** Nombre de la persona responsable del paciente. */
-  responsableNombre(detalle: PacienteDetalle | null): string {
-    if (!detalle?.responsable) return 'No registrado';
-
-    const nombre = `${detalle.responsable.nombres} ${detalle.responsable.apellidos}`.trim();
-    return nombre || 'No registrado';
-  }
-
-  /** Teléfono de la persona responsable del paciente. */
-  responsableTelefono(detalle: PacienteDetalle | null): string {
-    return detalle?.responsable?.telefono?.trim() || 'No registrado';
-  }
-
   /** Parte el texto en líneas cortas para que el tooltip nativo no se abra tan ancho. */
   textoTooltip(valor: string | null, porDefecto: string): string {
     const texto = (valor ?? '').trim() || porDefecto;
@@ -437,10 +467,11 @@ export class Expediente implements OnInit {
       .subscribe({
         next: ({ paciente, episodios }) => {
           this.paciente = paciente;
-          this.episodioSeleccionado = this.episodioMasReciente(episodios);
-          const episodioId = paciente.episodioId ?? this.episodioSeleccionado?.episodioId ?? null;
-          this.cargarSignosVitales(episodioId);
-          this.cargarPanel(episodioId);
+          this.episodios = this.ordenarEpisodios(episodios);
+          this.episodioSeleccionado = null;
+          this.opcionActiva = 'resumen';
+          this.cargarSignosVitales(null);
+          this.cargarPanel(null);
           this.cargando = false;
           this.cdr.detectChanges();
         },
@@ -452,19 +483,16 @@ export class Expediente implements OnInit {
       });
   }
 
-  private episodioMasReciente(episodios: EpisodioResumen[]): EpisodioResumen | null {
-    if (!episodios.length) return null;
-    return [...episodios].sort((a, b) => {
-      const fechaA = new Date(a.fechaHoraIngreso).getTime();
-      const fechaB = new Date(b.fechaHoraIngreso).getTime();
-      const valorA = Number.isNaN(fechaA) ? 0 : fechaA;
-      const valorB = Number.isNaN(fechaB) ? 0 : fechaB;
-      return valorB - valorA;
-    })[0];
+  /** Deja los episodios del más reciente al más antiguo. */
+  private ordenarEpisodios(episodios: EpisodioResumen[]): EpisodioResumen[] {
+    return [...episodios].sort(
+      (a, b) => this.fechaMs(b.fechaHoraIngreso) - this.fechaMs(a.fechaHoraIngreso),
+    );
   }
 
   /** Carga los signos vitales del episodio y deja el más reciente al inicio. */
   private cargarSignosVitales(episodioId: number | null): void {
+    const solicitud = ++this.solicitudSignos;
     this.signosVitales = [];
     this.errorSignos = '';
 
@@ -482,6 +510,8 @@ export class Expediente implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (registros) => {
+          if (solicitud !== this.solicitudSignos) return;
+
           this.signosVitales = [...registros].sort(
             (a, b) => this.fechaMs(b.fecha) - this.fechaMs(a.fecha),
           );
@@ -489,6 +519,8 @@ export class Expediente implements OnInit {
           this.cdr.detectChanges();
         },
         error: (error) => {
+          if (solicitud !== this.solicitudSignos) return;
+
           this.cargandoSignos = false;
           this.errorSignos = this.mensajeError(error, 'No se pudieron cargar los signos vitales.');
           this.cdr.detectChanges();
@@ -498,6 +530,7 @@ export class Expediente implements OnInit {
 
   /** Carga en una sola pasada los datos de todas las secciones del panel derecho. */
   private cargarPanel(episodioId: number | null): void {
+    const solicitud = ++this.solicitudPanel;
     this.historiaClinica = [];
     this.examenFisico = [];
     this.diagnosticos = [];
@@ -514,7 +547,6 @@ export class Expediente implements OnInit {
     this.ejecuciones = [];
     this.consumo = null;
     this.errorPanel = '';
-    this.seccionesConError = [];
 
     if (episodioId === null || episodioId <= 0) {
       this.cargandoPanel = false;
@@ -524,6 +556,9 @@ export class Expediente implements OnInit {
 
     this.cargandoPanel = true;
     this.cdr.markForCheck();
+
+    const seccionesConError: string[] = [];
+    this.erroresPanel = seccionesConError;
 
     forkJoin({
       historia: this.conRespaldo(
@@ -621,6 +656,8 @@ export class Expediente implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (datos) => {
+          if (solicitud !== this.solicitudPanel) return;
+
           this.historiaClinica = this.ordenarPorFechaDesc(datos.historia, (item) => item.fecha);
           this.examenFisico = this.ordenarPorFechaDesc(datos.examenFisico, (item) => item.fecha);
           this.diagnosticos = this.ordenarPorFechaDesc(datos.diagnosticos, (item) => item.fecha);
@@ -650,12 +687,14 @@ export class Expediente implements OnInit {
           this.consumo = datos.consumo;
           this.cargandoPanel = false;
 
-          if (this.seccionesConError.length) {
-            this.errorPanel = `No se pudieron cargar: ${this.seccionesConError.join(', ')}.`;
+          if (seccionesConError.length) {
+            this.errorPanel = `No se pudieron cargar: ${seccionesConError.join(', ')}.`;
           }
           this.cdr.detectChanges();
         },
         error: (error) => {
+          if (solicitud !== this.solicitudPanel) return;
+
           this.cargandoPanel = false;
           this.errorPanel = this.mensajeError(error, 'No se pudieron cargar los datos del panel.');
           this.cdr.detectChanges();
@@ -664,9 +703,10 @@ export class Expediente implements OnInit {
   }
 
   private conRespaldo<T>(observable: Observable<T>, respaldo: T, seccion: string): Observable<T> {
+    const errores = this.erroresPanel;
     return observable.pipe(
       catchError(() => {
-        this.seccionesConError = [...this.seccionesConError, seccion];
+        errores.push(seccion);
         return of(respaldo);
       }),
     );

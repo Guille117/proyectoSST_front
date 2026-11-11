@@ -155,7 +155,7 @@ export class IndicacionCuidados implements OnInit, OnDestroy {
   frecuenciaCuidado: number | null = null;
   duracionTipoCuidado: TipoDuracion | '' = '';
   duracionCantidadCuidado: number | null = null;
-  fechaInicioCuidado = this.fechaHoraLocalActual();
+  fechaInicioCuidado = '';
   observacionesCuidado = '';
 
   /** Tarjeta del listado con su menú desplegado; null si no hay ninguna. */
@@ -717,7 +717,7 @@ export class IndicacionCuidados implements OnInit, OnDestroy {
     this.frecuenciaCuidado = null;
     this.duracionTipoCuidado = '';
     this.duracionCantidadCuidado = null;
-    this.fechaInicioCuidado = this.fechaHoraLocalActual();
+    this.fechaInicioCuidado = '';
     this.observacionesCuidado = '';
     this.cuidadoEnEdicion = null;
     this.edicionOriginal = null;
@@ -777,7 +777,7 @@ export class IndicacionCuidados implements OnInit, OnDestroy {
       observacion: this.observacionesCuidado.trim() || null,
       episodioId,
       usuarioId,
-      fechaInicio: this.fechaInicioCuidado,
+      fechaInicio: this.fechaInicioCuidado || null,
     };
 
     this.guardando = true;
@@ -873,7 +873,7 @@ export class IndicacionCuidados implements OnInit, OnDestroy {
         respuesta.tipoDuracion === null ? '' : this.aDuracionVista(respuesta.tipoDuracion),
       duracionCantidad: respuesta.duracion,
       observaciones: respuesta.observacion ?? '',
-      fechaInicio: respuesta.fechaInicio || respuesta.fecha,
+      fechaInicio: respuesta.fechaInicio ?? '',
       fecha: this.formatearFecha(fechaRegistro),
       hora: this.formatearHora(fechaRegistro),
       medico: respuesta.usuarioNombreCorto,
@@ -932,19 +932,9 @@ export class IndicacionCuidados implements OnInit, OnDestroy {
     return `${this.formatearFecha(fecha)} ${this.formatearHora(fecha)}`;
   }
 
-  /** Fecha y hora local en el formato del input datetime-local. */
-  private fechaHoraLocalActual(): string {
-    const ahora = new Date();
-    const dosDigitos = (valor: number): string => `${valor}`.padStart(2, '0');
-
-    return `${ahora.getFullYear()}-${dosDigitos(ahora.getMonth() + 1)}-${dosDigitos(
-      ahora.getDate(),
-    )}T${dosDigitos(ahora.getHours())}:${dosDigitos(ahora.getMinutes())}`;
-  }
-
-  /** Recorta la fecha ISO al formato que acepta datetime-local. */
-  private aFechaHoraInput(fecha: string): string {
-    return fecha ? fecha.slice(0, 16) : this.fechaHoraLocalActual();
+  /** Recorta la fecha ISO al formato que acepta datetime-local, o la deja vacía. */
+  private aFechaHoraInput(fecha: string | null): string {
+    return fecha ? fecha.slice(0, 16) : '';
   }
 
   /** Avisa del campo que impide guardar cuando el formulario se envía incompleto. */
