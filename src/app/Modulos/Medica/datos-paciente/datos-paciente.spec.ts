@@ -122,7 +122,7 @@ describe('DatosPaciente', () => {
       'Dolor abdominal y vómitos',
     );
     expect(elemento<HTMLElement>('.ficha-lista').textContent).toContain('Penicilina');
-    expect(elementos<HTMLElement>('.ficha-signos .ficha-dato').length).toBe(4);
+    expect(elementos<HTMLElement>('.ficha-signos .ficha-dato').length).toBe(5);
     expect(elemento<HTMLElement>('.ficha-signos').textContent).toContain('120/80');
   });
 

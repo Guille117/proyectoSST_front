@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { finalize, forkJoin, map, Observable, Subscription, TimeoutError } from 'rxjs';
 import { PopUps } from '../../../../shared/popUps/popUpsService';
 import { TabSwitch } from '../../../../shared/tab-switch/tab-switch';
+import { fueraDeRango } from '../../../../shared/signos-vitales/rangos-signos-vitales';
 import { AuthService } from '../../../Auth/data/auth-service';
 import { PropiedadRegistroService } from '../../../Auth/data/propiedad-registro-service';
 import { EpisodioActivoService } from '../../data/episodio-activo-service';
@@ -79,7 +80,7 @@ interface EjecucionCuidadoVista {
 
 /** Resultados del control listos para la fila expandible del historial. */
 interface ResultadoControlVista {
-  filas: { etiqueta: string; valor: string }[];
+  filas: { etiqueta: string; valor: string; fueraRango?: boolean }[];
 }
 
 /** Opción del filtro que decide qué cuidados se muestran en el listado. */
@@ -554,11 +555,30 @@ export class IndicacionCuidados implements OnInit, OnDestroy {
         {
           etiqueta: 'Presión arterial',
           valor: `${respuesta.sistolica}/${respuesta.diastolica} mmHg`,
+          fueraRango:
+            fueraDeRango('sistolica', respuesta.sistolica) ||
+            fueraDeRango('diastolica', respuesta.diastolica),
         },
-        { etiqueta: 'Fr. cardíaca', valor: `${respuesta.frecuenciaCardiaca} lpm` },
-        { etiqueta: 'Fr. respiratoria', valor: `${respuesta.frecuenciaRespiratoria} rpm` },
-        { etiqueta: 'Temperatura', valor: `${respuesta.temperatura} °C` },
-        { etiqueta: 'Saturación', valor: `${respuesta.saturacion} %` },
+        {
+          etiqueta: 'Fr. cardíaca',
+          valor: `${respuesta.frecuenciaCardiaca} lpm`,
+          fueraRango: fueraDeRango('frecuenciaCardiaca', respuesta.frecuenciaCardiaca),
+        },
+        {
+          etiqueta: 'Fr. respiratoria',
+          valor: `${respuesta.frecuenciaRespiratoria} rpm`,
+          fueraRango: fueraDeRango('frecuenciaRespiratoria', respuesta.frecuenciaRespiratoria),
+        },
+        {
+          etiqueta: 'Temperatura',
+          valor: `${respuesta.temperatura} °C`,
+          fueraRango: fueraDeRango('temperatura', respuesta.temperatura),
+        },
+        {
+          etiqueta: 'Saturación',
+          valor: `${respuesta.saturacion} %`,
+          fueraRango: fueraDeRango('saturacion', respuesta.saturacion),
+        },
         { etiqueta: 'Observación', valor: respuesta.observacion?.trim() || 'Sin observación' },
       ],
     };

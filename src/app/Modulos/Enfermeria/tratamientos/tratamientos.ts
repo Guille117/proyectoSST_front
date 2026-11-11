@@ -64,6 +64,7 @@ import {
   proximaAplicacion,
   ultimaAplicacionRegistrada,
 } from './data/programacionTratamiento';
+import { fueraDeRango } from '../../../shared/signos-vitales/rangos-signos-vitales';
 
 /** Margen con el que se puede registrar una administración antes de la hora programada. */
 const MARGEN_ADMINISTRACION_MS = 20 * 60 * 1000;
@@ -142,7 +143,7 @@ interface AplicacionMedicamentoVista {
 
 /** Resultados del control listos para la fila expandible del historial. */
 interface ResultadoControlVista {
-  filas: { etiqueta: string; valor: string }[];
+  filas: { etiqueta: string; valor: string; fueraRango?: boolean }[];
 }
 
 /** Aplicación programada de una indicación, con su registro si ya se capturó. */
@@ -152,7 +153,7 @@ interface AplicacionProgramadaVista {
   registro: AplicacionMedicamentoVista | null;
 }
 
-/** Hora programada pendiente que el usuario puede elegir para registrar la administración. */
+/** Hora programada pendiente de la indicación, usada para fijar la próxima administración. */
 interface HoraAdministracionVista {
   numero: number;
   valor: string;
@@ -731,6 +732,18 @@ export class Tratamientos implements OnInit, OnDestroy {
 
     const fecha = new Date(this.horaAdministracion);
     return Number.isNaN(fecha.getTime()) ? null : fecha;
+  }
+
+  /** Próxima aplicación pendiente de la indicación; incluye la siguiente dosis de series indefinidas. */
+  private get proximaAdministracion(): Date | null {
+    const indicacion = this.indicacionSeleccionada;
+    if (!indicacion) return null;
+
+    return proximaAplicacion(
+      this.programacionDeVista(indicacion),
+      indicacion.aplicaciones,
+      new Date(),
+    );
   }
 
   /**
@@ -1582,11 +1595,30 @@ export class Tratamientos implements OnInit, OnDestroy {
         {
           etiqueta: 'Presión arterial',
           valor: `${respuesta.sistolica}/${respuesta.diastolica} mmHg`,
+          fueraRango:
+            fueraDeRango('sistolica', respuesta.sistolica) ||
+            fueraDeRango('diastolica', respuesta.diastolica),
         },
-        { etiqueta: 'Fr. cardíaca', valor: `${respuesta.frecuenciaCardiaca} lpm` },
-        { etiqueta: 'Fr. respiratoria', valor: `${respuesta.frecuenciaRespiratoria} rpm` },
-        { etiqueta: 'Temperatura', valor: `${respuesta.temperatura} °C` },
-        { etiqueta: 'Saturación', valor: `${respuesta.saturacion} %` },
+        {
+          etiqueta: 'Fr. cardíaca',
+          valor: `${respuesta.frecuenciaCardiaca} lpm`,
+          fueraRango: fueraDeRango('frecuenciaCardiaca', respuesta.frecuenciaCardiaca),
+        },
+        {
+          etiqueta: 'Fr. respiratoria',
+          valor: `${respuesta.frecuenciaRespiratoria} rpm`,
+          fueraRango: fueraDeRango('frecuenciaRespiratoria', respuesta.frecuenciaRespiratoria),
+        },
+        {
+          etiqueta: 'Temperatura',
+          valor: `${respuesta.temperatura} °C`,
+          fueraRango: fueraDeRango('temperatura', respuesta.temperatura),
+        },
+        {
+          etiqueta: 'Saturación',
+          valor: `${respuesta.saturacion} %`,
+          fueraRango: fueraDeRango('saturacion', respuesta.saturacion),
+        },
         { etiqueta: 'Observación', valor: respuesta.observacion?.trim() || 'Sin observación' },
       ],
     };
@@ -1645,6 +1677,15 @@ export class Tratamientos implements OnInit, OnDestroy {
     if (!horas.length && this.permiteHoraManual) {
       this.horaAdministracion = this.aIsoLocal(new Date()).slice(0, 16);
       return;
+    }
+
+    // Nueva administración: siempre la próxima aplicación pendiente, sin poder saltar
+    if (!this.editandoAplicacion && !this.controlTomado) {
+      const proxima = this.proximaAdministracion;
+      if (proxima) {
+        this.horaAdministracion = this.aIsoLocal(proxima);
+        return;
+      }
     }
 
     this.horaAdministracion = horas[0]?.valor ?? '';

@@ -545,7 +545,7 @@
                                     @for (fila of resultado.filas; track fila.etiqueta) {
                                       <div>
                                         <dt>{{ fila.etiqueta }}</dt>
-                                        <dd>{{ fila.valor }}</dd>
+                                        <dd [class.valor-fuera-rango]="fila.fueraRango">{{ fila.valor }}</dd>
                                       </div>
                                     }
                                   </dl>
@@ -849,7 +849,7 @@
                                     @for (fila of resultado.filas; track fila.etiqueta) {
                                       <div>
                                         <dt>{{ fila.etiqueta }}</dt>
-                                        <dd>{{ fila.valor }}</dd>
+                                        <dd [class.valor-fuera-rango]="fila.fueraRango">{{ fila.valor }}</dd>
                                       </div>
                                     }
                                   </dl>
@@ -920,7 +920,7 @@
               {{ etiquetaHoraAdministracion || 'Sin hora programada' }}
             </div>
 
-            @if (!horasAdministracion.length) {
+            @if (!horaAdministracion) {
               <span class="administracion-ayuda">
                 No hay horas programadas pendientes para esta indicación.
               </span>

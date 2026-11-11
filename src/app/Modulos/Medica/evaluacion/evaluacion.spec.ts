@@ -834,7 +834,7 @@ describe('Evaluacion', () => {
     const vitales = elementos<HTMLElement>('.ficha-signos .ficha-dato');
     expect(
       Array.from(vitales).map((signo) => signo.textContent?.replace(/\s+/g, ' ').trim()),
-    ).toEqual(['PA (mmHg)120/80', 'FC (lpm)82', 'Temp. (°C)37.2', 'SpO₂ (%)97']);
+    ).toEqual(['PA (mmHg)120/80', 'FC (lpm)82', 'FR (rpm)18', 'Temp. (°C)37.2', 'SpO₂ (%)97']);
   });
 
   it('colapsa las secciones al abrir la ficha y las expande al cerrarla', async () => {

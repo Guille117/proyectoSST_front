@@ -181,7 +181,7 @@ export class DatosPaciente implements OnInit, OnDestroy {
     });
   }
 
-  /** Trae los signos vitales del episodio y deja solo los cuatro datos de la ficha. */
+  /** Trae los signos vitales del episodio y deja solo los cinco datos de la ficha. */
   private cargarSignos(episodioId: number): void {
     this.cargandoSignos = true;
     this.errorSignos = '';
@@ -204,6 +204,11 @@ export class DatosPaciente implements OnInit, OnDestroy {
                 etiqueta: 'FC (lpm)',
                 valor: `${ultimo.frecuenciaCardiaca}`,
                 fueraRango: fueraDeRango('frecuenciaCardiaca', ultimo.frecuenciaCardiaca),
+              },
+              {
+                etiqueta: 'FR (rpm)',
+                valor: `${ultimo.frecuenciaRespiratoria}`,
+                fueraRango: fueraDeRango('frecuenciaRespiratoria', ultimo.frecuenciaRespiratoria),
               },
               {
                 etiqueta: 'Temp. (°C)',
