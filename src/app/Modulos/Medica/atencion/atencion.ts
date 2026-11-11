@@ -11,9 +11,6 @@ import {
 } from '../../Pacientes/paciente/data/pacienteInterfaz';
 import { SignosVitalesService } from '../../Enfermeria/monitoreo/data/signos-vitales-service';
 import { SignosVitalesResponse } from '../../Enfermeria/monitoreo/data/signosVitalesInterfaz';
-import {
-  fueraDeRango as evaluarFueraDeRango,
-} from '../../../shared/signos-vitales/rangos-signos-vitales';
 import { PopUps } from '../../../shared/popUps/popUpsService';
 import { AltaService } from '../alta/data/alta-service';
 import { AltaRecienteResponse, TipoAltaApi } from '../alta/data/altaInterfaz';
@@ -116,9 +113,6 @@ export class Atencion implements OnInit, OnDestroy {
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly popUps = inject(PopUps);
   private readonly episodioActivo = inject(EpisodioActivoService);
-
-  /** Evalúa si un signo vital está fuera de su rango normal. */
-  protected readonly fueraDeRango = evaluarFueraDeRango;
 
   /** Configuración del módulo que reutiliza la pantalla (Médica o Enfermería). */
   protected readonly mostrarAltas = this.route.snapshot.data['mostrarAltas'] !== false;
@@ -312,10 +306,8 @@ export class Atencion implements OnInit, OnDestroy {
   protected claseCard(paciente: PacienteAtencionVista): string {
     const clases = ['paciente-card'];
 
-    if (paciente.esAlta) clases.push('paciente-card--egresado');
-    else if (paciente.tipoAtencion === 'EMERGENCIA') clases.push('paciente-card--emergencia');
-    else clases.push('paciente-card--hospitalizacion');
-
+    if (paciente.tipoAtencion === 'EMERGENCIA') clases.push('paciente-card--emergencia');
+    if (paciente.estadoAtencion === 'pendiente') clases.push('paciente-card--pendiente');
     if (this.esSeleccionado(paciente)) clases.push('paciente-card--activa');
 
     return clases.join(' ');

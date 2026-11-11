@@ -247,20 +247,6 @@ select.administracion-input {
   cursor: not-allowed;
 }
 
-/* Próxima aplicación fija: se muestra como dato, no como control editable */
-.administracion-valor {
-  box-sizing: border-box;
-  width: 100%;
-  min-height: 45px;
-  padding: 10px 12px;
-  border: 1px solid #cfdcee;
-  border-radius: 12px;
-  background: #f8fafc;
-  color: #21324d;
-  font-size: 1rem;
-  font-weight: 600;
-}
-
 .administracion-textarea {
   min-height: 96px;
   line-height: 1.5;
@@ -275,11 +261,6 @@ select.administracion-input {
 
 .administracion-ayuda--error {
   color: #b42318;
-  font-weight: 600;
-}
-
-.administracion-ayuda--aviso {
-  color: #b45309;
   font-weight: 600;
 }
 

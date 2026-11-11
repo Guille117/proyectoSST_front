@@ -60,9 +60,6 @@ import { ConsumoEpisodioService } from '../../paciente/data/consumo-service';
 import { ConsumoEpisodio } from '../../paciente/data/consumoInterfaz';
 import { PacienteDetalle, TipoAtencion } from '../../paciente/data/pacienteInterfaz';
 import { EpisodioResumen, SeccionExpediente } from '../data/expedienteInterfaz';
-import {
-  fueraDeRango as evaluarFueraDeRango,
-} from '../../../../shared/signos-vitales/rangos-signos-vitales';
 
 @Component({
   selector: 'app-resumen-episodio',
@@ -93,9 +90,6 @@ export class ResumenEpisodio implements OnChanges {
   private readonly servicioConsumo = inject(ConsumoEpisodioService);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly destroyRef = inject(DestroyRef);
-
-  /** Evalúa si un signo vital está fuera de su rango normal. */
-  protected readonly fueraDeRango = evaluarFueraDeRango;
 
   historiaClinica: HistoriaClinicaResponse[] = [];
   examenFisico: ExamenFisicoResponse[] = [];

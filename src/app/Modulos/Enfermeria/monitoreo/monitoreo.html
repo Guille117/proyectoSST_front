@@ -54,7 +54,6 @@
                   inputmode="numeric"
                   placeholder="0"
                   aria-label="Presión arterial sistólica"
-                  [class.valor-fuera-rango]="fueraDeRango('sistolica', sistolica)"
                   [(ngModel)]="sistolica"
                 />
 
@@ -67,7 +66,6 @@
                   inputmode="numeric"
                   placeholder="0"
                   aria-label="Presión arterial diastólica"
-                  [class.valor-fuera-rango]="fueraDeRango('diastolica', diastolica)"
                   [(ngModel)]="diastolica"
                 />
               </div>
@@ -85,7 +83,6 @@
                 min="1"
                 inputmode="numeric"
                 placeholder="0"
-                [class.valor-fuera-rango]="fueraDeRango('frecuenciaCardiaca', frecuenciaCardiaca)"
                 [(ngModel)]="frecuenciaCardiaca"
               />
             </div>
@@ -104,7 +101,6 @@
                 min="1"
                 inputmode="numeric"
                 placeholder="0"
-                [class.valor-fuera-rango]="fueraDeRango('frecuenciaRespiratoria', frecuenciaRespiratoria)"
                 [(ngModel)]="frecuenciaRespiratoria"
               />
             </div>
@@ -120,7 +116,6 @@
                 step="0.1"
                 inputmode="decimal"
                 placeholder="0"
-                [class.valor-fuera-rango]="fueraDeRango('temperatura', temperatura)"
                 [(ngModel)]="temperatura"
               />
             </div>
@@ -138,7 +133,6 @@
                 max="100"
                 inputmode="numeric"
                 placeholder="0"
-                [class.valor-fuera-rango]="fueraDeRango('saturacion', saturacion)"
                 [(ngModel)]="saturacion"
               />
             </div>
@@ -205,48 +199,24 @@
                 <li>
                   <span class="registro-valor_etiqueta">PA (mmHg)</span>
                   <span class="registro-valor">
-                    <span [class.valor-fuera-rango]="fueraDeRango('sistolica', registro.sistolica)">{{
-                      registro.sistolica
-                    }}</span>/<span [class.valor-fuera-rango]="fueraDeRango('diastolica', registro.diastolica)">{{
-                      registro.diastolica
-                    }}</span>
+                    {{ registro.sistolica }}/{{ registro.diastolica }}
                   </span>
                 </li>
                 <li>
                   <span class="registro-valor_etiqueta">FC (lpm)</span>
-                  <span
-                    class="registro-valor"
-                    [class.valor-fuera-rango]="
-                      fueraDeRango('frecuenciaCardiaca', registro.frecuenciaCardiaca)
-                    "
-                    >{{ registro.frecuenciaCardiaca }}</span
-                  >
+                  <span class="registro-valor">{{ registro.frecuenciaCardiaca }}</span>
                 </li>
                 <li>
                   <span class="registro-valor_etiqueta">FR (rpm)</span>
-                  <span
-                    class="registro-valor"
-                    [class.valor-fuera-rango]="
-                      fueraDeRango('frecuenciaRespiratoria', registro.frecuenciaRespiratoria)
-                    "
-                    >{{ registro.frecuenciaRespiratoria }}</span
-                  >
+                  <span class="registro-valor">{{ registro.frecuenciaRespiratoria }}</span>
                 </li>
                 <li>
                   <span class="registro-valor_etiqueta">Temp. (°C)</span>
-                  <span
-                    class="registro-valor"
-                    [class.valor-fuera-rango]="fueraDeRango('temperatura', registro.temperatura)"
-                    >{{ registro.temperatura }}</span
-                  >
+                  <span class="registro-valor">{{ registro.temperatura }}</span>
                 </li>
                 <li>
                   <span class="registro-valor_etiqueta">SpO<sub>2</sub> (%)</span>
-                  <span
-                    class="registro-valor"
-                    [class.valor-fuera-rango]="fueraDeRango('saturacion', registro.saturacion)"
-                    >{{ registro.saturacion }}</span
-                  >
+                  <span class="registro-valor">{{ registro.saturacion }}</span>
                 </li>
               </ul>
 

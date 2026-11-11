@@ -509,28 +509,23 @@ describe('Atencion', () => {
     expect(regla('.paciente-card[')).toContain('border-left:7pxsolidvar(--acento-card)');
   });
 
-  it('colorea la tarjeta según el tipo de atención y el egreso', async () => {
+  it('acentúa la tarjeta según el tipo de atención y el estado del paciente', async () => {
     await render();
 
     const dibujadas = tarjetas();
 
-    // El primer paciente queda seleccionado por defecto y su tarjeta es de hospitalización (azul)
+    // El primer paciente queda seleccionado por defecto y conserva el acento de la hospitalización
     expect(dibujadas[0].classList.contains('paciente-card--activa')).toBe(true);
-    expect(dibujadas[0].classList.contains('paciente-card--hospitalizacion')).toBe(true);
     expect(dibujadas[0].getAttribute('aria-pressed')).toBe('true');
 
-    // La emergencia se distingue en rojo y la hospitalización en azul
+    // La emergencia y la atención pendiente se distinguen por el acento de la tarjeta
     expect(dibujadas[1].classList.contains('paciente-card--emergencia')).toBe(true);
     expect(regla('.paciente-card--emergencia')).toContain('--acento-card:#ef4444');
-    expect(dibujadas[2].classList.contains('paciente-card--hospitalizacion')).toBe(true);
-    expect(regla('.paciente-card--hospitalizacion')).toContain(
-      '--acento-card:var(--azulSecundario)',
-    );
-    expect(regla('.paciente-card--egresado')).toContain('--acento-card:#22c55e');
     expect(regla('.paciente-tipo[')).toContain('color:var(--acento-card)');
+    expect(dibujadas[2].classList.contains('paciente-card--pendiente')).toBe(true);
+    expect(regla('.paciente-card--pendiente')).toContain('--acento-card:#f59e0b');
 
-    // El estado de atención ya no altera el color de la tarjeta
-    expect(elementos<HTMLElement>('.paciente-card--pendiente').length).toBe(0);
+    // El estado no se repite con una etiqueta: en la tarjeta lo dice el acento del borde
     expect(elementos<HTMLElement>('.atencion-estado').length).toBe(0);
   });
 

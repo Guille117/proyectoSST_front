@@ -288,13 +288,6 @@ select.monitoreo-input {
   white-space: nowrap;
 }
 
-/* Signo fuera de su rango normal, tanto en el formulario como en el historial. */
-.monitoreo-input.valor-fuera-rango,
-.registro-valor.valor-fuera-rango {
-  color: #dc2626;
-  font-weight: 700;
-}
-
 /* Subíndice de la saturación (SpO₂) sin aumentar el alto de la línea */
 .registro-valor_etiqueta sub {
   font-size: 0.7em;

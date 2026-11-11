@@ -101,9 +101,7 @@
             @for (signo of signosVitales; track signo.etiqueta) {
               <div class="ficha-dato">
                 <span class="ficha-campo_etiqueta">{{ signo.etiqueta }}</span>
-                <span class="ficha-campo_valor" [class.valor-fuera-rango]="signo.fueraRango">{{
-                  signo.valor
-                }}</span>
+                <span class="ficha-campo_valor">{{ signo.valor }}</span>
               </div>
             }
           </div>

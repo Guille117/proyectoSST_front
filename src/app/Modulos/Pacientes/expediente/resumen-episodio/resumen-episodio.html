@@ -416,29 +416,11 @@
                 @for (item of signosVitales; track item.id) {
                   <tr>
                     <td>{{ fechaHora(item.fecha) }}</td>
-                    <td>
-                      <span [class.valor-fuera-rango]="fueraDeRango('sistolica', item.sistolica)">{{
-                        item.sistolica
-                      }}</span>/<span [class.valor-fuera-rango]="fueraDeRango('diastolica', item.diastolica)">{{
-                        item.diastolica
-                      }}</span>
-                    </td>
-                    <td [class.valor-fuera-rango]="fueraDeRango('frecuenciaCardiaca', item.frecuenciaCardiaca)">
-                      {{ item.frecuenciaCardiaca }}
-                    </td>
-                    <td
-                      [class.valor-fuera-rango]="
-                        fueraDeRango('frecuenciaRespiratoria', item.frecuenciaRespiratoria)
-                      "
-                    >
-                      {{ item.frecuenciaRespiratoria }}
-                    </td>
-                    <td [class.valor-fuera-rango]="fueraDeRango('temperatura', item.temperatura)">
-                      {{ item.temperatura }}
-                    </td>
-                    <td [class.valor-fuera-rango]="fueraDeRango('saturacion', item.saturacion)">
-                      {{ item.saturacion }}
-                    </td>
+                    <td>{{ item.sistolica }}/{{ item.diastolica }}</td>
+                    <td>{{ item.frecuenciaCardiaca }}</td>
+                    <td>{{ item.frecuenciaRespiratoria }}</td>
+                    <td>{{ item.temperatura }}</td>
+                    <td>{{ item.saturacion }}</td>
                     <td>{{ item.observacion || '—' }}</td>
                     <td>{{ item.usuarioNombre }}</td>
                   </tr>
